@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "target": "es2015",
+        "module": "es2022",
+        "moduleResolution": "node12",
+        "declaration": true,
+        "rootDir": "src",
+        "outDir": "dist"
+    }
+}
