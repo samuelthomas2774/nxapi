@@ -1,5 +1,5 @@
 {
-    "name": "discord-switch-presence",
+    "name": "nintendo-znc",
     "version": "1.0.0",
     "description": "",
     "author": "Samuel Elliott",
@@ -7,21 +7,22 @@
     "type": "module",
     "repository": {
         "type": "git",
-        "url": "git@gitlab.fancy.org.uk:samuel/discord-switch-presence.git"
+        "url": "git@gitlab.fancy.org.uk:samuel/nintendo-znc.git"
     },
     "bin": {
-        "discord-switch-presence": "bin/discord-switch-presence.js"
+        "nintendo-znc": "bin/nintendo-znc.js"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "cli": "node bin/discord-switch-presence.js",
-        "start": "node bin/discord-switch-presence.js presence"
+        "cli": "node bin/nintendo-znc.js",
+        "start": "node bin/nintendo-znc.js presence"
     },
     "dependencies": {
         "cli-table": "^0.3.11",
         "debug": "^4.3.3",
         "discord-rpc": "^4.0.1",
         "node-fetch": "^3.2.2",
+        "node-notifier": "^10.0.1",
         "node-persist": "^3.1.0",
         "read": "^1.0.7",
         "uuid": "^8.3.2",
@@ -32,6 +33,7 @@
         "@types/debug": "^4.1.7",
         "@types/discord-rpc": "^4.0.0",
         "@types/node": "^17.0.21",
+        "@types/node-notifier": "^8.0.2",
         "@types/node-persist": "^3.1.2",
         "@types/read": "^0.0.29",
         "@types/uuid": "^8.3.4",

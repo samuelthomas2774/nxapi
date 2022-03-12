@@ -1,0 +1,220 @@
+import createDebug from 'debug';
+import persist from 'node-persist';
+import notifier from 'node-notifier';
+import { CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
+import ZncApi from '../api/znc.js';
+import type { Arguments as ParentArguments } from '../cli.js';
+import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../util.js';
+
+const debug = createDebug('cli:notify');
+const debugFriends = createDebug('cli:notify:friends');
+
+export const command = 'notify';
+export const desc = 'Show notifications when friends come online without starting Discord Rich Presence';
+
+export function builder(yargs: Argv<ParentArguments>) {
+    return yargs.option('user', {
+        describe: 'Nintendo Account ID',
+        type: 'string',
+    }).option('token', {
+        describe: 'Nintendo Account session token',
+        type: 'string',
+    }).option('user-notifications', {
+        describe: 'Show notification for your own user',
+        type: 'boolean',
+        default: false,
+    }).option('friend-notifications', {
+        describe: 'Show notification for friends',
+        type: 'boolean',
+        default: true,
+    }).option('update-interval', {
+        describe: 'Update interval in seconds',
+        type: 'number',
+        default: 30,
+    });
+}
+
+type Arguments = YargsArguments<ReturnType<typeof builder>>;
+
+export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    if (!argv.userNotifications && !argv.friendNotifications) {
+        throw new Error('Must enable either user or friend notifications');
+    }
+
+    const storage = await initStorage(argv.dataPath);
+
+    const usernsid = argv.user ?? await storage.getItem('SelectedUser');
+    const token: string = argv.token ||
+        await storage.getItem('NintendoAccountToken.' + usernsid) ||
+        await storage.getItem('SessionToken');
+    const {nso, data} = await getToken(storage, token);
+
+    const i = new ZncNotifications(argv, storage, token, nso, data);
+
+    console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
+        data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+
+    await i.init();
+
+    while (true) {
+        await i.loop();
+    }
+}
+
+export class ZncNotifications {
+    constructor(
+        readonly argv: ArgumentsCamelCase<Arguments>,
+        public storage: persist.LocalStorage,
+        public token: string,
+        public nso: ZncApi,
+        public data: Omit<SavedToken, 'expires_at'>,
+    ) {}
+
+    async init() {
+        const announcements = await this.nso.getAnnouncements();
+        const friends = await this.nso.getFriendList();
+        const webservices = await this.nso.getWebServices();
+        const activeevent = await this.nso.getActiveEvent();
+
+        if (this.argv.userNotifications) {
+            const user = await this.nso.getCurrentUser();
+
+            await this.updateFriendsStatusForNotifications(this.argv.friendNotifications ?
+                [user.result, ...friends.result.friends] : [user.result]);
+        } else {
+            await this.updateFriendsStatusForNotifications(friends.result.friends);
+        }
+
+        await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
+    }
+
+    onlinefriends: (CurrentUser | Friend)[] = [];
+
+    async updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], initialRun?: boolean) {
+        const newonlinefriends: (CurrentUser | Friend)[] = [];
+
+        for (const friend of friends) {
+            const lastpresence = this.onlinefriends.find(f => f.id === friend.id)?.presence;
+            const online = friend.presence.state === PresenceState.ONLINE ||
+                friend.presence.state === PresenceState.PLAYING;
+
+            if (!lastpresence && online) {
+                // Friend has come online
+                const currenttitle = friend.presence.game as Game;
+
+                debugFriends('%s is now online, title %s %s', friend.name,
+                    currenttitle.name, JSON.stringify(currenttitle.sysDescription));
+
+                notifier.notify({
+                    title: friend.name,
+                    message: 'Playing ' + currenttitle.name +
+                        (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+                    icon: currenttitle.imageUri,
+                });
+
+                newonlinefriends.push(friend);
+            } else if (lastpresence && !online) {
+                // Friend has gone offline
+                const lasttitle = lastpresence.game as Game;
+
+                notifier.notify({
+                    title: friend.name,
+                    message: 'Offline',
+                });
+
+                debugFriends('%s is now offline, was playing title %s %s', friend.name,
+                    lasttitle.name, JSON.stringify(lasttitle.sysDescription));
+            } else if (lastpresence && online) {
+                // Friend is still online
+                const lasttitle = lastpresence.game as Game;
+                const currenttitle = friend.presence.game as Game;
+
+                if (getTitleIdFromEcUrl(lasttitle.shopUri) !== getTitleIdFromEcUrl(currenttitle.shopUri)) {
+                    // Friend is playing a different title
+
+                    debugFriends('%s is now playing %s %s, was playing %s %s',
+                        friend.name,
+                        currenttitle.name, JSON.stringify(currenttitle.sysDescription),
+                        lasttitle.name, JSON.stringify(lasttitle.sysDescription));
+
+                    notifier.notify({
+                        title: friend.name,
+                        message: 'Playing ' + currenttitle.name +
+                            (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+                        icon: currenttitle.imageUri,
+                    });
+                } else if (
+                    lastpresence.state !== friend.presence.state ||
+                    lasttitle.sysDescription !== currenttitle.sysDescription
+                ) {
+                    // Title state changed
+
+                    debugFriends('%s title %s state changed, now %s %s, was %s %s',
+                        friend.name, currenttitle.name,
+                        friend.presence.state, JSON.stringify(currenttitle.sysDescription),
+                        lastpresence.state, JSON.stringify(lasttitle.sysDescription));
+
+                    notifier.notify({
+                        title: friend.name,
+                        message: 'Playing ' + currenttitle.name +
+                            (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+                        icon: currenttitle.imageUri,
+                    });
+                }
+
+                newonlinefriends.push(friend);
+            }
+        }
+
+        this.onlinefriends = newonlinefriends;
+    }
+
+    async update() {
+        debug('Updating presence');
+
+        if (this.argv.friendNotifications) {
+            const activeevent = await this.nso.getActiveEvent();
+            const friends = await this.nso.getFriendList();
+            const webservices = await this.nso.getWebServices();
+
+            if (this.argv.userNotifications) {
+                const user = await this.nso.getCurrentUser();
+
+                await this.updateFriendsStatusForNotifications([user.result, ...friends.result.friends]);
+            } else {
+                await this.updateFriendsStatusForNotifications(friends.result.friends);
+            }
+        } else {
+            const user = await this.nso.getCurrentUser();
+
+            await this.updateFriendsStatusForNotifications([user.result]);
+        }
+
+        debug('Updated presence');
+    }
+
+    async loop() {
+        try {
+            await this.update();
+
+            await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
+        } catch (err) {
+            // @ts-expect-error
+            if (err?.data?.status === 9404) {
+                // Token expired
+                debug('Renewing token');
+
+                const data = await this.nso.renewToken(this.token);
+
+                const existingToken: SavedToken = {
+                    ...data,
+                    expires_at: Date.now() + (data.credential.expiresIn * 1000),
+                };
+
+                await this.storage.setItem('NsoToken.' + this.token, existingToken);
+            } else {
+                throw err;
+            }
+        }
+    }
+}

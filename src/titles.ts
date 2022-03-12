@@ -1,11 +1,4 @@
-interface Title {
-    id: string;
-    client: string;
-    titleName?: string | true;
-    largeImageKey?: string;
-    smallImageKey?: string;
-    showTimestamp?: boolean;
-}
+import { Title } from './util.js';
 
 export const defaultTitle: Title = {
     id: '0000000000000000',
