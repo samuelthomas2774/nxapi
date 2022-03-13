@@ -106,10 +106,9 @@ export interface CurrentUser {
     links: {
         nintendoAccount: {
             membership: {
-                // active: {
-                //     active: boolean;
-                // };
-                active: boolean;
+                active: {
+                    active: boolean;
+                } | boolean;
             };
         };
         friendCode: {

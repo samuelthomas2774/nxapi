@@ -42,7 +42,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     await storage.setItem('SessionToken', argv.token);
 
     if (argv.auth) {
-        const {nso, data} = await getToken(storage, argv.token);
+        const {nso, data} = await getToken(storage, argv.token, argv.zncProxyUrl);
 
         console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
             data.user.screenName, data.user.nickname, data.nsoAccount.user.name);

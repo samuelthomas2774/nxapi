@@ -17,10 +17,10 @@ const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 
 export default class ZncApi {
     constructor(
-        private token: string
+        public token: string
     ) {}
 
-    protected async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
+    async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
         const response = await fetch(ZNC_URL + url, {
             method: method,
             headers: Object.assign({
@@ -32,6 +32,8 @@ export default class ZncApi {
             }, headers),
             body: body,
         });
+
+        debug('fetch %s %s, response %s', method, url, response.status);
 
         const data = await response.json() as ZncResponse<T>;
 

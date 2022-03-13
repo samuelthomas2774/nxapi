@@ -7,3 +7,4 @@ export * as webservicetoken from './webservicetoken.js';
 export * as friends from './friends.js';
 export * as presence from './presence.js';
 export * as notify from './notify.js';
+export * as httpServer from './http-server.js';

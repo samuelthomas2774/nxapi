@@ -1,14 +1,16 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
-import { CurrentUser, Presence, PresenceState } from '../api/znc-types.js';
+import fetch from 'node-fetch';
+import { CurrentUser, Friend, Presence, PresenceState } from '../api/znc-types.js';
 import ZncApi from '../api/znc.js';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, getDiscordPresence, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../util.js';
 import { ZncNotifications } from './notify.js';
+import ZncProxyApi from '../api/znc-proxy.js';
 
 const debug = createDebug('cli:presence');
-const debugFriends = createDebug('cli:presence:friends');
+const debugProxy = createDebug('cli:presence:proxy');
 const debugDiscord = createDebug('cli:presence:discordrpc');
 
 export const command = 'presence';
@@ -39,19 +41,42 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Update interval in seconds',
         type: 'number',
         default: 30,
+    }).option('presence-url', {
+        describe: 'URL to get user presence from, for use with `nintendo-znc http-server`',
+        type: 'string',
     });
 }
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    if (argv.presenceUrl) {
+        if (argv.token) throw new Error('--presence-url not compatible with --user');
+        if (argv.token) throw new Error('--presence-url not compatible with --token');
+        if (argv.friendNaid) throw new Error('--presence-url not compatible with --friend-naid');
+        if (argv.userNotifications) throw new Error('--presence-url not compatible with --user-notifications');
+        if (argv.friendNotifications) throw new Error('--presence-url not compatible with --user-notifications');
+
+        const i = new ZncProxyDiscordPresence(argv, argv.presenceUrl);
+
+        console.log('Not authenticated; using znc proxy');
+
+        await i.init();
+
+        while (true) {
+            await i.loop();
+        }
+
+        return;
+    }
+
     const storage = await initStorage(argv.dataPath);
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid) ||
         await storage.getItem('SessionToken');
-    const {nso, data} = await getToken(storage, token);
+    const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     const i = new ZncDiscordPresence(argv, storage, token, nso, data);
 
@@ -85,9 +110,23 @@ class ZncDiscordPresence extends ZncNotifications {
 
     async init() {
         const announcements = await this.nso.getAnnouncements();
-        const friends = await this.nso.getFriendList();
-        const webservices = await this.nso.getWebServices();
-        const activeevent = await this.nso.getActiveEvent();
+        const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
+            await this.nso.getFriendList() : {result: {friends: this.argv.friendNaid ? [this.argv.userNotifications ?
+                (await this.nso.fetch<{friend: Friend}>('/friend/' + this.argv.friendNaid)).friend : {
+                    id: 0,
+                    nsaId: this.argv.friendNaid,
+                    imageUri: '',
+                    name: '',
+                    isFriend: true,
+                    isFavoriteFriend: false,
+                    isServiceUser: true,
+                    friendCreatedAt: 0,
+                    presence: await this.nso.fetch<Presence>('/friend/' + this.argv.friendNaid + '/presence'),
+                }] : []}};
+        if (!(this.nso instanceof ZncProxyApi)) {
+            await this.nso.getWebServices();
+            await this.nso.getActiveEvent();
+        }
 
         if (this.argv.friendNaid) {
             const friend = friends.result.friends.find(f => f.nsaId === this.argv.friendNaid);
@@ -235,9 +274,21 @@ class ZncDiscordPresence extends ZncNotifications {
 
     async update() {
         if (this.argv.friendNaid) {
-            const activeevent = await this.nso.getActiveEvent();
-            const friends = await this.nso.getFriendList();
-            const webservices = await this.nso.getWebServices();
+            if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
+            const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
+                await this.nso.getFriendList() : {result: {friends: this.argv.friendNaid ? [this.argv.userNotifications ?
+                    (await this.nso.fetch<{friend: Friend}>('/friend/' + this.argv.friendNaid)).friend : {
+                        id: 0,
+                        nsaId: this.argv.friendNaid,
+                        imageUri: '',
+                        name: '',
+                        isFriend: true,
+                        isFavoriteFriend: false,
+                        isServiceUser: true,
+                        friendCreatedAt: 0,
+                        presence: await this.nso.fetch<Presence>('/friend/' + this.argv.friendNaid + '/presence'),
+                    }] : []}};
+            if (!(this.nso instanceof ZncProxyApi)) await this.nso.getWebServices();
 
             const friend = friends.result.friends.find(f => f.nsaId === this.argv.friendNaid);
 
@@ -258,13 +309,17 @@ class ZncDiscordPresence extends ZncNotifications {
 
             await this.updatePresence(friend.presence);
         } else {
-            const user = await this.nso.getCurrentUser();
+            const user = !(this.nso instanceof ZncProxyApi) ?
+                await this.nso.getCurrentUser() : {result: {
+                    ...this.data.nsoAccount.user,
+                    presence: await this.nso.fetch<Presence>('/user/presence'),
+                }};
 
             if (this.argv.friendNotifications) {
-                const activeevent = await this.nso.getActiveEvent();
+                if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
                 const friends = await this.nso.getFriendList();
-                const webservices = await this.nso.getWebServices();
-
+                if (!(this.nso instanceof ZncProxyApi)) await this.nso.getWebServices();
+    
                 await this.updateFriendsStatusForNotifications(this.argv.userNotifications ?
                     [user.result, ...friends.result.friends] : friends.result.friends);
             } else if (this.argv.userNotifications) {
@@ -273,5 +328,32 @@ class ZncDiscordPresence extends ZncNotifications {
 
             await this.updatePresence(user.result.presence, user.result.links.friendCode);
         }
+    }
+}
+
+class ZncProxyDiscordPresence extends ZncDiscordPresence {
+    constructor(
+        readonly argv: ArgumentsCamelCase<Arguments>,
+        public presence_url: string
+    ) {
+        super(argv, null!, null!, null!, null!);
+    }
+
+    async init() {
+        await this.update();
+
+        await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
+    }
+
+    async update() {
+        const response = await fetch(this.presence_url);
+        debugProxy('fetch %s %s, response %s', 'GET', this.presence_url, response.status);
+        if (response.status !== 200) {
+            console.error('Non-200 status code', await response.text());
+            throw new Error('Unknown error');
+        }
+        const presence = await response.json() as Presence;
+
+        await this.updatePresence(presence);
     }
 }

@@ -30,7 +30,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid) ||
         await storage.getItem('SessionToken');
-    const {nso, data} = await getToken(storage, token);
+    const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     if (argv.forceRefresh && 'expires_at' in data) {
         const user = await nso.getCurrentUser();

@@ -22,6 +22,7 @@ export function builder(yargs: Argv<ParentArguments>) {
                 'Screen name',
                 'Nickname',
                 'Country',
+                'Nintendo Switch ID',
                 'Nintendo Switch username',
             ],
         });
@@ -37,6 +38,7 @@ export function builder(yargs: Argv<ParentArguments>) {
                 cache.user.screenName,
                 cache.user.nickname,
                 cache.user.country,
+                cache.nsoAccount.user.nsaId,
                 cache.nsoAccount.user.name,
             ]);
         }
@@ -64,6 +66,10 @@ export function builder(yargs: Argv<ParentArguments>) {
         }
 
         await storage.setItem('SelectedUser', argv.user);
+
+        const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
+        users.add(argv.user);
+        await storage.setItem('NintendoAccountIds', [...users]);
     }).command('forget <user>', 'Removes all data for a Nintendo Account', yargs => {
         return yargs.positional('user', {
             describe: 'Nintendo Account ID',

@@ -10,6 +10,9 @@ const yargs = Yargs(process.argv.slice(2)).option('data-path', {
     describe: 'Data storage path',
     type: 'string',
     default: path.join(import.meta.url.substr(7), '..', '..', 'data'),
+}).option('znc-proxy-url', {
+    describe: 'URL of Nintendo Switch Online app API proxy server to use',
+    type: 'string',
 });
 
 export type Arguments = YargsArguments<typeof yargs>;

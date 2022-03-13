@@ -5,6 +5,7 @@ import { CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
 import ZncApi from '../api/znc.js';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../util.js';
+import ZncProxyApi from '../api/znc-proxy.js';
 
 const debug = createDebug('cli:notify');
 const debugFriends = createDebug('cli:notify:friends');
@@ -47,7 +48,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid) ||
         await storage.getItem('SessionToken');
-    const {nso, data} = await getToken(storage, token);
+    const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     const i = new ZncNotifications(argv, storage, token, nso, data);
 
@@ -72,9 +73,12 @@ export class ZncNotifications {
 
     async init() {
         const announcements = await this.nso.getAnnouncements();
-        const friends = await this.nso.getFriendList();
-        const webservices = await this.nso.getWebServices();
-        const activeevent = await this.nso.getActiveEvent();
+        const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
+            await this.nso.getFriendList() : {result: {friends: []}};
+        if (!(this.nso instanceof ZncProxyApi)) {
+            const webservices = await this.nso.getWebServices();
+            const activeevent = await this.nso.getActiveEvent();
+        }
 
         if (this.argv.userNotifications) {
             const user = await this.nso.getCurrentUser();
@@ -88,13 +92,58 @@ export class ZncNotifications {
         await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
     }
 
+    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+        const currenttitle = friend.presence.game as Game;
+
+        notifier.notify({
+            title: friend.name,
+            message: 'Playing ' + currenttitle.name +
+                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+            // icon: currenttitle.imageUri,
+            icon: friend.imageUri,
+        });
+    }
+
+    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+        notifier.notify({
+            title: friend.name,
+            message: 'Offline',
+            icon: friend.imageUri,
+        });
+    }
+
+    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+        const currenttitle = friend.presence.game as Game;
+
+        notifier.notify({
+            title: friend.name,
+            message: 'Playing ' + currenttitle.name +
+                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+            // icon: currenttitle.imageUri,
+            icon: friend.imageUri,
+        });
+    }
+
+    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+        const currenttitle = friend.presence.game as Game;
+
+        notifier.notify({
+            title: friend.name,
+            message: 'Playing ' + currenttitle.name +
+                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+            // icon: currenttitle.imageUri,
+            icon: friend.imageUri,
+        });
+    }
+
     onlinefriends: (CurrentUser | Friend)[] = [];
 
     async updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], initialRun?: boolean) {
         const newonlinefriends: (CurrentUser | Friend)[] = [];
 
         for (const friend of friends) {
-            const lastpresence = this.onlinefriends.find(f => f.id === friend.id)?.presence;
+            const prev = this.onlinefriends.find(f => f.id === friend.id);
+            const lastpresence = prev?.presence;
             const online = friend.presence.state === PresenceState.ONLINE ||
                 friend.presence.state === PresenceState.PLAYING;
 
@@ -105,25 +154,17 @@ export class ZncNotifications {
                 debugFriends('%s is now online, title %s %s', friend.name,
                     currenttitle.name, JSON.stringify(currenttitle.sysDescription));
 
-                notifier.notify({
-                    title: friend.name,
-                    message: 'Playing ' + currenttitle.name +
-                        (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-                    icon: currenttitle.imageUri,
-                });
+                this.onFriendOnline(friend, prev, initialRun);
 
                 newonlinefriends.push(friend);
             } else if (lastpresence && !online) {
                 // Friend has gone offline
                 const lasttitle = lastpresence.game as Game;
 
-                notifier.notify({
-                    title: friend.name,
-                    message: 'Offline',
-                });
-
                 debugFriends('%s is now offline, was playing title %s %s', friend.name,
                     lasttitle.name, JSON.stringify(lasttitle.sysDescription));
+
+                this.onFriendOffline(friend, prev, initialRun);
             } else if (lastpresence && online) {
                 // Friend is still online
                 const lasttitle = lastpresence.game as Game;
@@ -137,12 +178,7 @@ export class ZncNotifications {
                         currenttitle.name, JSON.stringify(currenttitle.sysDescription),
                         lasttitle.name, JSON.stringify(lasttitle.sysDescription));
 
-                    notifier.notify({
-                        title: friend.name,
-                        message: 'Playing ' + currenttitle.name +
-                            (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-                        icon: currenttitle.imageUri,
-                    });
+                    this.onFriendPlayingChangeTitle(friend, prev, initialRun);
                 } else if (
                     lastpresence.state !== friend.presence.state ||
                     lasttitle.sysDescription !== currenttitle.sysDescription
@@ -154,12 +190,7 @@ export class ZncNotifications {
                         friend.presence.state, JSON.stringify(currenttitle.sysDescription),
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
 
-                    notifier.notify({
-                        title: friend.name,
-                        message: 'Playing ' + currenttitle.name +
-                            (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-                        icon: currenttitle.imageUri,
-                    });
+                    this.onFriendTitleStateChange(friend, prev, initialRun);
                 }
 
                 newonlinefriends.push(friend);
@@ -173,9 +204,10 @@ export class ZncNotifications {
         debug('Updating presence');
 
         if (this.argv.friendNotifications) {
-            const activeevent = await this.nso.getActiveEvent();
-            const friends = await this.nso.getFriendList();
-            const webservices = await this.nso.getWebServices();
+            if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
+            const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
+                await this.nso.getFriendList() : {result: {friends: []}};
+            if (!(this.nso instanceof ZncProxyApi)) await this.nso.getWebServices();
 
             if (this.argv.userNotifications) {
                 const user = await this.nso.getCurrentUser();

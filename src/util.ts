@@ -9,6 +9,7 @@ import { NintendoAccountToken, NintendoAccountUser } from './api/na.js';
 import { AccountLogin, CurrentUser, Game } from './api/znc-types.js';
 import ZncApi from './api/znc.js';
 import titles, { defaultTitle } from './titles.js';
+import ZncProxyApi from './api/znc-proxy.js';
 
 const debug = createDebug('cli');
 
@@ -26,6 +27,7 @@ export interface SavedToken {
     credential: AccountLogin['webApiServerCredential'];
 
     expires_at: number;
+    proxy_url?: string;
 }
 
 export async function initStorage(dir = path.join(import.meta.url.substr(7), '..', '..', 'data')) {
@@ -37,7 +39,7 @@ export async function initStorage(dir = path.join(import.meta.url.substr(7), '..
     return storage;
 }
 
-export async function getToken(storage: persist.LocalStorage, token: string) {
+export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string) {
     if (!token) {
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nintendo-znc token`.');
         throw new Error('Invalid token');
@@ -49,23 +51,28 @@ export async function getToken(storage: persist.LocalStorage, token: string) {
         console.log('Authenticating to Nintendo Switch Online app');
         debug('Authenticating to znc with session token');
 
-        const data = await ZncApi.createWithSessionToken(token);
+        const {nso, data} = proxy_url ?
+            await ZncProxyApi.createWithSessionToken(proxy_url, token) :
+            await ZncApi.createWithSessionToken(token);
 
         const existingToken: SavedToken = {
-            ...data.data,
-            expires_at: Date.now() + (data.data.credential.expiresIn * 1000),
+            ...data,
+            expires_at: Date.now() + (data.credential.expiresIn * 1000),
         };
 
         await storage.setItem('NsoToken.' + token, existingToken);
-        await storage.setItem('NintendoAccountToken.' + data.data.user.id, token);
+        await storage.setItem('NintendoAccountToken.' + data.user.id, token);
 
-        return data;
+        return {nso, data: existingToken};
     }
 
     debug('Using existing token');
+    await storage.setItem('NintendoAccountToken.' + existingToken.user.id, token);
 
     return {
-        nso: new ZncApi(existingToken.credential.accessToken),
+        nso: proxy_url ?
+            new ZncProxyApi(proxy_url, token) :
+            new ZncApi(existingToken.credential.accessToken),
         data: existingToken,
     };
 }
