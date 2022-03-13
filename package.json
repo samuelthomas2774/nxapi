@@ -15,12 +15,16 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "cli": "node bin/nintendo-znc.js",
+        "build-macos-linux": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nintendo-znc.js\"",
+        "build-macosapp": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc.app -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nintendo-znc.js\" \"presence\"",
+        "build-windows": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc.exe -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nintendo-znc.js\"",
         "start": "node bin/nintendo-znc.js presence"
     },
     "dependencies": {
         "cli-table": "^0.3.11",
         "debug": "^4.3.3",
         "discord-rpc": "^4.0.1",
+        "env-paths": "^3.0.0",
         "express": "^4.17.3",
         "node-fetch": "^3.2.2",
         "node-notifier": "^10.0.1",
@@ -40,6 +44,7 @@
         "@types/read": "^0.0.29",
         "@types/uuid": "^8.3.4",
         "@types/yargs": "^17.0.9",
+        "caxa": "^2.1.0",
         "typescript": "^4.7.0-dev.20220308"
     }
 }

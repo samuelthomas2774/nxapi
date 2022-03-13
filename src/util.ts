@@ -1,9 +1,9 @@
 import * as yargs from 'yargs';
-import * as yargstypes from '../node_modules/@types/yargs/index.js';
+import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
 import DiscordRPC from 'discord-rpc';
 import persist from 'node-persist';
-import * as path from 'path';
+import getPaths from 'env-paths';
 import { FlapgApiResponse } from './api/f.js';
 import { NintendoAccountToken, NintendoAccountUser } from './api/na.js';
 import { AccountLogin, CurrentUser, Game } from './api/znc-types.js';
@@ -12,6 +12,8 @@ import titles, { defaultTitle } from './titles.js';
 import ZncProxyApi from './api/znc-proxy.js';
 
 const debug = createDebug('cli');
+
+export const paths = getPaths('nintendo-znc');
 
 export type YargsArguments<T extends yargs.Argv> = T extends yargs.Argv<infer R> ? R : any;
 export type Argv<T = {}> = yargs.Argv<T>;
@@ -30,7 +32,7 @@ export interface SavedToken {
     proxy_url?: string;
 }
 
-export async function initStorage(dir = path.join(import.meta.url.substr(7), '..', '..', 'data')) {
+export async function initStorage(dir: string) {
     const storage = persist.create({
         dir,
         stringify: data => JSON.stringify(data, null, 4) + '\n',
