@@ -4,7 +4,6 @@ export const defaultTitle: Title = {
     id: '0000000000000000',
     client: '950883021165330493',
     titleName: true,
-    largeImageKey: 'nintendoswitch',
 };
 
 const titles: Title[] = [

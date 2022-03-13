@@ -115,9 +115,15 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
         presence: {
             details: text[0],
             state: text[1],
-            largeImageKey: title.largeImageKey,
-            largeImageText: friendcode && title.largeImageKey ? 'SW-' + friendcode.id : undefined,
+            largeImageKey: title.largeImageKey ?? game.imageUri,
+            largeImageText: friendcode ? 'SW-' + friendcode.id : undefined,
             smallImageKey: title.smallImageKey,
+            buttons: game.shopUri ? [
+                {
+                    label: 'Nintendo eShop',
+                    url: game.shopUri,
+                },
+            ] : [],
         },
         showTimestamp: title.showTimestamp,
     };
