@@ -107,8 +107,6 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
         (minutes ? ', ' + minutes + ' minute' + (minutes === 1 ? '' : 's'): '') +
         ' since ' + new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB'));
 
-    if (friendcode && !title.largeImageKey) text.push('SW-' + friendcode.id);
-
     return {
         id: title.client || defaultTitle.client,
         title: titleid,
