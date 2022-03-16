@@ -50,7 +50,7 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
     const existingToken: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
-        console.log('Authenticating to Nintendo Switch Online app');
+        console.warn('Authenticating to Nintendo Switch Online app');
         debug('Authenticating to znc with session token');
 
         const {nso, data} = proxy_url ?

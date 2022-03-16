@@ -19,6 +19,12 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('token', {
         describe: 'Nintendo Account session token',
         type: 'string',
+    }).option('json', {
+        describe: 'Output raw JSON',
+        type: 'boolean',
+    }).option('json-pretty-print', {
+        describe: 'Output pretty-printed JSON',
+        type: 'boolean',
     });
 }
 
@@ -53,6 +59,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         na_country: data.user.country,
         na_lang: data.user.language,
     }).toString();
+
+    if (argv.jsonPrettyPrint) {
+        console.log(JSON.stringify({
+            webservice,
+            token: webserviceToken.result,
+        }, null, 4));
+        return;
+    }
+    if (argv.json) {
+        console.log(JSON.stringify({
+            webservice,
+            token: webserviceToken.result,
+        }));
+        return;
+    }
 
     console.log('Web service', {
         name: webservice.name,

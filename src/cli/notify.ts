@@ -52,7 +52,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncNotifications(argv, storage, token, nso, data);
 
-    console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
+    console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
     await i.init();

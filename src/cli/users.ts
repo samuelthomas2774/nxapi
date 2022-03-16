@@ -44,7 +44,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         }
 
         if (!table.length) {
-            console.log('No Nintendo Accounts');
+            console.warn('No Nintendo Accounts');
             return;
         }
 

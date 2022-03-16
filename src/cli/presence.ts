@@ -59,7 +59,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         const i = new ZncProxyDiscordPresence(argv, argv.presenceUrl);
 
-        console.log('Not authenticated; using znc proxy');
+        console.warn('Not authenticated; using znc proxy');
 
         await i.init();
 
@@ -80,7 +80,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncDiscordPresence(argv, storage, token, nso, data);
 
-    console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
+    console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
     await i.init();

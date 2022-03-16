@@ -16,13 +16,19 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('token', {
         describe: 'Nintendo Account session token',
         type: 'string',
+    }).option('json', {
+        describe: 'Output raw JSON',
+        type: 'boolean',
+    }).option('json-pretty-print', {
+        describe: 'Output pretty-printed JSON',
+        type: 'boolean',
     });
 }
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    console.log('Listing web services');
+    console.warn('Listing web services');
 
     const storage = await initStorage(argv.dataPath);
 
@@ -36,6 +42,15 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const friends = await nso.getFriendList();
     const webservices = await nso.getWebServices();
     const activeevent = await nso.getActiveEvent();
+
+    if (argv.jsonPrettyPrint) {
+        console.log(JSON.stringify(webservices.result, null, 4));
+        return;
+    }
+    if (argv.json) {
+        console.log(JSON.stringify(webservices.result));
+        return;
+    }
 
     const table = new Table({
         head: [
