@@ -2,7 +2,7 @@ import createDebug from 'debug';
 // @ts-expect-error
 import Table from 'cli-table/lib/index.js';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { Argv, initStorage, SavedToken } from '../util.js';
+import { Argv, initStorage, SavedMoonToken, SavedToken } from '../util.js';
 
 const debug = createDebug('cli:users');
 
@@ -24,22 +24,27 @@ export function builder(yargs: Argv<ParentArguments>) {
                 'Country',
                 'Nintendo Switch ID',
                 'Nintendo Switch username',
+                'Parental Controls',
             ],
         });
 
         for (const userid of users ?? []) {
             const token: string | undefined = await storage.getItem('NintendoAccountToken.' + userid);
-            if (!token) continue;
-            const cache: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
-            if (!cache) continue;
+            const nsoCache: SavedToken | undefined = token ? await storage.getItem('NsoToken.' + token) : undefined;
+            const moonToken: string | undefined = await storage.getItem('NintendoAccountToken-pctl.' + userid);
+            const moonCache: SavedMoonToken | undefined = moonToken ? await storage.getItem('MoonToken.' + moonToken) : undefined;
+
+            const user = nsoCache?.user ?? moonCache?.user;
+            if (!user) continue;
 
             table.push([
-                cache.user.id + (selected === cache.user.id ? ' *' : ''),
-                cache.user.screenName,
-                cache.user.nickname,
-                cache.user.country,
-                cache.nsoAccount.user.nsaId,
-                cache.nsoAccount.user.name,
+                user.id + (selected === user.id ? ' *' : ''),
+                user.screenName,
+                user.nickname,
+                user.country,
+                nsoCache?.nsoAccount.user.nsaId ?? 'Not signed in',
+                nsoCache?.nsoAccount.user.name ?? 'Not signed in',
+                moonCache ? 'Signed in' : 'Not signed in',
             ]);
         }
 

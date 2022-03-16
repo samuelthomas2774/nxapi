@@ -1,6 +1,6 @@
 {
     "files.associations": {
-        "**/data/*": "json"
+        "**/data/persist/*": "json"
     },
     "typescript.tsdk": "node_modules/typescript/lib"
 }

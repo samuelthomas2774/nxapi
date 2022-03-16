@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import Table from 'cli-table/lib/index.js';
 import { PresenceState } from '../api/znc-types.js';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../util.js';
+import { ArgumentsCamelCase, Argv, getToken, hrduration, initStorage, YargsArguments } from '../util.js';
 
 const debug = createDebug('cli:friends');
 
@@ -67,8 +67,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     for (const friend of friends.result.friends) {
         const online = friend.presence.state === PresenceState.ONLINE ||
             friend.presence.state === PresenceState.PLAYING;
-        const hours = 'name' in friend.presence.game ? Math.floor(friend.presence.game.totalPlayTime / 60) : 0;
-        const minutes = 'name' in friend.presence.game ? friend.presence.game.totalPlayTime - (hours * 60) : 0;
 
         table.push([
             friend.id,
@@ -76,10 +74,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             friend.name,
             online ?
                 'name' in friend.presence.game ?
-                    'Playing ' + friend.presence.game.name +
-                        '; played for ' + (hours || !minutes ? hours + ' hour' + (hours === 1 ? '' : 's') : '') +
-                        (minutes ? ', ' + minutes + ' minute' + (minutes === 1 ? '' : 's'): '') +
-                        ' since ' + new Date(friend.presence.game.firstPlayedAt * 1000).toLocaleDateString('en-GB') :
+                    'Playing ' + friend.presence.game.name + '; played for ' +
+                        hrduration(friend.presence.game.totalPlayTime) + ' since ' +
+                        new Date(friend.presence.game.firstPlayedAt * 1000).toLocaleDateString('en-GB') :
                     'Online' :
                 friend.presence.logoutAt ?
                     'Last seen ' + new Date(friend.presence.logoutAt * 1000).toISOString() :

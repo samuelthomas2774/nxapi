@@ -1,12 +1,12 @@
 import * as util from 'util';
 import createDebug from 'debug';
 import * as crypto from 'crypto';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../util.js';
-import { getNintendoAccountSessionToken } from '../api/na.js';
-import { ZNCA_CLIENT_ID } from '../api/znc.js';
+import type { Arguments as ParentArguments } from '../../cli.js';
+import { ArgumentsCamelCase, Argv, getPctlToken, initStorage, YargsArguments } from '../../util.js';
+import { getNintendoAccountSessionToken } from '../../api/na.js';
+import { MOON_CLIENT_ID } from '../../api/moon.js';
 
-const debug = createDebug('cli:auth');
+const debug = createDebug('cli:pctl:auth');
 
 export const command = 'auth';
 export const desc = 'Generate a link to login to a Nintendo Account';
@@ -31,13 +31,26 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const params = {
         state,
-        redirect_uri: 'npf71b963c1b7b6d119://auth',
-        client_id: ZNCA_CLIENT_ID,
-        scope: 'openid user user.birthday user.mii user.screenName',
+        redirect_uri: 'npf54789befb391a838://auth',
+        client_id: MOON_CLIENT_ID,
+        scope: [
+            'openid',
+            'user',
+            'user.mii',
+            'moonUser:administration',
+            'moonDevice:create',
+            'moonOwnedDevice:administration',
+            'moonParentalControlSetting',
+            'moonParentalControlSetting:update',
+            'moonParentalControlSettingState',
+            'moonPairingState',
+            'moonSmartDevice:administration',
+            'moonDailySummary',
+            'moonMonthlySummary',
+        ].join(' '),
         response_type: 'session_token_code',
         session_token_code_challenge: challenge,
         session_token_code_challenge_method: 'S256',
-        theme: 'login_form',
     };
 
     const authoriseurl = 'https://accounts.nintendo.com/connect/1.0.0/authorize?' +
@@ -54,7 +67,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log(authoriseurl);
     console.log('');
     
-    console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf71b963c1b7b6d119://auth".');
+    console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf54789befb391a838://auth".');
     console.log('');
 
     const read = await import('read');
@@ -63,6 +76,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const applink = await prompt({
         prompt: `Paste the link: `,
+        // silent: true,
         output: process.stderr,
     });
 
@@ -73,19 +87,19 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     debug('Redirect URL parameters', [...authorisedparams.entries()]);
 
     const code = authorisedparams.get('session_token_code')!;
-    const token = await getNintendoAccountSessionToken(code, verifier, ZNCA_CLIENT_ID);
+    const token = await getNintendoAccountSessionToken(code, verifier, MOON_CLIENT_ID);
 
     console.log('Session token', token);
 
     if (argv.auth) {
         const storage = await initStorage(argv.dataPath);
     
-        const {nso, data} = await getToken(storage, token.session_token, argv.zncProxyUrl);
+        const {moon, data} = await getPctlToken(storage, token.session_token);
 
-        console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
-            data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+        console.log('Authenticated as Nintendo Account %s (%s)',
+            data.user.nickname, data.user.id);
 
-        await storage.setItem('NintendoAccountToken.' + data.user.id, token.session_token);
+        await storage.setItem('NintendoAccountToken-pctl.' + data.user.id, token.session_token);
 
         const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
         users.add(data.user.id);

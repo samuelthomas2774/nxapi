@@ -1,0 +1,59 @@
+import createDebug from 'debug';
+// @ts-expect-error
+import Table from 'cli-table/lib/index.js';
+import type { Arguments as ParentArguments } from '../../cli.js';
+import { ArgumentsCamelCase, Argv, getPctlToken, initStorage, YargsArguments } from '../../util.js';
+
+const debug = createDebug('cli:pctl:devices');
+
+export const command = 'devices';
+export const desc = 'List Nintendo Switch consoles';
+
+export function builder(yargs: Argv<ParentArguments>) {
+    return yargs.option('user', {
+        describe: 'Nintendo Account ID',
+        type: 'string',
+    }).option('token', {
+        describe: 'Nintendo Account session token',
+        type: 'string',
+    });
+}
+
+type Arguments = YargsArguments<ReturnType<typeof builder>>;
+
+export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    console.warn('Listing devices');
+
+    const storage = await initStorage(argv.dataPath);
+
+    const usernsid = argv.user ?? await storage.getItem('SelectedUser');
+    const token: string = argv.token ||
+        await storage.getItem('NintendoAccountToken-pctl.' + usernsid);
+    const {moon, data} = await getPctlToken(storage, token);
+
+    const devices = await moon.getDevices();
+
+    const table = new Table({
+        head: [
+            'ID',
+            'Label',
+            'Serial number',
+            'Software version',
+            'PIN',
+            'Last synchronised',
+        ],
+    });
+
+    for (const device of devices.items) {
+        table.push([
+            device.deviceId,
+            device.label,
+            device.device.serialNumber,
+            device.device.firmwareVersion.displayedVersion + ' (' + device.device.firmwareVersion.internalVersion + ')',
+            device.device.synchronizedUnlockCode,
+            new Date(device.device.synchronizedParentalControlSetting.synchronizedAt * 1000).toISOString(),
+        ]);
+    }
+
+    console.log(table.toString());
+}

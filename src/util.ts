@@ -1,3 +1,4 @@
+import * as path from 'path';
 import * as yargs from 'yargs';
 import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
@@ -10,6 +11,7 @@ import { AccountLogin, CurrentUser, Game } from './api/znc-types.js';
 import ZncApi from './api/znc.js';
 import titles, { defaultTitle } from './titles.js';
 import ZncProxyApi from './api/znc-proxy.js';
+import MoonApi from './api/moon.js';
 
 const debug = createDebug('cli');
 
@@ -32,9 +34,16 @@ export interface SavedToken {
     proxy_url?: string;
 }
 
+export interface SavedMoonToken {
+    nintendoAccountToken: NintendoAccountToken;
+    user: NintendoAccountUser;
+
+    expires_at: number;
+}
+
 export async function initStorage(dir: string) {
     const storage = persist.create({
-        dir,
+        dir: path.join(dir, 'persist'),
         stringify: data => JSON.stringify(data, null, 4) + '\n',
     });
     await storage.init();
@@ -79,6 +88,40 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
     };
 }
 
+export async function getPctlToken(storage: persist.LocalStorage, token: string) {
+    if (!token) {
+        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nintendo-znc pctl users add`.');
+        throw new Error('Invalid token');
+    }
+
+    const existingToken: SavedMoonToken | undefined = await storage.getItem('MoonToken.' + token);
+
+    if (!existingToken || existingToken.expires_at <= Date.now()) {
+        console.warn('Authenticating to Nintendo Switch Parental Controls app');
+        debug('Authenticating to pctl with session token');
+
+        const {moon, data} = await MoonApi.createWithSessionToken(token);
+
+        const existingToken: SavedMoonToken = {
+            ...data,
+            expires_at: Date.now() + (data.nintendoAccountToken.expires_in * 1000),
+        };
+
+        await storage.setItem('MoonToken.' + token, existingToken);
+        await storage.setItem('NintendoAccountToken-pctl.' + data.user.id, token);
+
+        return {moon, data: existingToken};
+    }
+
+    debug('Using existing token');
+    await storage.setItem('NintendoAccountToken-pctl.' + existingToken.user.id, token);
+
+    return {
+        moon: new MoonApi(existingToken.nintendoAccountToken.access_token!, existingToken.user.id),
+        data: existingToken,
+    };
+}
+
 export function getTitleIdFromEcUrl(url: string) {
     const match = url.match(/^https:\/\/ec\.nintendo\.com\/apps\/([0-9a-f]{16})\//);
     return match?.[1] ?? null;
@@ -93,9 +136,6 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
     const titleid = getTitleIdFromEcUrl(game.shopUri);
     const title = titles.find(t => t.id === titleid) || defaultTitle;
 
-    const hours = Math.floor(game.totalPlayTime / 60);
-    const minutes = game.totalPlayTime - (hours * 60);
-
     const text = [];
 
     if (title.titleName === true) text.push(game.name);
@@ -103,9 +143,10 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
 
     if (game.sysDescription) text.push(game.sysDescription);
 
-    if (hours >= 1) text.push('Played for ' + hours + ' hour' + (hours === 1 ? '' : 's') +
-        (minutes ? ', ' + minutes + ' minute' + (minutes === 1 ? '' : 's'): '') +
-        ' since ' + new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB'));
+    if (game.totalPlayTime >= 60) {
+        text.push('Played for ' + hrduration(game.totalPlayTime) +
+            ' since ' + new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB'));
+    }
 
     return {
         id: title.client || defaultTitle.client,
@@ -137,4 +178,19 @@ export interface Title {
     largeImageKey?: string;
     smallImageKey?: string;
     showTimestamp?: boolean;
+}
+
+export function hrduration(duration: number, short = false) {
+    const hours = Math.floor(duration / 60);
+    const minutes = duration - (hours * 60);
+
+    const hour_str = short ? 'hr' : 'hour';
+    const minute_str = short ? 'min' : 'minute';
+
+    if (hours >= 1) {
+        return hours + ' ' + hour_str + (hours === 1 ? '' : 's') +
+            (minutes ? ', ' + minutes + ' ' + minute_str + (minutes === 1 ? '' : 's') : '');
+    } else {
+        return minutes + ' ' + minute_str + (minutes === 1 ? '' : 's');
+    }
 }

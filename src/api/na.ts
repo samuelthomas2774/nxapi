@@ -33,7 +33,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
     return token;
 }
 
-export async function getNintendoAccountToken(token: string) {
+export async function getNintendoAccountToken(token: string, client_id: string) {
     debug('Getting Nintendo Account token');
 
     const response = await fetch('https://accounts.nintendo.com/connect/1.0.0/api/token', {
@@ -44,7 +44,7 @@ export async function getNintendoAccountToken(token: string) {
             'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 8.0.0)',
         },
         body: JSON.stringify({
-            client_id: '71b963c1b7b6d119',
+            client_id,
             session_token: token,
             grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer-session-token',
         }),
@@ -91,7 +91,7 @@ export interface NintendoAccountSessionToken {
 }
 
 export interface NintendoAccountToken {
-    scope: ['openid', 'user', 'user.birthday', 'user.mii', 'user.screenName'];
+    scope: string[];
     token_type: 'Bearer';
     id_token: string;
     access_token?: string;

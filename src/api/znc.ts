@@ -14,6 +14,7 @@ const ZNCA_VERSION = '2.0.0';
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
+export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 
 export default class ZncApi {
     constructor(
@@ -112,7 +113,7 @@ export default class ZncApi {
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
         // Nintendo Account token
-        const nintendoAccountToken = await getNintendoAccountToken(token);
+        const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
