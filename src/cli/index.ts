@@ -1,4 +1,5 @@
 export * as token from './token.js';
+export * as auth from './auth.js';
 export * as users from './users.js';
 export * as user from './user.js';
 export * as announcements from './announcements.js';

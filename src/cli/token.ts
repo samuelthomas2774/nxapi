@@ -12,10 +12,6 @@ export function builder(yargs: Argv<ParentArguments>) {
     return yargs.positional('token', {
         describe: 'Nintendo Account session token (it is recommended this is not set and you enter it interactively)',
         type: 'string',
-    }).option('auth', {
-        describe: 'Authenticate immediately',
-        type: 'boolean',
-        default: true,
     }).option('select', {
         describe: 'Set as default user (default: true if only user)',
         type: 'boolean',
@@ -39,26 +35,22 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         });
     }
 
-    await storage.setItem('SessionToken', argv.token);
+    const {nso, data} = await getToken(storage, argv.token, argv.zncProxyUrl);
 
-    if (argv.auth) {
-        const {nso, data} = await getToken(storage, argv.token, argv.zncProxyUrl);
+    console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
+        data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
-        console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
-            data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+    await storage.setItem('NintendoAccountToken.' + data.user.id, argv.token);
 
-        await storage.setItem('NintendoAccountToken.' + data.user.id, argv.token);
+    const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
+    users.add(data.user.id);
+    await storage.setItem('NintendoAccountIds', [...users]);
 
-        const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
-        users.add(data.user.id);
-        await storage.setItem('NintendoAccountIds', [...users]);
+    console.log('Saved token');
 
-        if ('select' in argv ? argv.select : users.size === 1) {
-            await storage.setItem('SelectedUser', data.user.id);
+    if ('select' in argv ? argv.select : users.size === 1) {
+        await storage.setItem('SelectedUser', data.user.id);
 
-            console.log('Set as default user');
-        }
-    } else {
-        console.log('Saved token');
+        console.log('Set as default user');
     }
 }

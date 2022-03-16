@@ -4,6 +4,35 @@ import { ErrorResponse } from './util.js';
 
 const debug = createDebug('api:na');
 
+export async function getNintendoAccountSessionToken(code: string, verifier: string, client_id: string) {
+    debug('Getting Nintendo Account session token');
+
+    const response = await fetch('https://accounts.nintendo.com/connect/1.0.0/api/session_token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Platform': 'Android',
+            'X-ProductVersion': '2.0.0',
+            'User-Agent': 'NASDKAPI; Android',
+        },
+        body: new URLSearchParams({
+            client_id,
+            session_token_code: code,
+            session_token_code_verifier: verifier,
+        }).toString(),
+    });
+
+    const token = await response.json() as NintendoAccountSessionToken | NintendoAccountError;
+
+    if ('errorCode' in token) {
+        throw new ErrorResponse('[na] + ' + token.detail, response, token);
+    }
+
+    debug('Got Nintendo Account session token', token);
+
+    return token;
+}
+
 export async function getNintendoAccountToken(token: string) {
     debug('Getting Nintendo Account token');
 
@@ -54,6 +83,11 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
     debug('Got Nintendo Account user info', user);
 
     return user;
+}
+
+export interface NintendoAccountSessionToken {
+    session_token: string;
+    code: string;
 }
 
 export interface NintendoAccountToken {
