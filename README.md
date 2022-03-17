@@ -3,6 +3,27 @@ nxapi
 
 Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Includes Discord Rich Presence and friend notifications.
 
+### Install
+
+#### Install from source
+
+Node.js and npm must already be installed.
+
+```sh
+git clone https://gitlab.fancy.org.uk/samuel/nxapi.git # or download as an archive
+cd nxapi
+
+# Install locally
+npm install
+npx tsc
+npm link
+
+# Build Docker image
+docker build . --tag gitlab.fancy.org.uk:5005/samuel/nxapi
+# # Run in Docker
+# docker run -it --rm -v ./data:/data gitlab.fancy.org.uk:5005/samuel/nxapi ...
+```
+
 ### Nintendo Switch Online
 
 #### Login to the Nintendo Switch Online app
@@ -257,7 +278,7 @@ nxapi pctl dump-summaries summaries --device 0123456789abcdef
 # This will only show cached data and does not make any requests to Nintendo servers
 nxapi users list
 
-# User a specific user in a command
+# Use a specific user in a command
 nxapi ... --user 0123456789abcdef
 nxapi ... --token $NA_SESSION_TOKEN
 
@@ -300,7 +321,7 @@ This requires:
 
 - adb is installed on the computer running nxapi
 - The Android device is running adbd as root or a su-like command can be used to escalate to root
-- The frida-server executable to be located at `/data/local/tmp/frida-server` on the Android device
+- The frida-server executable is located at `/data/local/tmp/frida-server` on the Android device
 - The Nintendo Switch Online app is installed on the Android device
 
 The Android device must be constantly reachable using ADB. The server will exit if the device is unreachable.
