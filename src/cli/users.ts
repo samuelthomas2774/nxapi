@@ -85,9 +85,10 @@ export function builder(yargs: Argv<ParentArguments>) {
         const storage = await initStorage(argv.dataPath);
 
         const selected: string | undefined = await storage.getItem('SelectedUser');
-        const token: string | undefined = await storage.getItem('NintendoAccountToken.' + argv.user);
+        const nsoToken: string | undefined = await storage.getItem('NintendoAccountToken.' + argv.user);
+        const moonToken: string | undefined = await storage.getItem('NintendoAccountToken-pctl.' + argv.user);
 
-        if (!token) {
+        if (!nsoToken || !moonToken) {
             throw new Error('Unknown user');
         }
 
@@ -97,7 +98,9 @@ export function builder(yargs: Argv<ParentArguments>) {
         }
 
         await storage.removeItem('NintendoAccountToken.' + argv.user);
-        await storage.removeItem('NsoToken.' + token);
+        await storage.removeItem('NsoToken.' + nsoToken);
+        await storage.removeItem('NintendoAccountToken-pctl.' + argv.user);
+        await storage.removeItem('MoonToken.' + moonToken);
 
         const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
         users.delete(argv.user);
