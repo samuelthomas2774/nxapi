@@ -16,6 +16,12 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('token', {
         describe: 'Nintendo Account session token',
         type: 'string',
+    }).option('json', {
+        describe: 'Output raw JSON',
+        type: 'boolean',
+    }).option('json-pretty-print', {
+        describe: 'Output pretty-printed JSON',
+        type: 'boolean',
     });
 }
 
@@ -32,6 +38,15 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const {moon, data} = await getPctlToken(storage, token);
 
     const devices = await moon.getDevices();
+
+    if (argv.jsonPrettyPrint) {
+        console.log(JSON.stringify(devices, null, 4));
+        return;
+    }
+    if (argv.json) {
+        console.log(JSON.stringify(devices));
+        return;
+    }
 
     const table = new Table({
         head: [

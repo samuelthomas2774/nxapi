@@ -196,6 +196,10 @@ nxapi pctl user
 ```sh
 # Show Nintendo Switch consoles in a table
 nxapi pctl devices
+
+# JSON
+nxapi pctl devices --json
+nxapi pctl devices --json-pretty-print
 ```
 
 #### Daily summaries
