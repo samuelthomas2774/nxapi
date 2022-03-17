@@ -1,12 +1,12 @@
 import * as util from 'util';
 import createDebug from 'debug';
 import * as crypto from 'crypto';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../util.js';
-import { getNintendoAccountSessionToken } from '../api/na.js';
-import { ZNCA_CLIENT_ID } from '../api/znc.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../../util.js';
+import { getNintendoAccountSessionToken } from '../../api/na.js';
+import { ZNCA_CLIENT_ID } from '../../api/znc.js';
 
-const debug = createDebug('cli:auth');
+const debug = createDebug('cli:nso:auth');
 
 export const command = 'auth';
 export const desc = 'Generate a link to login to a Nintendo Account';

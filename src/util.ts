@@ -15,7 +15,7 @@ import MoonApi from './api/moon.js';
 
 const debug = createDebug('cli');
 
-export const paths = getPaths('nintendo-znc');
+export const paths = getPaths('nxapi');
 
 export type YargsArguments<T extends yargs.Argv> = T extends yargs.Argv<infer R> ? R : any;
 export type Argv<T = {}> = yargs.Argv<T>;
@@ -52,7 +52,7 @@ export async function initStorage(dir: string) {
 
 export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string) {
     if (!token) {
-        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nintendo-znc token`.');
+        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi nso token`.');
         throw new Error('Invalid token');
     }
 
@@ -90,7 +90,7 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
 
 export async function getPctlToken(storage: persist.LocalStorage, token: string) {
     if (!token) {
-        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nintendo-znc pctl users add`.');
+        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi pctl auth`.');
         throw new Error('Invalid token');
     }
 

@@ -1,5 +1,5 @@
 {
-    "name": "nintendo-znc",
+    "name": "nxapi",
     "version": "1.0.0",
     "description": "",
     "author": "Samuel Elliott",
@@ -7,18 +7,18 @@
     "type": "module",
     "repository": {
         "type": "git",
-        "url": "git@gitlab.fancy.org.uk:samuel/nintendo-znc.git"
+        "url": "git@gitlab.fancy.org.uk:samuel/nxapi.git"
     },
     "bin": {
-        "nintendo-znc": "bin/nintendo-znc.js"
+        "nxapi": "bin/nxapi.js"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "cli": "node bin/nintendo-znc.js",
-        "build-macos-linux": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nintendo-znc.js\"",
-        "build-macosapp": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc.app -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nintendo-znc.js\" \"presence\"",
-        "build-windows": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc.exe -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nintendo-znc.js\"",
-        "start": "node bin/nintendo-znc.js presence"
+        "cli": "node bin/nxapi.js",
+        "build-macos-linux": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nxapi.js\"",
+        "build-macosapp": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc.app -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nxapi.js\" \"presence\"",
+        "build-windows": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nintendo-znc.exe -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nxapi.js\"",
+        "start": "node bin/nxapi.js presence"
     },
     "dependencies": {
         "cli-table": "^0.3.11",

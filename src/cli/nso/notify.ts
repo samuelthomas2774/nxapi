@@ -1,14 +1,14 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import notifier from 'node-notifier';
-import { CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
-import ZncApi from '../api/znc.js';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../util.js';
-import ZncProxyApi from '../api/znc-proxy.js';
+import { CurrentUser, Friend, Game, PresenceState } from '../../api/znc-types.js';
+import ZncApi from '../../api/znc.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
+import ZncProxyApi from '../../api/znc-proxy.js';
 
-const debug = createDebug('cli:notify');
-const debugFriends = createDebug('cli:notify:friends');
+const debug = createDebug('cli:nso:notify');
+const debugFriends = createDebug('cli:nso:notify:friends');
 
 export const command = 'notify';
 export const desc = 'Show notifications when friends come online without starting Discord Rich Presence';
@@ -46,8 +46,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
-        await storage.getItem('NintendoAccountToken.' + usernsid) ||
-        await storage.getItem('SessionToken');
+        await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     const i = new ZncNotifications(argv, storage, token, nso, data);

@@ -1,7 +1,7 @@
-nintendo-znc
+nxapi
 ===
 
-Set Discord Rich Presence and get notifications for Nintendo Switch friends using the Nintendo Switch Online app API.
+Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Includes Discord Rich Presence and friend notifications.
 
 ### Links
 

@@ -2,10 +2,10 @@ import createDebug from 'debug';
 import express from 'express';
 import * as net from 'net';
 import persist from 'node-persist';
-import { ActiveEvent, Announcement, CurrentUser, Friend, Presence, WebService } from '../api/znc-types.js';
-import ZncApi from '../api/znc.js';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../util.js';
+import { ActiveEvent, Announcement, CurrentUser, Friend, Presence, WebService } from '../../api/znc-types.js';
+import ZncApi from '../../api/znc.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
 import { ZncNotifications } from './notify.js';
 
 declare global {

@@ -1,11 +1,11 @@
 import createDebug from 'debug';
 // @ts-expect-error
 import Table from 'cli-table/lib/index.js';
-import { PresenceState } from '../api/znc-types.js';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, hrduration, initStorage, YargsArguments } from '../util.js';
+import { PresenceState } from '../../api/znc-types.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getToken, hrduration, initStorage, YargsArguments } from '../../util.js';
 
-const debug = createDebug('cli:friends');
+const debug = createDebug('cli:nso:friends');
 
 export const command = 'friends';
 export const desc = 'List Nintendo Switch friends';
@@ -35,8 +35,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
-        await storage.getItem('NintendoAccountToken.' + usernsid) ||
-        await storage.getItem('SessionToken');
+        await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     const announcements = await nso.getAnnouncements();

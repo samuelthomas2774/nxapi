@@ -2,16 +2,16 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import fetch from 'node-fetch';
-import { CurrentUser, Friend, Presence, PresenceState } from '../api/znc-types.js';
-import ZncApi from '../api/znc.js';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getDiscordPresence, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../util.js';
+import { CurrentUser, Friend, Presence, PresenceState } from '../../api/znc-types.js';
+import ZncApi from '../../api/znc.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getDiscordPresence, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
 import { ZncNotifications } from './notify.js';
-import ZncProxyApi from '../api/znc-proxy.js';
+import ZncProxyApi from '../../api/znc-proxy.js';
 
-const debug = createDebug('cli:presence');
-const debugProxy = createDebug('cli:presence:proxy');
-const debugDiscord = createDebug('cli:presence:discordrpc');
+const debug = createDebug('cli:nso:presence');
+const debugProxy = createDebug('cli:nso:presence:proxy');
+const debugDiscord = createDebug('cli:nso:presence:discordrpc');
 
 export const command = 'presence';
 export const desc = 'Start Discord Rich Presence';
@@ -42,7 +42,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'number',
         default: 30,
     }).option('presence-url', {
-        describe: 'URL to get user presence from, for use with `nintendo-znc http-server`',
+        describe: 'URL to get user presence from, for use with `nxapi nso http-server`',
         type: 'string',
     });
 }
@@ -74,8 +74,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
-        await storage.getItem('NintendoAccountToken.' + usernsid) ||
-        await storage.getItem('SessionToken');
+        await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     const i = new ZncDiscordPresence(argv, storage, token, nso, data);

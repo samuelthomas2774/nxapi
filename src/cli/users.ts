@@ -66,7 +66,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         const token: string | undefined = await storage.getItem('NintendoAccountToken.' + argv.user);
 
         if (!token) {
-            console.error('No session token for this user. Set a Nintendo Account session token by running `nintendo-znc token --select`.');
+            console.error('No session token for this user. Set a Nintendo Account session token by running `nxapi nso token --select` or `nxapi pctl token --select`.');
             throw new Error('Unknown user');
         }
 

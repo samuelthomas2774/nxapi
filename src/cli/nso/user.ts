@@ -1,8 +1,8 @@
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../util.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../../util.js';
 
-const debug = createDebug('cli:user');
+const debug = createDebug('cli:nso:user');
 
 export const command = 'user';
 export const desc = 'Get the authenticated Nintendo Account';
@@ -28,8 +28,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
-        await storage.getItem('NintendoAccountToken.' + usernsid) ||
-        await storage.getItem('SessionToken');
+        await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     if (argv.forceRefresh && 'expires_at' in data) {

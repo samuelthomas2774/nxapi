@@ -1,9 +1,9 @@
 import * as util from 'util';
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../util.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../../util.js';
 
-const debug = createDebug('cli:token');
+const debug = createDebug('cli:nso:token');
 
 export const command = 'token [token]';
 export const desc = 'Set the default Nintendo Account session token';

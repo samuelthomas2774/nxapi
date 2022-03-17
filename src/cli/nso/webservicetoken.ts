@@ -1,9 +1,8 @@
 import createDebug from 'debug';
-import fetch from 'node-fetch';
-import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../util.js';
+import type { Arguments as ParentArguments } from '../nso.js';
+import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../../util.js';
 
-const debug = createDebug('cli:announcements');
+const debug = createDebug('cli:nso:webservicetoken');
 
 export const command = 'webservicetoken <id>';
 export const desc = 'Get a token for a web service';
@@ -35,8 +34,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
-        await storage.getItem('NintendoAccountToken.' + usernsid) ||
-        await storage.getItem('SessionToken');
+        await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
     const announcements = await nso.getAnnouncements();
