@@ -4,6 +4,7 @@ import { ErrorResponse } from './util.js';
 
 const debugS2s = createDebug('api:s2s');
 const debugFlapg = createDebug('api:flapg');
+const debugZncaApi = createDebug('api:znca-api');
 
 export async function getLoginHash(token: string, timestamp: string | number) {
     debugS2s('Getting login hash');
@@ -56,6 +57,51 @@ export async function flapg(token: string, timestamp: string | number, guid: str
     return data.result;
 }
 
+export async function genf(url: string, token: string, timestamp: string | number, uuid: string, type: FlapgIid) {
+    debugZncaApi('Getting f parameter', {
+        url, token, timestamp, uuid,
+    });
+
+    const req: AndroidZncaFRequest = {
+        type,
+        token,
+        timestamp: '' + timestamp,
+        uuid,
+    };
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req),
+    });
+
+    const data = await response.json() as AndroidZncaFResponse | AndroidZncaFError;
+
+    if ('error' in data) {
+        debugZncaApi('Error getting f parameter "%s"', data.error);
+        throw new ErrorResponse('[znca-api] ' + data.error, response, data);
+    }
+
+    debugZncaApi('Got f parameter "%s"', data.f);
+
+    return data.f;
+}
+
+export async function genfc(url: string, token: string, timestamp: string | number, uuid: string, type: FlapgIid) {
+    const f = await genf(url, token, timestamp, uuid, type);
+
+    return {
+        f,
+        p1: token,
+        p2: '' + timestamp,
+        p3: uuid,
+
+        url,
+    };
+}
+
 export interface LoginHashApiResponse {
     hash: string;
 }
@@ -77,4 +123,17 @@ export interface FlapgApiResponse {
         p2: string;
         p3: string;
     };
+}
+
+export interface AndroidZncaFRequest {
+    type: FlapgIid;
+    token: string;
+    timestamp: string;
+    uuid: string;
+}
+export interface AndroidZncaFResponse {
+    f: string;
+}
+export interface AndroidZncaFError {
+    error: string;
 }

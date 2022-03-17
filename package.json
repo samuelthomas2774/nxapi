@@ -21,11 +21,13 @@
         "start": "node bin/nxapi.js presence"
     },
     "dependencies": {
+        "body-parser": "^1.19.2",
         "cli-table": "^0.3.11",
         "debug": "^4.3.3",
         "discord-rpc": "^4.0.1",
         "env-paths": "^3.0.0",
         "express": "^4.17.3",
+        "frida": "^15.1.17",
         "mkdirp": "^1.0.4",
         "node-fetch": "^3.2.2",
         "node-notifier": "^10.0.1",

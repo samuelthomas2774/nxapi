@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
-import { flapg, FlapgIid } from './f.js';
+import { flapg, FlapgIid, genfc } from './f.js';
 import { AccountLogin, ActiveEvent, Announcement, CurrentUser, Friends, WebService, WebServiceToken, ZncResponse } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
@@ -76,14 +76,16 @@ export default class ZncApi {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
-        const data = await flapg(nintendoAccountToken, timestamp, uuid, FlapgIid.APP);
+        const data = process.env.ZNCA_API_URL ?
+            await genfc(process.env.ZNCA_API_URL + '/f', nintendoAccountToken, timestamp, uuid, FlapgIid.APP) :
+            await flapg(nintendoAccountToken, timestamp, uuid, FlapgIid.APP);
 
         const req = {
             id,
             registrationToken: nintendoAccountToken,
             f: data.f,
-            requestId: data.p3,
-            timestamp: data.p2,
+            requestId: uuid,
+            timestamp,
         };
 
         return this.fetch<WebServiceToken>('/v2/Game/GetWebServiceToken', 'POST', JSON.stringify({
@@ -118,7 +120,9 @@ export default class ZncApi {
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
-        const flapgdata = await flapg(nintendoAccountToken.id_token, timestamp, uuid, FlapgIid.NSO);
+        const flapgdata = process.env.ZNCA_API_URL ?
+            await genfc(process.env.ZNCA_API_URL + '/f', nintendoAccountToken.id_token, timestamp, uuid, FlapgIid.NSO) :
+            await flapg(nintendoAccountToken.id_token, timestamp, uuid, FlapgIid.NSO);
 
         debug('Getting Nintendo Switch Online app token');
 
@@ -132,12 +136,12 @@ export default class ZncApi {
             },
             body: JSON.stringify({
                 parameter: {
-                    naIdToken: flapgdata.p1,
+                    naIdToken: nintendoAccountToken.id_token,
                     naBirthday: user.birthday,
                     naCountry: user.country,
                     language: user.language,
-                    timestamp: flapgdata.p2,
-                    requestId: flapgdata.p3,
+                    timestamp,
+                    requestId: uuid,
                     f: flapgdata.f,
                 },
             }),

@@ -171,6 +171,8 @@ curl --no-buffer "http://[::1]:12345/api/znc/presence/events?user=0123456789abcd
 
 The splatnet2statink and flapg APIs are used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to these APIs to generate some data that is required to authenticate the app. These APIs run the Nintendo Switch Online app in an Android emulator to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
 
+Alternatively nxapi includes a custom server using Frida on an Android device/emulator that can be used instead of these.
+
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
 
 ### Nintendo Switch Parental Controls
@@ -288,6 +290,39 @@ DEBUG=api:* nxapi ...
 
 # Show all debug logs
 DEBUG=* nxapi ...
+```
+
+#### znca API server
+
+A server for controlling the Nintendo Switch Online app on an Android device/emulator using Frida can be used instead of the splatnet2statink and flapg APIs.
+
+This requires:
+
+- adb is installed on the computer running nxapi
+- The Android device is running adbd as root or a su-like command can be used to escalate to root
+- The frida-server executable to be located at `/data/local/tmp/frida-server` on the Android device
+- The Nintendo Switch Online app is installed on the Android device
+
+The Android device must be constantly reachable using ADB. The server will exit if the device is unreachable.
+
+```sh
+# Start the server using the ADB server "android.local:5555" listening on all interfaces on a random port
+nxapi android-znca-api-server-frida android.local:5555
+
+# Start the server listening on a specific address/port
+# The `--listen` option can be used multiple times
+nxapi android-znca-api-server-frida android.local:5555 --listen "[::1]:12345"
+
+# Use a command to escalate to root to start frida-server and the Nintendo Switch Online app
+# "{cmd}" will be replaced with the path to a temporary script in double quotes
+nxapi android-znca-api-server-frida android.local:5555 --exec-command "/system/bin/su -c {cmd}"
+
+# Make API requests using curl
+curl --header "Content-Type: application/json" --data '{"type": "nso", "token": "...", "timestamp": "...", "uuid": "..."}' "http://[::1]:12345/api/znca/f"
+
+# Use the znca API server in other commands
+# This should be set when running any nso commands as the access token will be refreshed automatically when it expires
+ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
 ```
 
 ### Links
