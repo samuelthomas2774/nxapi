@@ -141,7 +141,7 @@ export class ZncNotifications {
         const newonlinefriends: (CurrentUser | Friend)[] = [];
 
         for (const friend of friends) {
-            const prev = this.onlinefriends.find(f => f.id === friend.id);
+            const prev = this.onlinefriends.find(f => f.nsaId === friend.nsaId);
             const lastpresence = prev?.presence;
             const online = friend.presence.state === PresenceState.ONLINE ||
                 friend.presence.state === PresenceState.PLAYING;
