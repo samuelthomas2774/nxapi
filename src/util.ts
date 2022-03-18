@@ -127,12 +127,7 @@ export function getTitleIdFromEcUrl(url: string) {
     return match?.[1] ?? null;
 }
 
-export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']['friendCode']): {
-    id: string;
-    title: string | null;
-    presence: DiscordRPC.Presence;
-    showTimestamp?: boolean;
-} {
+export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']['friendCode']): DiscordPresence {
     const titleid = getTitleIdFromEcUrl(game.shopUri);
     const title = titles.find(t => t.id === titleid) || defaultTitle;
 
@@ -151,7 +146,7 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
     return {
         id: title.client || defaultTitle.client,
         title: titleid,
-        presence: {
+        activity: {
             details: text[0],
             state: text[1],
             largeImageKey: title.largeImageKey ?? game.imageUri,
@@ -166,6 +161,25 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
         },
         showTimestamp: title.showTimestamp,
     };
+}
+
+export function getInactiveDiscordPresence(friendcode?: CurrentUser['links']['friendCode']): DiscordPresence {
+    return {
+        id: defaultTitle.client,
+        title: null,
+        activity: {
+            state: 'Not playing',
+            largeImageKey: 'nintendoswitch',
+            largeImageText: friendcode ? 'SW-' + friendcode.id : undefined,
+        },
+    };
+}
+
+export interface DiscordPresence {
+    id: string;
+    title: string | null;
+    activity: DiscordRPC.Presence;
+    showTimestamp?: boolean;
 }
 
 export interface Title {

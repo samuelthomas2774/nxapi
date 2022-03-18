@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 import { CurrentUser, Friend, Presence, PresenceState } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, getDiscordPresence, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, getDiscordPresence, getInactiveDiscordPresence, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
 import { ZncNotifications } from './notify.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
@@ -23,6 +23,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('token', {
         describe: 'Nintendo Account session token',
         type: 'string',
+    }).option('show-inactive-presence', {
+        describe: 'Show Discord presence if your console is online but you are not playing (only enable if you are the only user on all consoles your account exists on)',
+        type: 'boolean',
+        default: false,
     }).option('friend-naid', {
         describe: 'Friend\'s Nintendo Account ID',
         type: 'string',
@@ -165,24 +169,17 @@ class ZncDiscordPresence extends ZncNotifications {
     i = 0;
 
     async updatePresence(presence: Presence | null, friendcode?: CurrentUser['links']['friendCode']) {
-        debug('Presence %d state=%s, updatedAt=%s, logoutAt=%s', this.i++,
-            presence?.state,
-            new Date((presence?.updatedAt ?? 0) * 1000).toString(),
-            new Date((presence?.logoutAt ?? 0) * 1000).toString());
-        if (presence && 'name' in presence.game) {
-            debug('Title %s, id=%s, totalPlayTime=%d, firstPlayedAt=%s, sysDescription=%s',
-                presence.game.name,
-                getTitleIdFromEcUrl(presence.game.shopUri),
-                presence.game.totalPlayTime,
-                new Date((presence.game.firstPlayedAt ?? 0) * 1000).toString(),
-                JSON.stringify(presence.game.sysDescription));
-        }
-
         const online = presence?.state === PresenceState.ONLINE || presence?.state === PresenceState.PLAYING;
 
-        if (online && 'name' in presence.game) {
-            const discordpresence = getDiscordPresence(presence.game,
-                this.argv.friendCode === '' || this.argv.friendCode === '-' ? friendcode : this.forceFriendCode);
+        const show_presence =
+            (online && 'name' in presence.game) ||
+            (this.argv.showConsoleOnline && presence?.state === PresenceState.INACTIVE);
+
+        if (show_presence) {
+            const fc = this.argv.friendCode === '' || this.argv.friendCode === '-' ? friendcode : this.forceFriendCode;
+            const discordpresence = 'name' in presence.game ?
+                getDiscordPresence(presence.game, fc) :
+                getInactiveDiscordPresence(fc);
 
             if (this.rpc && this.rpc.id !== discordpresence.id) {
                 const client = this.rpc.client;
@@ -251,16 +248,16 @@ class ZncDiscordPresence extends ZncNotifications {
                 }
 
                 if (discordpresence.showTimestamp) {
-                    discordpresence.presence.startTimestamp = this.title.since;
+                    discordpresence.activity.startTimestamp = this.title.since;
                 }
             } else {
                 this.title = null;
             }
 
-            this.rpc.client.setActivity(discordpresence.presence);
+            this.rpc.client.setActivity(discordpresence.activity);
         }
 
-        if (!presence || !online || !('name' in presence.game)) {
+        if (!presence || !show_presence) {
             if (this.rpc) {
                 const client = this.rpc.client;
                 this.rpc = null;
