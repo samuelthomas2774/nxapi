@@ -17,7 +17,7 @@ declare global {
     }
 }
 
-const debug = createDebug('cli:http-server');
+const debug = createDebug('cli:nso:http-server');
 
 export const command = 'http-server';
 export const desc = 'Starts a HTTP server to access the Nintendo Switch Online app API';
@@ -46,6 +46,16 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const storage = await initStorage(argv.dataPath);
 
     const app = express();
+
+    app.use('/api/znc', (req, res, next) => {
+        console.log('[%s] %s %s HTTP/%s from %s, port %d%s, %s',
+            new Date(), req.method, req.url, req.httpVersion,
+            req.socket.remoteAddress, req.socket.remotePort,
+            req.headers['x-forwarded-for'] ? ', ' + req.headers['x-forwarded-for'] : '',
+            req.headers['user-agent']);
+
+        next();
+    });
 
     const localAuth: express.RequestHandler = async (req, res, next) => {
         if (argv.requireToken || !req.query.user) return next();
@@ -311,10 +321,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     });
 
     for (const address of argv.listen) {
-        const match = address.match(/^(?:((?:\d+\.){3}\d+)|\[(.*)\]):(\d+)$/);
-        if (!match || !net.isIP(match[1] || match[2])) throw new Error('Not a valid address/port');
+        const match = address.match(/^((?:((?:\d+\.){3}\d+)|\[(.*)\]):)(\d+)$/);
+        if (!match || (match[1] && !net.isIP(match[2] || match[3]))) throw new Error('Not a valid address/port');
 
-        const server = app.listen(parseInt(match[3]), match[1] || match[2]);
+        const server = app.listen(parseInt(match[4]), match[2] || match[3] || '::');
         server.on('listening', () => {
             const address = server.address() as net.AddressInfo;
             console.log('Listening on %s, port %d', address.address, address.port);

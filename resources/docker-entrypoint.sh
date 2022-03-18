@@ -2,4 +2,4 @@
 
 mkdir -p /data/android
 
-exec /app/bin/nxapi.js --data-path /data $@
+exec /app/bin/nxapi.js --data-path /data "$@"
