@@ -4,7 +4,7 @@ import notifier from 'node-notifier';
 import { CurrentUser, Friend, Game, PresenceState } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, hrduration, initStorage, SavedToken, YargsArguments } from '../../util.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
 const debug = createDebug('cli:nso:notify');
@@ -145,26 +145,42 @@ export class ZncNotifications {
             const lastpresence = prev?.presence;
             const online = friend.presence.state === PresenceState.ONLINE ||
                 friend.presence.state === PresenceState.PLAYING;
+            const wasonline = lastpresence?.state === PresenceState.ONLINE ||
+                lastpresence?.state === PresenceState.PLAYING;
 
-            if (!lastpresence && online) {
+            if (!wasonline && online) {
                 // Friend has come online
                 const currenttitle = friend.presence.game as Game;
 
-                debugFriends('%s is now online, title %s %s', friend.name,
-                    currenttitle.name, JSON.stringify(currenttitle.sysDescription));
+                debugFriends('%s is now online%s%s, title %s %s - played for %s since %s', friend.name,
+                    friend.presence.state === PresenceState.ONLINE ? '' : ' (' + friend.presence.state + ')',
+                    lastpresence ? ' (console was already online)' : '',
+                    currenttitle.name, JSON.stringify(currenttitle.sysDescription),
+                    hrduration(currenttitle.totalPlayTime),
+                    new Date((currenttitle.firstPlayedAt ?? 0) * 1000).toString());
 
                 this.onFriendOnline(friend, prev, initialRun);
 
                 newonlinefriends.push(friend);
-            } else if (lastpresence && !online) {
+
+                if (lastpresence) {
+                    // Friend's console was already online
+                }
+            } else if (wasonline && !online) {
                 // Friend has gone offline
                 const lasttitle = lastpresence.game as Game;
 
-                debugFriends('%s is now offline, was playing title %s %s', friend.name,
+                debugFriends('%s is now offline%s, was playing title %s %s', friend.name,
+                    friend.presence.state !== PresenceState.OFFLINE ? ' (console still online)' : '',
                     lasttitle.name, JSON.stringify(lasttitle.sysDescription));
 
                 this.onFriendOffline(friend, prev, initialRun);
-            } else if (lastpresence && online) {
+
+                if (friend.presence.state !== PresenceState.OFFLINE) {
+                    // Friend's console is still online
+                    newonlinefriends.push(friend);
+                }
+            } else if (wasonline && online) {
                 // Friend is still online
                 const lasttitle = lastpresence.game as Game;
                 const currenttitle = friend.presence.game as Game;
@@ -172,10 +188,14 @@ export class ZncNotifications {
                 if (getTitleIdFromEcUrl(lasttitle.shopUri) !== getTitleIdFromEcUrl(currenttitle.shopUri)) {
                     // Friend is playing a different title
 
-                    debugFriends('%s is now playing %s %s, was playing %s %s',
+                    debugFriends('%s title is now %s %s%s, was playing %s %s%s - played for %s since %s',
                         friend.name,
                         currenttitle.name, JSON.stringify(currenttitle.sysDescription),
-                        lasttitle.name, JSON.stringify(lasttitle.sysDescription));
+                        friend.presence.state === PresenceState.ONLINE ? '' : ' (' + friend.presence.state + ')',
+                        lasttitle.name, JSON.stringify(lasttitle.sysDescription),
+                        lastpresence.state === PresenceState.ONLINE ? '' : ' (' + lastpresence.state + ')',
+                        hrduration(currenttitle.totalPlayTime),
+                        new Date((currenttitle.firstPlayedAt ?? 0) * 1000).toString());
 
                     this.onFriendPlayingChangeTitle(friend, prev, initialRun);
                 } else if (
@@ -190,9 +210,33 @@ export class ZncNotifications {
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
 
                     this.onFriendTitleStateChange(friend, prev, initialRun);
+                } else if (
+                    lastpresence.state !== friend.presence.state ||
+                    lasttitle.sysDescription !== currenttitle.sysDescription
+                ) {
+                    // Presence state changed (between online/playing)
+
+                    debugFriends('%s title %s state changed%s, now %s %s, was %s %s',
+                        friend.name, currenttitle.name,
+                        friend.presence.state, JSON.stringify(currenttitle.sysDescription),
+                        lastpresence.state, JSON.stringify(lasttitle.sysDescription));
                 }
 
                 newonlinefriends.push(friend);
+            } else if (!lastpresence && friend.presence.state !== PresenceState.OFFLINE) {
+                // Friend's console is now online, but the user is not playing
+
+                debugFriends('%s\'s console is now online', friend.name);
+
+                newonlinefriends.push(friend);
+            } else if (lastpresence && friend.presence.state !== PresenceState.OFFLINE) {
+                // Friend's console is still online, the user is still not playing
+
+                newonlinefriends.push(friend);
+            } else if (lastpresence && friend.presence.state === PresenceState.OFFLINE) {
+                // Friend's console is now offline
+
+                debugFriends('%s\'s console is now offline', friend.name);
             }
         }
 
