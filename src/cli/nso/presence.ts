@@ -175,88 +175,6 @@ class ZncDiscordPresence extends ZncNotifications {
             (online && 'name' in presence.game) ||
             (this.argv.showConsoleOnline && presence?.state === PresenceState.INACTIVE);
 
-        if (show_presence) {
-            const fc = this.argv.friendCode === '' || this.argv.friendCode === '-' ? friendcode : this.forceFriendCode;
-            const discordpresence = 'name' in presence.game ?
-                getDiscordPresence(presence.game, fc) :
-                getInactiveDiscordPresence(fc);
-
-            if (this.rpc && this.rpc.id !== discordpresence.id) {
-                const client = this.rpc.client;
-                this.rpc = null;
-                await client.destroy();
-            }
-
-            if (!this.rpc) {
-                const client = new DiscordRPC.Client({transport: 'ipc'});
-                let attempts = 0;
-                let connected = false;
-
-                while (attempts < 10) {
-                    if (attempts === 0) debugDiscord('RPC connecting');
-                    else debugDiscord('RPC connecting, attempt %d', attempts + 1);
-
-                    try {
-                        await client.connect(discordpresence.id);
-                        debugDiscord('RPC connected');
-                        connected = true;
-                        break;
-                    } catch (err) {}
-
-                    attempts++;
-                    await new Promise(rs => setTimeout(rs, 5000));
-                }
-
-                if (!connected) throw new Error('Failed to connect to Discord');
-
-                // @ts-expect-error
-                client.transport.on('close', async () => {
-                    if (this.rpc?.client !== client) return;
-
-                    console.warn('[discordrpc] RPC client disconnected, attempting to reconnect');
-                    debugDiscord('RPC client disconnected');
-                    let attempts = 0;
-                    let connected = false;
-
-                    while (attempts < 10) {
-                        if (this.rpc?.client !== client) return;
-
-                        debugDiscord('RPC reconnecting, attempt %d', attempts + 1);
-                        try {
-                            await client.connect(discordpresence.id);
-                            console.warn('[discordrpc] RPC reconnected');
-                            debugDiscord('RPC reconnected');
-                            connected = true;
-                            break;
-                        } catch (err) {}
-
-                        attempts++;
-                        await new Promise(rs => setTimeout(rs, 5000));
-                    }
-
-                    if (!connected) throw new Error('Failed to reconnect to Discord');
-
-                    throw new Error('Discord disconnected');
-                });
-
-                this.rpc = {client, id: discordpresence.id};
-            }
-
-            if (discordpresence.title) {
-                if (discordpresence.title !== this.title?.id) {
-                    this.title = {id: discordpresence.title, since: Date.now()};
-                }
-
-                if (discordpresence.showTimestamp) {
-                    discordpresence.activity.startTimestamp = this.title.since;
-                }
-            } else {
-                this.title = null;
-            }
-
-            this.rpc.client.setActivity(discordpresence.activity);
-        }
-
         if (!presence || !show_presence) {
             if (this.rpc) {
                 const client = this.rpc.client;
@@ -265,7 +183,86 @@ class ZncDiscordPresence extends ZncNotifications {
             }
 
             this.title = null;
+            return;
         }
+
+        const fc = this.argv.friendCode === '' || this.argv.friendCode === '-' ? friendcode : this.forceFriendCode;
+        const discordpresence = 'name' in presence.game ?
+            getDiscordPresence(presence.game, fc) :
+            getInactiveDiscordPresence(fc);
+
+        if (this.rpc && this.rpc.id !== discordpresence.id) {
+            const client = this.rpc.client;
+            this.rpc = null;
+            await client.destroy();
+        }
+
+        if (!this.rpc) {
+            const client = new DiscordRPC.Client({transport: 'ipc'});
+            let attempts = 0;
+            let connected = false;
+
+            while (attempts < 10) {
+                if (attempts === 0) debugDiscord('RPC connecting');
+                else debugDiscord('RPC connecting, attempt %d', attempts + 1);
+
+                try {
+                    await client.connect(discordpresence.id);
+                    debugDiscord('RPC connected');
+                    connected = true;
+                    break;
+                } catch (err) {}
+
+                attempts++;
+                await new Promise(rs => setTimeout(rs, 5000));
+            }
+
+            if (!connected) throw new Error('Failed to connect to Discord');
+
+            // @ts-expect-error
+            client.transport.on('close', async () => {
+                if (this.rpc?.client !== client) return;
+
+                debugDiscord('RPC client disconnected, attempting to reconnect');
+                let attempts = 0;
+                let connected = false;
+
+                while (attempts < 10) {
+                    if (this.rpc?.client !== client) return;
+
+                    debugDiscord('RPC reconnecting, attempt %d', attempts + 1);
+                    try {
+                        await client.connect(discordpresence.id);
+                        debugDiscord('RPC reconnected');
+                        connected = true;
+                        break;
+                    } catch (err) {}
+
+                    attempts++;
+                    await new Promise(rs => setTimeout(rs, 5000));
+                }
+
+                if (!connected) throw new Error('Failed to reconnect to Discord');
+
+                throw new Error('Discord disconnected');
+            });
+
+            this.rpc = {client, id: discordpresence.id};
+        }
+
+        if (discordpresence.title) {
+            if (discordpresence.title !== this.title?.id) {
+                this.title = {id: discordpresence.title, since: Date.now()};
+            }
+
+            if (discordpresence.showTimestamp) {
+                discordpresence.activity.startTimestamp = this.title.since;
+            }
+        } else {
+            this.title = null;
+        }
+
+        this.rpc.client.setActivity(discordpresence.activity);
     }
 
     async update() {

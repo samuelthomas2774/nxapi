@@ -43,11 +43,19 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const devices = await moon.getDevices();
 
-    for (const device of argv.device ?? devices.items.map(d => d.deviceId)) {
-        console.warn('Downloading summaries for device %s', device);
+    for (const id of argv.device ?? []) {
+        if (!devices.items.find(d => d.deviceId === id)) {
+            console.warn('Device %s does not exist or is not linked to the authenticated user');
+        }
+    }
 
-        await dumpMonthlySummariesForDevice(moon, argv.directory, '' + device);
-        await dumpDailySummariesForDevice(moon, argv.directory, '' + device);
+    for (const device of devices.items) {
+        if (argv.device && !argv.device.includes(device.deviceId)) continue;
+
+        console.warn('Downloading summaries for device %s (%s)', device.label, device.deviceId);
+
+        await dumpMonthlySummariesForDevice(moon, argv.directory, device.deviceId);
+        await dumpDailySummariesForDevice(moon, argv.directory, device.deviceId);
     }
 }
 

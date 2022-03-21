@@ -48,7 +48,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         throw new Error('Invalid web service');
     }
 
-    const webserviceToken = await nso.getWebServiceToken(argv.id, data.credential.accessToken);
+    const webserviceToken = await nso.getWebServiceToken(argv.id);
 
     // https://app.splatoon2.nintendo.net/?lang=en-GB&na_country=GB&na_lang=en-GB
     const url = new URL(webservice.uri);

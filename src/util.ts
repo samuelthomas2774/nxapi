@@ -140,7 +140,7 @@ export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']
 
     if (game.totalPlayTime >= 60) {
         text.push('Played for ' + hrduration(game.totalPlayTime) +
-            ' since ' + new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB'));
+            ' since ' + (game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB') : 'now'));
     }
 
     return {

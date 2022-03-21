@@ -231,7 +231,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     app.get('/api/znc/webservice/:id/token', nsoAuth, async (req, res) => {
         try {
-            const response = await req.znc!.getWebServiceToken(req.params.id, req.zncAuth!.credential.accessToken);
+            const response = await req.znc!.getWebServiceToken(req.params.id);
 
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({

@@ -73,6 +73,7 @@ export interface Game {
     imageUri: string;
     shopUri: string;
     totalPlayTime: number;
+    /** 0 if never played before */
     firstPlayedAt: number;
     sysDescription: string;
 }

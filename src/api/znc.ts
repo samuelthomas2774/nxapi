@@ -72,17 +72,17 @@ export default class ZncApi {
         return this.fetch<CurrentUser>('/v3/User/ShowSelf', 'POST', '{"parameter":{}}');
     }
 
-    async getWebServiceToken(id: string, nintendoAccountToken: string) {
+    async getWebServiceToken(id: string) {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
         const data = process.env.ZNCA_API_URL ?
-            await genfc(process.env.ZNCA_API_URL + '/f', nintendoAccountToken, timestamp, uuid, FlapgIid.APP) :
-            await flapg(nintendoAccountToken, timestamp, uuid, FlapgIid.APP);
+            await genfc(process.env.ZNCA_API_URL + '/f', this.token, timestamp, uuid, FlapgIid.APP) :
+            await flapg(this.token, timestamp, uuid, FlapgIid.APP);
 
         const req = {
             id,
-            registrationToken: nintendoAccountToken,
+            registrationToken: this.token,
             f: data.f,
             requestId: uuid,
             timestamp,
