@@ -5,7 +5,8 @@ import fetch from 'node-fetch';
 import { CurrentUser, Friend, Presence, PresenceState } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, getDiscordPresence, getInactiveDiscordPresence, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
+import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { ZncNotifications } from './notify.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
@@ -188,8 +189,8 @@ class ZncDiscordPresence extends ZncNotifications {
 
         const fc = this.argv.friendCode === '' || this.argv.friendCode === '-' ? friendcode : this.forceFriendCode;
         const discordpresence = 'name' in presence.game ?
-            getDiscordPresence(presence.game, fc) :
-            getInactiveDiscordPresence(fc);
+            getDiscordPresence(presence.state, presence.game, fc) :
+            getInactiveDiscordPresence(presence.state, presence.logoutAt, fc);
 
         if (this.rpc && this.rpc.id !== discordpresence.id) {
             const client = this.rpc.client;

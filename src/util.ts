@@ -2,14 +2,12 @@ import * as path from 'path';
 import * as yargs from 'yargs';
 import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
-import DiscordRPC from 'discord-rpc';
 import persist from 'node-persist';
 import getPaths from 'env-paths';
 import { FlapgApiResponse } from './api/f.js';
 import { NintendoAccountToken, NintendoAccountUser } from './api/na.js';
-import { AccountLogin, CurrentUser, Game } from './api/znc-types.js';
+import { AccountLogin } from './api/znc-types.js';
 import ZncApi from './api/znc.js';
-import titles, { defaultTitle } from './titles.js';
 import ZncProxyApi from './api/znc-proxy.js';
 import MoonApi from './api/moon.js';
 
@@ -50,6 +48,14 @@ export async function initStorage(dir: string) {
     return storage;
 }
 
+export async function getToken(storage: persist.LocalStorage, token: string, proxy_url: string): Promise<{
+    nso: ZncProxyApi;
+    data: SavedToken;
+}>
+export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string): Promise<{
+    nso: ZncApi;
+    data: SavedToken;
+}>
 export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string) {
     if (!token) {
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi nso token`.');
@@ -125,73 +131,6 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string)
 export function getTitleIdFromEcUrl(url: string) {
     const match = url.match(/^https:\/\/ec\.nintendo\.com\/apps\/([0-9a-f]{16})\//);
     return match?.[1] ?? null;
-}
-
-export function getDiscordPresence(game: Game, friendcode?: CurrentUser['links']['friendCode']): DiscordPresence {
-    const titleid = getTitleIdFromEcUrl(game.shopUri);
-    const title = titles.find(t => t.id === titleid) || defaultTitle;
-
-    const text = [];
-
-    if (title.titleName === true) text.push(game.name);
-    else if (title.titleName) text.push(title.titleName);
-
-    if (game.sysDescription) text.push(game.sysDescription);
-
-    if (game.totalPlayTime >= 60) {
-        text.push('Played for ' + hrduration(game.totalPlayTime) +
-            ' since ' + (game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB') : 'now'));
-    }
-
-    return {
-        id: title.client || defaultTitle.client,
-        title: titleid,
-        activity: {
-            details: text[0],
-            state: text[1],
-            largeImageKey: title.largeImageKey ?? game.imageUri,
-            largeImageText: friendcode ? 'SW-' + friendcode.id : undefined,
-            smallImageKey: title.smallImageKey,
-            buttons: game.shopUri ? [
-                {
-                    label: 'Nintendo eShop',
-                    url: game.shopUri,
-                },
-            ] : [],
-        },
-        showTimestamp: title.showTimestamp,
-    };
-}
-
-export function getInactiveDiscordPresence(friendcode?: CurrentUser['links']['friendCode']): DiscordPresence {
-    return {
-        id: defaultTitle.client,
-        title: null,
-        activity: {
-            state: 'Not playing',
-            largeImageKey: 'nintendoswitch',
-            largeImageText: friendcode ? 'SW-' + friendcode.id : undefined,
-        },
-    };
-}
-
-export interface DiscordPresence {
-    id: string;
-    title: string | null;
-    activity: DiscordRPC.Presence;
-    showTimestamp?: boolean;
-}
-
-export interface Title {
-    /** Lowercase hexadecimal title ID */
-    id: string;
-    /** Discord client ID */
-    client: string;
-
-    titleName?: string | true;
-    largeImageKey?: string;
-    smallImageKey?: string;
-    showTimestamp?: boolean;
 }
 
 export function hrduration(duration: number, short = false) {

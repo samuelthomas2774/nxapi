@@ -4,6 +4,7 @@ export const defaultTitle: Title = {
     id: '0000000000000000',
     client: '950883021165330493',
     titleName: true,
+    showPlayingOnline: true,
 };
 
 const titles: Title[] = [
@@ -12,18 +13,21 @@ const titles: Title[] = [
         id: '0100f8f0000a2000',
         client: '950886725398429726',
         largeImageKey: '0100f8f0000a2000',
+        showPlayingOnline: true,
     },
     {
         // Splatoon 2 [The Americas]
         id: '01003bc0000a0000',
         client: '950886725398429726',
         largeImageKey: '0100f8f0000a2000',
+        showPlayingOnline: true,
     },
     {
         // Splatoon 2 [Japan]
         id: '01003c700009c000',
         client: '950886725398429726',
         largeImageKey: '01003c700009c000',
+        showPlayingOnline: true,
     },
 
     {
