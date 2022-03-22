@@ -2,12 +2,12 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import fetch from 'node-fetch';
-import { CurrentUser, Friend, Presence, PresenceState } from '../../api/znc-types.js';
+import { CurrentUser, Friend, Presence, PresenceState, ZncSuccessResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
-import { ZncNotifications } from './notify.js';
+import { handleEnableSplatNet2Monitoring, ZncNotifications } from './notify.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
 const debug = createDebug('cli:nso:presence');
@@ -29,7 +29,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'boolean',
         default: false,
     }).option('friend-naid', {
-        describe: 'Friend\'s Nintendo Account ID',
+        describe: 'Friend\'s Nintendo Switch account ID',
         type: 'string',
     }).option('friend-code', {
         describe: 'Friend code',
@@ -49,6 +49,40 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('presence-url', {
         describe: 'URL to get user presence from, for use with `nxapi nso http-server`',
         type: 'string',
+    }).option('splatnet2-monitor-directory', {
+        describe: 'Directory to write SplatNet 2 record data to',
+        type: 'string',
+    }).option('splatnet2-monitor-profile-image', {
+        describe: 'Include profile image',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet2-monitor-favourite-stage', {
+        describe: 'Favourite stage to include on profile image',
+        type: 'string',
+    }).option('splatnet2-monitor-favourite-colour', {
+        describe: 'Favourite colour to include on profile image',
+        type: 'string',
+    }).option('splatnet2-monitor-battles', {
+        describe: 'Include regular/ranked/private/festival battle results',
+        type: 'boolean',
+        default: true,
+    }).option('splatnet2-monitor-battle-summary-image', {
+        describe: 'Include regular/ranked/private/festival battle summary image',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet2-monitor-battle-images', {
+        describe: 'Include regular/ranked/private/festival battle result images',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet2-monitor-coop', {
+        describe: 'Include coop (Salmon Run) results',
+        type: 'boolean',
+        default: true,
+    }).option('splatnet2-monitor-update-interval', {
+        describe: 'Update interval in seconds',
+        type: 'number',
+        // 3 minutes - the monitor is only active while the authenticated user is playing Splatoon 2 online
+        default: 3 * 60,
     });
 }
 
@@ -56,15 +90,34 @@ type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.presenceUrl) {
-        if (argv.token) throw new Error('--presence-url not compatible with --user');
-        if (argv.token) throw new Error('--presence-url not compatible with --token');
         if (argv.friendNaid) throw new Error('--presence-url not compatible with --friend-naid');
         if (argv.userNotifications) throw new Error('--presence-url not compatible with --user-notifications');
         if (argv.friendNotifications) throw new Error('--presence-url not compatible with --user-notifications');
 
         const i = new ZncProxyDiscordPresence(argv, argv.presenceUrl);
 
-        console.warn('Not authenticated; using znc proxy');
+        if (argv.splatnet2MonitorDirectory) {
+            const storage = await initStorage(argv.dataPath);
+
+            const usernsid = argv.user ?? await storage.getItem('SelectedUser');
+            const token: string = argv.token ||
+                await storage.getItem('NintendoAccountToken.' + usernsid);
+            const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
+
+            console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
+                data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+            console.warn('SplatNet 2 monitoring is enabled for %s (NA %s, NSO %s), but using znc proxy for ' +
+                'presence. The presence URL must return the presence of the authenticated user for SplatNet 2 ' +
+                'monitoring to work.',
+                data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+
+            i.splatnet2_monitors.set(argv.presenceUrl, handleEnableSplatNet2Monitoring(argv, storage, token));
+        } else {
+            if (argv.user) throw new Error('--presence-url not compatible with --user');
+            if (argv.token) throw new Error('--presence-url not compatible with --token');
+
+            console.warn('Not authenticated; using znc proxy');
+        }
 
         await i.init();
 
@@ -86,6 +139,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+
+    if (argv.splatnet2MonitorDirectory) {
+        if (argv.friendNaid) {
+            console.warn('SplatNet 2 monitoring is enabled, but --friend-naid is set. SplatNet 2 records will only be downloaded when the authenticated user is playing Splatoon 2 online, regardless of the --friend-naid user.');
+        }
+
+        i.splatnet2_monitors.set(data.nsoAccount.user.nsaId, handleEnableSplatNet2Monitoring(argv, storage, token));
+    }
 
     await i.init();
 
@@ -132,6 +193,8 @@ class ZncDiscordPresence extends ZncNotifications {
             await this.nso.getActiveEvent();
         }
 
+        let user: ZncSuccessResponse<CurrentUser> | null = null;
+
         if (this.argv.friendNaid) {
             const friend = friends.result.friends.find(f => f.nsaId === this.argv.friendNaid);
 
@@ -150,7 +213,7 @@ class ZncDiscordPresence extends ZncNotifications {
 
             await this.updatePresence(friend.presence);
         } else {
-            const user = await this.nso.getCurrentUser();
+            user = await this.nso.getCurrentUser();
 
             if (this.argv.friendNotifications) {
                 await this.updateFriendsStatusForNotifications(this.argv.userNotifications ?
@@ -160,6 +223,12 @@ class ZncDiscordPresence extends ZncNotifications {
             }
 
             await this.updatePresence(user.result.presence, user.result.links.friendCode);
+        }
+
+        if (this.argv.splatnet2MonitorDirectory) {
+            if (!user) user = await this.nso.getCurrentUser();
+
+            await this.updatePresenceForSplatNet2Monitors([user.result]);
         }
 
         await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
@@ -267,6 +336,8 @@ class ZncDiscordPresence extends ZncNotifications {
     }
 
     async update() {
+        let user: CurrentUser | null = null;
+
         if (this.argv.friendNaid) {
             if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
             const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
@@ -303,11 +374,11 @@ class ZncDiscordPresence extends ZncNotifications {
 
             await this.updatePresence(friend.presence);
         } else {
-            const user = !(this.nso instanceof ZncProxyApi) ?
-                await this.nso.getCurrentUser() : {result: {
+            user = !(this.nso instanceof ZncProxyApi) ?
+                (await this.nso.getCurrentUser()).result : {
                     ...this.data.nsoAccount.user,
                     presence: await this.nso.fetch<Presence>('/user/presence'),
-                }};
+                };
 
             if (this.argv.friendNotifications) {
                 if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
@@ -315,12 +386,18 @@ class ZncDiscordPresence extends ZncNotifications {
                 if (!(this.nso instanceof ZncProxyApi)) await this.nso.getWebServices();
     
                 await this.updateFriendsStatusForNotifications(this.argv.userNotifications ?
-                    [user.result, ...friends.result.friends] : friends.result.friends);
+                    [user, ...friends.result.friends] : friends.result.friends);
             } else if (this.argv.userNotifications) {
-                await this.updateFriendsStatusForNotifications([user.result]);
+                await this.updateFriendsStatusForNotifications([user]);
             }
 
-            await this.updatePresence(user.result.presence, user.result.links.friendCode);
+            await this.updatePresence(user.presence, user.links.friendCode);
+        }
+
+        if (this.argv.splatnet2MonitorDirectory) {
+            if (!user) user = (await this.nso.getCurrentUser()).result;
+
+            await this.updatePresenceForSplatNet2Monitors([user]);
         }
     }
 }
@@ -349,5 +426,6 @@ class ZncProxyDiscordPresence extends ZncDiscordPresence {
         const presence = await response.json() as Presence;
 
         await this.updatePresence(presence);
+        await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
     }
 }

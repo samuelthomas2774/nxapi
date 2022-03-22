@@ -1,14 +1,17 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import notifier from 'node-notifier';
-import { CurrentUser, Friend, Game, PresenceState } from '../../api/znc-types.js';
+import { CurrentUser, Friend, Game, Presence, PresenceState, ZncSuccessResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, hrduration, initStorage, SavedToken, YargsArguments } from '../../util.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
+import { SplatNet2RecordsMonitor } from '../splatnet2/monitor.js';
+import { getIksmToken } from '../splatnet2/util.js';
 
 const debug = createDebug('cli:nso:notify');
 const debugFriends = createDebug('cli:nso:notify:friends');
+const debugSplatnet2 = createDebug('cli:nso:notify:splatnet2-monitor');
 
 export const command = 'notify';
 export const desc = 'Show notifications when friends come online without starting Discord Rich Presence';
@@ -32,14 +35,48 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Update interval in seconds',
         type: 'number',
         default: 30,
+    }).option('splatnet2-monitor-directory', {
+        describe: 'Directory to write SplatNet 2 record data to',
+        type: 'string',
+    }).option('splatnet2-monitor-profile-image', {
+        describe: 'Include profile image',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet2-monitor-favourite-stage', {
+        describe: 'Favourite stage to include on profile image',
+        type: 'string',
+    }).option('splatnet2-monitor-favourite-colour', {
+        describe: 'Favourite colour to include on profile image',
+        type: 'string',
+    }).option('splatnet2-monitor-battles', {
+        describe: 'Include regular/ranked/private/festival battle results',
+        type: 'boolean',
+        default: true,
+    }).option('splatnet2-monitor-battle-summary-image', {
+        describe: 'Include regular/ranked/private/festival battle summary image',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet2-monitor-battle-images', {
+        describe: 'Include regular/ranked/private/festival battle result images',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet2-monitor-coop', {
+        describe: 'Include coop (Salmon Run) results',
+        type: 'boolean',
+        default: true,
+    }).option('splatnet2-monitor-update-interval', {
+        describe: 'Update interval in seconds',
+        type: 'number',
+        // 3 minutes - the monitor is only active while the authenticated user is playing Splatoon 2 online
+        default: 3 * 60,
     });
 }
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    if (!argv.userNotifications && !argv.friendNotifications) {
-        throw new Error('Must enable either user or friend notifications');
+    if (!argv.userNotifications && !argv.friendNotifications && !argv.splatnet2MonitorDirectory) {
+        throw new Error('Must enable either user notifications, friend notifications, or SplatNet 2 monitoring');
     }
 
     const storage = await initStorage(argv.dataPath);
@@ -54,6 +91,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
+    if (argv.splatnet2MonitorDirectory) {
+        console.warn('SplatNet 2 monitoring enabled for %s (NA %s, NSO %s) - SplatNet 2 records will be ' +
+            'downloaded when this user is playing Splatoon 2 online.',
+            data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
+        i.splatnet2_monitors.set(data.nsoAccount.user.nsaId, handleEnableSplatNet2Monitoring(argv, storage, token));
+    }
+
     await i.init();
 
     while (true) {
@@ -62,6 +106,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 }
 
 export class ZncNotifications {
+    splatnet2_monitors = new Map<string, EmbeddedSplatNet2Monitor | (() => Promise<EmbeddedSplatNet2Monitor>)>();
+
     constructor(
         readonly argv: ArgumentsCamelCase<Arguments>,
         public storage: persist.LocalStorage,
@@ -79,13 +125,21 @@ export class ZncNotifications {
             const activeevent = await this.nso.getActiveEvent();
         }
 
+        let user: ZncSuccessResponse<CurrentUser> | null = null;
+
         if (this.argv.userNotifications) {
-            const user = await this.nso.getCurrentUser();
+            user = await this.nso.getCurrentUser();
 
             await this.updateFriendsStatusForNotifications(this.argv.friendNotifications ?
                 [user.result, ...friends.result.friends] : [user.result]);
-        } else {
+        } else if (this.argv.friendNotifications) {
             await this.updateFriendsStatusForNotifications(friends.result.friends);
+        }
+
+        if (this.argv.splatnet2MonitorDirectory) {
+            if (!user) user = await this.nso.getCurrentUser();
+
+            await this.updatePresenceForSplatNet2Monitors([user.result]);
         }
 
         await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
@@ -243,6 +297,40 @@ export class ZncNotifications {
         this.onlinefriends = newonlinefriends;
     }
 
+    async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
+        for (const friend of friends) {
+            await this.updatePresenceForSplatNet2Monitor(friend.presence, friend.nsaId, friend.name);
+        }
+    }
+
+    async updatePresenceForSplatNet2Monitor(presence: Presence, nsa_id: string, name?: string) {
+        const playing = presence.state === PresenceState.PLAYING;
+        const monitor = this.splatnet2_monitors.get(nsa_id);
+
+        if (playing && monitor) {
+            const currenttitle = presence.game as Game;
+            const titleid = getTitleIdFromEcUrl(currenttitle.shopUri);
+
+            if (titleid && EmbeddedSplatNet2Monitor.title_ids.includes(titleid)) {
+                if ('enable' in monitor) {
+                    monitor.enable();
+                    if (!monitor.enabled) debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
+                } else {
+                    const m = await monitor.call(null);
+                    this.splatnet2_monitors.set(nsa_id, m);
+                    m.enable();
+                    debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
+                }
+            } else if ('disable' in monitor) {
+                if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
+                monitor.disable();
+            }
+        } else if (monitor && 'disable' in monitor) {
+            if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
+            monitor.disable();
+        }
+    }
+
     async update() {
         debug('Updating presence');
 
@@ -292,4 +380,80 @@ export class ZncNotifications {
             }
         }
     }
+}
+
+export class EmbeddedSplatNet2Monitor extends SplatNet2RecordsMonitor {
+    static title_ids = [
+        '0100f8f0000a2000', // Europe
+        '01003bc0000a0000', // The Americas
+        '01003c700009c000', // Japan
+    ];
+
+    enable() {
+        if (this._running !== 0) return;
+        this._run();
+    }
+
+    disable() {
+        this._running = 0;
+    }
+
+    get enabled() {
+        return this._running !== 0;
+    }
+
+    private _running = 0;
+
+    private async _run() {
+        this._running++;
+        const i = this._running;
+
+        try {
+            await this.init();
+
+            while (i === this._running) {
+                await this.loop();
+            }
+
+            // Run one more time after the loop ends
+            await this.loop();
+        } finally {
+            this._running = 0;
+        }
+    }
+}
+
+export function handleEnableSplatNet2Monitoring(
+    argv: ArgumentsCamelCase<Arguments>, storage: persist.LocalStorage, token: string
+) {
+    return async () => {
+        const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl);
+
+        const records = await splatnet.getRecords();
+        const stages = await splatnet.getStages();
+
+        const i = new EmbeddedSplatNet2Monitor(storage, token, splatnet, stages, argv.splatnet2MonitorDirectory!, argv.zncProxyUrl);
+
+        i.update_interval = argv.splatnet2MonitorUpdateInterval;
+
+        i.profile_image = argv.splatnet2MonitorProfileImage;
+        i.favourite_stage = argv.splatnet2MonitorFavouriteStage;
+        i.favourite_colour = argv.splatnet2MonitorFavouriteColour;
+
+        i.results = argv.splatnet2MonitorBattles;
+        i.results_summary_image = argv.splatnet2MonitorBattleSummaryImage;
+        i.result_images = argv.splatnet2MonitorBattleImages;
+        i.coop_results = argv.splatnet2MonitorCoop;
+
+        i.cached_records = records;
+
+        console.log('Player %s (Splatoon 2 ID %s, NSA ID %s) level %d',
+            records.records.player.nickname,
+            records.records.unique_id,
+            records.records.player.principal_id,
+            records.records.player.player_rank,
+            records.records.player.player_type);
+
+        return i;
+    };
 }

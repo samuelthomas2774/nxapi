@@ -38,13 +38,13 @@ interface Challenges {
     archived_challenges: Challenge[];
     next_challenge_octa: OctaChallenge;
 }
-interface Challenge {
+export interface Challenge {
     image: string;
     key: string;
     name: string;
     paint_points: number;
 }
-interface OctaChallenge {
+export interface OctaChallenge {
     key: string;
     paint_points: number;
     url: null;
@@ -172,7 +172,7 @@ export interface Stages {
     stages: Stage[];
 }
 
-interface Stage {
+export interface Stage {
     image: string;
     name: string;
     id: string;
@@ -205,7 +205,7 @@ export interface Timeline {
         next_challenge: Challenge;
         total_paint_point: number;
         importance: number;
-        last_archived_challenge: Challenge;
+        last_archived_challenge?: Challenge;
     };
     schedule: {
         schedules: {
@@ -447,7 +447,7 @@ interface FestivalResults1 {
     };
 }
 
-/** GET /league_match_ranking/{league}/ALL */
+/** GET /league_match_ranking/{league}/{region} */
 export interface LeagueMatchRankings {
     start_time: number;
     league_type: {
@@ -491,22 +491,45 @@ export interface Results {
     };
 }
 
-interface MatchResults {
+type MatchResults = RegularMatchResults | RankedMatchResults;
+interface BaseMatchResults {
     battle_number: string;
-    my_team_percentage: number;
     type: string;
     start_time: number;
-    win_meter: number;
     player_result: PlayerResult;
     rule: Rule;
     star_rank: number;
     stage: Stage;
-    other_team_percentage: number;
     other_team_result: TeamResult;
     weapon_paint_point: number;
     player_rank: number;
     game_mode: GameMode;
     my_team_result: TeamResult;
+}
+interface RegularMatchResults extends BaseMatchResults {
+    type: 'regular';
+    my_team_percentage: number;
+    other_team_percentage: number;
+    win_meter: number;
+}
+interface RankedMatchResults extends BaseMatchResults {
+    type: 'gachi';
+    player_result: SelfRankedPlayerResult;
+    my_team_count: number;
+    other_team_count: number;
+    estimate_x_power: null;
+    elapsed_time: number;
+    rank: null;
+    crown_players: null;
+    udemae: {
+        is_x: boolean;
+        is_number_reached: boolean;
+        s_plus_number: null;
+        name: null;
+        number: number;
+    };
+    estimate_gachi_power: null;
+    x_power: null;
 }
 interface PlayerResult {
     kill_count: number;
@@ -516,6 +539,26 @@ interface PlayerResult {
     assist_count: number;
     sort_score: number;
     game_paint_point: number;
+}
+interface RankedPlayerResult extends PlayerResult {
+    player: PlayerResult['player'] & {
+        udemae: {
+            name: null;
+            s_plus_number: null;
+            is_x: boolean;
+        };
+    };
+}
+interface SelfRankedPlayerResult extends PlayerResult {
+    player: PlayerResult['player'] & {
+        udemae: {
+            name: null;
+            s_plus_number: null;
+            number: number; // -1;
+            is_number_reached: boolean;
+            is_x: boolean;
+        };
+    };
 }
 interface Rule {
     multiline_name: string;
@@ -532,9 +575,14 @@ interface TeamResult {
 }
 
 /** GET /results/1 */
-export interface Result extends MatchResults {
+export type Result = RegularResult | RankedResult;
+export interface RegularResult extends RegularMatchResults {
     other_team_members: PlayerResult[];
     my_team_members: PlayerResult[];
+}
+export interface RankedResult extends RankedMatchResults {
+    other_team_members: RankedPlayerResult[];
+    my_team_members: RankedPlayerResult[];
 }
 
 /** GET /coop_results */
@@ -678,4 +726,13 @@ export interface ShareResponse {
     url: string;
     hashtags: string[];
     text: string;
+}
+
+export interface ResultWithPlayerNicknameAndIcons {
+    result: Result;
+    nickname_and_icons: NicknameAndIcon[];
+}
+export interface CoopResultWithPlayerNicknameAndIcons {
+    result: CoopResult;
+    nickname_and_icons: NicknameAndIcon[];
 }

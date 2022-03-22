@@ -196,6 +196,136 @@ Alternatively nxapi includes a custom server using Frida on an Android device/em
 
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
 
+### SplatNet 2
+
+All SplatNet 2 commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-iksm-session`, however this will cause commands to fail if there isn't a valid SplatNet 2 token.
+
+#### User
+
+```sh
+# Show the authenticated SplatNet 2 user
+nxapi splatnet2 user
+```
+
+#### Download user records
+
+```sh
+# Download user records to data/splatnet2
+# Data that already exists will not be redownloaded
+nxapi splatnet2 dump-records data/splatnet2
+# Don't include user records (when downloading other data)
+nxapi splatnet2 dump-records data/splatnet2 --no-user-records
+
+# Include lifetime inkage challenge images
+nxapi splatnet2 dump-records data/splatnet2 --challenges
+
+# Include profile image (share button on the home page)
+nxapi splatnet2 dump-records data/splatnet2 --profile-image
+nxapi splatnet2 dump-records data/splatnet2 --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
+
+# Download user records even if they already exist and haven't been updated
+nxapi splatnet2 dump-records data/splatnet2 --no-new-records
+
+# Include hero (Octo Canyon) records
+# If this option is included hero records will always be downloaded even if they haven't been updated
+nxapi splatnet2 dump-records data/splatnet2 --hero-records
+# Only download hero records
+nxapi splatnet2 dump-records data/splatnet2 --no-user-records --hero-records
+
+# Include timeline (CPOD FM on the home page)
+# If this option is included the timeline will always be downloaded even if they haven't been updated
+nxapi splatnet2 dump-records data/splatnet2 --timeline
+# Only download the timeline
+nxapi splatnet2 dump-records data/splatnet2 --no-user-records --timeline
+```
+
+#### Download battle/Salmon Run results
+
+```sh
+# Download battle and Salmon Run results to data/splatnet2
+# Data that already exists will not be redownloaded
+nxapi splatnet2 dump-results data/splatnet2
+
+# Include battle summary image (share button on the battles list)
+nxapi splatnet2 dump-results data/splatnet2 --battle-summary-image
+
+# Include battle result images (share button on the battle details page)
+nxapi splatnet2 dump-results data/splatnet2 --battle-images
+
+# Only download battle results
+nxapi splatnet2 dump-results data/splatnet2 --no-coop
+# Only download Salmon Run results
+nxapi splatnet2 dump-results data/splatnet2 --no-battles
+
+# Download summary data even if user records haven't been updated
+# Individual battle results/images/Salmon Run results still won't be redownloaded if they exist
+nxapi splatnet2 dump-results data/splatnet2 --no-check-updated
+```
+
+#### Monitor SplatNet 2 for new user records/battle/Salmon Run results
+
+This will constantly check SplatNet 2 for new data.
+
+```sh
+# Watch for new battle and Salmon Run results and download them to data/splatnet2
+nxapi splatnet2 monitor data/splatnet2
+
+# Include profile image (share button on the home page)
+nxapi splatnet2 monitor data/splatnet2 --profile-image
+nxapi splatnet2 monitor data/splatnet2 --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
+
+# Include battle summary image (share button on the battles list)
+nxapi splatnet2 monitor data/splatnet2 --battle-summary-image
+
+# Include battle result images (share button on the battle details page)
+nxapi splatnet2 monitor data/splatnet2 --battle-images
+
+# Only download battle results
+nxapi splatnet2 monitor data/splatnet2 --no-coop
+# Only download Salmon Run results
+nxapi splatnet2 monitor data/splatnet2 --no-battles
+
+# Set update interval to 1800 seconds (30 minutes)
+nxapi splatnet2 monitor data/splatnet2 --update-interval 1800
+```
+
+SplatNet 2 monitoring can also be used with `nxapi nso notify` and `nxapi nso presence`. Data will only be downloaded from SplatNet 2 if the authenticated user is playing Splatoon 2 online.
+
+This can be used with `nxapi nso presence --presence-url ...` (the presence URL must return the status of the user authenticating to SplatNet 2). When used with `--friend-naid` the friend's presence will be shared on Discord but the authenticated user's presence will still be used to check if SplatNet 2 data should be updated.
+
+```sh
+# Watch for new battle and Salmon Run results and download them to data/splatnet2
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2
+
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2
+
+# Include profile image (share button on the home page)
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image
+
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image --splatoon2-monitor-favourite-stage "Starfish Mainstage" --splatoon2-monitor-favourite-colour purple
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image --splatoon2-monitor-favourite-stage "Starfish Mainstage" --splatoon2-monitor-favourite-colour purple
+
+# Include battle summary image (share button on the battles list)
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-summary-image
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-summary-image
+
+# Include battle result images (share button on the battle details page)
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-images
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-images
+
+# Only download battle results
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-coop
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-coop
+# Only download Salmon Run results
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-battles
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-battles
+
+# Set update interval to 60 seconds
+nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-update-interval 60
+nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-update-interval 60
+```
+
 ### Nintendo Switch Parental Controls
 
 #### Login to the Nintendo Switch Parental Controls app
@@ -259,14 +389,14 @@ nxapi pctl monthly-summary 0123456789abcdef 2022-02 --json-pretty-print
 #### Download summary data
 
 ```sh
-# Download all daily and monthly summary data from all devices to ./summaries
+# Download all daily and monthly summary data from all devices to data/summaries
 # Data that already exists will not be redownloaded
-nxapi pctl dump-summaries ./summaries
+nxapi pctl dump-summaries data/summaries
 
-# Download all daily and monthly summary data from a specific device to ./summaries
+# Download all daily and monthly summary data from a specific device to data/summaries
 # Use `nxapi pctl devices` to get the device ID
 # The `--device` option can be used multiple times
-nxapi pctl dump-summaries summaries --device 0123456789abcdef
+nxapi pctl dump-summaries data/summaries --device 0123456789abcdef
 ```
 
 ### Misc. commands/options

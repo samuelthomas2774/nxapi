@@ -64,7 +64,11 @@ export enum PresenceState {
     INACTIVE = 'INACTIVE',
     /** The user is selected in an application */
     ONLINE = 'ONLINE',
-    /** The user is selected in an application (and I assume playing online?) */
+    /**
+     * The user is selected in an application and playing online.
+     * (Is this set by Nintendo's servers if the user is in a session on Nintendo's servers, or by the application
+     * running on the console?)
+     */
     PLAYING = 'PLAYING',
 }
 

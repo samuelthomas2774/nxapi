@@ -20,7 +20,7 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('auto-update-iksm-session', {
         describe: 'Automatically obtain and refresh the iksm_session cookie',
         type: 'boolean',
-        default: false,
+        default: true,
     });
 }
 
