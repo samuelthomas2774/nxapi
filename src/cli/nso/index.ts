@@ -8,3 +8,4 @@ export * as friends from './friends.js';
 export * as presence from './presence.js';
 export * as notify from './notify.js';
 export * as httpServer from './http-server.js';
+export * as zncProxyTokens from './znc-proxy-tokens.js';
