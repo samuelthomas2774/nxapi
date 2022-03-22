@@ -1,7 +1,30 @@
 nxapi
 ===
 
-Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Includes Discord Rich Presence and friend notifications.
+Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Includes Discord Rich Presence, friend notifications and data downloads.
+
+### Features
+
+- Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
+- Automated login to the Nintendo Switch Online app API
+    - This uses splatnet2statink and flapg APIs by default.
+    - Alternatively a custom server using a rooted Android device/emulator is included.
+- Get Nintendo Switch account information, friends list and game-specific services
+- Show Discord Rich Presence using your own or a friend's Nintendo Switch presence
+    - Show your account's friend code (or a custom friend code)
+    - Fetch presence from a custom URL
+- Show notifications for friend Nintendo Switch presences
+- Nintendo Switch Online app API proxy server
+    - This allows a single account to fetch presence for multiple users.
+    - Data will be cached for a short time to reduce the number of requests to Nintendo's server.
+    - This automatically handles authentication when given a Nintendo Account session token. This makes it much
+        easier to access the API from a browser, in scripts or in other software.
+- Download all personalised SplatNet 2 data, including battle and Salmon Run results
+    - This supports monitoring the authenticated user's presence and only checking for new data when playing
+        Splatoon 2 online.
+- Download all Nintendo Switch Parental Controls usage records
+
+The API library and types are exported for use in JavaScript/TypeScript software.
 
 ### Install
 
@@ -55,6 +78,12 @@ nxapi nso presence --friend-naid 0123456789abcdef
 # Show the authenticated user's friend code in Discord
 nxapi nso presence --friend-code
 nxapi nso presence --friend-code -
+
+# Show inactive presence
+# This will show a "Not playing" status if any consoles linked to the user's account is online but the user
+# is not selected in a game
+# Don't enable this if you are not the only user of all consoles linked to your account
+nxapi nso presence --show-inactive-presence
 
 # Show a custom friend code in Discord
 # Use this if you are showing presence of a friend of the authenticated user
