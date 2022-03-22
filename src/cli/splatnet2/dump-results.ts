@@ -41,6 +41,10 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Include coop (Salmon Run) results',
         type: 'boolean',
         default: true,
+    }).option('check-updated', {
+        describe: 'Only download data if user records have been updated',
+        type: 'boolean',
+        default: true,
     });
 }
 
@@ -56,30 +60,51 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     await mkdirp(argv.directory);
 
-    const records = argv.coop ? await splatnet.getRecords() : null;
+    const updated = argv.checkUpdated ? new Date((await splatnet.getRecords()).records.update_time * 1000) : undefined;
+
+    const records = await splatnet.getRecords();
 
     if (argv.battles) {
-        await dumpResults(splatnet, argv.directory, argv.battleImages, argv.battleSummaryImage);
+        await dumpResults(splatnet, argv.directory, records.records.unique_id,
+            argv.battleImages, argv.battleSummaryImage, updated);
     }
     if (argv.coop) {
-        await dumpCoopResults(splatnet, argv.directory, records!.records.unique_id);
+        await dumpCoopResults(splatnet, argv.directory, records.records.unique_id, updated);
     }
 }
 
-async function dumpResults(splatnet: SplatNet2Api, directory: string, images = false, summary_image = images) {
+export async function dumpResults(
+    splatnet: SplatNet2Api, directory: string, user_id: string,
+    images = false, summary_image = images, updated?: Date
+) {
+    const latest_filename = 'splatnet2-results-summary-' + user_id + '-latest.json';
+    const latest_file = path.join(directory, latest_filename);
+
+    if (updated) {
+        try {
+            const {timestamp} = JSON.parse(await fs.readFile(latest_file, 'utf-8'));
+
+            if (timestamp > updated.getTime()) {
+                debug('Skipping battle results, user records not updated');
+                return;
+            }
+        } catch (err) {}
+    }
+
     debug('Fetching battle results');
     const results = await splatnet.getResults();
 
-    const summary_filename = 'splatnet2-results-summary-' + results.unique_id + '-' + Date.now() + '.json';
+    const timestamp = Date.now();
+    const summary_filename = 'splatnet2-results-summary-' + results.unique_id + '-' + timestamp + '.json';
     const summary_file = path.join(directory, summary_filename);
 
     debug('Writing summary %s', summary_filename);
     await fs.writeFile(summary_file, JSON.stringify(results, null, 4) + '\n', 'utf-8');
 
     if (summary_image) {
-        const filename = 'splatnet2-results-summary-image-' + results.unique_id + '-' + Date.now() + '.json';
+        const filename = 'splatnet2-results-summary-image-' + results.unique_id + '-' + timestamp + '.json';
         const file = path.join(directory, filename);
-        const image_filename = 'splatnet2-results-summary-image-' + results.unique_id + '-' + Date.now() + '.png';
+        const image_filename = 'splatnet2-results-summary-image-' + results.unique_id + '-' + timestamp + '.png';
         const image_file = path.join(directory, image_filename);
 
         debug('Fetching battle results summary image URL');
@@ -153,12 +178,29 @@ async function dumpResults(splatnet: SplatNet2Api, directory: string, images = f
             }
         }
     }
+
+    await fs.writeFile(latest_file, JSON.stringify({timestamp}, null, 4) + '\n', 'utf-8');
 }
 
-async function dumpCoopResults(splatnet: SplatNet2Api, directory: string, user_id: string) {
+export async function dumpCoopResults(splatnet: SplatNet2Api, directory: string, user_id: string, updated?: Date) {
+    const latest_filename = 'splatnet2-coop-summary-' + user_id + '-latest.json';
+    const latest_file = path.join(directory, latest_filename);
+
+    if (updated) {
+        try {
+            const {timestamp} = JSON.parse(await fs.readFile(latest_file, 'utf-8'));
+
+            if (timestamp > updated.getTime()) {
+                debug('Skipping coop results, user records not updated');
+                return;
+            }
+        } catch (err) {}
+    }
+
     debug('Fetching coop results');
     const results = await splatnet.getCoopResults();
 
+    const timestamp = Date.now();
     const summary_filename = 'splatnet2-coop-summary-' + user_id + '-' + Date.now() + '.json';
     const summary_file = path.join(directory, summary_filename);
 
@@ -191,4 +233,6 @@ async function dumpCoopResults(splatnet: SplatNet2Api, directory: string, user_i
             nickname_and_icons,
         }, null, 4) + '\n', 'utf-8');
     }
+
+    await fs.writeFile(latest_file, JSON.stringify({timestamp}, null, 4) + '\n', 'utf-8');
 }

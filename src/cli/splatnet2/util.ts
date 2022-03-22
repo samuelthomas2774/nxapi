@@ -1,5 +1,7 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getToken } from '../../util.js';
 import SplatNet2Api from '../../api/splatnet2.js';
 import { WebServiceToken } from '../../api/znc-types.js';
