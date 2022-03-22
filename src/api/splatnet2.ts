@@ -6,6 +6,7 @@ import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
+import { updateIksmSessionLastUsed } from '../cli/splatnet2/util.js';
 
 const debug = createDebug('api:splatnet2');
 
@@ -17,16 +18,6 @@ const SPLATNET2_URL = SPLATNET2_WEBSERVICE_URL + 'api';
 
 const XPOWERRANKING_SEASON = /^(\d{2})(\d{2})01T00_(\d{2})(\d{2})01T00$/;
 const LEAGUE_ID = /^(\d{2})(\d{2})(\d{2})(\d{2})(T|P)$/;
-
-export interface SavedIksmSessionToken {
-    webserviceToken: WebServiceToken;
-    url: string;
-    cookies: string;
-
-    iksm_session: string;
-    expires_at: number;
-    useragent: string;
-}
 
 export default class SplatNet2Api {
     constructor(
@@ -57,6 +48,8 @@ export default class SplatNet2Api {
 
             throw new ErrorResponse('[splatnet2] Unknown error', response, data);
         }
+
+        updateIksmSessionLastUsed(this.iksm_session);
 
         const data = await response.json() as T | WebServiceError;
 
@@ -188,6 +181,16 @@ ${colour}
         });
     }
 
+    async shareChallenge(id: string, season: 1 | 2 = 1) {
+        const url = '/share/challenges' + (season === 2 ? '_season_2' : '') + '/' + id;
+
+        return this.fetch<ShareResponse>(url, 'POST', '', {
+            'Referer': 'https://app.splatoon2.nintendo.net/records/challenge' + (season === 2 ? '_season_2' : ''),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Origin': 'https://app.splatoon2.nintendo.net',
+        });
+    }
+
     async shareResultsSummary() {
         return this.fetch<ShareResponse>('/share/results/summary', 'POST', '', {
             'Referer': 'https://app.splatoon2.nintendo.net/results',
@@ -219,7 +222,7 @@ ${colour}
         return this.loginWithWebServiceToken(webserviceToken.result, user);
     }
 
-    static async loginWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser): Promise<SavedIksmSessionToken> {
+    static async loginWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser) {
         const url = new URL(SPLATNET2_WEBSERVICE_URL);
         url.search = new URLSearchParams({
             lang: user.language,
