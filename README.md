@@ -262,7 +262,7 @@ nxapi splatnet2 dump-records data/splatnet2 --hero-records
 nxapi splatnet2 dump-records data/splatnet2 --no-user-records --hero-records
 
 # Include timeline (CPOD FM on the home page)
-# If this option is included the timeline will always be downloaded even if they haven't been updated
+# If this option is included the timeline will always be downloaded even if it hasn't been updated
 nxapi splatnet2 dump-records data/splatnet2 --timeline
 # Only download the timeline
 nxapi splatnet2 dump-records data/splatnet2 --no-user-records --timeline
@@ -324,35 +324,35 @@ This can be used with `nxapi nso presence --presence-url ...` (the presence URL 
 
 ```sh
 # Watch for new battle and Salmon Run results and download them to data/splatnet2
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2
 
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2
 
 # Include profile image (share button on the home page)
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image
 
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image --splatoon2-monitor-favourite-stage "Starfish Mainstage" --splatoon2-monitor-favourite-colour purple
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-profile-image --splatoon2-monitor-favourite-stage "Starfish Mainstage" --splatoon2-monitor-favourite-colour purple
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image --splatnet2-monitor-favourite-stage "Starfish Mainstage" --splatnet2-monitor-favourite-colour purple
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image --splatnet2-monitor-favourite-stage "Starfish Mainstage" --splatnet2-monitor-favourite-colour purple
 
 # Include battle summary image (share button on the battles list)
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-summary-image
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-summary-image
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-summary-image
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-summary-image
 
 # Include battle result images (share button on the battle details page)
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-images
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-battle-images
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-images
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-images
 
 # Only download battle results
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-coop
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-coop
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-coop
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-coop
 # Only download Salmon Run results
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-battles
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --no-splatoon2-monitor-battles
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-battles
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-battles
 
 # Set update interval to 60 seconds
-nxapi nso notify --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-update-interval 60
-nxapi nso presence --splatoon2-monitor-directory data/splatnet2 --splatoon2-monitor-update-interval 60
+nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-update-interval 60
+nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-update-interval 60
 ```
 
 ### Nintendo Switch Parental Controls
