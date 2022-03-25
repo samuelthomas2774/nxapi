@@ -264,10 +264,23 @@ ${colour}
 
         const expires_at = expires ? Date.parse(expires) : Date.now() + 24 * 60 * 60 * 1000;
 
+        const body = await response.text();
+
+        const ml = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+lang=(?:"([^"]*)"|([^\s>]*))/i);
+        const mr = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-region=(?:"([^"]*)"|([^\s>]*))/i);
+        const mu = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-unique-id=(?:"([^"]*)"|([^\s>]*))/i);
+        const mn = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-nsa-id=(?:"([^"]*)"|([^\s>]*))/i);
+        const [language, region, user_id, nsa_id] = [ml, mr, mu, mn].map(m => m?.[1] || m?.[2] || null);
+
         return {
             webserviceToken,
             url: url.toString(),
             cookies: cookies!,
+            body,
+            language,
+            region,
+            user_id,
+            nsa_id,
 
             iksm_session,
             expires_at,
