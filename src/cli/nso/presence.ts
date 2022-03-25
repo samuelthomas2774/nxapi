@@ -51,36 +51,49 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('presence-url', {
         describe: 'URL to get user presence from, for use with `nxapi nso http-server`',
         type: 'string',
+    }).option('splatnet2-monitor', {
+        describe: 'Download new SplatNet 2 data when you are playing Splatoon 2 online',
+        type: 'boolean',
+        default: false,
     }).option('splatnet2-monitor-directory', {
+        alias: ['sn2-path'],
         describe: 'Directory to write SplatNet 2 record data to',
         type: 'string',
     }).option('splatnet2-monitor-profile-image', {
+        alias: ['sn2-profile-image'],
         describe: 'Include profile image',
         type: 'boolean',
         default: false,
     }).option('splatnet2-monitor-favourite-stage', {
+        alias: ['sn2-favourite-stage'],
         describe: 'Favourite stage to include on profile image',
         type: 'string',
     }).option('splatnet2-monitor-favourite-colour', {
+        alias: ['sn2-favourite-colour'],
         describe: 'Favourite colour to include on profile image',
         type: 'string',
     }).option('splatnet2-monitor-battles', {
+        alias: ['sn2-battles'],
         describe: 'Include regular/ranked/private/festival battle results',
         type: 'boolean',
         default: true,
     }).option('splatnet2-monitor-battle-summary-image', {
+        alias: ['sn2-battle-summary-image'],
         describe: 'Include regular/ranked/private/festival battle summary image',
         type: 'boolean',
         default: false,
     }).option('splatnet2-monitor-battle-images', {
+        alias: ['sn2-battle-images'],
         describe: 'Include regular/ranked/private/festival battle result images',
         type: 'boolean',
         default: false,
     }).option('splatnet2-monitor-coop', {
+        alias: ['sn2-coop'],
         describe: 'Include coop (Salmon Run) results',
         type: 'boolean',
         default: true,
     }).option('splatnet2-monitor-update-interval', {
+        alias: ['sn2-update-interval'],
         describe: 'Update interval in seconds',
         type: 'number',
         // 3 minutes - the monitor is only active while the authenticated user is playing Splatoon 2 online
@@ -98,7 +111,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         const i = new ZncProxyDiscordPresence(argv, argv.presenceUrl);
 
-        if (argv.splatnet2MonitorDirectory) {
+        if (argv.splatnet2Monitor) {
             const storage = await initStorage(argv.dataPath);
 
             const usernsid = argv.user ?? await storage.getItem('SelectedUser');
@@ -142,7 +155,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
-    if (argv.splatnet2MonitorDirectory) {
+    if (argv.splatnet2Monitor) {
         if (argv.friendNsaid) {
             console.warn('SplatNet 2 monitoring is enabled, but --friend-nsaid is set. SplatNet 2 records will only be downloaded when the authenticated user is playing Splatoon 2 online, regardless of the --friend-nsaid user.');
         }

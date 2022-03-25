@@ -9,14 +9,13 @@ import MoonApi from '../../api/moon.js';
 
 const debug = createDebug('cli:pctl:dump-summaries');
 
-export const command = 'dump-summaries <directory>';
+export const command = 'dump-summaries [directory]';
 export const desc = 'Download all daily and monthly summaries';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.positional('directory', {
         describe: 'Directory to write summary data to',
         type: 'string',
-        demandOption: true,
     }).option('user', {
         describe: 'Nintendo Account ID',
         type: 'string',
@@ -39,7 +38,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken-pctl.' + usernsid);
     const {moon, data} = await getPctlToken(storage, token);
 
-    await mkdirp(argv.directory);
+    const directory = argv.directory ?? path.join(argv.dataPath, 'summaries');
+
+    await mkdirp(directory);
 
     const devices = await moon.getDevices();
 
@@ -54,8 +55,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         console.warn('Downloading summaries for device %s (%s)', device.label, device.deviceId);
 
-        await dumpMonthlySummariesForDevice(moon, argv.directory, device.deviceId);
-        await dumpDailySummariesForDevice(moon, argv.directory, device.deviceId);
+        await dumpMonthlySummariesForDevice(moon, directory, device.deviceId);
+        await dumpDailySummariesForDevice(moon, directory, device.deviceId);
     }
 }
 

@@ -12,14 +12,13 @@ import { Challenge, NicknameAndIcon, Records, Stages } from '../../api/splatnet2
 
 const debug = createDebug('cli:splatnet2:dump-records');
 
-export const command = 'dump-records <directory>';
+export const command = 'dump-records [directory]';
 export const desc = 'Download all other records';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.positional('directory', {
         describe: 'Directory to write record data to',
         type: 'string',
-        demandOption: true,
     }).option('user', {
         describe: 'Nintendo Account ID',
         type: 'string',
@@ -69,7 +68,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
-    await mkdirp(argv.directory);
+    const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet2');
+
+    await mkdirp(directory);
 
     const [records, stages, activefestivals, timeline] = await Promise.all([
         splatnet.getRecords(),
@@ -82,30 +83,30 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const updated = argv.newRecords ? new Date(records.records.update_time * 1000) : undefined;
 
     if (argv.userRecords) {
-        await dumpRecords(argv.directory, records.records.unique_id, records,
+        await dumpRecords(directory, records.records.unique_id, records,
             nickname_and_icons.nickname_and_icons[0], updated);
     }
 
     if (argv.profileImage) {
-        await dumpProfileImage(splatnet, argv.directory, records.records.unique_id, stages,
+        await dumpProfileImage(splatnet, directory, records.records.unique_id, stages,
             nickname_and_icons.nickname_and_icons[0],
             argv.favouriteStage, argv.favouriteColour, updated);
     }
 
     if (argv.challenges) {
-        await dumpChallenges(splatnet, argv.directory, records.records.unique_id,
+        await dumpChallenges(splatnet, directory, records.records.unique_id,
             records.challenges.archived_challenges, 1);
-        await dumpChallenges(splatnet, argv.directory, records.records.unique_id,
+        await dumpChallenges(splatnet, directory, records.records.unique_id,
             records.challenges.archived_challenges_octa, 2);
     }
 
     if (argv.heroRecords) {
-        await dumpHeroRecords(splatnet, argv.directory, records.records.unique_id);
+        await dumpHeroRecords(splatnet, directory, records.records.unique_id);
     }
 
     if (argv.timeline) {
         const filename = 'splatnet2-timeline-' + records.records.unique_id + '-' + Date.now() + '.json';
-        const file = path.join(argv.directory, filename);
+        const file = path.join(directory, filename);
 
         debug('Writing timeline %s', filename);
         await fs.writeFile(file, JSON.stringify(timeline, null, 4) + '\n', 'utf-8');

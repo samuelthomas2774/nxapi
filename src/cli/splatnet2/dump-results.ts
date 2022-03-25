@@ -11,14 +11,13 @@ import fetch from 'node-fetch';
 
 const debug = createDebug('cli:splatnet2:dump-results');
 
-export const command = 'dump-results <directory>';
+export const command = 'dump-results [directory]';
 export const desc = 'Download all battle and coop results';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.positional('directory', {
         describe: 'Directory to write record data to',
         type: 'string',
-        demandOption: true,
     }).option('user', {
         describe: 'Nintendo Account ID',
         type: 'string',
@@ -58,18 +57,20 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
-    await mkdirp(argv.directory);
+    const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet2');
+
+    await mkdirp(directory);
 
     const updated = argv.checkUpdated ? new Date((await splatnet.getRecords()).records.update_time * 1000) : undefined;
 
     const records = await splatnet.getRecords();
 
     if (argv.battles) {
-        await dumpResults(splatnet, argv.directory, records.records.unique_id,
+        await dumpResults(splatnet, directory, records.records.unique_id,
             argv.battleImages, argv.battleSummaryImage, updated);
     }
     if (argv.coop) {
-        await dumpCoopResults(splatnet, argv.directory, records.records.unique_id, updated);
+        await dumpCoopResults(splatnet, directory, records.records.unique_id, updated);
     }
 }
 

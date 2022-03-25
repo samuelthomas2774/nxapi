@@ -37,36 +37,49 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Update interval in seconds',
         type: 'number',
         default: 30,
+    }).option('splatnet2-monitor', {
+        describe: 'Download new SplatNet 2 data when you are playing Splatoon 2 online',
+        type: 'boolean',
+        default: false,
     }).option('splatnet2-monitor-directory', {
+        alias: ['sn2-path'],
         describe: 'Directory to write SplatNet 2 record data to',
         type: 'string',
     }).option('splatnet2-monitor-profile-image', {
+        alias: ['sn2-profile-image'],
         describe: 'Include profile image',
         type: 'boolean',
         default: false,
     }).option('splatnet2-monitor-favourite-stage', {
+        alias: ['sn2-favourite-stage'],
         describe: 'Favourite stage to include on profile image',
         type: 'string',
     }).option('splatnet2-monitor-favourite-colour', {
+        alias: ['sn2-favourite-colour'],
         describe: 'Favourite colour to include on profile image',
         type: 'string',
     }).option('splatnet2-monitor-battles', {
+        alias: ['sn2-battles'],
         describe: 'Include regular/ranked/private/festival battle results',
         type: 'boolean',
         default: true,
     }).option('splatnet2-monitor-battle-summary-image', {
+        alias: ['sn2-battle-summary-image'],
         describe: 'Include regular/ranked/private/festival battle summary image',
         type: 'boolean',
         default: false,
     }).option('splatnet2-monitor-battle-images', {
+        alias: ['sn2-battle-images'],
         describe: 'Include regular/ranked/private/festival battle result images',
         type: 'boolean',
         default: false,
     }).option('splatnet2-monitor-coop', {
+        alias: ['sn2-coop'],
         describe: 'Include coop (Salmon Run) results',
         type: 'boolean',
         default: true,
     }).option('splatnet2-monitor-update-interval', {
+        alias: ['sn2-update-interval'],
         describe: 'Update interval in seconds',
         type: 'number',
         // 3 minutes - the monitor is only active while the authenticated user is playing Splatoon 2 online
@@ -77,7 +90,7 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    if (!argv.userNotifications && !argv.friendNotifications && !argv.splatnet2MonitorDirectory) {
+    if (!argv.userNotifications && !argv.friendNotifications && !argv.splatnet2Monitor) {
         throw new Error('Must enable either user notifications, friend notifications, or SplatNet 2 monitoring');
     }
 
@@ -93,7 +106,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
-    if (argv.splatnet2MonitorDirectory) {
+    if (argv.splatnet2Monitor) {
         console.warn('SplatNet 2 monitoring enabled for %s (NA %s, NSO %s) - SplatNet 2 records will be ' +
             'downloaded when this user is playing Splatoon 2 online.',
             data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
@@ -446,12 +459,14 @@ export function handleEnableSplatNet2Monitoring(
     argv: ArgumentsCamelCase<Arguments>, storage: persist.LocalStorage, token: string
 ) {
     return async () => {
+        const directory = argv.splatnet2MonitorDirectory ?? path.join(argv.dataPath, 'splatnet2');
+
         const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl);
 
         const records = await splatnet.getRecords();
         const stages = await splatnet.getStages();
 
-        const i = new EmbeddedSplatNet2Monitor(storage, token, splatnet, stages, argv.splatnet2MonitorDirectory!, argv.zncProxyUrl);
+        const i = new EmbeddedSplatNet2Monitor(storage, token, splatnet, stages, directory, argv.zncProxyUrl);
 
         i.update_interval = argv.splatnet2MonitorUpdateInterval;
 
