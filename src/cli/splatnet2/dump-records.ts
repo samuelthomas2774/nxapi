@@ -123,9 +123,9 @@ export async function dumpRecords(
 
     if (updated) {
         try {
-            const {timestamp} = JSON.parse(await fs.readFile(latest_file, 'utf-8'));
+            const {sn2_updated_timestamp} = JSON.parse(await fs.readFile(latest_file, 'utf-8'));
 
-            if (timestamp > updated.getTime()) {
+            if ((sn2_updated_timestamp * 1000) >= updated.getTime()) {
                 debug('Skipping user records, not updated');
                 return;
             }
@@ -133,6 +133,8 @@ export async function dumpRecords(
     }
 
     const timestamp = Date.now();
+    const sn2_updated_timestamp = records.records.update_time;
+
     const filename = 'splatnet2-records-' + user_id + '-' + timestamp + '.json';
     const file = path.join(directory, filename);
     const ni_filename = 'splatnet2-ni-' + user_id + '-' + timestamp + '.json';
@@ -144,7 +146,7 @@ export async function dumpRecords(
     debug('Writing records %s', ni_filename);
     await fs.writeFile(ni_file, JSON.stringify(nickname_and_icon, null, 4) + '\n', 'utf-8');
 
-    await fs.writeFile(latest_file, JSON.stringify({timestamp}, null, 4) + '\n', 'utf-8');
+    await fs.writeFile(latest_file, JSON.stringify({timestamp, sn2_updated_timestamp}, null, 4) + '\n', 'utf-8');
 }
 
 export async function dumpProfileImage(

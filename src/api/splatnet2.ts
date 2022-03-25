@@ -272,6 +272,8 @@ ${colour}
         const mn = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-nsa-id=(?:"([^"]*)"|([^\s>]*))/i);
         const [language, region, user_id, nsa_id] = [ml, mr, mu, mn].map(m => m?.[1] || m?.[2] || null);
 
+        debug('SplatNet 2 user', {language, region, user_id, nsa_id});
+
         return {
             webserviceToken,
             url: url.toString(),

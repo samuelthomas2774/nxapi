@@ -147,9 +147,9 @@ export class SplatNet2RecordsMonitor extends Loop {
         const updated = new Date(records.records.update_time * 1000);
 
         try {
-            const {timestamp} = JSON.parse(await fs.readFile(latest_file, 'utf-8'));
+            const {sn2_updated_timestamp} = JSON.parse(await fs.readFile(latest_file, 'utf-8'));
 
-            return timestamp <= updated.getTime();
+            return (sn2_updated_timestamp * 1000) < updated.getTime();
         } catch (err) {}
 
         return true;
