@@ -1,13 +1,15 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import notifier from 'node-notifier';
-import { CurrentUser, Friend, Game, Presence, PresenceState, ZncSuccessResponse } from '../../api/znc-types.js';
+import * as path from 'path';
+import { CurrentUser, Friend, Game, Presence, PresenceState, ZncErrorResponse, ZncSuccessResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, hrduration, initStorage, SavedToken, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, hrduration, initStorage, Loop, LoopResult, SavedToken, YargsArguments } from '../../util.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 import { SplatNet2RecordsMonitor } from '../splatnet2/monitor.js';
 import { getIksmToken } from '../splatnet2/util.js';
+import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('cli:nso:notify');
 const debugFriends = createDebug('cli:nso:notify:friends');
@@ -105,20 +107,30 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 }
 
-export class ZncNotifications {
+export class ZncNotifications extends Loop {
     splatnet2_monitors = new Map<string, EmbeddedSplatNet2Monitor | (() => Promise<EmbeddedSplatNet2Monitor>)>();
 
+    user_notifications = true;
+    friend_notifications = true;
+    update_interval = 30;
+
     constructor(
-        readonly argv: ArgumentsCamelCase<Arguments>,
+        argv: Pick<ArgumentsCamelCase<Arguments>, 'userNotifications' | 'friendNotifications' | 'updateInterval'>,
         public storage: persist.LocalStorage,
         public token: string,
         public nso: ZncApi,
         public data: Omit<SavedToken, 'expires_at'>,
-    ) {}
+    ) {
+        super();
+
+        this.user_notifications = argv.userNotifications;
+        this.friend_notifications = argv.friendNotifications;
+        this.update_interval = argv.updateInterval;
+    }
 
     async init() {
         const announcements = await this.nso.getAnnouncements();
-        const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
+        const friends = this.friend_notifications || !(this.nso instanceof ZncProxyApi) ?
             await this.nso.getFriendList() : {result: {friends: []}};
         if (!(this.nso instanceof ZncProxyApi)) {
             const webservices = await this.nso.getWebServices();
@@ -127,22 +139,22 @@ export class ZncNotifications {
 
         let user: ZncSuccessResponse<CurrentUser> | null = null;
 
-        if (this.argv.userNotifications) {
+        if (this.user_notifications) {
             user = await this.nso.getCurrentUser();
 
-            await this.updateFriendsStatusForNotifications(this.argv.friendNotifications ?
+            await this.updateFriendsStatusForNotifications(this.friend_notifications ?
                 [user.result, ...friends.result.friends] : [user.result]);
-        } else if (this.argv.friendNotifications) {
+        } else if (this.friend_notifications) {
             await this.updateFriendsStatusForNotifications(friends.result.friends);
         }
 
-        if (this.argv.splatnet2MonitorDirectory) {
+        if (this.splatnet2_monitors.size) {
             if (!user) user = await this.nso.getCurrentUser();
 
             await this.updatePresenceForSplatNet2Monitors([user.result]);
         }
 
-        await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
+        await new Promise(rs => setTimeout(rs, this.update_interval * 1000));
     }
 
     onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
@@ -334,13 +346,13 @@ export class ZncNotifications {
     async update() {
         debug('Updating presence');
 
-        if (this.argv.friendNotifications) {
+        if (this.friend_notifications) {
             if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
-            const friends = this.argv.friendNotifications || !(this.nso instanceof ZncProxyApi) ?
+            const friends = this.friend_notifications || !(this.nso instanceof ZncProxyApi) ?
                 await this.nso.getFriendList() : {result: {friends: []}};
             if (!(this.nso instanceof ZncProxyApi)) await this.nso.getWebServices();
 
-            if (this.argv.userNotifications) {
+            if (this.user_notifications) {
                 const user = await this.nso.getCurrentUser();
 
                 await this.updateFriendsStatusForNotifications([user.result, ...friends.result.friends]);
@@ -356,28 +368,31 @@ export class ZncNotifications {
         debug('Updated presence');
     }
 
-    async loop() {
-        try {
-            await this.update();
+    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+        if (err && 'response' in err && err.data?.status === 9404) {
+            // Token expired
+            debug('Renewing token');
 
-            await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
-        } catch (err) {
-            // @ts-expect-error
-            if (err?.data?.status === 9404) {
-                // Token expired
-                debug('Renewing token');
+            const data = await this.nso.renewToken(this.token);
 
-                const data = await this.nso.renewToken(this.token);
+            const existingToken: SavedToken = {
+                ...data,
+                expires_at: Date.now() + (data.credential.expiresIn * 1000),
+            };
 
-                const existingToken: SavedToken = {
-                    ...data,
-                    expires_at: Date.now() + (data.credential.expiresIn * 1000),
-                };
+            await this.storage.setItem('NsoToken.' + this.token, existingToken);
 
-                await this.storage.setItem('NsoToken.' + this.token, existingToken);
-            } else {
-                throw err;
-            }
+            return LoopResult.OK_SKIP_INTERVAL;
+        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
+            debug('Request timed out, waiting %ds before retrying', this.update_interval, err);
+
+            return LoopResult.OK;
+        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ENOTFOUND') {
+            debug('Request error, waiting %ds before retrying', this.update_interval, err);
+
+            return LoopResult.OK;
+        } else {
+            throw err;
         }
     }
 }
@@ -415,8 +430,12 @@ export class EmbeddedSplatNet2Monitor extends SplatNet2RecordsMonitor {
                 await this.loop();
             }
 
-            // Run one more time after the loop ends
-            await this.loop();
+            if (this._running === 0) {
+                // Run one more time after the loop ends
+                const result = await this.loopRun();
+            }
+
+            debugSplatnet2('SplatNet 2 monitoring finished');
         } finally {
             this._running = 0;
         }

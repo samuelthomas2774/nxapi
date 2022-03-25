@@ -5,11 +5,12 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import SplatNet2Api from '../../api/splatnet2.js';
 import { getIksmToken, renewIksmToken } from './util.js';
-import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, initStorage, Loop, LoopResult, YargsArguments } from '../../util.js';
 import { Records, Stages, WebServiceError } from '../../api/splatnet2-types.js';
 import { Arguments as ParentArguments } from '../splatnet2.js';
 import { dumpCoopResults, dumpResults } from './dump-results.js';
 import { dumpProfileImage, dumpRecords } from './dump-records.js';
+import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('cli:splatnet2:monitor');
 
@@ -107,7 +108,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 }
 
-export class SplatNet2RecordsMonitor {
+export class SplatNet2RecordsMonitor extends Loop {
     update_interval: number = 3 * 60; // 3 minutes in seconds
 
     profile_image = true;
@@ -131,7 +132,9 @@ export class SplatNet2RecordsMonitor {
         public stages: Stages,
         public directory: string,
         public znc_proxy_url?: string
-    ) {}
+    ) {
+        super();
+    }
 
     async init() {
         await mkdirp(this.directory);
@@ -182,21 +185,20 @@ export class SplatNet2RecordsMonitor {
         }
     }
 
-    async loop() {
-        try {
-            await this.update();
+    async handleError(err: Error | ErrorResponse<WebServiceError>): Promise<LoopResult> {
+        if ('response' in err && err.data.code === 'AUTHENTICATION_ERROR') {
+            // Token expired
+            debug('Renewing iksm_session cookie');
 
-            await new Promise(rs => setTimeout(rs, this.update_interval * 1000));
-        } catch (err) {
-            // @ts-expect-error
-            if ((err?.data as WebServiceError)?.code === 'AUTHENTICATION_ERROR') {
-                // Token expired
-                debug('Renewing iksm_session cookie');
-
-                await renewIksmToken(this.splatnet, this.storage, this.token, this.znc_proxy_url);
-            } else {
-                throw err;
+            if (!this.auto_update_iksm_session) {
+                throw new Error('iksm_session cookie expired');
             }
+
+            await renewIksmToken(this.splatnet, this.storage, this.token, this.znc_proxy_url);
+
+            return LoopResult.OK_SKIP_INTERVAL;
+        } else {
+            throw err;
         }
     }
 }

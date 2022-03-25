@@ -530,30 +530,8 @@ class ZncPresenceEventStream extends ZncNotifications {
     ) {
         super({
             ...argv,
-            user: undefined,
-            token: undefined,
-            'user-notifications': user,
             userNotifications: user,
-            'friend-notifications': friend,
             friendNotifications: friend,
-            'splatnet2-monitor-directory': undefined,
-            splatnet2MonitorDirectory: undefined,
-            'splatnet2-monitor-profile-image': false,
-            splatnet2MonitorProfileImage: false,
-            'splatnet2-monitor-favourite-stage': undefined,
-            splatnet2MonitorFavouriteStage: undefined,
-            'splatnet2-monitor-favourite-colour': undefined,
-            splatnet2MonitorFavouriteColour: undefined,
-            'splatnet2-monitor-battles': false,
-            splatnet2MonitorBattles: false,
-            'splatnet2-monitor-battle-summary-image': false,
-            splatnet2MonitorBattleSummaryImage: false,
-            'splatnet2-monitor-battle-images': false,
-            splatnet2MonitorBattleImages: false,
-            'splatnet2-monitor-coop': false,
-            splatnet2MonitorCoop: false,
-            'splatnet2-monitor-update-interval': 180,
-            splatnet2MonitorUpdateInterval: 180,
         }, storage, token, nso, data);
     }
 

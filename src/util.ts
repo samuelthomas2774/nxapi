@@ -147,3 +147,41 @@ export function hrduration(duration: number, short = false) {
         return minutes + ' ' + minute_str + (minutes === 1 ? '' : 's');
     }
 }
+
+export abstract class Loop {
+    update_interval = 60;
+
+    init(): void | Promise<void> {}
+
+    abstract update(): void | Promise<void>;
+
+    async loopRun(): Promise<LoopResult> {
+        try {
+            await this.update();
+
+            return LoopResult.OK;
+        } catch (err) {
+            return this.handleError(err as any);
+        }
+    }
+
+    async handleError(err: Error): Promise<LoopResult> {
+        throw err;
+    }
+
+    async loop() {
+        const result = await this.loopRun();
+
+        if (result === LoopResult.OK) {
+            await new Promise(rs => setTimeout(rs, this.update_interval * 1000));
+        }
+    }
+}
+
+const LoopRunOk = Symbol('LoopRunOk');
+const LoopRunOkSkipInterval = Symbol('LoopRunOkSkipInterval');
+
+export enum LoopResult {
+    OK = LoopRunOk as any,
+    OK_SKIP_INTERVAL = LoopRunOkSkipInterval as any,
+}
