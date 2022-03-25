@@ -17,6 +17,7 @@ export function builder(yargs: Argv<ParentArguments>) {
     return yargs.option('znc-proxy-url', {
         describe: 'URL of Nintendo Switch Online app API proxy server to use',
         type: 'string',
+        default: process.env.ZNC_PROXY_URL,
     }).option('auto-update-session', {
         alias: ['auto-update-iksm-session'],
         describe: 'Automatically obtain and refresh the iksm_session cookie',

@@ -10,13 +10,14 @@ export const desc = 'Nintendo Switch Online';
 
 export function builder(yargs: Argv<ParentArguments>) {
     for (const command of Object.values(commands)) {
-        // @ts-expect-error
+        // @ts-ignore
         yargs.command(command);
     }
 
     return yargs.option('znc-proxy-url', {
         describe: 'URL of Nintendo Switch Online app API proxy server to use',
         type: 'string',
+        default: process.env.ZNC_PROXY_URL,
     });
 }
 

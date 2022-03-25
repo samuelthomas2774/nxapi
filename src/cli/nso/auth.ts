@@ -53,7 +53,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log('');
     console.log(authoriseurl);
     console.log('');
-    
+
     console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf71b963c1b7b6d119://auth".');
     console.log('');
 
@@ -79,7 +79,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     if (argv.auth) {
         const storage = await initStorage(argv.dataPath);
-    
+
         const {nso, data} = await getToken(storage, token.session_token, argv.zncProxyUrl);
 
         console.log('Authenticated as Nintendo Account %s (NA %s, NSO %s)',

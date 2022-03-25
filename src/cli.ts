@@ -8,7 +8,7 @@ const debug = createDebug('cli');
 const yargs = Yargs(process.argv.slice(2)).option('data-path', {
     describe: 'Data storage path',
     type: 'string',
-    default: paths.data,
+    default: process.env.NXAPI_DATA_PATH || paths.data,
 });
 
 export type Arguments = YargsArguments<typeof yargs>;
