@@ -67,7 +67,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateIksmSession);
+    const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
     await mkdirp(argv.directory);
 

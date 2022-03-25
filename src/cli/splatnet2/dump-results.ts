@@ -56,7 +56,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateIksmSession);
+    const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
     await mkdirp(argv.directory);
 
@@ -123,13 +123,16 @@ export async function dumpResults(
         await fs.writeFile(image_file, image);
     }
 
+    const skipped = [];
+    const skipped_images = [];
+
     for (const item of results.results) {
         const filename = 'splatnet2-result-' + results.unique_id + '-' + item.battle_number + '-' + item.type + '.json';
         const file = path.join(directory, filename);
 
         try {
             await fs.stat(file);
-            debug('Skipping battle result %d, file already exists', item.battle_number);
+            skipped.push(item.battle_number);
         } catch (err) {
             debug('Fetching battle result %d', item.battle_number);
             const result = await splatnet.getResult(item.battle_number);
@@ -159,24 +162,34 @@ export async function dumpResults(
             try {
                 await fs.stat(file);
                 await fs.stat(image_file);
-                debug('Skipping battle result image %d, file already exists', item.battle_number);
+                skipped_images.push(item.battle_number);
             } catch (err) {
-                debug('Fetching battle results summary image URL');
+                debug('Fetching battle results image URL');
                 const share = await splatnet.shareResult(item.battle_number);
 
-                debug('Fetching battle results summary image');
+                debug('Fetching battle results image');
                 const image_response = await fetch(share.url);
                 const image = await image_response.buffer();
 
-                debug('Writing battle results summary image data %s', filename);
+                debug('Writing battle results image data %s', filename);
                 await fs.writeFile(file, JSON.stringify({
                     share,
                 }, null, 4) + '\n', 'utf-8');
 
-                debug('Writing battle results summary image %s', filename);
+                debug('Writing battle results image %s', filename);
                 await fs.writeFile(image_file, image);
             }
         }
+    }
+
+    if (skipped.length) {
+        if (skipped.length === 1) debug('Skipped battle result %d, file already exists', skipped[0]);
+        else debug('Skipped battle results %s, files already exist', skipped.join(', '));
+    }
+    if (skipped_images.length) {
+        if (skipped_images.length === 1) debug('Skipped battle result image %d, file already exists',
+            skipped_images[0]);
+        else debug('Skipped battle result images %s, files already exist', skipped_images.join(', '));
     }
 
     await fs.writeFile(latest_file, JSON.stringify({timestamp}, null, 4) + '\n', 'utf-8');
@@ -207,13 +220,15 @@ export async function dumpCoopResults(splatnet: SplatNet2Api, directory: string,
     debug('Writing summary %s', summary_filename);
     await fs.writeFile(summary_file, JSON.stringify(results, null, 4) + '\n', 'utf-8');
 
+    const skipped = [];
+
     for (const item of results.results) {
         const filename = 'splatnet2-coop-result-' + user_id + '-' + item.job_id + '.json';
         const file = path.join(directory, filename);
 
         try {
             await fs.stat(file);
-            debug('Skipping coop result %d, file already exists', item.job_id);
+            skipped.push(item.job_id);
             continue;
         } catch (err) {}
 
@@ -232,6 +247,11 @@ export async function dumpCoopResults(splatnet: SplatNet2Api, directory: string,
             result,
             nickname_and_icons,
         }, null, 4) + '\n', 'utf-8');
+    }
+
+    if (skipped.length) {
+        if (skipped.length === 1) debug('Skipped coop result %d, file already exists', skipped[0]);
+        else debug('Skipped coop results %s, files already exist', skipped.join(', '));
     }
 
     await fs.writeFile(latest_file, JSON.stringify({timestamp}, null, 4) + '\n', 'utf-8');

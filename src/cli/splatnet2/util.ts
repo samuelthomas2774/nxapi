@@ -28,7 +28,7 @@ export async function getIksmToken(storage: persist.LocalStorage, token: string,
 
     const existingToken: SavedIksmSessionToken | undefined = await storage.getItem('IksmToken.' + token);
 
-    const td = 2 * 24 * 60 * 60 * 1000; // 2 days in ms
+    const td = 24 * 60 * 60 * 1000; // 1 day in ms
     const last_used_days_ago = existingToken?.last_used && (existingToken.last_used + td) <= Date.now();
     const expired = existingToken && existingToken.expires_at <= Date.now();
 

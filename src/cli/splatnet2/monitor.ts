@@ -91,6 +91,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     i.cached_records = records;
 
+    i.auto_update_iksm_session = argv.autoUpdateSession;
+
     console.log('Player %s (Splatoon 2 ID %s, NSA ID %s) level %d',
         records.records.player.nickname,
         records.records.unique_id,
@@ -119,6 +121,8 @@ export class SplatNet2RecordsMonitor {
 
     /** Prevents redownloading user records on the first loop run */
     cached_records: Records | null = null;
+
+    auto_update_iksm_session = true;
 
     constructor(
         public storage: persist.LocalStorage,

@@ -26,7 +26,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {splatnet} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateIksmSession);
+    const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
     const [records, stages, activefestivals, timeline] = await Promise.all([
         splatnet.getRecords(),
@@ -42,4 +42,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         records.records.player.principal_id,
         records.records.player.player_rank,
         records.records.player.player_type);
+
+    console.log(data.iksm_session);
 }
