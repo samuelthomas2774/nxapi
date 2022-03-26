@@ -32,7 +32,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const params = {
         state,
         redirect_uri: 'npf54789befb391a838://auth',
-        client_id: MOON_CLIENT_ID,
+        client_id: ZNMA_CLIENT_ID,
         scope: [
             'openid',
             'user',
