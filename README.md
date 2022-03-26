@@ -28,6 +28,17 @@ The API library and types are exported for use in JavaScript/TypeScript software
 
 ### Install
 
+```sh
+# From registry.npmjs.com
+npm install --global nxapi
+
+# From gitlab.fancy.org.uk
+npm install --global --registry https://gitlab.fancy.org.uk/api/v4/packages/npm/ @samuel/nxapi
+
+# From npm.pkg.github.com
+npm install --global --registry https://npm.pkg.github.com @samuelthomas2774/nxapi
+```
+
 #### Install from source
 
 Node.js and npm must already be installed.
