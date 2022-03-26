@@ -6,7 +6,7 @@ import { CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse, ZncSucc
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, LoopResult, SavedToken, YargsArguments } from '../../util.js';
-import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
+import { DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { handleEnableSplatNet2Monitoring, ZncNotifications } from './notify.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 import { ErrorResponse } from '../../index.js';
@@ -98,6 +98,11 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'number',
         // 3 minutes - the monitor is only active while the authenticated user is playing Splatoon 2 online
         default: 3 * 60,
+    }).option('splatnet2-auto-update-session', {
+        alias: ['sn2-auto-update-session'],
+        describe: 'Automatically obtain and refresh the iksm_session cookie',
+        type: 'boolean',
+        default: true,
     });
 }
 
@@ -170,7 +175,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 }
 
-class ZncDiscordPresence extends ZncNotifications {
+export class ZncDiscordPresence extends ZncNotifications {
     show_friend_code = false;
     force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
     show_console_online = false;
@@ -261,7 +266,13 @@ class ZncDiscordPresence extends ZncNotifications {
     title: {id: string; since: number} | null = null;
     i = 0;
 
+    last_presence: Presence | null = null;
+    friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
+
     async updatePresence(presence: Presence | null, friendcode?: CurrentUser['links']['friendCode']) {
+        this.last_presence = presence;
+        this.friendcode = friendcode;
+
         const online = presence?.state === PresenceState.ONLINE || presence?.state === PresenceState.PLAYING;
 
         const show_presence =
@@ -279,10 +290,14 @@ class ZncDiscordPresence extends ZncNotifications {
             return;
         }
 
-        const fc = this.show_friend_code ? this.force_friend_code ?? friendcode : undefined;
+        const presencecontext: DiscordPresenceContext = {
+            friendcode: this.show_friend_code ? this.force_friend_code ?? friendcode : undefined,
+            znc_discord_presence: this,
+            nsaid: this.friend_nsaid ?? this.data.nsoAccount.user.nsaId,
+        };
         const discordpresence = 'name' in presence.game ?
-            getDiscordPresence(presence.state, presence.game, fc) :
-            getInactiveDiscordPresence(presence.state, presence.logoutAt, fc);
+            getDiscordPresence(presence.state, presence.game, presencecontext) :
+            getInactiveDiscordPresence(presence.state, presence.logoutAt, presencecontext);
 
         if (this.rpc && this.rpc.id !== discordpresence.id) {
             const client = this.rpc.client;
@@ -446,7 +461,7 @@ class ZncDiscordPresence extends ZncNotifications {
     }
 }
 
-class ZncProxyDiscordPresence extends ZncDiscordPresence {
+export class ZncProxyDiscordPresence extends ZncDiscordPresence {
     constructor(
         readonly argv: ArgumentsCamelCase<Arguments>,
         public presence_url: string

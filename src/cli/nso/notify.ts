@@ -84,6 +84,11 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'number',
         // 3 minutes - the monitor is only active while the authenticated user is playing Splatoon 2 online
         default: 3 * 60,
+    }).option('splatnet2-auto-update-session', {
+        alias: ['sn2-auto-update-session'],
+        describe: 'Automatically obtain and refresh the iksm_session cookie',
+        type: 'boolean',
+        default: true,
     });
 }
 
@@ -461,7 +466,7 @@ export function handleEnableSplatNet2Monitoring(
     return async () => {
         const directory = argv.splatnet2MonitorDirectory ?? path.join(argv.dataPath, 'splatnet2');
 
-        const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl);
+        const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.splatnet2AutoUpdateSession);
 
         const records = await splatnet.getRecords();
         const stages = await splatnet.getStages();

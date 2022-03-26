@@ -72,7 +72,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl);
+    const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
     const records = await splatnet.getRecords();
     const stages = await splatnet.getStages();

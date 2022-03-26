@@ -2,10 +2,10 @@ import DiscordRPC from 'discord-rpc';
 import { CurrentUser, Game, PresenceState } from '../api/znc-types.js';
 import titles, { defaultTitle } from './titles.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util.js';
+import { ZncDiscordPresence } from '../cli/nso/presence.js';
 
 export function getDiscordPresence(
-    state: PresenceState, game: Game,
-    friendcode?: CurrentUser['links']['friendCode']
+    state: PresenceState, game: Game, context?: DiscordPresenceContext
 ): DiscordPresence {
     const titleid = getTitleIdFromEcUrl(game.shopUri);
     const title = titles.find(t => t.id === titleid) || defaultTitle;
@@ -28,7 +28,7 @@ export function getDiscordPresence(
         details: text[0],
         state: text[1],
         largeImageKey: title.largeImageKey ?? game.imageUri,
-        largeImageText: friendcode ? 'SW-' + friendcode.id : undefined,
+        largeImageText: context?.friendcode ? 'SW-' + context.friendcode.id : undefined,
         smallImageKey: title.smallImageKey,
         buttons: game.shopUri ? [
             {
@@ -38,7 +38,7 @@ export function getDiscordPresence(
         ] : [],
     };
 
-    title.callback?.call(null, activity, game);
+    title.callback?.call(null, activity, game, context);
 
     return {
         id: title.client || defaultTitle.client,
@@ -49,8 +49,7 @@ export function getDiscordPresence(
 }
 
 export function getInactiveDiscordPresence(
-    state: PresenceState, logoutAt: number,
-    friendcode?: CurrentUser['links']['friendCode']
+    state: PresenceState, logoutAt: number, context?: DiscordPresenceContext
 ): DiscordPresence {
     return {
         id: defaultTitle.client,
@@ -58,9 +57,15 @@ export function getInactiveDiscordPresence(
         activity: {
             state: 'Not playing',
             largeImageKey: 'nintendoswitch',
-            largeImageText: friendcode ? 'SW-' + friendcode.id : undefined,
+            largeImageText: context?.friendcode ? 'SW-' + context.friendcode.id : undefined,
         },
     };
+}
+
+export interface DiscordPresenceContext {
+    friendcode?: CurrentUser['links']['friendCode'];
+    znc_discord_presence?: ZncDiscordPresence;
+    nsaid?: string;
 }
 
 export interface DiscordPresence {
@@ -90,4 +95,6 @@ export interface Title {
     showTimestamp?: boolean;
     /** Show "Playing online" if playing online and the game doesn't set activity details */
     showPlayingOnline?: string | boolean;
+
+    callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) => void;
 }
