@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import { flapg, FlapgIid, genfc } from './f.js';
 import { AccountLogin, ActiveEvent, Announcement, CurrentUser, Friends, WebService, WebServiceToken, ZncResponse } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
-import { ErrorResponse } from './util.js';
+import { ErrorResponse, JwtPayload } from './util.js';
 
 const debug = createDebug('api:znc');
 
@@ -168,4 +168,38 @@ export default class ZncApi {
             credential: data.result.webApiServerCredential,
         };
     }
+}
+
+export interface ZncJwtPayload extends JwtPayload {
+    isChildRestricted: boolean;
+    membership: {
+        active: boolean;
+    };
+    aud: string;
+    exp: number;
+    iat: number;
+    iss: 'api-lp1.znc.srv.nintendo.net';
+    /** User ID (CurrentUser.id, not CurrentUser.nsaID) */
+    sub: number;
+    typ: 'id_token';
+}
+export interface ZncWebServiceJwtPayload extends JwtPayload {
+    isChildRestricted: boolean;
+    aud: string;
+    exp: number;
+    iat: number;
+    iss: 'api-lp1.znc.srv.nintendo.net';
+    jti: string;
+    /** User ID (CurrentUser.id, not CurrentUser.nsaID) */
+    sub: number;
+    links: {
+        networkServiceAccount: {
+            /** NSA ID (CurrentUser.nsaID) */
+            id: string;
+        };
+    };
+    typ: 'id_token';
+    membership: {
+        active: boolean;
+    };
 }

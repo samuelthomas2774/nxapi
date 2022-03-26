@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { ErrorResponse } from './util.js';
+import { ErrorResponse, JwtPayload } from './util.js';
 
 const debug = createDebug('api:na');
 
@@ -89,6 +89,18 @@ export interface NintendoAccountSessionToken {
     session_token: string;
     code: string;
 }
+export interface NintendoAccountSessionTokenJwtPayload extends JwtPayload {
+    jti: string;
+    typ: 'session_token';
+    iss: 'https://accounts.nintendo.com';
+    'st:scp': number[];
+    /** Subject (Nintendo Account ID) */
+    sub: string;
+    exp: number;
+    /** Audience (client ID) */
+    aud: string;
+    iat: number;
+}
 
 export interface NintendoAccountToken {
     scope: string[];
@@ -96,6 +108,32 @@ export interface NintendoAccountToken {
     id_token: string;
     access_token?: string;
     expires_in: 900;
+}
+export interface NintendoAccountIdTokenJwtPayload extends JwtPayload {
+    /** Subject (Nintendo Account ID) */
+    sub: string;
+    iat: number;
+    exp: number;
+    /** Audience (client ID) */
+    aud: string;
+    iss: 'https://accounts.nintendo.com';
+    jti: string;
+    at_hash: string; // ??
+    typ: 'id_token';
+    country: string;
+}
+export interface NintendoAccountAccessTokenJwtPayload extends JwtPayload {
+    iss: 'https://accounts.nintendo.com';
+    jti: string;
+    typ: 'token';
+    /** Subject (Nintendo Account ID) */
+    sub: string;
+    iat: number;
+    'ac:grt': number; // ??
+    'ac:scp': number[]; // ??
+    exp: number;
+    /** Audience (client ID) */
+    aud: string;
 }
 
 export interface NintendoAccountUser {

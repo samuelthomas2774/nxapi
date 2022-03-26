@@ -4,12 +4,14 @@ import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import getPaths from 'env-paths';
+import fetch from 'node-fetch';
 import { FlapgApiResponse } from './api/f.js';
-import { NintendoAccountToken, NintendoAccountUser } from './api/na.js';
+import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from './api/na.js';
 import { AccountLogin } from './api/znc-types.js';
-import ZncApi from './api/znc.js';
+import ZncApi, { ZNCA_CLIENT_ID } from './api/znc.js';
 import ZncProxyApi from './api/znc-proxy.js';
-import MoonApi from './api/moon.js';
+import MoonApi, { ZNMA_CLIENT_ID } from './api/moon.js';
+import { Jwks, Jwt } from './api/util.js';
 
 const debug = createDebug('cli');
 
@@ -62,6 +64,23 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
         throw new Error('Invalid token');
     }
 
+    const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+
+    if (jwt.payload.iss !== 'https://accounts.nintendo.com') {
+        throw new Error('Invalid Nintendo Account session token issuer');
+    }
+    if (jwt.payload.typ !== 'session_token') {
+        throw new Error('Invalid Nintendo Account session token type');
+    }
+    if (jwt.payload.aud !== ZNCA_CLIENT_ID) {
+        throw new Error('Invalid Nintendo Account session token audience');
+    }
+    if (jwt.payload.exp <= (Date.now() / 1000)) {
+        throw new Error('Nintendo Account session token expired');
+    }
+
+    // Nintendo Account session tokens use a HMAC SHA256 signature, so we can't verify this is valid
+
     const existingToken: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
@@ -99,6 +118,23 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string)
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi pctl auth`.');
         throw new Error('Invalid token');
     }
+
+    const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+
+    if (jwt.payload.iss !== 'https://accounts.nintendo.com') {
+        throw new Error('Invalid Nintendo Account session token issuer');
+    }
+    if (jwt.payload.typ !== 'session_token') {
+        throw new Error('Invalid Nintendo Account session token type');
+    }
+    if (jwt.payload.aud !== ZNMA_CLIENT_ID) {
+        throw new Error('Invalid Nintendo Account session token audience');
+    }
+    if (jwt.payload.exp <= (Date.now() / 1000)) {
+        throw new Error('Nintendo Account session token expired');
+    }
+
+    // Nintendo Account session tokens use a HMAC SHA256 signature, so we can't verify this is valid
 
     const existingToken: SavedMoonToken | undefined = await storage.getItem('MoonToken.' + token);
 
@@ -184,4 +220,32 @@ const LoopRunOkSkipInterval = Symbol('LoopRunOkSkipInterval');
 export enum LoopResult {
     OK = LoopRunOk as any,
     OK_SKIP_INTERVAL = LoopRunOkSkipInterval as any,
+}
+
+interface SavedJwks {
+    jwks: Jwks;
+    expires_at: number;
+}
+
+export async function getJwks(url: string, storage?: persist.LocalStorage) {
+    const cached_keyset: SavedJwks | undefined = await storage?.getItem('Jwks.' + url);
+
+    if (!cached_keyset || cached_keyset.expires_at <= Date.now()) {
+        debug('Downloading JSON Web Key Set from %s', url);
+
+        const response = await fetch(url);
+
+        const jwks = await response.json() as Jwks;
+
+        const cached_keyset: SavedJwks = {
+            jwks,
+            expires_at: Date.now() + (1 * 60 * 60 * 1000), // 1 hour
+        };
+
+        await storage?.setItem('Jwks.' + url, cached_keyset);
+
+        return jwks;
+    }
+
+    return cached_keyset.jwks;
 }

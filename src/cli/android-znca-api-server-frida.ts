@@ -6,7 +6,10 @@ import frida, { Session } from 'frida';
 import express from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, YargsArguments } from '../util.js';
+import { ArgumentsCamelCase, Argv, getJwks, initStorage, YargsArguments } from '../util.js';
+import { Jwt } from '../api/util.js';
+import { NintendoAccountIdTokenJwtPayload } from '../api/na.js';
+import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
 
 const debug = createDebug('cli:android-znca-api-server-frida');
 const debugApi = createDebug('cli:android-znca-api-server-frida:api');
@@ -32,6 +35,7 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    const storage = await initStorage(argv.dataPath);
     await setup(argv);
 
     let {session, script} = await attach(argv);
@@ -43,7 +47,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         genAudioH2(token: string, timestamp: string, uuid: string): Promise<string>;
     } = script.exports as any;
 
-    process.on('beforeExit', () => {
+    process.on('exit', () => {
         debug('Releasing wake lock', argv.device);
         execFileSync('adb', [
             '-s',
@@ -100,6 +104,60 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({error: 'invalid_request'}));
+                return;
+            }
+
+            try {
+                const [jwt, sig] = Jwt.decode<NintendoAccountIdTokenJwtPayload | ZncJwtPayload>(data.token);
+
+                const check_signature = jwt.payload.iss === 'https://accounts.nintendo.com';
+
+                if (data.type === 'nso' && jwt.payload.iss !== 'https://accounts.nintendo.com') {
+                    throw new Error('Invalid token issuer');
+                }
+                if (data.type === 'nso' && jwt.payload.aud !== ZNCA_CLIENT_ID) {
+                    throw new Error('Invalid token audience');
+                }
+                if (data.type === 'app' && jwt.payload.iss !== 'api-lp1.znc.srv.nintendo.net') {
+                    throw new Error('Invalid token issuer');
+                }
+
+                if (jwt.payload.exp <= (Date.now() / 1000)) {
+                    throw new Error('Token expired');
+                }
+
+                const jwks = jwt.header.kid &&
+                    jwt.header.jku?.match(/^https\:\/\/([^/]+\.)?nintendo\.(com|net)(\/|$)/i) ?
+                    await getJwks(jwt.header.jku, storage) : null;
+
+                if (check_signature && !jwks) {
+                    throw new Error('Requires signature verification, but trusted JWKS URL and key ID not included in token');
+                }
+
+                const jwk = jwks?.keys.find(jwk => jwk.use === 'sig' && jwk.alg === jwt.header.alg &&
+                    jwk.kid === jwt.header.kid && jwk.x5c?.length);
+                const cert = jwk?.x5c?.[0] ? '-----BEGIN CERTIFICATE-----\n' +
+                    jwk.x5c[0].match(/.{1,64}/g)!.join('\n') + '\n-----END CERTIFICATE-----\n' : null;
+
+                if (!cert) {
+                    if (check_signature) throw new Error('Not verifying signature, no JKW found for this token');
+                    else debug('Not verifying signature, no JKW found for this token');
+                }
+
+                const signature_valid = cert && jwt.verify(sig, cert);
+
+                if (check_signature && !signature_valid) {
+                    throw new Error('Invalid signature');
+                }
+
+                if (!check_signature) {
+                    if (signature_valid) debug('JWT signature is valid');
+                    else debug('JWT signature is not valid or not checked');
+                }
+            } catch (err) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({error: 'invalid_token', error_message: (err as Error).message}));
                 return;
             }
 

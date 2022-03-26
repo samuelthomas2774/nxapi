@@ -7,7 +7,7 @@ import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, S
 const debug = createDebug('api:moon');
 
 const MOON_URL = 'https://api-lp1.pctl.srv.nintendo.net/moon';
-export const MOON_CLIENT_ID = '54789befb391a838';
+export const ZNMA_CLIENT_ID = '54789befb391a838';
 
 export default class MoonApi {
     constructor(
@@ -95,7 +95,7 @@ export default class MoonApi {
 
     static async loginWithSessionToken(token: string) {
         // Nintendo Account token
-        const nintendoAccountToken = await getNintendoAccountToken(token, MOON_CLIENT_ID);
+        const nintendoAccountToken = await getNintendoAccountToken(token, ZNMA_CLIENT_ID);
 
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);

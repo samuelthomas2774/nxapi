@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import type { Arguments as ParentArguments } from '../../cli.js';
 import { ArgumentsCamelCase, Argv, getPctlToken, initStorage, YargsArguments } from '../../util.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
-import { MOON_CLIENT_ID } from '../../api/moon.js';
+import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 
 const debug = createDebug('cli:pctl:auth');
 
@@ -87,7 +87,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     debug('Redirect URL parameters', [...authorisedparams.entries()]);
 
     const code = authorisedparams.get('session_token_code')!;
-    const token = await getNintendoAccountSessionToken(code, verifier, MOON_CLIENT_ID);
+    const token = await getNintendoAccountSessionToken(code, verifier, ZNMA_CLIENT_ID);
 
     console.log('Session token', token);
 
