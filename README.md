@@ -28,6 +28,10 @@ The API library and types are exported for use in JavaScript/TypeScript software
 
 ### Install
 
+#### Install with npm
+
+Node.js and npm must already be installed.
+
 ```sh
 # From registry.npmjs.com
 npm install --global nxapi
@@ -84,22 +88,22 @@ nxapi nso presence
 
 # Show a friend's presence
 # Use `nxapi nso friends` to show all friend's Nintendo Switch account IDs
-nxapi nso presence --friend-naid 0123456789abcdef
+nxapi nso presence --friend-nsaid 0123456789abcdef
 
 # Show the authenticated user's friend code in Discord
 nxapi nso presence --friend-code
 nxapi nso presence --friend-code -
+
+# Show a custom friend code in Discord
+# Use this if you are showing presence of a friend of the authenticated user
+nxapi nso presence --friend-code 0000-0000-0000
+nxapi nso presence --friend-code SW-0000-0000-0000
 
 # Show inactive presence
 # This will show a "Not playing" status if any consoles linked to the user's account is online but the user
 # is not selected in a game
 # Don't enable this if you are not the only user of all consoles linked to your account
 nxapi nso presence --show-inactive-presence
-
-# Show a custom friend code in Discord
-# Use this if you are showing presence of a friend of the authenticated user
-nxapi nso presence --friend-code 0000-0000-0000
-nxapi nso presence --friend-code SW-0000-0000-0000
 
 # Also show friend notifications (see below)
 nxapi nso presence --friend-notifications
@@ -185,9 +189,11 @@ nxapi nso http-server --listen "[::1]:12345"
 
 # Use the API proxy server in other commands
 nxapi nso ... --znc-proxy-url "http://[::1]:12345/api/znc"
+ZNC_PROXY_URL=http://[::1]:12345/api/znc nxapi nso ...
 
 # Start the server using another API proxy server
 nxapi nso http-server --znc-proxy-url "http://[::1]:12345/api/znc"
+ZNC_PROXY_URL=http://[::1]:12345/api/znc nxapi nso http-server
 
 # Allow requests without a Nintendo Account session token
 # Anyone connecting to the API proxy server will be able to use any already authenticated user with their Nintendo Account ID
@@ -232,13 +238,15 @@ curl --no-buffer "http://[::1]:12345/api/znc/presence/events?user=0123456789abcd
 
 The splatnet2statink and flapg APIs are used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to these APIs to generate some data that is required to authenticate the app. These APIs run the Nintendo Switch Online app in an Android emulator to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
 
+Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
+
 Alternatively nxapi includes a custom server using Frida on an Android device/emulator that can be used instead of these.
 
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
 
 ### SplatNet 2
 
-All SplatNet 2 commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-iksm-session`, however this will cause commands to fail if there isn't a valid SplatNet 2 token.
+All SplatNet 2 commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid SplatNet 2 token.
 
 #### User
 
@@ -250,56 +258,60 @@ nxapi splatnet2 user
 #### Download user records
 
 ```sh
-# Download user records to data/splatnet2
+# Download user records to the splatnet2 directory in nxapi's data path
 # Data that already exists will not be redownloaded
+nxapi splatnet2 dump-records
+# Download user records to data/splatnet2
 nxapi splatnet2 dump-records data/splatnet2
 # Don't include user records (when downloading other data)
-nxapi splatnet2 dump-records data/splatnet2 --no-user-records
+nxapi splatnet2 dump-records --no-user-records
 
 # Include lifetime inkage challenge images
-nxapi splatnet2 dump-records data/splatnet2 --challenges
+nxapi splatnet2 dump-records --challenges
 
 # Include profile image (share button on the home page)
-nxapi splatnet2 dump-records data/splatnet2 --profile-image
-nxapi splatnet2 dump-records data/splatnet2 --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
+nxapi splatnet2 dump-records --profile-image
+nxapi splatnet2 dump-records --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
 
 # Download user records even if they already exist and haven't been updated
-nxapi splatnet2 dump-records data/splatnet2 --no-new-records
+nxapi splatnet2 dump-records --no-new-records
 
 # Include hero (Octo Canyon) records
 # If this option is included hero records will always be downloaded even if they haven't been updated
-nxapi splatnet2 dump-records data/splatnet2 --hero-records
+nxapi splatnet2 dump-records --hero-records
 # Only download hero records
-nxapi splatnet2 dump-records data/splatnet2 --no-user-records --hero-records
+nxapi splatnet2 dump-records --no-user-records --hero-records
 
 # Include timeline (CPOD FM on the home page)
 # If this option is included the timeline will always be downloaded even if it hasn't been updated
-nxapi splatnet2 dump-records data/splatnet2 --timeline
+nxapi splatnet2 dump-records --timeline
 # Only download the timeline
-nxapi splatnet2 dump-records data/splatnet2 --no-user-records --timeline
+nxapi splatnet2 dump-records --no-user-records --timeline
 ```
 
 #### Download battle/Salmon Run results
 
 ```sh
-# Download battle and Salmon Run results to data/splatnet2
+# Download battle and Salmon Run results to the splatnet2 directory in nxapi's data path
 # Data that already exists will not be redownloaded
+nxapi splatnet2 dump-results
+# Download battle and Salmon Run results to data/splatnet2
 nxapi splatnet2 dump-results data/splatnet2
 
 # Include battle summary image (share button on the battles list)
-nxapi splatnet2 dump-results data/splatnet2 --battle-summary-image
+nxapi splatnet2 dump-results --battle-summary-image
 
 # Include battle result images (share button on the battle details page)
-nxapi splatnet2 dump-results data/splatnet2 --battle-images
+nxapi splatnet2 dump-results --battle-images
 
 # Only download battle results
-nxapi splatnet2 dump-results data/splatnet2 --no-coop
+nxapi splatnet2 dump-results --no-coop
 # Only download Salmon Run results
-nxapi splatnet2 dump-results data/splatnet2 --no-battles
+nxapi splatnet2 dump-results --no-battles
 
 # Download summary data even if user records haven't been updated
 # Individual battle results/images/Salmon Run results still won't be redownloaded if they exist
-nxapi splatnet2 dump-results data/splatnet2 --no-check-updated
+nxapi splatnet2 dump-results --no-check-updated
 ```
 
 #### Monitor SplatNet 2 for new user records/battle/Salmon Run results
@@ -307,63 +319,70 @@ nxapi splatnet2 dump-results data/splatnet2 --no-check-updated
 This will constantly check SplatNet 2 for new data.
 
 ```sh
+# Watch for new battle and Salmon Run results and download them to the splatnet2 directory in nxapi's data path
+nxapi splatnet2 monitor
+
 # Watch for new battle and Salmon Run results and download them to data/splatnet2
 nxapi splatnet2 monitor data/splatnet2
 
 # Include profile image (share button on the home page)
-nxapi splatnet2 monitor data/splatnet2 --profile-image
-nxapi splatnet2 monitor data/splatnet2 --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
+nxapi splatnet2 monitor --profile-image
+nxapi splatnet2 monitor --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
 
 # Include battle summary image (share button on the battles list)
-nxapi splatnet2 monitor data/splatnet2 --battle-summary-image
+nxapi splatnet2 monitor --battle-summary-image
 
 # Include battle result images (share button on the battle details page)
-nxapi splatnet2 monitor data/splatnet2 --battle-images
+nxapi splatnet2 monitor --battle-images
 
 # Only download battle results
-nxapi splatnet2 monitor data/splatnet2 --no-coop
+nxapi splatnet2 monitor --no-coop
 # Only download Salmon Run results
-nxapi splatnet2 monitor data/splatnet2 --no-battles
+nxapi splatnet2 monitor --no-battles
 
 # Set update interval to 1800 seconds (30 minutes)
-nxapi splatnet2 monitor data/splatnet2 --update-interval 1800
+nxapi splatnet2 monitor --update-interval 1800
 ```
 
 SplatNet 2 monitoring can also be used with `nxapi nso notify` and `nxapi nso presence`. Data will only be downloaded from SplatNet 2 if the authenticated user is playing Splatoon 2 online.
 
-This can be used with `nxapi nso presence --presence-url ...` (the presence URL must return the status of the user authenticating to SplatNet 2). When used with `--friend-naid` the friend's presence will be shared on Discord but the authenticated user's presence will still be used to check if SplatNet 2 data should be updated.
+This can be used with `nxapi nso presence --presence-url ...` (the presence URL must return the status of the user authenticating to SplatNet 2). When used with `--friend-nsaid` the friend's presence will be shared on Discord but the authenticated user's presence will still be used to check if SplatNet 2 data should be updated.
 
 ```sh
-# Watch for new battle and Salmon Run results and download them to data/splatnet2
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2
+# Watch for new battle and Salmon Run results and download them to the splatnet2 directory in nxapi's data path
+# All options support both the notify and presence commands
+nxapi nso notify --splatnet2-monitor
+nxapi nso presence --splatnet2-monitor
 
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2
+# Watch for new battle and Salmon Run results and download them to data/splatnet2
+nxapi nso presence --splatnet2-monitor --splatnet2-monitor-directory data/splatnet2
+nxapi nso presence --splatnet2-monitor --sn2-path data/splatnet2
 
 # Include profile image (share button on the home page)
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image
+nxapi nso presence --splatnet2-monitor --splatnet2-monitor-profile-image
+nxapi nso presence --splatnet2-monitor --sn2-profile-image
 
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image --splatnet2-monitor-favourite-stage "Starfish Mainstage" --splatnet2-monitor-favourite-colour purple
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-profile-image --splatnet2-monitor-favourite-stage "Starfish Mainstage" --splatnet2-monitor-favourite-colour purple
+nxapi nso presence --splatnet2-monitor --splatnet2-monitor-profile-image --splatnet2-monitor-favourite-stage "Starfish Mainstage" --splatnet2-monitor-favourite-colour purple
+nxapi nso presence --splatnet2-monitor --sn2-profile-image --sn2-favourite-stage "Starfish Mainstage" --sn2-favourite-colour purple
 
 # Include battle summary image (share button on the battles list)
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-summary-image
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-summary-image
+nxapi nso presence --splatnet2-monitor --splatnet2-monitor-battle-summary-image
+nxapi nso presence --splatnet2-monitor --sn2-battle-summary-image
 
 # Include battle result images (share button on the battle details page)
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-images
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-battle-images
+nxapi nso presence --splatnet2-monitor --splatnet2-monitor-battle-images
+nxapi nso presence --splatnet2-monitor --sn2-battle-images
 
 # Only download battle results
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-coop
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-coop
+nxapi nso presence --splatnet2-monitor --no-splatnet2-monitor-coop
+nxapi nso presence --splatnet2-monitor --no-sn2-coop
 # Only download Salmon Run results
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-battles
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --no-splatnet2-monitor-battles
+nxapi nso presence --splatnet2-monitor --no-splatnet2-monitor-battles
+nxapi nso presence --splatnet2-monitor --no-sn2-battles
 
 # Set update interval to 60 seconds
-nxapi nso notify --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-update-interval 60
-nxapi nso presence --splatnet2-monitor-directory data/splatnet2 --splatnet2-monitor-update-interval 60
+nxapi nso presence --splatnet2-monitor --splatnet2-monitor-update-interval 60
+nxapi nso presence --splatnet2-monitor --sn2-update-interval 60
 ```
 
 ### Nintendo Switch Parental Controls
@@ -466,6 +485,7 @@ Data will be stored in an OS-specific local data location by default in the `nxa
 ```sh
 # Store data in ./data
 nxapi --data-path ./data ...
+NXAPI_DATA_PATH=`pwd`/data nxapi ...
 ```
 
 #### Debug logs
@@ -516,6 +536,10 @@ curl --header "Content-Type: application/json" --data '{"type": "nso", "token": 
 ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
 ```
 
+#### .env file
+
+Some options can be set using environment variables. These can be stored in a `.env` file in the data location. Environment variables will be read from the `.env` file in the default location, then the `.env` file in `NXAPI_DATA_PATH` location. `.env` files will not be read from the location set in the `--data-path` option.
+
 ### Links
 
 - Nintendo Switch Online app API docs
@@ -525,3 +549,15 @@ ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
     - https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs
 - Disabling TLS certificate validation (entirely) with Frida on Android
     - https://httptoolkit.tech/blog/frida-certificate-pinning/
+- Other Discord Rich Presence implementations (that use znc)
+    - https://github.com/MCMi460/NSO-RPC
+    - https://github.com/Quark064/NSO-Discord-Integration
+    - https://github.com/AAGaming00/acnhrp - doesn't use znc, instead attempts to send a message in Animal Crossing: New Horizons every 10 seconds to check if the user is playing that game online
+- Other projects using znc/web services
+    - https://github.com/frozenpandaman/splatnet2statink
+    - https://github.com/subnode/LoungeDesktop
+    - https://github.com/dqn/gonso
+    - https://github.com/clovervidia/splatnet-datagrabber
+    - https://github.com/mizuyoukanao/ACNH_Chat_Client
+    - https://github.com/dqn/acnh
+    - ... plus many more - [search GitHub for https://elifessler.com/s2s/api/gen2](https://github.com/search?q=https%3A%2F%2Felifessler.com%2Fs2s%2Fapi%2Fgen2&type=code)
