@@ -14,16 +14,16 @@ build:
         - PACKAGE=`npm --color="always" pack`
         - mv "$PACKAGE" nxapi.tgz
 
-        - npm run build-macos-linux
-        - npm run build-windows
-        - mv dist/bin/nxapi .
-        - mv dist/bin/nxapi.exe .
+        # - npm run build-macos-linux
+        # - npm run build-windows
+        # - mv dist/bin/nxapi .
+        # - mv dist/bin/nxapi.exe .
     artifacts:
         paths:
             - dist
             - nxapi.tgz
-            - nxapi
-            - nxapi.exe
+            # - nxapi
+            # - nxapi.exe
 
 publish-npm:
     stage: deploy
