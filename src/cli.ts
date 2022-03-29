@@ -1,9 +1,21 @@
+import * as path from 'path';
 import createDebug from 'debug';
 import Yargs from 'yargs';
+import dotenv from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
 import { paths, YargsArguments } from './util.js';
 import * as commands from './cli/index.js';
 
 const debug = createDebug('cli');
+
+dotenvExpand.expand(dotenv.config({
+    path: path.join(paths.data, '.env'),
+}));
+if (process.env.NXAPI_DATA_PATH) dotenvExpand.expand(dotenv.config({
+    path: path.join(process.env.NXAPI_DATA_PATH, '.env'),
+}));
+
+if (process.env.DEBUG) createDebug.enable(process.env.DEBUG);
 
 const yargs = Yargs(process.argv.slice(2)).option('data-path', {
     describe: 'Data storage path',

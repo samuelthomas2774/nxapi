@@ -93,6 +93,7 @@ export interface NintendoAccountSessionTokenJwtPayload extends JwtPayload {
     jti: string;
     typ: 'session_token';
     iss: 'https://accounts.nintendo.com';
+    /** Unknown - scopes the token is valid for? */
     'st:scp': number[];
     /** Subject (Nintendo Account ID) */
     sub: string;

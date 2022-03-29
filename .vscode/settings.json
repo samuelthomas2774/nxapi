@@ -2,5 +2,53 @@
     "files.associations": {
         "**/data/persist/*": "json"
     },
-    "typescript.tsdk": "node_modules/typescript/lib"
+    "json.schemas": [
+        {
+            "fileMatch": ["**/pctl-daily-*.json"],
+            "url": "./.vscode/schema/moon/dailysummary.schema.json"
+        },
+        {
+            "fileMatch": ["**/pctl-monthly-*.json"],
+            "url": "./.vscode/schema/moon/monthlysummary.schema.json"
+        },
+
+        {
+            "fileMatch": ["**/splatnet2-records-*.json", "!**-latest.json"],
+            "url": "./.vscode/schema/splatnet2/records.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-ni-*.json"],
+            "url": "./.vscode/schema/splatnet2/ni.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-timeline-*.json"],
+            "url": "./.vscode/schema/splatnet2/timeline.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-hero-*.json"],
+            "url": "./.vscode/schema/splatnet2/hero.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-results-summary-*.json", "!**/splatnet2-results-summary-image-*", "!**-latest.json"],
+            "url": "./.vscode/schema/splatnet2/results-summary.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-result-*.json", "!**/splatnet2-result-image-*.json"],
+            "url": "./.vscode/schema/splatnet2/result.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-coop-summary-*.json", "!**-latest.json"],
+            "url": "./.vscode/schema/splatnet2/coop-summary.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet2-coop-result-*.json"],
+            "url": "./.vscode/schema/splatnet2/coop-result.schema.json"
+        },
+
+        {
+            "fileMatch": ["**/nooklink-newspaper-*.json"],
+            "url": "./.vscode/schema/nooklink/newspaper.schema.json"
+        },
+    ],
+    "typescript.tsdk": "node_modules/typescript/lib",
 }

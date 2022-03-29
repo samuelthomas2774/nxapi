@@ -3,6 +3,7 @@
         "strict": true,
         "target": "es2015",
         "module": "es2022",
+        "jsx": "react",
         "moduleResolution": "node12",
         "declaration": true,
         "rootDir": "src",
