@@ -1,19 +1,20 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
+import { version } from '../util.js';
 
 const debugS2s = createDebug('api:s2s');
 const debugFlapg = createDebug('api:flapg');
 const debugZncaApi = createDebug('api:znca-api');
 
-export async function getLoginHash(token: string, timestamp: string | number) {
+export async function getLoginHash(token: string, timestamp: string | number, useragent?: string) {
     debugS2s('Getting login hash');
 
     const response = await fetch('https://elifessler.com/s2s/api/gen2', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'discord-switch-presence/1.0.0',
+            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
         },
         body: new URLSearchParams({
             naIdToken: token,
@@ -32,8 +33,11 @@ export async function getLoginHash(token: string, timestamp: string | number) {
     return data.hash;
 }
 
-export async function flapg(token: string, timestamp: string | number, guid: string, iid: FlapgIid) {
-    const hash = await getLoginHash(token, timestamp);
+export async function flapg(
+    token: string, timestamp: string | number, guid: string, iid: FlapgIid,
+    useragent?: string
+) {
+    const hash = await getLoginHash(token, timestamp, useragent);
 
     debugFlapg('Getting f parameter', {
         token, timestamp, guid, iid,
@@ -41,6 +45,7 @@ export async function flapg(token: string, timestamp: string | number, guid: str
 
     const response = await fetch('https://flapg.com/ika2/api/login?public', {
         headers: {
+            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
             'x-token': token,
             'x-time': '' + timestamp,
             'x-guid': guid,
@@ -57,7 +62,10 @@ export async function flapg(token: string, timestamp: string | number, guid: str
     return data.result;
 }
 
-export async function genf(url: string, token: string, timestamp: string | number, uuid: string, type: FlapgIid) {
+export async function genf(
+    url: string, token: string, timestamp: string | number, uuid: string, type: FlapgIid,
+    useragent?: string
+) {
     debugZncaApi('Getting f parameter', {
         url, token, timestamp, uuid,
     });
@@ -73,6 +81,7 @@ export async function genf(url: string, token: string, timestamp: string | numbe
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
         },
         body: JSON.stringify(req),
     });
@@ -89,8 +98,11 @@ export async function genf(url: string, token: string, timestamp: string | numbe
     return data.f;
 }
 
-export async function genfc(url: string, token: string, timestamp: string | number, uuid: string, type: FlapgIid) {
-    const f = await genf(url, token, timestamp, uuid, type);
+export async function genfc(
+    url: string, token: string, timestamp: string | number, uuid: string, type: FlapgIid,
+    useragent?: string
+) {
+    const f = await genf(url, token, timestamp, uuid, type, useragent);
 
     return {
         f,

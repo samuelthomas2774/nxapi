@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import * as yargs from 'yargs';
 import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
@@ -16,6 +17,17 @@ import { Jwks, Jwt } from './api/util.js';
 const debug = createDebug('cli');
 
 export const paths = getPaths('nxapi');
+
+export const dir = path.resolve(import.meta.url.substr(7), '..', '..');
+export const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
+export const version = pkg.version;
+export const dev = (() => {
+    try {
+        fs.statSync(path.join(dir, '.git'));
+        return true;
+    } catch (err) {}
+    return false;
+})();
 
 export type YargsArguments<T extends yargs.Argv> = T extends yargs.Argv<infer R> ? R : any;
 export type Argv<T = {}> = yargs.Argv<T>;

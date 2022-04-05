@@ -17,6 +17,8 @@ const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 
 export default class ZncApi {
+    static useragent: string | null = null;
+
     constructor(
         public token: string
     ) {}
@@ -93,8 +95,8 @@ export default class ZncApi {
         }));
     }
 
-    static async createWithSessionToken(token: string) {
-        const data = await this.loginWithSessionToken(token);
+    static async createWithSessionToken(token: string, useragent = ZncApi.useragent) {
+        const data = await this.loginWithSessionToken(token, useragent);
 
         return {
             nso: new this(data.credential.accessToken),
@@ -102,15 +104,15 @@ export default class ZncApi {
         };
     }
 
-    async renewToken(token: string) {
-        const data = await ZncApi.loginWithSessionToken(token);
+    async renewToken(token: string, useragent = ZncApi.useragent) {
+        const data = await ZncApi.loginWithSessionToken(token, useragent);
 
         this.token = data.credential.accessToken;
 
         return data;
     }
 
-    static async loginWithSessionToken(token: string) {
+    static async loginWithSessionToken(token: string, useragent = ZncApi.useragent) {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
@@ -120,9 +122,10 @@ export default class ZncApi {
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
+        const id_token = nintendoAccountToken.id_token;
         const flapgdata = process.env.ZNCA_API_URL ?
-            await genfc(process.env.ZNCA_API_URL + '/f', nintendoAccountToken.id_token, timestamp, uuid, FlapgIid.NSO) :
-            await flapg(nintendoAccountToken.id_token, timestamp, uuid, FlapgIid.NSO);
+            await genfc(process.env.ZNCA_API_URL + '/f', id_token, timestamp, uuid, FlapgIid.NSO, useragent ?? undefined) :
+            await flapg(id_token, timestamp, uuid, FlapgIid.NSO, useragent ?? undefined);
 
         debug('Getting Nintendo Switch Online app token');
 

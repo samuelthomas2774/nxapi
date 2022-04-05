@@ -3,16 +3,19 @@ import createDebug from 'debug';
 import { ActiveEvent, Announcement, CurrentUser, Friend, WebService, WebServiceToken } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
-import { SavedToken } from '../util.js';
+import { SavedToken, version } from '../util.js';
 
 const debug = createDebug('api:znc-proxy');
 
 export default class ZncProxyApi implements ZncApi {
+    static useragent: string | null = null;
+
     constructor(
         private url: string,
         // ZncApi uses the NSO token (valid for a few hours)
         // ZncProxyApi uses the Nintendo Account session token (valid for two years)
-        public token: string
+        public token: string,
+        public useragent = ZncProxyApi.useragent
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
@@ -20,6 +23,7 @@ export default class ZncProxyApi implements ZncApi {
             method: method,
             headers: Object.assign({
                 'Authorization': 'na ' + this.token,
+                'User-Agent': (this.useragent ? this.useragent + ' ' : '') + 'nxapi/' + version,
             }, headers),
             body: body,
         });
