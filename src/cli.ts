@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import Yargs from 'yargs';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-import { paths, YargsArguments } from './util.js';
+import { dev, paths, YargsArguments } from './util.js';
 import * as commands from './cli/index.js';
 
 const debug = createDebug('cli');
@@ -26,6 +26,8 @@ const yargs = Yargs(process.argv.slice(2)).option('data-path', {
 export type Arguments = YargsArguments<typeof yargs>;
 
 for (const command of Object.values(commands)) {
+    if (command.command === 'app' && !dev) continue;
+
     // @ts-expect-error
     yargs.command(command);
 }
@@ -38,3 +40,7 @@ yargs
     .showHelpOnFail(false, 'Specify --help for available options');
 
 export default yargs;
+
+export async function main() {
+    yargs.argv;
+}
