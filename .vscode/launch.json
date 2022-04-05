@@ -16,7 +16,12 @@
             "args": [
                 "dist/app/main/app-entry.cjs"
             ],
-            "outputCapture": "std"
+            "outputCapture": "std",
+            "env": {
+                "DEBUG": "*,-express:*,-body-parser:*",
+                "DEBUG_COLORS": "1",
+                "FORCE_COLOR": "3"
+            },
         }
     ]
 }

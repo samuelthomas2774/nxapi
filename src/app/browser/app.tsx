@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { Button, Image, StyleSheet, Text, TextProps, useColorScheme, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { NintendoAccountUser } from '../../api/na.js';
 import { SavedMoonToken, SavedToken } from '../../util.js';
 import ipc from './ipc.js';

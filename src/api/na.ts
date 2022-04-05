@@ -137,6 +137,73 @@ export interface NintendoAccountAccessTokenJwtPayload extends JwtPayload {
     aud: string;
 }
 
+export enum NintendoAccountScope {
+    OPENID = 'openid', // Used by NSO, PCTL, nintendo.co.uk
+    OFFLINE = 'offline', // Used by ec
+    USER = 'user', // Used by NSO, PCTL, nintendo.co.uk
+    USER_BIRTHDAY = 'user.birthday', // Used by NSO, PCTL, nintendo.co.uk
+    USER_MII = 'user.mii', // Used by NSO, nintendo.co.uk
+    USER_SCREENNAME = 'user.screenName', // Used by NSO
+    USER_EMAIL = 'user.email', // Used by nintendo.co.uk
+    USER_LINKS = 'user.links[].id', // Used by nintendo.co.uk
+    USER_LINKS_NNID = 'user.links.nintendoNetwork.id', // Used by ec
+    USER_MEMBERSHIP = 'user.membership', // Used by nintendo.co.uk
+    USER_WISHLIST = 'user.wishlist', // Used by nintendo.co.uk
+    ESHOP_DEMO = 'eshopDemo', // Used by nintendo.co.uk
+    ESHOP_DEVICE = 'eshopDevice', // Used by nintendo.co.uk
+    ESHOP_PRICE = 'eshopPrice', // Used by nintendo.co.uk
+    MISSIONSTATUS = 'missionStatus', // Used by nintendo.co.uk
+    MISSIONSTATUS_PROGRESS = 'missionStatus:progress', // Used by nintendo.co.uk
+    POINTWALLET = 'pointWallet', // Used by nintendo.co.uk
+    USERNOTIFICATIONMESSAGE_ANYCLIENTS = 'userNotificationMessage:anyClients', // Used by nintendo.co.uk
+    USERNOTIFICATIONMESSAGE_ANYCLIENTS_WRITE = 'userNotificationMessage:anyClients:write', // Used by nintendo.co.uk
+    MOONUSER_ADMINISTRATION = 'moonUser:administration', // Used by PCTL
+    MOONDEVICE_CREATE = 'moonDevice:create', // Used by PCTL
+    MOONOWNEDDEVICE_ADMINISTRATION = 'moonOwnedDevice:administration', // Used by PCTL
+    MOONPARENTALCONTROLSETTING = 'moonParentalControlSetting', // Used by PCTL
+    MOONPARENTALCONTROLSETTING_UPDATE = 'moonParentalControlSetting:update', // Used by PCTL
+    MOONPARENTALCONTROLSETTINGSTATE = 'moonParentalControlSettingState', // Used by PCTL
+    MOONPAIRINGSTATE = 'moonPairingState', // Used by PCTL
+    MOONSMARTDEVICE_ADMINISTRATION = 'moonSmartDevice:administration', // Used by PCTL
+    MOONDAILYSUMMARY = 'moonDailySummary', // Used by PCTL
+    MOONMONTHLYSUMMARY = 'moonMonthlySummary', // Used by PCTL
+}
+export enum NintendoAccountJwtScope {
+    'openid' = 0,
+    'user' = 8,
+    'user.birthday' = 9,
+    'user.mii' = 17,
+    'user.screenName' = 23,
+    'moonUser:administration' = 320,
+    'moonDevice:create' = 321,
+    'moonOwnedDevice:administration' = 325,
+    'moonParentalControlSetting' = 322,
+    'moonParentalControlSetting:update' = 323,
+    'moonParentalControlSettingState' = 324,
+    'moonPairingState' = 326,
+    'moonSmartDevice:administration' = 327,
+    'moonDailySummary' = 328,
+    'moonMonthlySummary' = 329,
+
+    // 10, 12, 70, 81, 198, 288, 289, 291, 292, 356, 357, 376
+    // 'user.email' = -1,
+    // 'user.links[].id' = -1,
+    // 'user.membership' = -1,
+    // 'user.wishlist' = -1,
+    // 'eshopDemo' = -1,
+    // 'eshopDevice' = -1,
+    // 'eshopPrice' = -1,
+    // 'missionStatus' = -1,
+    // 'missionStatus:progress' = -1,
+    // 'pointWallet' = -1,
+    // 'userNotificationMessage:anyClients' = -1,
+    // 'userNotificationMessage:anyClients:write' = -1,
+
+    // 1, 31
+	// 'offline' = -1,
+    // 'user.links.nintendoNetwork.id' = -1,
+}
+
 export interface NintendoAccountUser {
     emailOptedIn: boolean;
     language: string;
