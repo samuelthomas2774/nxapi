@@ -9,6 +9,9 @@ const debug = createDebug('api:moon');
 const MOON_URL = 'https://api-lp1.pctl.srv.nintendo.net/moon';
 export const ZNMA_CLIENT_ID = '54789befb391a838';
 
+const ZNMA_VERSION = '1.17.0';
+const ZNMA_BUILD = '261';
+
 export default class MoonApi {
     constructor(
         public token: string,
@@ -29,9 +32,10 @@ export default class MoonApi {
                 'X-Moon-TimeZone': 'Europe/London',
                 'X-Moon-Os-Language': 'en-GB',
                 'X-Moon-App-Language': 'en-GB',
-                'X-Moon-App-Display-Version': '1.16.0',
-                'X-Moon-App-Internal-Version': '247',
-                'User-Agent': 'moon_ANDROID/1.16.0 (com.nintendo.znma; build:247; ANDROID 26)',
+                'X-Moon-App-Display-Version': ZNMA_VERSION,
+                'X-Moon-App-Internal-Version': ZNMA_BUILD,
+                'User-Agent': 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; build:' + ZNMA_BUILD +
+                    '; ANDROID 26)',
             }, headers),
             body: body,
         });
