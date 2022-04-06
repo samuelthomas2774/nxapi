@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import notifier from 'node-notifier';
 import * as path from 'path';
-import { CurrentUser, Friend, Game, Presence, PresenceState, ZncErrorResponse, ZncSuccessResponse } from '../../api/znc-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, ZncErrorResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getTitleIdFromEcUrl, getToken, hrduration, initStorage, Loop, LoopResult, SavedToken, YargsArguments } from '../../util.js';
@@ -146,31 +146,77 @@ export class ZncNotifications extends Loop {
         this.update_interval = argv.updateInterval;
     }
 
-    async init() {
-        const announcements = await this.nso.getAnnouncements();
-        const friends = this.friend_notifications || !(this.nso instanceof ZncProxyApi) ?
-            await this.nso.getFriendList() : {result: {friends: []}};
+    async fetch(req: (
+        'announcements' | 'friends' | {friend: string; presence?: boolean} | 'webservices' | 'event' | 'user' | null
+    )[]) {
+        const result: Partial<{
+            announcements: Announcements;
+            friends: Friend[];
+            webservices: WebServices;
+            activeevent: ActiveEvent;
+            user: CurrentUser;
+        }> = {};
+
+        const friends = req.filter(r => typeof r === 'object' && r && 'friend' in r) as
+            {friend: string; presence?: boolean}[];
+
         if (!(this.nso instanceof ZncProxyApi)) {
-            const webservices = await this.nso.getWebServices();
-            const activeevent = await this.nso.getActiveEvent();
+            if (req.includes('announcements')) req.push('friends', 'webservices', 'event');
+            if (req.includes('webservices')) req.push('friends', 'event');
+            if (req.includes('event')) req.push('friends', 'webservices');
         }
 
-        let user: ZncSuccessResponse<CurrentUser> | null = null;
+        if (req.includes('announcements')) {
+            result.announcements = (await this.nso.getAnnouncements()).result;
+        }
+        if (req.includes('friends') || (friends && !(this.nso instanceof ZncProxyApi))) {
+            result.friends = (await this.nso.getFriendList()).result.friends;
+        } else if (friends && this.nso instanceof ZncProxyApi) {
+            result.friends = await Promise.all(friends.map(async r => {
+                const nso = this.nso as unknown as ZncProxyApi;
 
-        if (this.user_notifications) {
-            user = await this.nso.getCurrentUser();
+                if (r.presence) {
+                    const friend: Friend = {
+                        id: 0,
+                        nsaId: r.friend,
+                        imageUri: '',
+                        name: '',
+                        isFriend: true,
+                        isFavoriteFriend: false,
+                        isServiceUser: true,
+                        friendCreatedAt: 0,
+                        presence: await nso.fetch<Presence>('/friend/' + r.friend + '/presence'),
+                    };
 
-            await this.updateFriendsStatusForNotifications(this.friend_notifications ?
-                [user.result, ...friends.result.friends] : [user.result]);
-        } else if (this.friend_notifications) {
-            await this.updateFriendsStatusForNotifications(friends.result.friends);
+                    return friend;
+                }
+
+                return (await nso.fetch<{friend: Friend}>('/friend/' + r.friend)).friend;
+            }))
+        }
+        if (req.includes('webservices')) {
+            result.webservices = (await this.nso.getWebServices()).result;
+        }
+        if (req.includes('event')) {
+            result.activeevent = (await this.nso.getActiveEvent()).result;
+        }
+        if (req.includes('user')) {
+            result.user = (await this.nso.getCurrentUser()).result;
         }
 
-        if (this.splatnet2_monitors.size) {
-            if (!user) user = await this.nso.getCurrentUser();
+        return result;
+    }
 
-            await this.updatePresenceForSplatNet2Monitors([user.result]);
-        }
+    async init() {
+        const {friends, user} = await this.fetch([
+            'announcements',
+            this.user_notifications ? 'user' : null,
+            this.friend_notifications ? 'friends' : null,
+            this.splatnet2_monitors.size ? 'user' : null,
+        ]);
+
+        await this.updatePresenceForNotifications(user, friends, true);
+        await this.updatePresenceForSplatNet2Monitors([user!]);
 
         await new Promise(rs => setTimeout(rs, this.update_interval * 1000));
     }
@@ -327,6 +373,14 @@ export class ZncNotifications extends Loop {
         this.onlinefriends = newonlinefriends;
     }
 
+    async updatePresenceForNotifications(
+        user: CurrentUser | undefined, friends: Friend[] | undefined, initialRun?: boolean
+    ) {
+        await this.updateFriendsStatusForNotifications(([] as (CurrentUser | Friend)[])
+            .concat(this.user_notifications && user ? [user] : [])
+            .concat(this.friend_notifications && friends ? friends : []), initialRun);
+    }
+
     async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
         for (const friend of friends) {
             await this.updatePresenceForSplatNet2Monitor(friend.presence, friend.nsaId, friend.name);
@@ -362,28 +416,14 @@ export class ZncNotifications extends Loop {
     }
 
     async update() {
-        debug('Updating presence');
+        const {friends, user} = await this.fetch([
+            this.user_notifications ? 'user' : null,
+            this.friend_notifications ? 'friends' : null,
+            this.splatnet2_monitors.size ? 'user' : null,
+        ]);
 
-        if (this.friend_notifications) {
-            if (!(this.nso instanceof ZncProxyApi)) await this.nso.getActiveEvent();
-            const friends = this.friend_notifications || !(this.nso instanceof ZncProxyApi) ?
-                await this.nso.getFriendList() : {result: {friends: []}};
-            if (!(this.nso instanceof ZncProxyApi)) await this.nso.getWebServices();
-
-            if (this.user_notifications) {
-                const user = await this.nso.getCurrentUser();
-
-                await this.updateFriendsStatusForNotifications([user.result, ...friends.result.friends]);
-            } else {
-                await this.updateFriendsStatusForNotifications(friends.result.friends);
-            }
-        } else {
-            const user = await this.nso.getCurrentUser();
-
-            await this.updateFriendsStatusForNotifications([user.result]);
-        }
-
-        debug('Updated presence');
+        await this.updatePresenceForNotifications(user, friends);
+        await this.updatePresenceForSplatNet2Monitors([user!]);
     }
 
     async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
