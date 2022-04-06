@@ -267,12 +267,39 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     // Nintendo Switch friends, NSO app web services, events
     //
 
-    const cached_appdata = new Map<string, [Friend[], WebService[], ActiveEvent, number]>();
+    const cached_friendsdata = new Map<string, [Friend[], number]>();
+    const cached_appdata = new Map<string, [WebService[], ActiveEvent, number]>();
 
+    const getFriendsData: express.RequestHandler = async (req, res, next) => {
+        const cache = cached_friendsdata.get(req.zncAuth!.user.id);
+
+        if (cache && ((cache[1] + updateInterval) > Date.now())) {
+            debug('Using cached friends data for %s', req.zncAuth!.user.id);
+            next();
+            return;
+        }
+
+        try {
+            const friends = await req.znc!.getFriendList();
+
+            cached_friendsdata.set(req.zncAuth!.user.id, [
+                friends.result.friends, Date.now(),
+            ]);
+
+            next();
+        } catch (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: err,
+                error_message: (err as Error).message,
+            }));
+        }
+    };
     const getAppData: express.RequestHandler = async (req, res, next) => {
         const cache = cached_appdata.get(req.zncAuth!.user.id);
 
-        if (cache && ((cache[3] + updateInterval) > Date.now())) {
+        if (cache && ((cache[2] + updateInterval) > Date.now())) {
             debug('Using cached app data for %s', req.zncAuth!.user.id);
             next();
             return;
@@ -283,8 +310,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             const webservices = await req.znc!.getWebServices();
             const activeevent = await req.znc!.getActiveEvent();
 
+            cached_friendsdata.set(req.zncAuth!.user.id, [
+                friends.result.friends, Date.now(),
+            ]);
             cached_appdata.set(req.zncAuth!.user.id, [
-                friends.result.friends, webservices.result, activeevent.result, Date.now(),
+                webservices.result, activeevent.result, Date.now(),
             ]);
 
             next();
@@ -302,8 +332,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (!req.zncAuthPolicy) return next();
         if (!req.zncAuthPolicy.list_friends) return tokenUnauthorised(req, res);
         next();
-    }, localAuth, nsoAuth, getAppData, async (req, res) => {
-        const [friends, webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
+    }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
 
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
@@ -317,8 +347,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (!req.zncAuthPolicy) return next();
         if (!req.zncAuthPolicy.list_friends_presence) return tokenUnauthorised(req, res);
         next();
-    }, localAuth, nsoAuth, getAppData, async (req, res) => {
-        const [friends, webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
+    }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
         const presence: Record<string, Presence> = {};
 
         for (const friend of friends) {
@@ -340,8 +370,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (!req.zncAuthPolicy.friend) return tokenUnauthorised(req, res);
         if (req.zncAuthPolicy.friends && !req.zncAuthPolicy.friends.includes(req.params.nsaid)) return tokenUnauthorised(req, res);
         next();
-    }, localAuth, nsoAuth, getAppData, async (req, res) => {
-        const [friends, webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
+    }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
         const friend = friends.find(f => f.nsaId === req.params.nsaid);
 
         if (!friend) {
@@ -364,8 +394,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (req.zncAuthPolicy.friends_presence && !req.zncAuthPolicy.friends_presence.includes(req.params.nsaid)) return tokenUnauthorised(req, res);
         if (req.zncAuthPolicy.friends && !req.zncAuthPolicy.friends_presence && !req.zncAuthPolicy.friends.includes(req.params.nsaid)) return tokenUnauthorised(req, res);
         next();
-    }, localAuth, nsoAuth, getAppData, async (req, res) => {
-        const [friends, webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
+    }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
         const friend = friends.find(f => f.nsaId === req.params.nsaid);
 
         if (!friend) {
@@ -387,7 +417,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (!req.zncAuthPolicy.webservices) return tokenUnauthorised(req, res);
         next();
     }, localAuth, nsoAuth, getAppData, async (req, res) => {
-        const [friends, webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
+        const [webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
 
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({webservices, updated}));
@@ -416,7 +446,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (!req.zncAuthPolicy.activeevent) return tokenUnauthorised(req, res);
         next();
     }, localAuth, nsoAuth, getAppData, async (req, res) => {
-        const [friends, webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
+        const [webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
 
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({activeevent, updated}));
