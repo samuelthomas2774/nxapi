@@ -1,18 +1,27 @@
 
 export interface ZncSuccessResponse<T = unknown> {
-    status: 0;
+    status: ZncStatus.OK;
     result: T;
     correlationId: string;
 }
 
 export interface ZncErrorResponse {
-    status: number;
+    status: ZncStatus | number;
     errorMessage: string;
     correlationId: string;
+}
+export enum ZncStatus {
+    OK = 0,
+
+    BAD_REQUEST = 9400,
+    INVALID_TOKEN = 9403,
+    TOKEN_EXPIRED = 9404,
+    UPGRADE_REQUIRED = 9427,
 }
 
 export type ZncResponse<T = unknown> = ZncSuccessResponse<T> | ZncErrorResponse;
 
+/** /v3/Account/Login */
 export interface AccountLogin {
     user: CurrentUser;
     webApiServerCredential: {
@@ -25,6 +34,9 @@ export interface AccountLogin {
     };
 }
 
+/** /v1/Announcement/List */
+export type Announcements = Announcement[];
+
 export interface Announcement {
     announcementId: number;
     priority: number;
@@ -34,6 +46,7 @@ export interface Announcement {
     description: string;
 }
 
+/** /v3/Friend/List */
 export interface Friends {
     friends: Friend[];
 }
@@ -82,6 +95,9 @@ export interface Game {
     sysDescription: string;
 }
 
+/** /v1/Game/ListWebServices */
+export type WebServices = WebService[];
+
 export interface WebService {
     id: number;
     uri: string;
@@ -96,10 +112,48 @@ export interface WebServiceAttribute {
     attrKey: string;
 }
 
-export interface ActiveEvent {
-    // ??
+/** /v1/Event/GetActiveEvent */
+export type ActiveEvent = _ActiveEvent | {};
+
+export interface _ActiveEvent extends Event {
+    activateId: string;
 }
 
+/** /v1/Event/Show */
+export interface Event {
+    id: number;
+    name: string;
+    description: string;
+    shareUri: string;
+    ownerUserId: number;
+    members: EventMember[];
+    passCode: string;
+    eventType: 3; // ??
+    allowJoinGameWithoutCoral: boolean;
+    game: {
+        id: number;
+    };
+    imageUri: string;
+}
+
+export interface EventMember {
+    id: number;
+    name: string;
+    imageUri: string;
+    isPlaying: boolean;
+    isInvited: boolean;
+    isJoinedVoip: boolean;
+}
+
+/** /v3/User/Show */
+export interface User {
+    id: number;
+    nsaId: string;
+    imageUri: string;
+    name: string;
+}
+
+/** /v3/User/ShowSelf */
 export interface CurrentUser {
     id: number;
     nsaId: string;
@@ -127,12 +181,22 @@ export interface CurrentUser {
     };
     presence: Presence;
 }
+
 export enum PresencePermissions {
     FRIENDS = 'FRIENDS',
     FAVORITE_FRIENDS = 'FAVORITE_FRIENDS',
     SELF = 'SELF',
 }
 
+/** /v3/User/Permissions/ShowSelf */
+export interface CurrentUserPermissions {
+    etag: string;
+    permissions: {
+        presence: PresencePermissions;
+    };
+}
+
+/** /v2/Game/GetWebServiceToken */
 export interface WebServiceToken {
     accessToken: string;
     expiresIn: number;

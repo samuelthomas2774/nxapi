@@ -1,9 +1,10 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { ActiveEvent, Announcement, CurrentUser, Friend, WebService, WebServiceToken } from './znc-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Event, Friend, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { SavedToken, version } from '../util.js';
+import { NintendoAccountUser } from './na.js';
 
 const debug = createDebug('api:znc-proxy');
 
@@ -30,6 +31,8 @@ export default class ZncProxyApi implements ZncApi {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
+        if (response.status === 204) return null!;
+
         if (response.status !== 200) {
             throw new ErrorResponse('[zncproxy] Unknown error', response);
         }
@@ -40,33 +43,80 @@ export default class ZncProxyApi implements ZncApi {
     }
 
     async getAnnouncements() {
-        const response = await this.fetch<{announcements: Announcement[]}>('/announcements');
-        return {status: 0 as const, result: response.announcements, correlationId: ''};
+        const response = await this.fetch<{announcements: Announcements}>('/announcements');
+        return {status: ZncStatus.OK as const, result: response.announcements, correlationId: ''};
     }
 
     async getFriendList() {
         const response = await this.fetch<{friends: Friend[]}>('/friends');
-        return {status: 0 as const, result: response, correlationId: ''};
+        return {status: ZncStatus.OK as const, result: response, correlationId: ''};
+    }
+
+    async addFavouriteFriend(nsaid: string) {
+        await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
+            isFavoriteFriend: true,
+        }));
+        return {status: ZncStatus.OK as const, result: {}, correlationId: ''};
+    }
+
+    async removeFavouriteFriend(nsaid: string) {
+        await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
+            isFavoriteFriend: false,
+        }));
+        return {status: ZncStatus.OK as const, result: {}, correlationId: ''};
     }
 
     async getWebServices() {
         const response = await this.fetch<{webservices: WebService[]}>('/webservices');
-        return {status: 0 as const, result: response.webservices, correlationId: ''};
+        return {status: ZncStatus.OK as const, result: response.webservices, correlationId: ''};
     }
 
     async getActiveEvent() {
         const response = await this.fetch<{activeevent: ActiveEvent}>('/activeevent');
-        return {status: 0 as const, result: response.activeevent, correlationId: ''};
+        return {status: ZncStatus.OK as const, result: response.activeevent, correlationId: ''};
+    }
+
+    async getEvent(id: number) {
+        const response = await this.fetch<{event: Event}>('/event/' + id);
+        return {status: ZncStatus.OK as const, result: response.event, correlationId: ''};
+    }
+
+    async getUser(id: number) {
+        const response = await this.fetch<{user: User}>('/user/' + id);
+        return {status: ZncStatus.OK as const, result: response.user, correlationId: ''};
     }
 
     async getCurrentUser() {
         const response = await this.fetch<{user: CurrentUser}>('/user');
-        return {status: 0 as const, result: response.user, correlationId: ''};
+        return {status: ZncStatus.OK as const, result: response.user, correlationId: ''};
+    }
+
+    async getCurrentUserPermissions() {
+        const user = await this.getCurrentUser();
+
+        return {
+            status: ZncStatus.OK as const,
+            result: {
+                etag: user.result.etag,
+                permissions: user.result.permissions,
+            },
+            correlationId: '',
+        };
+    }
+
+    async updateCurrentUserPermissions(
+        to: PresencePermissions, from: PresencePermissions, etag: string
+    ): Promise<ZncSuccessResponse<{}>> {
+        throw new Error('Not supported in ZncProxyApi');
     }
 
     async getWebServiceToken(id: string) {
         const response = await this.fetch<{token: WebServiceToken}>('/webservice/' + id + '/token');
-        return {status: 0 as const, result: response.token, correlationId: ''};
+        return {status: ZncStatus.OK as const, result: response.token, correlationId: ''};
+    }
+
+    async getToken(token: string, user: NintendoAccountUser): Promise<ZncSuccessResponse<WebServiceToken>> {
+        throw new Error('Not supported in ZncProxyApi');
     }
 
     async renewToken() {

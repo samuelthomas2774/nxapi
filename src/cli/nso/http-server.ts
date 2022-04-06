@@ -343,6 +343,24 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         }));
     });
 
+    app.get('/api/znc/friends/favourites', authToken, (req, res, next) => {
+        if (!req.zncAuthPolicy) return next();
+        if (!req.zncAuthPolicy.list_friends) return tokenUnauthorised(req, res);
+        next();
+    }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+            friends: friends.filter(f => {
+                if (req.zncAuthPolicy?.friends && !req.zncAuthPolicy.friends.includes(f.nsaId)) return false;
+
+                return f.isFavoriteFriend;
+            }),
+            updated,
+        }));
+    });
+
     app.get('/api/znc/friends/presence', authToken, (req, res, next) => {
         if (!req.zncAuthPolicy) return next();
         if (!req.zncAuthPolicy.list_friends_presence) return tokenUnauthorised(req, res);
@@ -357,6 +375,30 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 if (p.friends_presence && !p.friends_presence.includes(friend.nsaId)) continue;
                 if (p.friends && !p.friends_presence && !p.friends.includes(friend.nsaId)) continue;
             }
+
+            presence[friend.nsaId] = friend.presence;
+        }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(presence));
+    });
+
+    app.get('/api/znc/friends/favourites/presence', authToken, (req, res, next) => {
+        if (!req.zncAuthPolicy) return next();
+        if (!req.zncAuthPolicy.list_friends_presence) return tokenUnauthorised(req, res);
+        next();
+    }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
+        const presence: Record<string, Presence> = {};
+
+        for (const friend of friends) {
+            if (req.zncAuthPolicy) {
+                const p = req.zncAuthPolicy;
+                if (p.friends_presence && !p.friends_presence.includes(friend.nsaId)) continue;
+                if (p.friends && !p.friends_presence && !p.friends.includes(friend.nsaId)) continue;
+            }
+
+            if (!friend.isFavoriteFriend) continue;
 
             presence[friend.nsaId] = friend.presence;
         }
@@ -386,6 +428,56 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({friend, updated}));
+    });
+
+    app.post('/api/znc/friend/:nsaid', nsoAuth, getFriendsData, bodyParser.json(), async (req, res) => {
+        const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
+        const friend = friends.find(f => f.nsaId === req.params.nsaid);
+
+        if (!friend) {
+            res.statusCode = 404;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: 'not_found',
+                error_message: 'The user is not friends with the authenticated user.',
+            }));
+            return;
+        }
+
+        if ('isFavoriteFriend' in req.body &&
+            req.body.isFavoriteFriend !== true &&
+            req.body.isFavoriteFriend !== false
+        ) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: 'invalid_request',
+                error_message: 'Invalid value for isFavoriteFriend',
+            }));
+            return;
+        }
+
+        if ('isFavoriteFriend' in req.body) {
+            try {
+                if (friend.isFavoriteFriend !== req.body.isFavoriteFriend) {
+                    if (req.body.isFavoriteFriend) await req.znc!.addFavouriteFriend(friend.nsaId);
+                    if (!req.body.isFavoriteFriend) await req.znc!.removeFavouriteFriend(friend.nsaId);
+                } else {
+                    // No change
+                }
+            } catch (err) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({
+                    error: err,
+                    error_message: (err as Error).message,
+                }));
+                return;
+            }
+        }
+
+        res.statusCode = 204;
+        res.end();
     });
 
     app.get('/api/znc/friend/:nsaid/presence', authToken, (req, res, next) => {
@@ -450,6 +542,42 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({activeevent, updated}));
+    });
+
+    app.get('/api/znc/event/:id', nsoAuth, async (req, res) => {
+        try {
+            const response = await req.znc!.getEvent(parseInt(req.params.id));
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                event: response.result,
+            }));
+        } catch (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: err,
+                error_message: (err as Error).message,
+            }));
+        }
+    });
+
+    app.get('/api/znc/user/:id', nsoAuth, async (req, res) => {
+        try {
+            const response = await req.znc!.getUser(parseInt(req.params.id));
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                user: response.result,
+            }));
+        } catch (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: err,
+                error_message: (err as Error).message,
+            }));
+        }
     });
 
     //

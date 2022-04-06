@@ -2,8 +2,8 @@ import fetch from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { flapg, FlapgIid, genfc } from './f.js';
-import { AccountLogin, ActiveEvent, Announcement, CurrentUser, Friends, WebService, WebServiceToken, ZncResponse } from './znc-types.js';
-import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
+import { AccountLogin, ActiveEvent, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
+import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse, JwtPayload } from './util.js';
 
 const debug = createDebug('api:znc');
@@ -20,7 +20,8 @@ export default class ZncApi {
     static useragent: string | null = null;
 
     constructor(
-        public token: string
+        public token: string,
+        public useragent: string | null = ZncApi.useragent
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
@@ -43,7 +44,7 @@ export default class ZncApi {
         if ('errorMessage' in data) {
             throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
-        if (data.status !== 0) {
+        if (data.status !== ZncStatus.OK) {
             throw new ErrorResponse('[znc] Unknown error', response, data);
         }
 
@@ -51,17 +52,33 @@ export default class ZncApi {
     }
 
     async getAnnouncements() {
-        return this.fetch<Announcement[]>('/v1/Announcement/List', 'POST', '{"parameter":{}}');
+        return this.fetch<Announcements>('/v1/Announcement/List', 'POST', '{"parameter":{}}');
     }
 
     async getFriendList() {
         return this.fetch<Friends>('/v3/Friend/List', 'POST', '{"parameter":{}}');
     }
 
+    async addFavouriteFriend(nsaid: string) {
+        return this.fetch<{}>('/v3/Friend/Favorite/Create', 'POST', JSON.stringify({
+            parameter: {
+                nsaId: nsaid,
+            },
+        }));
+    }
+
+    async removeFavouriteFriend(nsaid: string) {
+        return this.fetch<{}>('/v3/Friend/Favorite/Create', 'POST', JSON.stringify({
+            parameter: {
+                nsaId: nsaid,
+            },
+        }));
+    }
+
     async getWebServices() {
         const uuid = uuidgen();
 
-        return this.fetch<WebService[]>('/v1/Game/ListWebServices', 'POST', JSON.stringify({
+        return this.fetch<WebServices>('/v1/Game/ListWebServices', 'POST', JSON.stringify({
             requestId: uuid,
         }));
     }
@@ -70,17 +87,52 @@ export default class ZncApi {
         return this.fetch<ActiveEvent>('/v1/Event/GetActiveEvent', 'POST', '{"parameter":{}}');
     }
 
+    async getEvent(id: number) {
+        return this.fetch<Event>('/v1/Event/Show', 'POST', JSON.stringify({
+            parameter: {
+                id,
+            },
+        }));
+    }
+
+    async getUser(id: number) {
+        return this.fetch<User>('/v3/User/Show', 'POST', JSON.stringify({
+            parameter: {
+                id,
+            },
+        }));
+    }
+
     async getCurrentUser() {
         return this.fetch<CurrentUser>('/v3/User/ShowSelf', 'POST', '{"parameter":{}}');
+    }
+
+    async getCurrentUserPermissions() {
+        return this.fetch<CurrentUserPermissions>('/v3/User/Permissions/ShowSelf', 'POST', '{"parameter":{}}');
+    }
+
+    async updateCurrentUserPermissions(to: PresencePermissions, from: PresencePermissions, etag: string) {
+        return this.fetch<{}>('/v3/User/Permissions/UpdateSelf', 'POST', JSON.stringify({
+            parameter: {
+                permissions: {
+                    presence: {
+                        toValue: to,
+                        fromValue: from,
+                    },
+                },
+                etag,
+            },
+        }));
     }
 
     async getWebServiceToken(id: string) {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
+        const useragent = this.useragent ?? undefined;
         const data = process.env.ZNCA_API_URL ?
-            await genfc(process.env.ZNCA_API_URL + '/f', this.token, timestamp, uuid, FlapgIid.APP) :
-            await flapg(this.token, timestamp, uuid, FlapgIid.APP);
+            await genfc(process.env.ZNCA_API_URL + '/f', this.token, timestamp, uuid, FlapgIid.APP, useragent) :
+            await flapg(this.token, timestamp, uuid, FlapgIid.APP, useragent);
 
         const req = {
             id,
@@ -95,17 +147,43 @@ export default class ZncApi {
         }));
     }
 
+    async getToken(token: string, user: NintendoAccountUser) {
+        const uuid = uuidgen();
+        const timestamp = '' + Math.floor(Date.now() / 1000);
+
+        // Nintendo Account token
+        const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
+
+        const id_token = nintendoAccountToken.id_token;
+        const useragent = this.useragent ?? undefined;
+        const data = process.env.ZNCA_API_URL ?
+            await genfc(process.env.ZNCA_API_URL + '/f', id_token, timestamp, uuid, FlapgIid.NSO, useragent) :
+            await flapg(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
+
+        const req = {
+            naBirthday: user.birthday,
+            timestamp,
+            f: data.f,
+            requestId: uuid,
+            naIdToken: this.token,
+        };
+
+        return this.fetch<WebServiceToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
+            parameter: req,
+        }));
+    }
+
     static async createWithSessionToken(token: string, useragent = ZncApi.useragent) {
         const data = await this.loginWithSessionToken(token, useragent);
 
         return {
-            nso: new this(data.credential.accessToken),
+            nso: new this(data.credential.accessToken, useragent),
             data,
         };
     }
 
-    async renewToken(token: string, useragent = ZncApi.useragent) {
-        const data = await ZncApi.loginWithSessionToken(token, useragent);
+    async renewToken(token: string) {
+        const data = await ZncApi.loginWithSessionToken(token, this.useragent);
 
         this.token = data.credential.accessToken;
 
