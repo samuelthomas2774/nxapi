@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import { dev, paths, YargsArguments } from './util.js';
 import * as commands from './cli/index.js';
+import { checkUpdates } from './cli/update.js';
 
 const debug = createDebug('cli');
 
@@ -42,5 +43,7 @@ yargs
 export default yargs;
 
 export async function main() {
+    if (!process.env.NXAPI_SKIP_UPDATE_CHECK) await checkUpdates();
+
     yargs.argv;
 }
