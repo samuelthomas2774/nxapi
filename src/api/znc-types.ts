@@ -113,9 +113,9 @@ export interface WebServiceAttribute {
 }
 
 /** /v1/Event/GetActiveEvent */
-export type ActiveEvent = _ActiveEvent | {};
+export type GetActiveEventResult = ActiveEvent | {};
 
-export interface _ActiveEvent extends Event {
+export interface ActiveEvent extends Event {
     activateId: string;
 }
 

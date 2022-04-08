@@ -4,7 +4,7 @@ import bodyParser from 'body-parser';
 import * as net from 'net';
 import persist from 'node-persist';
 import { v4 as uuidgen } from 'uuid';
-import { ActiveEvent, Announcement, CurrentUser, Friend, Presence, WebService } from '../../api/znc-types.js';
+import { ActiveEvent, Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
@@ -268,7 +268,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     //
 
     const cached_friendsdata = new Map<string, [Friend[], number]>();
-    const cached_appdata = new Map<string, [WebService[], ActiveEvent, number]>();
+    const cached_appdata = new Map<string, [WebService[], GetActiveEventResult, number]>();
 
     const getFriendsData: express.RequestHandler = async (req, res, next) => {
         const cache = cached_friendsdata.get(req.zncAuth!.user.id);

@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { flapg, FlapgIid, genfc } from './f.js';
-import { AccountLogin, ActiveEvent, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
+import { AccountLogin, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse, JwtPayload } from './util.js';
 
@@ -84,7 +84,7 @@ export default class ZncApi {
     }
 
     async getActiveEvent() {
-        return this.fetch<ActiveEvent>('/v1/Event/GetActiveEvent', 'POST', '{"parameter":{}}');
+        return this.fetch<GetActiveEventResult>('/v1/Event/GetActiveEvent', 'POST', '{"parameter":{}}');
     }
 
     async getEvent(id: number) {

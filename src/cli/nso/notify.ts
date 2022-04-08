@@ -198,7 +198,8 @@ export class ZncNotifications extends Loop {
             result.webservices = (await this.nso.getWebServices()).result;
         }
         if (req.includes('event')) {
-            result.activeevent = (await this.nso.getActiveEvent()).result;
+            const activeevent = (await this.nso.getActiveEvent()).result;
+            result.activeevent = 'id' in activeevent ? activeevent : undefined;
         }
         if (req.includes('user')) {
             result.user = (await this.nso.getCurrentUser()).result;

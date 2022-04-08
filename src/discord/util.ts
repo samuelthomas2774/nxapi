@@ -1,5 +1,5 @@
 import DiscordRPC from 'discord-rpc';
-import { CurrentUser, Game, PresenceState } from '../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Game, PresenceState } from '../api/znc-types.js';
 import titles, { defaultTitle } from './titles.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util.js';
 import { ZncDiscordPresence } from '../cli/nso/presence.js';
@@ -15,9 +15,15 @@ export function getDiscordPresence(
     if (title.titleName === true) text.push(game.name);
     else if (title.titleName) text.push(title.titleName);
 
-    if (game.sysDescription) text.push(game.sysDescription);
-    else if (state === PresenceState.PLAYING && title.showPlayingOnline === true) text.push('Playing online');
-    else if (state === PresenceState.PLAYING && title.showPlayingOnline) text.push(title.showPlayingOnline as string);
+    const online = state === PresenceState.PLAYING;
+    const members = context?.activeevent?.members.filter(m => m.isPlaying);
+    const event_text = title.showActiveEvent && context?.activeevent ?
+        ' (' + members?.length + ' player' + (members?.length === 1 ? '' : 's') +
+        ')' : '';
+
+    if (game.sysDescription) text.push(game.sysDescription + event_text);
+    else if (online && title.showPlayingOnline === true) text.push('Playing online' + event_text);
+    else if (online && title.showPlayingOnline) text.push(title.showPlayingOnline as string + event_text);
 
     if (game.totalPlayTime >= 60) {
         text.push('Played for ' + hrduration(game.totalPlayTime) +
@@ -37,6 +43,18 @@ export function getDiscordPresence(
             },
         ] : [],
     };
+
+    if (online && title.showActiveEvent && context?.activeevent?.shareUri) {
+        activity.buttons?.push({
+            label: 'Join',
+            url: context.activeevent.shareUri,
+        });
+    } else if (online && title.showActiveEvent) {
+        activity.buttons?.push({
+            label: 'Join via Nintendo Switch',
+            url: 'https://lounge.nintendo.com',
+        });
+    }
 
     title.callback?.call(null, activity, game, context);
 
@@ -64,6 +82,7 @@ export function getInactiveDiscordPresence(
 
 export interface DiscordPresenceContext {
     friendcode?: CurrentUser['links']['friendCode'];
+    activeevent?: ActiveEvent;
     znc_discord_presence?: ZncDiscordPresence;
     nsaid?: string;
 }
@@ -95,6 +114,7 @@ export interface Title {
     showTimestamp?: boolean;
     /** Show "Playing online" if playing online and the game doesn't set activity details */
     showPlayingOnline?: string | boolean;
+    showActiveEvent?: boolean;
 
     callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) => void;
 }

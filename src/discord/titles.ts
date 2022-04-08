@@ -5,6 +5,7 @@ export const defaultTitle: Title = {
     client: '950883021165330493',
     titleName: true,
     showPlayingOnline: true,
+    showActiveEvent: true,
 };
 
 const titles: Title[] = [
@@ -14,6 +15,7 @@ const titles: Title[] = [
         client: '950886725398429726',
         largeImageKey: '0100f8f0000a2000',
         showPlayingOnline: true,
+        showActiveEvent: true,
     },
     {
         // Splatoon 2 [The Americas]
@@ -21,6 +23,7 @@ const titles: Title[] = [
         client: '950886725398429726',
         largeImageKey: '0100f8f0000a2000',
         showPlayingOnline: true,
+        showActiveEvent: true,
     },
     {
         // Splatoon 2 [Japan]
@@ -28,6 +31,7 @@ const titles: Title[] = [
         client: '950886725398429726',
         largeImageKey: '01003c700009c000',
         showPlayingOnline: true,
+        showActiveEvent: true,
     },
 
     {
@@ -35,6 +39,7 @@ const titles: Title[] = [
         id: '01006a800016e000',
         client: '950894516104212490',
         largeImageKey: '01006a800016e000',
+        showActiveEvent: true,
     },
 
     {
@@ -42,6 +47,7 @@ const titles: Title[] = [
         id: '0100152000022000',
         client: '950905573149409280',
         largeImageKey: '0100152000022000',
+        showActiveEvent: true,
     },
 
     {

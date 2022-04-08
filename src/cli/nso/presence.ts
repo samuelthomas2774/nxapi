@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import fetch from 'node-fetch';
-import { CurrentUser, Presence, PresenceState, ZncErrorResponse } from '../../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Presence, PresenceState, ZncErrorResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, LoopResult, SavedToken, YargsArguments } from '../../util.js';
@@ -27,6 +27,10 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'string',
     }).option('show-inactive-presence', {
         describe: 'Show Discord presence if your console is online but you are not playing (only enable if you are the only user on all consoles your account exists on)',
+        type: 'boolean',
+        default: false,
+    }).option('show-event', {
+        describe: 'Show event (Online Lounge/voice chat) details - this shows the number of players in game (experimental)',
         type: 'boolean',
         default: false,
     }).option('friend-nsaid', {
@@ -110,6 +114,7 @@ type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.presenceUrl) {
+        if (argv.showEvent) throw new Error('--presence-url not compatible with --show-event');
         if (argv.friendNsaid) throw new Error('--presence-url not compatible with --friend-nsaid');
         if (argv.userNotifications) throw new Error('--presence-url not compatible with --user-notifications');
         if (argv.friendNotifications) throw new Error('--presence-url not compatible with --user-notifications');
@@ -148,6 +153,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         return;
     }
 
+    if (argv.showEvent && argv.friendNsaid) throw new Error('--show-event not compatible with --friend-nsaid');
+
     const storage = await initStorage(argv.dataPath);
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
@@ -180,11 +187,12 @@ export class ZncDiscordPresence extends ZncNotifications {
     show_friend_code = false;
     force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
     show_console_online = false;
+    show_active_event = true;
 
     constructor(
         argv: Pick<ArgumentsCamelCase<Arguments>,
             'userNotifications' | 'friendNotifications' | 'updateInterval' |
-            'friendCode' | 'showInactivePresence' | 'friendNsaid'
+            'friendCode' | 'showInactivePresence' | 'showEvent' | 'friendNsaid'
         >,
         storage: persist.LocalStorage,
         token: string,
@@ -199,31 +207,35 @@ export class ZncDiscordPresence extends ZncNotifications {
                 {id: match[2] + '-' + match[3] + '-' + match[4], regenerable: false, regenerableAt: 0} : undefined;
         this.show_friend_code = !!this.force_friend_code || argv.friendCode === '' || argv.friendCode === '-';
         this.show_console_online = argv.showInactivePresence;
+        this.show_active_event = argv.showEvent;
 
         this.presence_user = argv.friendNsaid ?? data.nsoAccount.user.nsaId;
     }
 
     async init() {
-        const {friends, user} = await this.fetch([
+        const {friends, user, activeevent} = await this.fetch([
             'announcements',
             this.presence_user ?
                 this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
                     {friend: this.presence_user, presence: true} : null,
+            this.presence_user && this.show_active_event ? 'event' : null,
             this.user_notifications ? 'user' : null,
             this.friend_notifications ? 'friends' : null,
             this.splatnet2_monitors.size ? 'user' : null,
         ]);
 
-        if (this.presence_user && this.presence_user !== this.data.nsoAccount.user.nsaId) {
-            const friend = friends!.find(f => f.nsaId === this.presence_user);
+        if (this.presence_user) {
+            if (this.presence_user !== this.data.nsoAccount.user.nsaId) {
+                const friend = friends!.find(f => f.nsaId === this.presence_user);
 
-            if (!friend) {
-                throw new Error('User "' + this.presence_user + '" is not friends with this user');
+                if (!friend) {
+                    throw new Error('User "' + this.presence_user + '" is not friends with this user');
+                }
+
+                await this.updatePresenceForDiscord(friend.presence);
+            } else {
+                await this.updatePresenceForDiscord(user!.presence, user!.links.friendCode, activeevent);
             }
-
-            await this.updatePresenceForDiscord(friend.presence);
-        } else {
-            await this.updatePresenceForDiscord(user!.presence, user!.links.friendCode);
         }
 
         await this.updatePresenceForNotifications(user, friends);
@@ -238,10 +250,15 @@ export class ZncDiscordPresence extends ZncNotifications {
 
     last_presence: Presence | null = null;
     friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
+    last_event: ActiveEvent | undefined = undefined;
 
-    async updatePresenceForDiscord(presence: Presence | null, friendcode?: CurrentUser['links']['friendCode']) {
+    async updatePresenceForDiscord(
+        presence: Presence | null, friendcode?: CurrentUser['links']['friendCode'],
+        activeevent?: ActiveEvent
+    ) {
         this.last_presence = presence;
         this.friendcode = friendcode;
+        this.last_event = activeevent;
 
         const online = presence?.state === PresenceState.ONLINE || presence?.state === PresenceState.PLAYING;
 
@@ -262,6 +279,7 @@ export class ZncDiscordPresence extends ZncNotifications {
 
         const presencecontext: DiscordPresenceContext = {
             friendcode: this.show_friend_code ? this.force_friend_code ?? friendcode : undefined,
+            activeevent,
             znc_discord_presence: this,
             nsaid: this.presence_user!,
         };
@@ -346,26 +364,29 @@ export class ZncDiscordPresence extends ZncNotifications {
     }
 
     async update() {
-        const {friends, user} = await this.fetch([
+        const {friends, user, activeevent} = await this.fetch([
             this.presence_user ?
                 this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
                     {friend: this.presence_user, presence: true} : null,
+            this.presence_user && this.show_active_event ? 'event' : null,
             this.user_notifications ? 'user' : null,
             this.friend_notifications ? 'friends' : null,
             this.splatnet2_monitors.size ? 'user' : null,
         ]);
 
-        if (this.presence_user && this.presence_user !== this.data.nsoAccount.user.nsaId) {
-            const friend = friends!.find(f => f.nsaId === this.presence_user);
+        if (this.presence_user) {
+            if (this.presence_user !== this.data.nsoAccount.user.nsaId) {
+                const friend = friends!.find(f => f.nsaId === this.presence_user);
 
-            if (!friend) {
-                // Is the authenticated user no longer friends with this user?
-                await this.updatePresenceForDiscord(null);
+                if (!friend) {
+                    // Is the authenticated user no longer friends with this user?
+                    await this.updatePresenceForDiscord(null);
+                } else {
+                    await this.updatePresenceForDiscord(friend.presence);
+                }
             } else {
-                await this.updatePresenceForDiscord(friend.presence);
+                await this.updatePresenceForDiscord(user!.presence, user!.links.friendCode, activeevent);
             }
-        } else {
-            await this.updatePresenceForDiscord(user!.presence, user!.links.friendCode);
         }
 
         await this.updatePresenceForNotifications(user, friends);
