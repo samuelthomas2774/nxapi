@@ -432,9 +432,10 @@ export class ZncNotifications extends Loop {
             // Token expired
             debug('Renewing token');
 
-            const data = await this.nso.renewToken(this.token);
+            const data = await this.nso.renewToken(this.token, this.data.user);
 
             const existingToken: SavedToken = {
+                user: this.data.user,
                 ...data,
                 expires_at: Date.now() + (data.credential.expiresIn * 1000),
             };

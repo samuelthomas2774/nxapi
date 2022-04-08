@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { ActiveEvent, Announcements, CurrentUser, Event, Friend, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
+import { AccountToken, ActiveEvent, Announcements, CurrentUser, Event, Friend, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { SavedToken, version } from '../util.js';
@@ -115,7 +115,7 @@ export default class ZncProxyApi implements ZncApi {
         return {status: ZncStatus.OK as const, result: response.token, correlationId: ''};
     }
 
-    async getToken(token: string, user: NintendoAccountUser): Promise<ZncSuccessResponse<WebServiceToken>> {
+    async getToken(token: string, user: NintendoAccountUser): ReturnType<ZncApi['getToken']> {
         throw new Error('Not supported in ZncProxyApi');
     }
 

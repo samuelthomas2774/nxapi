@@ -34,6 +34,9 @@ export interface AccountLogin {
     };
 }
 
+/** /v3/Account/GetToken */
+export type AccountToken = AccountLogin;
+
 /** /v1/Announcement/List */
 export type Announcements = Announcement[];
 

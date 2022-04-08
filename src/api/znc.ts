@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { flapg, FlapgIid, genfc } from './f.js';
-import { AccountLogin, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
+import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse, JwtPayload } from './util.js';
 
@@ -68,7 +68,7 @@ export default class ZncApi {
     }
 
     async removeFavouriteFriend(nsaid: string) {
-        return this.fetch<{}>('/v3/Friend/Favorite/Create', 'POST', JSON.stringify({
+        return this.fetch<{}>('/v3/Friend/Favorite/Delete', 'POST', JSON.stringify({
             parameter: {
                 nsaId: nsaid,
             },
@@ -156,21 +156,31 @@ export default class ZncApi {
 
         const id_token = nintendoAccountToken.id_token;
         const useragent = this.useragent ?? undefined;
-        const data = process.env.ZNCA_API_URL ?
+        const flapgdata = process.env.ZNCA_API_URL ?
             await genfc(process.env.ZNCA_API_URL + '/f', id_token, timestamp, uuid, FlapgIid.NSO, useragent) :
             await flapg(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
 
         const req = {
             naBirthday: user.birthday,
             timestamp,
-            f: data.f,
+            f: flapgdata.f,
             requestId: uuid,
             naIdToken: this.token,
         };
 
-        return this.fetch<WebServiceToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
+        const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
             parameter: req,
         }));
+
+        return {
+            uuid,
+            timestamp,
+            nintendoAccountToken,
+            // user,
+            flapg: flapgdata,
+            nsoAccount: data.result,
+            credential: data.result.webApiServerCredential,
+        };
     }
 
     static async createWithSessionToken(token: string, useragent = ZncApi.useragent) {
@@ -182,8 +192,8 @@ export default class ZncApi {
         };
     }
 
-    async renewToken(token: string) {
-        const data = await ZncApi.loginWithSessionToken(token, this.useragent);
+    async renewToken(token: string, user: NintendoAccountUser) {
+        const data = await this.getToken(token, user);
 
         this.token = data.credential.accessToken;
 
