@@ -165,7 +165,7 @@ export default class ZncApi {
             timestamp,
             f: flapgdata.f,
             requestId: uuid,
-            naIdToken: this.token,
+            naIdToken: id_token,
         };
 
         const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
