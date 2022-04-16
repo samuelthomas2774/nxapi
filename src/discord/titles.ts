@@ -104,6 +104,8 @@ const titles: Title[] = [
         id: '01006f8002326000',
         client: '950908097235415079',
         largeImageKey: '01006f8002326000',
+        showPlayingOnline: true,
+        showActiveEvent: true,
     },
     {
         // Animal Crossing: New Horizons Island Transfer Tool
