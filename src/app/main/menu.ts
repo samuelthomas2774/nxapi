@@ -146,7 +146,7 @@ export default class MenuApp {
             items.push(new MenuItem({
                 label: webservice.name,
                 click: async () => {
-                    const {nso, data} = await getToken(this.store.storage, token);
+                    const {nso, data} = await getToken(this.store.storage, token, process.env.ZNC_PROXY_URL);
 
                     await openWebService(this.store, token, nso, data, webservice);
                 },
