@@ -28,6 +28,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     ], {
         stdio: 'inherit',
         env: {
+            ...process.env,
             NXAPI_SKIP_UPDATE_CHECK: '1',
         },
     });

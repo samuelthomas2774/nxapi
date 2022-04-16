@@ -8,11 +8,12 @@ import { EventEmitter } from 'events';
 
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
+import { WebServiceIpc } from './webservices.js';
 
 const debug = createDebug('app:main');
 
 const __dirname = path.join(import.meta.url.substr(7), '..');
-const bundlepath = path.join(import.meta.url.substr(7), '..', '..', 'bundle');
+export const bundlepath = path.join(import.meta.url.substr(7), '..', '..', 'bundle');
 
 function createWindow() {
     // Create the browser window.
@@ -47,6 +48,13 @@ app.whenReady().then(async () => {
     ipcMain.handle('nxapi:nso:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
     ipcMain.handle('nxapi:moon:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken-pctl.' + id));
     ipcMain.handle('nxapi:moon:getcachedtoken', (e, token: string) => storage.getItem('MoonToken.' + token));
+
+    const webserviceipc = new WebServiceIpc(store);
+    ipcMain.handle('nxapi:webserviceapi:invokeNativeShare', (e, data: string) => webserviceipc.invokeNativeShare(e, data));
+    ipcMain.handle('nxapi:webserviceapi:invokeNativeShareUrl', (e, data: string) => webserviceipc.invokeNativeShareUrl(e, data));
+    ipcMain.handle('nxapi:webserviceapi:requestGameWebToken', e => webserviceipc.requestGameWebToken(e));
+    ipcMain.handle('nxapi:webserviceapi:restorePersistentData', e => webserviceipc.restorePersistentData(e));
+    ipcMain.handle('nxapi:webserviceapi:storePersistentData', (e, data: string) => webserviceipc.storePersistentData(e, data));
 
     const sendToAllWindows = (channel: string, ...args: any[]) =>
         BrowserWindow.getAllWindows().forEach(w => w.webContents.send(channel, ...args));

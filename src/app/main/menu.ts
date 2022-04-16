@@ -41,6 +41,8 @@ export default class MenuApp {
                     ...await this.getWebServiceItems(token) as any,
                 ],
             });
+
+            menu.append(item);
         }
 
         menu.append(new MenuItem({label: 'Add account', click: this.addNsoAccount}));
@@ -146,7 +148,7 @@ export default class MenuApp {
                 click: async () => {
                     const {nso, data} = await getToken(this.store.storage, token);
 
-                    await openWebService(nso, data, webservice);
+                    await openWebService(this.store, token, nso, data, webservice);
                 },
             }));
         }

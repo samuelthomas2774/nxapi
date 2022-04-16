@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import * as EventEmitter from 'events';
+import { EventEmitter } from 'events';
 import { SavedMoonToken, SavedToken } from '../../util.js';
 
 const ipc = {

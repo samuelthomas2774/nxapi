@@ -16,7 +16,9 @@ export const shell = electron.shell;
 export const Tray = electron.Tray;
 
 export type BrowserWindow = import('electron').BrowserWindow;
+export type IpcMainInvokeEvent = import('electron').IpcMainInvokeEvent;
 export type Menu = import('electron').Menu;
 export type MenuItem = import('electron').MenuItem;
 export type Notification = import('electron').Notification;
 export type Tray = import('electron').Tray;
+export type WebContents = import('electron').WebContents;

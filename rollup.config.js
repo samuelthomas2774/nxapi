@@ -29,6 +29,28 @@ const preload = {
     ],
 };
 
+const preload_webservice = {
+    input: 'src/app/preload-webservice/index.ts',
+    output: {
+        file: 'dist/app/bundle/preload-webservice.cjs',
+        format: 'cjs',
+    },
+    plugins: [
+        typescript({
+            noEmit: true,
+            declaration: false,
+        }),
+        commonjs({
+            // the ".ts" extension is required
+            extensions: ['.js', '.jsx', '.ts', '.tsx'],
+            esmExternals: true,
+        }),
+    ],
+    external: [
+        'electron',
+    ],
+};
+
 const browser = {
     input: 'src/app/browser/index.ts',
     output: {
@@ -63,5 +85,6 @@ const browser = {
 
 export default [
     preload,
+    preload_webservice,
     browser,
 ];
