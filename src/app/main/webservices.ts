@@ -10,7 +10,7 @@ import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webse
 const debug = createDebug('app:main:webservices');
 
 export function createWebServiceWindow(nsa_id: string, webservice: WebService) {
-    const browser_session = session.fromPartition('webservices-' + nsa_id, {
+    const browser_session = session.fromPartition('persist:webservices-' + nsa_id, {
         cache: false,
     });
 
