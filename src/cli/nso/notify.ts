@@ -118,7 +118,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         i.splatnet2_monitors.set(data.nsoAccount.user.nsaId, handleEnableSplatNet2Monitoring(argv, storage, token));
     }
 
-    await i.init();
+    await i.loop(true);
 
     while (true) {
         await i.loop();
@@ -126,6 +126,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 }
 
 export class ZncNotifications extends Loop {
+    notifications = new NotificationManager();
     splatnet2_monitors = new Map<string, EmbeddedSplatNet2Monitor | (() => Promise<EmbeddedSplatNet2Monitor>)>();
 
     user_notifications = true;
@@ -217,11 +218,99 @@ export class ZncNotifications extends Loop {
         ]);
 
         await this.updatePresenceForNotifications(user, friends, true);
-        await this.updatePresenceForSplatNet2Monitors([user!]);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
 
-        await new Promise(rs => setTimeout(rs, this.update_interval * 1000));
+        return LoopResult.OK;
     }
 
+    async updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], initialRun?: boolean) {
+        this.notifications.updateFriendsStatusForNotifications(friends, initialRun);
+    }
+
+    async updatePresenceForNotifications(
+        user: CurrentUser | undefined, friends: Friend[] | undefined, initialRun?: boolean
+    ) {
+        await this.updateFriendsStatusForNotifications(([] as (CurrentUser | Friend)[])
+            .concat(this.user_notifications && user ? [user] : [])
+            .concat(this.friend_notifications && friends ? friends : []), initialRun);
+    }
+
+    async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
+        for (const friend of friends) {
+            await this.updatePresenceForSplatNet2Monitor(friend.presence, friend.nsaId, friend.name);
+        }
+    }
+
+    async updatePresenceForSplatNet2Monitor(presence: Presence, nsa_id: string, name?: string) {
+        const playing = presence.state === PresenceState.PLAYING;
+        const monitor = this.splatnet2_monitors.get(nsa_id);
+
+        if (playing && monitor) {
+            const currenttitle = presence.game as Game;
+            const titleid = getTitleIdFromEcUrl(currenttitle.shopUri);
+
+            if (titleid && EmbeddedSplatNet2Monitor.title_ids.includes(titleid)) {
+                if ('enable' in monitor) {
+                    monitor.enable();
+                    if (!monitor.enabled) debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
+                } else {
+                    const m = await monitor.call(null);
+                    this.splatnet2_monitors.set(nsa_id, m);
+                    m.enable();
+                    debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
+                }
+            } else if ('disable' in monitor) {
+                if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
+                monitor.disable();
+            }
+        } else if (monitor && 'disable' in monitor) {
+            if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
+            monitor.disable();
+        }
+    }
+
+    async update() {
+        const {friends, user} = await this.fetch([
+            this.user_notifications ? 'user' : null,
+            this.friend_notifications ? 'friends' : null,
+            this.splatnet2_monitors.size ? 'user' : null,
+        ]);
+
+        await this.updatePresenceForNotifications(user, friends);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
+    }
+
+    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+        if (err && 'response' in err && err.data?.status === 9404) {
+            // Token expired
+            debug('Renewing token');
+
+            const data = await this.nso.renewToken(this.token, this.data.user);
+
+            const existingToken: SavedToken = {
+                user: this.data.user,
+                ...data,
+                expires_at: Date.now() + (data.credential.expiresIn * 1000),
+            };
+
+            await this.storage.setItem('NsoToken.' + this.token, existingToken);
+
+            return LoopResult.OK_SKIP_INTERVAL;
+        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
+            debug('Request timed out, waiting %ds before retrying', this.update_interval, err);
+
+            return LoopResult.OK;
+        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ENOTFOUND') {
+            debug('Request error, waiting %ds before retrying', this.update_interval, err);
+
+            return LoopResult.OK;
+        } else {
+            throw err;
+        }
+    }
+}
+
+export class NotificationManager {
     onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
@@ -373,88 +462,6 @@ export class ZncNotifications extends Loop {
 
         this.onlinefriends = newonlinefriends;
     }
-
-    async updatePresenceForNotifications(
-        user: CurrentUser | undefined, friends: Friend[] | undefined, initialRun?: boolean
-    ) {
-        await this.updateFriendsStatusForNotifications(([] as (CurrentUser | Friend)[])
-            .concat(this.user_notifications && user ? [user] : [])
-            .concat(this.friend_notifications && friends ? friends : []), initialRun);
-    }
-
-    async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
-        for (const friend of friends) {
-            await this.updatePresenceForSplatNet2Monitor(friend.presence, friend.nsaId, friend.name);
-        }
-    }
-
-    async updatePresenceForSplatNet2Monitor(presence: Presence, nsa_id: string, name?: string) {
-        const playing = presence.state === PresenceState.PLAYING;
-        const monitor = this.splatnet2_monitors.get(nsa_id);
-
-        if (playing && monitor) {
-            const currenttitle = presence.game as Game;
-            const titleid = getTitleIdFromEcUrl(currenttitle.shopUri);
-
-            if (titleid && EmbeddedSplatNet2Monitor.title_ids.includes(titleid)) {
-                if ('enable' in monitor) {
-                    monitor.enable();
-                    if (!monitor.enabled) debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
-                } else {
-                    const m = await monitor.call(null);
-                    this.splatnet2_monitors.set(nsa_id, m);
-                    m.enable();
-                    debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
-                }
-            } else if ('disable' in monitor) {
-                if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
-                monitor.disable();
-            }
-        } else if (monitor && 'disable' in monitor) {
-            if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
-            monitor.disable();
-        }
-    }
-
-    async update() {
-        const {friends, user} = await this.fetch([
-            this.user_notifications ? 'user' : null,
-            this.friend_notifications ? 'friends' : null,
-            this.splatnet2_monitors.size ? 'user' : null,
-        ]);
-
-        await this.updatePresenceForNotifications(user, friends);
-        await this.updatePresenceForSplatNet2Monitors([user!]);
-    }
-
-    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
-        if (err && 'response' in err && err.data?.status === 9404) {
-            // Token expired
-            debug('Renewing token');
-
-            const data = await this.nso.renewToken(this.token, this.data.user);
-
-            const existingToken: SavedToken = {
-                user: this.data.user,
-                ...data,
-                expires_at: Date.now() + (data.credential.expiresIn * 1000),
-            };
-
-            await this.storage.setItem('NsoToken.' + this.token, existingToken);
-
-            return LoopResult.OK_SKIP_INTERVAL;
-        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
-            debug('Request timed out, waiting %ds before retrying', this.update_interval, err);
-
-            return LoopResult.OK;
-        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ENOTFOUND') {
-            debug('Request error, waiting %ds before retrying', this.update_interval, err);
-
-            return LoopResult.OK;
-        } else {
-            throw err;
-        }
-    }
 }
 
 export class EmbeddedSplatNet2Monitor extends SplatNet2RecordsMonitor {
@@ -484,7 +491,7 @@ export class EmbeddedSplatNet2Monitor extends SplatNet2RecordsMonitor {
         const i = this._running;
 
         try {
-            await this.init();
+            await this.loop(true);
 
             while (i === this._running) {
                 await this.loop();

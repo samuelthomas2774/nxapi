@@ -144,7 +144,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             console.warn('Not authenticated; using znc proxy');
         }
 
-        await i.init();
+        await i.loop(true);
 
         while (true) {
             await i.loop();
@@ -175,7 +175,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         i.splatnet2_monitors.set(data.nsoAccount.user.nsaId, handleEnableSplatNet2Monitoring(argv, storage, token));
     }
 
-    await i.init();
+    await i.loop(true);
 
     while (true) {
         await i.loop();
@@ -239,9 +239,9 @@ export class ZncDiscordPresence extends ZncNotifications {
         }
 
         await this.updatePresenceForNotifications(user, friends);
-        await this.updatePresenceForSplatNet2Monitors([user!]);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
 
-        await new Promise(rs => setTimeout(rs, this.update_interval * 1000));
+        return LoopResult.OK;
     }
 
     rpc: {client: DiscordRPC.Client, id: string} | null = null;
@@ -390,7 +390,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         }
 
         await this.updatePresenceForNotifications(user, friends);
-        await this.updatePresenceForSplatNet2Monitors([user!]);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
     update_presence_errors = 0;
@@ -425,7 +425,7 @@ export class ZncProxyDiscordPresence extends ZncDiscordPresence {
     async init() {
         await this.update();
 
-        await new Promise(rs => setTimeout(rs, this.argv.updateInterval * 1000));
+        return LoopResult.OK;
     }
 
     async update() {

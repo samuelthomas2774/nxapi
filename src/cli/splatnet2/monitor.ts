@@ -14,14 +14,13 @@ import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('cli:splatnet2:monitor');
 
-export const command = 'monitor <directory>';
+export const command = 'monitor [directory]';
 export const desc = 'Monitor SplatNet 2 for new user records/battles/Salmon Run results';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.positional('directory', {
         describe: 'Directory to write record data to',
         type: 'string',
-        demandOption: true,
     }).option('user', {
         describe: 'Nintendo Account ID',
         type: 'string',
@@ -77,7 +76,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const records = await splatnet.getRecords();
     const stages = await splatnet.getStages();
 
-    const i = new SplatNet2RecordsMonitor(storage, token, splatnet, stages, argv.directory, argv.zncProxyUrl);
+    const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet2');
+    const i = new SplatNet2RecordsMonitor(storage, token, splatnet, stages, directory, argv.zncProxyUrl);
 
     i.update_interval = argv.updateInterval;
 
@@ -101,7 +101,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         records.records.player.player_rank,
         records.records.player.player_type);
 
-    await i.init();
+    await i.loop(true);
 
     while (true) {
         await i.loop();

@@ -1,6 +1,6 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem } from '../electron.js';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
-import { Store } from './index.js';
+import { PresenceMonitorManager, Store } from './index.js';
 import { getToken, SavedMoonToken, SavedToken } from '../../util.js';
 import { WebService } from '../../api/znc-types.js';
 import openWebService from './webservices.js';
@@ -8,7 +8,7 @@ import openWebService from './webservices.js';
 export default class MenuApp {
     tray: Tray;
 
-    constructor(readonly store: Store) {
+    constructor(readonly store: Store, readonly monitors: PresenceMonitorManager) {
         const icon = nativeImage.createEmpty();
 
         this.tray = new Tray(icon);
@@ -22,8 +22,11 @@ export default class MenuApp {
 
     async updateMenu() {
         const menu = new Menu();
+
         const ids = await this.store.storage.getItem('NintendoAccountIds') as string[] | undefined;
         menu.append(new MenuItem({label: 'Nintendo Switch Online', enabled: false}));
+
+        const discordPresenceMonitor = this.getActiveDiscordPresenceMonitor();
 
         for (const id of ids ?? []) {
             const token = await this.store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
@@ -31,11 +34,24 @@ export default class MenuApp {
             const data = await this.store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
             if (!data) continue;
 
+            const monitor = this.monitors.monitors.find(m => m.data.user.id === data.user.id);
+            const discordPresenceActive = discordPresenceMonitor?.data.user.id === data.user.id;
+
             const item = new MenuItem({
                 label: data.nsoAccount.user.name,
                 submenu: [
                     {label: 'Nintendo Account ID: ' + data.user.id, enabled: false},
                     {label: 'NSA ID: ' + data.nsoAccount.user.nsaId, enabled: false},
+                    {type: 'separator'},
+                    {label: 'Enable Discord Presence', type: 'checkbox', checked: discordPresenceActive,
+                        click: () => this.setActiveDiscordPresenceUser(discordPresenceActive ? null : data.user.id)},
+                    {label: 'Enable notifications for this user\'s presence', type: 'checkbox',
+                        checked: monitor?.user_notifications,
+                        click: () => this.setUserNotificationsActive(data.user.id, !monitor?.user_notifications)},
+                    {label: 'Enable notifications for this friends of this user\'s presence', type: 'checkbox',
+                        checked: monitor?.friend_notifications,
+                        click: () => this.setFriendNotificationsActive(data.user.id, !monitor?.friend_notifications)},
+                    {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop()},
                     {type: 'separator'},
                     {label: 'Web services', enabled: false},
                     ...await this.getWebServiceItems(token) as any,
@@ -158,5 +174,80 @@ export default class MenuApp {
         }
 
         return items;
+    }
+
+    getActiveDiscordPresenceMonitor() {
+        for (const monitor of this.monitors.monitors) {
+            if (!monitor.presence_user) continue;
+
+            return monitor;
+        }
+
+        return null;
+    }
+
+    async setActiveDiscordPresenceUser(id: string | null) {
+        const monitor = this.getActiveDiscordPresenceMonitor();
+
+        if (monitor) {
+            if (monitor.data.user.id === id) return;
+
+            monitor.presence_user = null;
+            // monitor.skipIntervalInCurrentLoop();
+            monitor.updatePresenceForDiscord(null);
+
+            if (!monitor.user_notifications && !monitor.friend_notifications) {
+                this.monitors.stop(monitor.data.user.id);
+            }
+        }
+
+        if (id) await this.monitors.start(id, monitor => {
+            monitor.presence_user = monitor.data.nsoAccount.user.nsaId;
+            monitor.skipIntervalInCurrentLoop();
+        });
+
+        if (monitor || id) this.updateMenu();
+    }
+
+    async setUserNotificationsActive(id: string, active: boolean) {
+        const monitor = this.monitors.monitors.find(m => m.data.user.id === id);
+
+        if (monitor?.user_notifications && !active) {
+            monitor.user_notifications = false;
+
+            if (!monitor.presence_user && !monitor.friend_notifications) {
+                this.monitors.stop(monitor.data.user.id);
+            }
+
+            monitor.skipIntervalInCurrentLoop();
+            this.updateMenu();
+        }
+
+        if (!monitor?.user_notifications && active) await this.monitors.start(id, monitor => {
+            monitor.user_notifications = true;
+            monitor.skipIntervalInCurrentLoop();
+            this.updateMenu();
+        });
+    }
+
+    async setFriendNotificationsActive(id: string, active: boolean) {
+        const monitor = this.monitors.monitors.find(m => m.data.user.id === id);
+
+        if (monitor?.friend_notifications && !active) {
+            monitor.friend_notifications = false;
+
+            if (!monitor.presence_user && !monitor.user_notifications) {
+                this.monitors.stop(monitor.data.user.id);
+            }
+
+            monitor.skipIntervalInCurrentLoop();
+            this.updateMenu();
+        }
+
+        if (!monitor?.friend_notifications && active) await this.monitors.start(id, monitor => {
+            monitor.friend_notifications = true;
+            monitor.skipIntervalInCurrentLoop();
+            this.updateMenu();
+        });
     }
 }

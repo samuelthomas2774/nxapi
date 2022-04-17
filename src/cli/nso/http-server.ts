@@ -8,7 +8,7 @@ import { ActiveEvent, Announcement, CurrentUser, Friend, GetActiveEventResult, P
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
-import { ZncNotifications } from './notify.js';
+import { NotificationManager, ZncNotifications } from './notify.js';
 
 declare global {
     namespace Express {
@@ -642,16 +642,26 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         res.setHeader('Content-Type', 'text/event-stream');
 
         const nintendoAccountSessionToken = req.headers['authorization']!.substr(3);
-        const i = new ZncPresenceEventStream(
-            argv as any, storage, nintendoAccountSessionToken, req.znc!, req.zncAuth!,
-            req, res,
-            true, true,
-        );
+        const i = new ZncNotifications({
+            ...argv,
+            userNotifications: true,
+            friendNotifications: true,
+        }, storage, nintendoAccountSessionToken, req.znc!, req.zncAuth!);
 
-        await i.init();
+        const es = i.notifications = new EventStreamNotificationManager(req, res);
 
-        while (true) {
-            await i.loop();
+        try {
+            await i.loop(true);
+
+            while (true) {
+                await i.loop();
+            }
+        } catch (err) {
+            es.sendEvent('error', {
+                error: (err as Error).name,
+                error_message: (err as Error).message,
+            });
+            res.end();
         }
     });
 
@@ -674,23 +684,12 @@ export enum ZncPresenceEventStreamEvent {
     FRIEND_TITLE_STATECHANGE = '3',
 }
 
-class ZncPresenceEventStream extends ZncNotifications {
+class EventStreamNotificationManager extends NotificationManager {
     constructor(
-        argv: ArgumentsCamelCase<Arguments>,
-        storage: persist.LocalStorage,
-        token: string,
-        nso: ZncApi,
-        data: Omit<SavedToken, 'expires_at'>,
         public req: express.Request,
-        public res: express.Response,
-        user: boolean,
-        friend: boolean,
+        public res: express.Response
     ) {
-        super({
-            ...argv,
-            userNotifications: user,
-            friendNotifications: friend,
-        }, storage, token, nso, data);
+        super();
     }
 
     sendEvent(event: string | null, ...data: unknown[]) {
