@@ -18,9 +18,11 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
         Discord apps (meaning they appear under your name with the title's name instead of "Nintendo Switch")
         or other custom Discord features. [See here for Discord title overrides](src/discord/titles.ts) or
         [create an issue if you'd like another title added](https://github.com/samuelthomas2774/nxapi/issues/new/choose).
-    <img src="resources/Screenshot%202022-03-31%20at%2017.56.47%203.png" alt="Screenshot showing Splatoon 2 as a Discord activity" style="max-width: 300px; max-height: 200px;" /><br />
+
+    ![Screenshot showing Splatoon 2 as a Discord activity](resources/Screenshot%202022-03-31%20at%2017.56.47%203.png)
 - Show notifications for friend Nintendo Switch presences
-    <img src="resources/Screenshot%202022-03-31%20at%2017.56.47%202.png" alt="Screenshot showing a presence notification" style="max-width: 300px; max-height: 200px;" /><br />
+
+    ![Screenshot showing a presence notification](resources/Screenshot%202022-03-31%20at%2017.56.47%202.png)
 - [Electron app] Open game-specific services
     - Including NookLink, which doesn't work in web browsers as it requires custom JavaScript APIs.
 - Nintendo Switch Online app API proxy server
