@@ -5,6 +5,7 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
 
 ### Features
 
+- Command line and menu bar app interfaces
 - Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
 - Automated login to the Nintendo Switch Online app API
     - This uses splatnet2statink and flapg APIs by default.
@@ -13,7 +14,15 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
 - Show Discord Rich Presence using your own or a friend's Nintendo Switch presence
     - Show your account's friend code (or a custom friend code)
     - Fetch presence from a custom URL
+    - All titles are supported using a default Nintendo Switch app. A limited number of titles have their own
+        Discord apps (meaning they appear under your name with the title's name instead of "Nintendo Switch")
+        or other custom Discord features. [See here for Discord title overrides](src/discord/titles.ts) or
+        [create an issue if you'd like another title added](https://github.com/samuelthomas2774/nxapi/issues/new/choose).
+    <img src="resources/Screenshot%202022-03-31%20at%2017.56.47%203.png" alt="Screenshot showing Splatoon 2 as a Discord activity" style="max-width: 300px; max-height: 200px;" /><br />
 - Show notifications for friend Nintendo Switch presences
+    <img src="resources/Screenshot%202022-03-31%20at%2017.56.47%202.png" alt="Screenshot showing a presence notification" style="max-width: 300px; max-height: 200px;" /><br />
+- [Electron app] Open game-specific services
+    - Including NookLink, which doesn't work in web browsers as it requires custom JavaScript APIs.
 - Nintendo Switch Online app API proxy server
     - This allows a single account to fetch presence for multiple users.
     - Data will be cached for a short time to reduce the number of requests to Nintendo's server.
@@ -24,7 +33,68 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
         Splatoon 2 online.
 - Download all Nintendo Switch Parental Controls usage records
 
-The API library and types are exported for use in JavaScript/TypeScript software.
+The API library and types are exported for use in JavaScript/TypeScript software. The app/commands properly cache access tokens and try to handle requests to appear as Nintendo's apps - if using nxapi as a library you will need to handle this yourself.
+
+#### Do I need a Nintendo Switch Online membership?
+
+No.
+
+The only requirement to use this is that your Nintendo Account is linked to a Network Service Account, i.e. you've linked your Nintendo Account to a Nintendo Switch console at some point. It doesn't matter if your account is no longer linked to any console.
+
+You will need to have had an online membership (free trial is ok) to use any game-specific services if you want to access those. SplatNet 2 can be used without an active membership, but NookLink and Smash World both require an active membership just to open them.
+
+For Parental Controls data, you don't need to have linked your account to a console. You will need to use Nintendo's app to add a console to your account though, as this isn't supported in nxapi and the Parental Controls API is a bit useless without doing this.
+
+#### Will my Nintendo Switch console be banned for using this?
+
+No.
+
+#### Will my Nintendo Account/Network Service Account be banned for using this?
+
+It's extremely unlikely:
+
+- Other projects (e.g. splatnet2statink, splatoon2.ink) have used the same reverse engineered APIs for a long time (pretty much since they've existed) and no one has ever been banned for using them. splatnet2statink in monitoring mode updates every 5 minutes by default - monitoring commands (Discord presence, friend notifications and SplatNet 2 monitoring) in nxapi only update slightly more frequently (every 1 minute), so there's not much higher risk than using splatnet2statink.
+- Unlike console bans, account bans would prevent you from accessing digital content or online services you've paid for. (If your console was banned you'd still be able to use it and you could just buy another one to access your account.)
+- Nintendo can't stop you watching their app's network activity, which is all the reverse engineering required to develop this.
+
+For Discord Rich Presence, you can create an additional account, add your main account as a friend and use the `--friend-nsaid` option to avoid automating your main account. Once set up, you can remove the additional account from any console. You can also set up an API proxy server (with a HTTPS reverse proxy), authenticate using a separate account, and set up API proxy authentication tokens to allow up to 300 users (max. Nintendo Switch friends) to set up Discord Rich Presence (or, get their Nintendo Switch presence in a simple HTTP request to use for anything else) without any additional requests to Nintendo.
+
+#### Why is a token sent to one/two different non-Nintendo servers?
+
+It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app. (This isn't required for Parental Controls data.) See the splatnet2statink and flapg section below for more information.
+
+Currently it's too hard to do this locally. nxapi includes a service to do this using a rooted Android device/emulator. Hopefully at some point this will become easier.
+
+This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `genAudioH`/`genAudioH2`, always returns a different result, even when given the same inputs.)
+
+The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
+
+### Electron app
+
+nxapi includes an Electron menu bar app. Currently it can only be used by installing from source (there's no packaged version yet).
+
+The app can currently be used to:
+
+- Login to a Nintendo Account, both for the Nintendo Switch Online app and Parental Controls app.
+    - This will open the Nintendo Account login page in the app, just like signing into Nintendo's own apps.
+    - Accounts are shared with the nxapi command line interface.
+- Share an authenticated Nintendo Account's presence to Discord.
+    - Using a custom presence URL or a friend's presence is not supported.
+    - Only one user can be selected - selecting another user will stop sharing the first user's presence.
+- Showing notifications for an authenticated user/friend's presence.
+    - Multiple users can be selected, but this doesn't work yet.
+- Access game-specific services.
+    - These will be opened in the app.
+
+![Screenshot of the menu bar app open with SplatNet 2 and NookLink open in the background](resources/Screenshot%202022-04-17%20at%2023.56.08%202.png)
+
+After installing nxapi from source the app can be run using this command:
+
+```sh
+nxapi app
+```
+
+This command has no options, but environment variables can still be used.
 
 ### Install
 
