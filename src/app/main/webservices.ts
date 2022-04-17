@@ -46,6 +46,14 @@ export default async function openWebService(
         return;
     }
 
+    const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
+
+    if (verifymembership?.attrValue === 'true') {
+        const membership = data.nsoAccount.user.links.nintendoAccount.membership;
+        const active = typeof membership.active === 'object' ? membership.active.active : membership.active;
+        if (!active) throw new Error('Nintendo Switch Online membership required');
+    }
+
     const window = createWebServiceWindow(data.nsoAccount.user.nsaId, webservice);
 
     windows.set(windowid, window);

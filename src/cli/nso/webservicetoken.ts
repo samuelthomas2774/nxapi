@@ -48,6 +48,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         throw new Error('Invalid web service');
     }
 
+    const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
+
+    if (verifymembership?.attrValue === 'true') {
+        const membership = data.nsoAccount.user.links.nintendoAccount.membership;
+        const active = typeof membership.active === 'object' ? membership.active.active : membership.active;
+        if (!active) throw new Error('Nintendo Switch Online membership required');
+    }
+
     const webserviceToken = await nso.getWebServiceToken(argv.id);
 
     // https://app.splatoon2.nintendo.net/?lang=en-GB&na_country=GB&na_lang=en-GB

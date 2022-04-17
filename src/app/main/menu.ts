@@ -146,9 +146,13 @@ export default class MenuApp {
             items.push(new MenuItem({
                 label: webservice.name,
                 click: async () => {
-                    const {nso, data} = await getToken(this.store.storage, token, process.env.ZNC_PROXY_URL);
+                    try {
+                        const {nso, data} = await getToken(this.store.storage, token, process.env.ZNC_PROXY_URL);
 
-                    await openWebService(this.store, token, nso, data, webservice);
+                        await openWebService(this.store, token, nso, data, webservice);
+                    } catch (err) {
+                        dialog.showErrorBox('Error loading web service', (err as any).stack ?? (err as any).message);
+                    }
                 },
             }));
         }
