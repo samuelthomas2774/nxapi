@@ -64,6 +64,8 @@ app.whenReady().then(async () => {
     store.on('update-nintendo-accounts', () => sendToAllWindows('nxapi:accounts:shouldrefresh'));
 
     const monitors = new PresenceMonitorManager(store);
+    await store.restoreMonitorState(monitors);
+
     const menu = new MenuApp(store, monitors);
 
     app.on('activate', () => {
@@ -79,6 +81,19 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
+interface SavedMonitorState {
+    users: {
+        /** Nintendo Account ID */
+        id: string;
+        /** NSA ID */
+        presence_user: string | null;
+        user_notifications: boolean;
+        friend_notifications: boolean;
+    }[];
+    /** Nintendo Account ID */
+    discord_presence_user: string | null;
+}
+
 export class Store extends EventEmitter {
     constructor(
         public storage: persist.LocalStorage
@@ -86,7 +101,51 @@ export class Store extends EventEmitter {
         super();
     }
 
-    //
+    async saveMonitorState(monitors: PresenceMonitorManager) {
+        const users = new Set();
+        const state: SavedMonitorState = {
+            users: [],
+            discord_presence_user: null,
+        };
+
+        for (const monitor of monitors.monitors) {
+            if (users.has(monitor.data.user.id)) continue;
+            users.add(monitor.data.user.id);
+
+            state.users.push({
+                id: monitor.data.user.id,
+                presence_user: monitor.presence_user,
+                user_notifications: monitor.user_notifications,
+                friend_notifications: monitor.friend_notifications,
+            });
+
+            if (monitor.presence_user && !state.discord_presence_user) {
+                state.discord_presence_user = monitor.data.user.id;
+            }
+        }
+
+        debug('Saving monitor state', state);
+        await this.storage.setItem('AppMonitors', state);
+    }
+
+    async restoreMonitorState(monitors: PresenceMonitorManager) {
+        const state: SavedMonitorState | undefined = await this.storage.getItem('AppMonitors');
+        debug('Restoring monitor state', state);
+        if (!state) return;
+
+        for (const user of state.users) {
+            if (state.discord_presence_user !== user.id &&
+                !user.user_notifications && !user.friend_notifications
+            ) continue;
+
+            await monitors.start(user.id, monitor => {
+                monitor.presence_user = state.discord_presence_user === user.id ?
+                    user.presence_user || monitor.data.nsoAccount.user.nsaId : null;
+                monitor.user_notifications = user.user_notifications;
+                monitor.friend_notifications = user.friend_notifications;
+            });
+        }
+    }
 }
 
 export class PresenceMonitorManager {

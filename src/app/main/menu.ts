@@ -1,9 +1,12 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem } from '../electron.js';
+import createDebug from 'debug';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { PresenceMonitorManager, Store } from './index.js';
 import { getToken, SavedMoonToken, SavedToken } from '../../util.js';
 import { WebService } from '../../api/znc-types.js';
 import openWebService from './webservices.js';
+
+const debug = createDebug('app:main:menu');
 
 export default class MenuApp {
     tray: Tray;
@@ -206,7 +209,7 @@ export default class MenuApp {
             monitor.skipIntervalInCurrentLoop();
         });
 
-        if (monitor || id) this.updateMenu();
+        if (monitor || id) this.saveMonitorStateAndUpdateMenu();
     }
 
     async setUserNotificationsActive(id: string, active: boolean) {
@@ -220,13 +223,13 @@ export default class MenuApp {
             }
 
             monitor.skipIntervalInCurrentLoop();
-            this.updateMenu();
+            this.saveMonitorStateAndUpdateMenu();
         }
 
         if (!monitor?.user_notifications && active) await this.monitors.start(id, monitor => {
             monitor.user_notifications = true;
             monitor.skipIntervalInCurrentLoop();
-            this.updateMenu();
+            this.saveMonitorStateAndUpdateMenu();
         });
     }
 
@@ -241,13 +244,26 @@ export default class MenuApp {
             }
 
             monitor.skipIntervalInCurrentLoop();
-            this.updateMenu();
+            this.saveMonitorStateAndUpdateMenu();
         }
 
         if (!monitor?.friend_notifications && active) await this.monitors.start(id, monitor => {
             monitor.friend_notifications = true;
             monitor.skipIntervalInCurrentLoop();
-            this.updateMenu();
+            this.saveMonitorStateAndUpdateMenu();
         });
+    }
+
+    async saveMonitorState() {
+        try {
+            await this.store.saveMonitorState(this.monitors);
+        } catch (err) {
+            debug('Error saving monitor state', err);
+        }
+    }
+
+    saveMonitorStateAndUpdateMenu() {
+        this.saveMonitorState();
+        this.updateMenu();
     }
 }
