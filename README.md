@@ -33,6 +33,7 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
 - Download all personalised SplatNet 2 data, including battle and Salmon Run results
     - This supports monitoring the authenticated user's presence and only checking for new data when playing
         Splatoon 2 online.
+- Download island newspapers from and send messages and reactions using NookLink
 - Download all Nintendo Switch Parental Controls usage records
 
 The API library and types are exported for use in JavaScript/TypeScript software. The app/commands properly cache access tokens and try to handle requests to appear as Nintendo's apps - if using nxapi as a library you will need to handle this yourself.
@@ -457,6 +458,79 @@ nxapi nso presence --splatnet2-monitor --splatnet2-monitor-update-interval 60
 nxapi nso presence --splatnet2-monitor --sn2-update-interval 60
 ```
 
+### NookLink
+
+All NookLink commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid NookLink token.
+
+#### User
+
+```sh
+# Show NookLink users in a table
+nxapi nooklink users
+
+# Show the authenticated NookLink user
+nxapi nooklink user
+
+# Show the authenticated NookLink user's island and other players
+nxapi nooklink island
+
+# Use a specific NookLink user linked to the selected Nintendo Account
+# If more than 1 NookLink users exist by default the first user will be used
+nxapi nooklink user --islander 0x0123456789abcdef
+# --user can also be used to selecte a different Nintendo Account
+nxapi nooklink user --user 0123456789abcdef
+nxapi nooklink user --user 0123456789abcdef --islander 0x0123456789abcdef
+```
+
+#### Newspapers
+
+```sh
+# Show the latest newspaper issue in a table
+nxapi nooklink newspaper
+# JSON
+nxapi nooklink newspaper --json
+nxapi nooklink newspaper --json-pretty-print
+
+# List newspaper issues in a table
+nxapi nooklink newspapers
+# JSON
+nxapi nooklink newspapers --json
+nxapi nooklink newspapers --json-pretty-print
+
+# Show a specific newspaper issue in a table
+nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000
+# JSON
+nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000 --json
+nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000 --json-pretty-print
+```
+
+#### Download newspapers
+
+```sh
+# Download all island newspapers to the nooklink directory in nxapi's data path
+# Data that already exists will not be redownloaded
+nxapi nooklink dump-newspapers
+
+# Download all island newspapers to data/nooklink
+nxapi nooklink dump-newspapers data/nooklink
+```
+
+#### Messages
+
+```sh
+# Send a message in an online Animal Crossing: New Horizons session
+nxapi nooklink keyboard "Hello"
+
+# Ask for a message interactively
+nxapi nooklink keyboard
+
+# List available reactions
+nxapi nooklink reactions
+
+# Send a reaction
+nxapi nooklink post-reaction happyflower
+```
+
 ### Nintendo Switch Parental Controls
 
 #### Login to the Nintendo Switch Parental Controls app
@@ -520,14 +594,17 @@ nxapi pctl monthly-summary 0123456789abcdef 2022-02 --json-pretty-print
 #### Download summary data
 
 ```sh
-# Download all daily and monthly summary data from all devices to data/summaries
+# Download all daily and monthly summary data from all devices to the summaries directory in nxapi's data path
 # Data that already exists will not be redownloaded
+nxapi pctl dump-summaries
+
+# Download all daily and monthly summary data from all devices to data/summaries
 nxapi pctl dump-summaries data/summaries
 
-# Download all daily and monthly summary data from a specific device to data/summaries
+# Download all daily and monthly summary data from a specific device
 # Use `nxapi pctl devices` to get the device ID
 # The `--device` option can be used multiple times
-nxapi pctl dump-summaries data/summaries --device 0123456789abcdef
+nxapi pctl dump-summaries --device 0123456789abcdef
 ```
 
 ### Misc. commands/options
