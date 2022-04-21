@@ -5,7 +5,7 @@ cache:
         - node_modules/
 
 before_script:
-    - npm --color="always" install
+    - npm --color="always" install --force
 
 build:
     stage: build
