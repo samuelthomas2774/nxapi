@@ -5,7 +5,6 @@ export const titles: Title[] = [
         // Splatoon 2 [Europe]
         id: '0100f8f0000a2000',
         client: '950886725398429726',
-        largeImageKey: '0100f8f0000a2000',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -13,7 +12,6 @@ export const titles: Title[] = [
         // Splatoon 2 [The Americas]
         id: '01003bc0000a0000',
         client: '950886725398429726',
-        largeImageKey: '0100f8f0000a2000',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -21,7 +19,6 @@ export const titles: Title[] = [
         // Splatoon 2 [Japan]
         id: '01003c700009c000',
         client: '950886725398429726',
-        largeImageKey: '01003c700009c000',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -29,49 +26,49 @@ export const titles: Title[] = [
         // Splatoon 2: Splatfest World Premiere [Europe, The Americas]
         id: '01003870040fa000',
         client: '950886725398429726',
-        titleName: 'Splatfest World Premiere',
+        largeImageText: 'Splatfest World Premiere',
         showPlayingOnline: true,
     },
     {
         // Splatoon 2: Special Demo [Europe]
         id: '01007e200d45c000',
         client: '950886725398429726',
-        titleName: 'Special Demo',
+        largeImageText: 'Special Demo',
         showPlayingOnline: true,
     },
     {
         // Splatoon 2 Special Demo [The Americas]
         id: '01006bb00d45a000',
         client: '950886725398429726',
-        titleName: 'Special Demo',
+        largeImageText: 'Special Demo',
         showPlayingOnline: true,
     },
     {
         // Splatoon 2 Special Demo [Japan]
         id: '01009c900d458000',
         client: '950886725398429726',
-        titleName: 'Special Demo',
+        largeImageText: 'Special Demo',
         showPlayingOnline: true,
     },
     {
         // Splatoon 2: Special Demo 2020 [Europe]
         id: '01009240116cc000',
         client: '950886725398429726',
-        titleName: 'Special Demo 2020',
+        largeImageText: 'Special Demo 2020',
         showPlayingOnline: true,
     },
     {
         // Splatoon 2 Special Demo 2020 [The Americas]
         id: '01002120116c4000',
         client: '950886725398429726',
-        titleName: 'Special Demo 2020',
+        largeImageText: 'Special Demo 2020',
         showPlayingOnline: true,
     },
     {
         // Splatoon 2 Special Demo 2020 [Japan]
         id: '0100998011330000',
         client: '950886725398429726',
-        titleName: 'Special Demo 2020',
+        largeImageText: 'Special Demo 2020',
         showPlayingOnline: true,
     },
 
@@ -79,7 +76,6 @@ export const titles: Title[] = [
         // Super Smash Bros. Ultimate
         id: '01006a800016e000',
         client: '950894516104212490',
-        largeImageKey: '01006a800016e000',
         showActiveEvent: true,
     },
 
@@ -87,7 +83,6 @@ export const titles: Title[] = [
         // Mario Kart 8 Deluxe
         id: '0100152000022000',
         client: '950905573149409280',
-        largeImageKey: '0100152000022000',
         showActiveEvent: true,
     },
 
@@ -95,43 +90,37 @@ export const titles: Title[] = [
         // Super Mario Odyssey
         id: '0100000000010000',
         client: '950905939899351050',
-        largeImageKey: '0100000000010000',
     },
 
     {
         // Nintendo Entertainment System - Nintendo Switch Online
         id: '0100d870045b6000',
         client: '950907272438104064',
-        titleName: 'Nintendo Entertainment System',
-        largeImageKey: '0100d870045b6000',
+        largeImageText: 'Nintendo Entertainment System',
     },
     {
         // Super Nintendo Entertainment System - Nintendo Switch Online
         id: '01008d300c50c000',
         client: '950907272438104064',
-        titleName: 'Super Nintendo Entertainment System',
-        largeImageKey: '01008d300c50c000',
+        largeImageText: 'Super Nintendo Entertainment System',
     },
     {
         // Nintendo 64 - Nintendo Switch Online
         id: '0100c9a00ece6000',
         client: '950907272438104064',
-        titleName: 'Nintendo 64',
-        largeImageKey: '0100c9a00ece6000',
+        largeImageText: 'Nintendo 64',
     },
     {
         // SEGA Mega Drive - Nintendo Switch Online
         id: '0100b3c014bda000',
         client: '950907272438104064',
-        titleName: 'SEGA Mega Drive',
-        largeImageKey: '0100b3c014bda000',
+        largeImageText: 'SEGA Mega Drive',
     },
 
     {
         // Animal Crossing: New Horizons
         id: '01006f8002326000',
         client: '950908097235415079',
-        largeImageKey: '01006f8002326000',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -140,7 +129,6 @@ export const titles: Title[] = [
         id: '0100f38011cfe000',
         client: '950908097235415079',
         titleName: 'Island Transfer Tool',
-        largeImageKey: '0100f38011cfe000',
     },
 
     {
@@ -170,7 +158,7 @@ export const titles: Title[] = [
         // Snipperclips - Cut it out, together! Demo
         id: '0100d87002ee0000',
         client: '966102704525025301',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -186,7 +174,7 @@ export const titles: Title[] = [
         // ARMS Sparring Demo
         id: '0100a5400ac86000',
         client: '966102773642960917',
-        titleName: 'Sparring Demo',
+        largeImageText: 'Sparring Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -209,7 +197,7 @@ export const titles: Title[] = [
         // Pokémon: Let's Go, Pikachu! & Pokémon: Let's Go, Eevee! Demo
         id: '0100c1800d7ae000',
         client: '966103072407437332',
-        titleName: 'Pokémon: Let\'s Go, Pikachu! & Pokémon: Let\'s Go, Eevee! Demo',
+        largeImageText: 'Pokémon: Let\'s Go, Pikachu! & Pokémon: Let\'s Go, Eevee! Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -241,7 +229,7 @@ export const titles: Title[] = [
         // Yoshi's Crafted World Demo
         id: '0100ae800c9c6000',
         client: '966103360589672488',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -257,7 +245,7 @@ export const titles: Title[] = [
         // Pokkén Tournament DX Demo
         id: '010030d005ae6000',
         client: '966103482702647326',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -273,7 +261,7 @@ export const titles: Title[] = [
         // OCTOPATH TRAVELER: Prologue Demo
         id: '010096000b3ea000',
         client: '966147770006241340',
-        titleName: 'Prologue Demo',
+        largeImageText: 'Prologue Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -297,7 +285,7 @@ export const titles: Title[] = [
         // Captain Toad: Treasure Tracker Demo
         id: '01002c400b6b6000',
         client: '966148067134939186',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -313,7 +301,7 @@ export const titles: Title[] = [
     //     // Sushi Striker: The Way of Sushido Demo
     //     id: '', // TODO
     //     client: '966148228154265661',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -329,7 +317,7 @@ export const titles: Title[] = [
         // Mario Tennis Aces: Special Demo [Europe]
         id: '0100f9600da78000',
         client: '966148353727561738',
-        titleName: 'Special Demo',
+        largeImageText: 'Special Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -337,7 +325,7 @@ export const titles: Title[] = [
         // Mario Tennis Aces Special Online Demo [The Americas]
         id: '0100a4200da76000',
         client: '966148353727561738',
-        titleName: 'Special Online Demo',
+        largeImageText: 'Special Online Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -368,7 +356,7 @@ export const titles: Title[] = [
         // Pikmin 3 Deluxe Demo
         id: '01001cb0106f8000',
         client: '966148753365041173',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -384,7 +372,7 @@ export const titles: Title[] = [
         // Dragon Quest Builders Demo
         id: '0100c360070f6000',
         client: '966148914933792838',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -432,7 +420,7 @@ export const titles: Title[] = [
         // Kirby Star Allies Demo
         id: '01005a70096fa000',
         client: '966330020391952384',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -472,7 +460,7 @@ export const titles: Title[] = [
     //     // Dragon Quest Builders 2 Demo
     //     id: '', // TODO
     //     client: '966331488322871346',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -480,7 +468,7 @@ export const titles: Title[] = [
     //     // Dragon Quest Builders 2 Jumbo Demo
     //     id: '', // TODO
     //     client: '966331488322871346',
-    //     titleName: 'Jumbo Demo',
+    //     largeImageText: 'Jumbo Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -504,7 +492,7 @@ export const titles: Title[] = [
         // Fitness Boxing Demo
         id: '010050200d0da000',
         client: '966387481375285300',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -544,7 +532,7 @@ export const titles: Title[] = [
     //     // Pokémon Mystery Dungeon: Rescue Team DX Demo
     //     id: '', // TODO
     //     client: '966387876520685668',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -568,7 +556,7 @@ export const titles: Title[] = [
         // DAEMON X MACHINA: Prototype Missions
         id: '0100bf600d83a000',
         client: '966388060428320789',
-        titleName: 'Prototype Missions',
+        largeImageText: 'Prototype Missions',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -576,7 +564,7 @@ export const titles: Title[] = [
     //     // DAEMON X MACHINA Demo
     //     id: '', // TODO
     //     client: '966388060428320789',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -608,7 +596,7 @@ export const titles: Title[] = [
         // BOXBOY! + BOXGIRL! Demo
         id: '0100b7200e02e000',
         client: '966388339127234592',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -640,7 +628,7 @@ export const titles: Title[] = [
     //     // Cadence of Hyrule - Crypt of the NecroDancer Featuring The Legend of Zelda Demo
     //     id: '', // TODO
     //     client: '966441763973763162',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -656,7 +644,7 @@ export const titles: Title[] = [
     //     // Dragon Quest XI S: Echoes of an Elusive Age - Definitive Edition Demo
     //     id: '', // TODO
     //     client: '966441876267864084',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -696,7 +684,7 @@ export const titles: Title[] = [
         // Bravely Default II Demo
         id: '0100b6801137e000',
         client: '966442378095382578',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -704,7 +692,7 @@ export const titles: Title[] = [
     //     // Bravely Default II Demo
     //     id: '', // TODO - there's two demos apparently
     //     client: '966442378095382578',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -728,7 +716,7 @@ export const titles: Title[] = [
         // 51 Worldwide Games: Local Multiplayer Guest Edition
         id: '0100cd9011c04000',
         client: '966442617938280526',
-        titleName: 'Local Multiplayer Guest Edition',
+        largeImageText: 'Local Multiplayer Guest Edition',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -784,7 +772,7 @@ export const titles: Title[] = [
     //     // Kirby Fighters 2 Demo
     //     id: '', // TODO
     //     client: '966479069287960656',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -800,7 +788,7 @@ export const titles: Title[] = [
     //     // Hyrule Warriors: Age of Calamity Demo
     //     id: '', // TODO
     //     client: '966479236762325013',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -816,7 +804,7 @@ export const titles: Title[] = [
         // Fitness Boxing 2: Rhythm & Exercise Demo
         id: '01000f50130a2000',
         client: '966479353510789150',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -856,7 +844,7 @@ export const titles: Title[] = [
         // Miitopia Demo
         id: '01007da0140e8000',
         client: '966487135194591282',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -903,7 +891,7 @@ export const titles: Title[] = [
         // Game Builder Garage Demo
         id: '01003b101497c000',
         client: '966487590721163264',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -919,7 +907,7 @@ export const titles: Title[] = [
     //     // Metroid Dread Demo
     //     id: '', // TODO
     //     client: '966487674162642974',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -935,7 +923,7 @@ export const titles: Title[] = [
         // WarioWare: Get It Together! Demo
         id: '0100ee9015b5e000',
         client: '966487765447483412',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -975,7 +963,7 @@ export const titles: Title[] = [
         // Big Brain Academy: Brain vs. Brain Demo
         id: '0100219016ab4000',
         client: '966533636969082921',
-        titleName: 'Demo',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -991,7 +979,7 @@ export const titles: Title[] = [
         // Project Triangle Strategy Debut Demo
         id: '01002980140f6000',
         client: '966533747023437904',
-        titleName: 'Project Triangle Strategy Debut Demo',
+        largeImageText: 'Project Triangle Strategy Debut Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
@@ -999,7 +987,7 @@ export const titles: Title[] = [
     //     // Project Triangle Strategy Prologue demo
     //     id: '', // TODO
     //     client: '966533747023437904',
-    //     titleName: 'Prologue demo',
+    //     largeImageText: 'Prologue demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -1015,7 +1003,7 @@ export const titles: Title[] = [
     //     // Kirby and the Forgotten Land Demo
     //     id: '', // TODO
     //     client: '966534055116021821',
-    //     titleName: 'Demo',
+    //     largeImageText: 'Demo',
     //     showPlayingOnline: true,
     //     showActiveEvent: true,
     // },
@@ -1031,7 +1019,7 @@ export const titles: Title[] = [
         // Nintendo Switch Sports Online Play Test
         id: '01000ee017182000',
         client: '966534181783998474',
-        titleName: 'Online Play Test',
+        largeImageText: 'Online Play Test',
         showPlayingOnline: true,
         showActiveEvent: true,
     },

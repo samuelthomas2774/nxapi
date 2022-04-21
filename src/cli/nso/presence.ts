@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import fetch from 'node-fetch';
-import { ActiveEvent, CurrentUser, Presence, PresenceState, ZncErrorResponse } from '../../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, LoopResult, SavedToken, YargsArguments } from '../../util.js';
@@ -232,9 +232,9 @@ export class ZncDiscordPresence extends ZncNotifications {
                     throw new Error('User "' + this.presence_user + '" is not friends with this user');
                 }
 
-                await this.updatePresenceForDiscord(friend.presence);
+                await this.updatePresenceForDiscord(friend.presence, user);
             } else {
-                await this.updatePresenceForDiscord(user!.presence, user!.links.friendCode, activeevent);
+                await this.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
             }
         }
 
@@ -249,15 +249,19 @@ export class ZncDiscordPresence extends ZncNotifications {
     i = 0;
 
     last_presence: Presence | null = null;
-    friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
+    last_user: CurrentUser | Friend | undefined = undefined;
+    last_friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
     last_event: ActiveEvent | undefined = undefined;
 
     async updatePresenceForDiscord(
-        presence: Presence | null, friendcode?: CurrentUser['links']['friendCode'],
+        presence: Presence | null,
+        user?: CurrentUser | Friend,
+        friendcode?: CurrentUser['links']['friendCode'],
         activeevent?: ActiveEvent
     ) {
         this.last_presence = presence;
-        this.friendcode = friendcode;
+        this.last_user = user;
+        this.last_friendcode = friendcode;
         this.last_event = activeevent;
 
         const online = presence?.state === PresenceState.ONLINE || presence?.state === PresenceState.PLAYING;
@@ -282,6 +286,7 @@ export class ZncDiscordPresence extends ZncNotifications {
             activeevent,
             znc_discord_presence: this,
             nsaid: this.presence_user!,
+            user,
         };
         const discordpresence = 'name' in presence.game ?
             getDiscordPresence(presence.state, presence.game, presencecontext) :
@@ -382,10 +387,10 @@ export class ZncDiscordPresence extends ZncNotifications {
                     // Is the authenticated user no longer friends with this user?
                     await this.updatePresenceForDiscord(null);
                 } else {
-                    await this.updatePresenceForDiscord(friend.presence);
+                    await this.updatePresenceForDiscord(friend.presence, friend);
                 }
             } else {
-                await this.updatePresenceForDiscord(user!.presence, user!.links.friendCode, activeevent);
+                await this.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
             }
         }
 

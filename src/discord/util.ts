@@ -1,7 +1,7 @@
 import DiscordRPC from 'discord-rpc';
-import { ActiveEvent, CurrentUser, Game, PresenceState } from '../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
 import { defaultTitle, titles } from './titles.js';
-import { getTitleIdFromEcUrl, hrduration } from '../util.js';
+import { getTitleIdFromEcUrl, hrduration, version } from '../util.js';
 import { ZncDiscordPresence } from '../cli/nso/presence.js';
 
 export function getDiscordPresence(
@@ -21,11 +21,11 @@ export function getDiscordPresence(
         ' (' + members?.length + ' player' + (members?.length === 1 ? '' : 's') +
         ')' : '';
 
-    if (game.sysDescription) text.push(game.sysDescription + event_text);
+    if ((title.showDescription ?? true) && game.sysDescription) text.push(game.sysDescription + event_text);
     else if (online && title.showPlayingOnline === true) text.push('Playing online' + event_text);
     else if (online && title.showPlayingOnline) text.push(title.showPlayingOnline as string + event_text);
 
-    if (game.totalPlayTime >= 60) {
+    if ((title.showPlayTime ?? true) && game.totalPlayTime >= 60) {
         text.push('Played for ' + hrduration(game.totalPlayTime) +
             ' since ' + (game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB') : 'now'));
     }
@@ -34,8 +34,10 @@ export function getDiscordPresence(
         details: text[0],
         state: text[1],
         largeImageKey: title.largeImageKey ?? game.imageUri,
-        largeImageText: context?.friendcode ? 'SW-' + context.friendcode.id : undefined,
-        smallImageKey: title.smallImageKey,
+        largeImageText: title.largeImageText ?? 'nxapi ' + version,
+        smallImageKey: title.smallImageKey || (context?.friendcode ? context?.user?.imageUri : undefined),
+        smallImageText: title.smallImageKey ? title.smallImageText :
+            context?.friendcode && context?.user?.imageUri ? 'SW-' + context.friendcode.id : undefined,
         buttons: game.shopUri ? [
             {
                 label: 'Nintendo eShop',
@@ -44,15 +46,10 @@ export function getDiscordPresence(
         ] : [],
     };
 
-    if (online && title.showActiveEvent && context?.activeevent?.shareUri) {
-        activity.buttons?.push({
-            label: 'Join',
-            url: context.activeevent.shareUri,
-        });
-    } else if (online && title.showActiveEvent) {
-        activity.buttons?.push({
-            label: 'Join via Nintendo Switch',
-            url: 'https://lounge.nintendo.com',
+    if (online && title.showActiveEvent) {
+        activity.buttons!.push({
+            label: context?.activeevent?.shareUri ? 'Join' : 'Join via Nintendo Switch',
+            url: context?.activeevent?.shareUri ?? 'https://lounge.nintendo.com',
         });
     }
 
@@ -75,7 +72,9 @@ export function getInactiveDiscordPresence(
         activity: {
             state: 'Not playing',
             largeImageKey: 'nintendoswitch',
-            largeImageText: context?.friendcode ? 'SW-' + context.friendcode.id : undefined,
+            largeImageText: 'nxapi ' + version,
+            smallImageKey: context?.friendcode ? context?.user?.imageUri : undefined,
+            smallImageText: context?.friendcode && context?.user?.imageUri ? 'SW-' + context.friendcode.id : undefined,
         },
     };
 }
@@ -85,6 +84,7 @@ export interface DiscordPresenceContext {
     activeevent?: ActiveEvent;
     znc_discord_presence?: ZncDiscordPresence;
     nsaid?: string;
+    user?: CurrentUser | Friend;
 }
 
 export interface DiscordPresence {
@@ -128,16 +128,24 @@ export interface Title {
      * By default the title's icon from znc will be used. (No icons need to be uploaded to Discord.)
      */
     largeImageKey?: string;
+    largeImageText?: string;
     /**
      * By default this will not be set.
      */
     smallImageKey?: string;
+    smallImageText?: string;
     /**
      * Whether to show the timestamp the user started playing the title in Discord. Discord shows this as the number of minutes and seconds since the timestamp; this will be inaccurate as it may take up to a minute (by default) to detect the user's presence, so this is disabled by default.
      *
      * @default false
      */
     showTimestamp?: boolean;
+    /**
+     * Show the activity description set by the title.
+     *
+     * @default true
+     */
+    showDescription?: boolean;
     /**
      * Show "Playing online" if playing online and the game doesn't set activity details.
      *
@@ -150,6 +158,12 @@ export interface Title {
      * @default false
      */
     showActiveEvent?: boolean;
+    /**
+     * Whether to show "Played for ... since ..." in Discord.
+     *
+     * @default true
+     */
+    showPlayTime?: boolean;
 
     /**
      * A function to call to customise the Discord activity.
