@@ -25,6 +25,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         });
     }, argv => {
         console.log(decrypt(argv.captureid));
+    });
 }
 
 const key = Buffer.from('b7ed7a66c80b4b008baf7f0589c08224', 'hex');
