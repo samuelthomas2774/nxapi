@@ -16,7 +16,7 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
     - Fetch presence from a custom URL
     - All titles are supported using a default Nintendo Switch app. A limited number of titles have their own
         Discord apps (meaning they appear under your name with the title's name instead of "Nintendo Switch")
-        or other custom Discord features. [See here for Discord title overrides](src/discord/titles.ts) or
+        or other custom Discord features. [See here for Discord title overrides](src/discord/titles) or
         [create an issue if you'd like another title added](https://github.com/samuelthomas2774/nxapi/issues/new/choose).
 
     ![Screenshot showing Splatoon 2 as a Discord activity](resources/Screenshot%202022-03-31%20at%2017.56.47%203.png)

@@ -1,6 +1,6 @@
 import DiscordRPC from 'discord-rpc';
 import { ActiveEvent, CurrentUser, Game, PresenceState } from '../api/znc-types.js';
-import titles, { defaultTitle } from './titles.js';
+import { defaultTitle, titles } from './titles.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util.js';
 import { ZncDiscordPresence } from '../cli/nso/presence.js';
 
@@ -103,18 +103,56 @@ export function getTitleConfiguration(game: Game, id: string) {
 }
 
 export interface Title {
-    /** Lowercase hexadecimal title ID */
+    /**
+     * Lowercase hexadecimal title ID.
+     *
+     * Valid title IDs are 16 characters long, and should start with `0100` and end with `0000`, `2000`, `4000`, `6000`, `8000`, `a000`, `c000`, `e000` (this is because applications have 4^16 title IDs for the application itself, plus addon content and update data).
+     */
     id: string;
-    /** Discord client ID */
+    /**
+     * Discord client ID
+     */
     client: string;
 
+    /**
+     * Title name to show in Discord. This is *not* the name that will appear under the user's name after "Playing ".
+     *
+     * If this is set to true the title's name from znc will be used.
+     * If this is set to false (default) no title name will be set. This should be used when a specific Discord client for the title is used.
+     * If this is set to a string it will be used as the title name.
+     *
+     * @default false
+     */
     titleName?: string | boolean;
+    /**
+     * By default the title's icon from znc will be used. (No icons need to be uploaded to Discord.)
+     */
     largeImageKey?: string;
+    /**
+     * By default this will not be set.
+     */
     smallImageKey?: string;
+    /**
+     * Whether to show the timestamp the user started playing the title in Discord. Discord shows this as the number of minutes and seconds since the timestamp; this will be inaccurate as it may take up to a minute (by default) to detect the user's presence, so this is disabled by default.
+     *
+     * @default false
+     */
     showTimestamp?: boolean;
-    /** Show "Playing online" if playing online and the game doesn't set activity details */
+    /**
+     * Show "Playing online" if playing online and the game doesn't set activity details.
+     *
+     * @default false
+     */
     showPlayingOnline?: string | boolean;
+    /**
+     * Whether to show details of the current event (Online Lounge/voice chat) in Discord.
+     *
+     * @default false
+     */
     showActiveEvent?: boolean;
 
+    /**
+     * A function to call to customise the Discord activity.
+     */
     callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) => void;
 }
