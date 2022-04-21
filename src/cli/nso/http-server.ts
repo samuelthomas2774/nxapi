@@ -2,9 +2,8 @@ import createDebug from 'debug';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import * as net from 'net';
-import persist from 'node-persist';
 import { v4 as uuidgen } from 'uuid';
-import { ActiveEvent, Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/znc-types.js';
+import { Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, SavedToken, YargsArguments } from '../../util.js';
@@ -75,9 +74,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     app.use('/api/znc', (req, res, next) => {
         console.log('[%s] %s %s HTTP/%s from %s, port %d%s, %s',
-            new Date(), req.method, req.url, req.httpVersion,
+            new Date(), req.method, req.path, req.httpVersion,
             req.socket.remoteAddress, req.socket.remotePort,
-            req.headers['x-forwarded-for'] ? ', ' + req.headers['x-forwarded-for'] : '',
+            req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
             req.headers['user-agent']);
 
         next();
@@ -261,6 +260,59 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 error_message: (err as Error).message,
             }));
         }
+    });
+
+    //
+    // Nintendo Switch user data
+    //
+
+    const cached_userdata = new Map<string, [CurrentUser, number]>();
+
+    const getUserData: express.RequestHandler = async (req, res, next) => {
+        const cache = cached_userdata.get(req.zncAuth!.user.id);
+
+        if (cache && ((cache[1] + updateInterval) > Date.now())) {
+            debug('Using cached user data for %s', req.zncAuth!.user.id);
+            next();
+            return;
+        }
+
+        try {
+            const user = await req.znc!.getCurrentUser();
+            cached_userdata.set(req.zncAuth!.user.id, [user.result, Date.now()]);
+
+            next();
+        } catch (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: err,
+                error_message: (err as Error).message,
+            }));
+        }
+    };
+
+    app.get('/api/znc/user', authToken, (req, res, next) => {
+        if (!req.zncAuthPolicy) return next();
+        if (!req.zncAuthPolicy.current_user) return tokenUnauthorised(req, res);
+        next();
+    }, localAuth, nsoAuth, getUserData, async (req, res) => {
+        const [user, updated] = cached_userdata.get(req.zncAuth!.user.id)!;
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({user, updated}));
+    });
+
+    app.get('/api/znc/user/presence', authToken, (req, res, next) => {
+        if (!req.zncAuthPolicy) return next();
+        if (!req.zncAuthPolicy.current_user_presence) return tokenUnauthorised(req, res);
+        if (!('current_user_presence' in req.zncAuthPolicy) && !req.zncAuthPolicy.current_user) return tokenUnauthorised(req, res);
+        next();
+    }, localAuth, nsoAuth, getUserData, async (req, res) => {
+        const [user, updated] = cached_userdata.get(req.zncAuth!.user.id)!;
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(user.presence));
     });
 
     //
@@ -564,6 +616,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     app.get('/api/znc/user/:id', nsoAuth, async (req, res) => {
         try {
+            if (!req.params.id.match(/^[0-9a-f]{16}$/)) {
+                throw new Error('Invalid NSA ID');
+            }
+
             const response = await req.znc!.getUser(parseInt(req.params.id));
 
             res.setHeader('Content-Type', 'application/json');
@@ -578,59 +634,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 error_message: (err as Error).message,
             }));
         }
-    });
-
-    //
-    // Nintendo Switch user data
-    //
-
-    const cached_userdata = new Map<string, [CurrentUser, number]>();
-
-    const getUserData: express.RequestHandler = async (req, res, next) => {
-        const cache = cached_userdata.get(req.zncAuth!.user.id);
-
-        if (cache && ((cache[1] + updateInterval) > Date.now())) {
-            debug('Using cached user data for %s', req.zncAuth!.user.id);
-            next();
-            return;
-        }
-
-        try {
-            const user = await req.znc!.getCurrentUser();
-            cached_userdata.set(req.zncAuth!.user.id, [user.result, Date.now()]);
-
-            next();
-        } catch (err) {
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                error: err,
-                error_message: (err as Error).message,
-            }));
-        }
-    };
-
-    app.get('/api/znc/user', authToken, (req, res, next) => {
-        if (!req.zncAuthPolicy) return next();
-        if (!req.zncAuthPolicy.current_user) return tokenUnauthorised(req, res);
-        next();
-    }, localAuth, nsoAuth, getUserData, async (req, res) => {
-        const [user, updated] = cached_userdata.get(req.zncAuth!.user.id)!;
-
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({user, updated}));
-    });
-
-    app.get('/api/znc/user/presence', authToken, (req, res, next) => {
-        if (!req.zncAuthPolicy) return next();
-        if (!req.zncAuthPolicy.current_user_presence) return tokenUnauthorised(req, res);
-        if (!('current_user_presence' in req.zncAuthPolicy) && !req.zncAuthPolicy.current_user) return tokenUnauthorised(req, res);
-        next();
-    }, localAuth, nsoAuth, getUserData, async (req, res) => {
-        const [user, updated] = cached_userdata.get(req.zncAuth!.user.id)!;
-
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify(user.presence));
     });
 
     //
