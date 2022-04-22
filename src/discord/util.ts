@@ -1,8 +1,11 @@
 import DiscordRPC from 'discord-rpc';
 import { ActiveEvent, CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
 import { defaultTitle, titles } from './titles.js';
-import { getTitleIdFromEcUrl, hrduration, version } from '../util.js';
+import { dev, getTitleIdFromEcUrl, hrduration, version } from '../util.js';
 import { ZncDiscordPresence } from '../cli/nso/presence.js';
+
+const product = 'nxapi ' + version +
+    (dev ? '-' + dev.revision.substr(0, 7) + (dev.branch ? ' (' + dev.branch + ')' : '') : '');
 
 export function getDiscordPresence(
     state: PresenceState, game: Game, context?: DiscordPresenceContext
@@ -34,7 +37,7 @@ export function getDiscordPresence(
         details: text[0],
         state: text[1],
         largeImageKey: title.largeImageKey ?? game.imageUri,
-        largeImageText: title.largeImageText ?? 'nxapi ' + version,
+        largeImageText: title.largeImageText ? title.largeImageText + ' | ' + product : product,
         smallImageKey: title.smallImageKey || (context?.friendcode ? context?.user?.imageUri : undefined),
         smallImageText: title.smallImageKey ? title.smallImageText :
             context?.friendcode && context?.user?.imageUri ? 'SW-' + context.friendcode.id : undefined,
@@ -72,7 +75,7 @@ export function getInactiveDiscordPresence(
         activity: {
             state: 'Not playing',
             largeImageKey: 'nintendoswitch',
-            largeImageText: 'nxapi ' + version,
+            largeImageText: product,
             smallImageKey: context?.friendcode ? context?.user?.imageUri : undefined,
             smallImageText: context?.friendcode && context?.user?.imageUri ? 'SW-' + context.friendcode.id : undefined,
         },

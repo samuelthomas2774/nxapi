@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as child_process from 'child_process';
 import * as yargs from 'yargs';
 import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
@@ -24,9 +25,19 @@ export const version = pkg.version;
 export const dev = (() => {
     try {
         fs.statSync(path.join(dir, '.git'));
-        return true;
-    } catch (err) {}
-    return false;
+    } catch (err) {
+        return null;
+    }
+
+    const revision = child_process.execSync('git rev-parse HEAD').toString().trim();
+    const branch = child_process.execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+    const changed_files = child_process.execSync('git diff --name-only HEAD').toString().trim();
+
+    return {
+        revision,
+        branch: branch && branch !== 'HEAD' ? branch : null,
+        changed_files: changed_files.length ? changed_files.split('\n') : [],
+    };
 })();
 
 export type YargsArguments<T extends yargs.Argv> = T extends yargs.Argv<infer R> ? R : any;

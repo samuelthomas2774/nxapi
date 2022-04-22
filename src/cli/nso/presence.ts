@@ -232,7 +232,7 @@ export class ZncDiscordPresence extends ZncNotifications {
                     throw new Error('User "' + this.presence_user + '" is not friends with this user');
                 }
 
-                await this.updatePresenceForDiscord(friend.presence, user);
+                await this.updatePresenceForDiscord(friend.presence, friend);
             } else {
                 await this.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
             }
