@@ -616,8 +616,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     app.get('/api/znc/user/:id', nsoAuth, async (req, res) => {
         try {
-            if (!req.params.id.match(/^[0-9a-f]{16}$/)) {
-                throw new Error('Invalid NSA ID');
+            if (!req.params.id.match(/^[0-9]{16}$/)) {
+                throw new Error('Invalid user ID');
             }
 
             const response = await req.znc!.getUser(parseInt(req.params.id));
