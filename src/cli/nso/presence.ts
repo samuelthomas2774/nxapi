@@ -209,7 +209,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         this.show_console_online = argv.showInactivePresence;
         this.show_active_event = argv.showEvent;
 
-        this.presence_user = argv.friendNsaid ?? data.nsoAccount.user.nsaId;
+        this.presence_user = argv.friendNsaid ?? data?.nsoAccount.user.nsaId;
     }
 
     async init() {
@@ -217,7 +217,7 @@ export class ZncDiscordPresence extends ZncNotifications {
             'announcements',
             this.presence_user ?
                 this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
-                    {friend: this.presence_user, presence: true} : null,
+                    {friend: this.presence_user} : null,
             this.presence_user && this.show_active_event ? 'event' : null,
             this.user_notifications ? 'user' : null,
             this.friend_notifications ? 'friends' : null,
@@ -372,7 +372,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         const {friends, user, activeevent} = await this.fetch([
             this.presence_user ?
                 this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
-                    {friend: this.presence_user, presence: true} : null,
+                    {friend: this.presence_user} : null,
             this.presence_user && this.show_active_event ? 'event' : null,
             this.user_notifications ? 'user' : null,
             this.friend_notifications ? 'friends' : null,
