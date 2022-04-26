@@ -186,7 +186,7 @@ export class SplatNet2RecordsMonitor extends Loop {
     }
 
     async handleError(err: Error | ErrorResponse<WebServiceError>): Promise<LoopResult> {
-        if ('response' in err && err.data.code === 'AUTHENTICATION_ERROR') {
+        if ('response' in err && err.data?.code === 'AUTHENTICATION_ERROR') {
             // Token expired
             debug('Renewing iksm_session cookie');
 

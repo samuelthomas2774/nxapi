@@ -43,10 +43,7 @@ export default class SplatNet2Api {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200) {
-            const data = response.headers.get('Content-Type')?.match(/\bapplication\/json\b/i) ?
-                await response.json() : await response.text();
-
-            throw new ErrorResponse('[splatnet2] Unknown error', response, data);
+            throw new ErrorResponse('[splatnet2] Unknown error', response, await response.text());
         }
 
         updateIksmSessionLastUsed(this.iksm_session);
@@ -244,15 +241,17 @@ ${colour}
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
+        const body = await response.text();
+
         if (response.status !== 200) {
-            throw new ErrorResponse('Unknown error', response);
+            throw new ErrorResponse('[splatnet2] Unknown error', response, body);
         }
 
         const cookies = response.headers.get('Set-Cookie');
         const match = cookies?.match(/\biksm_session=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);
 
         if (!match) {
-            throw new ErrorResponse('Response didn\'t include iksm_session cookie', response);
+            throw new ErrorResponse('[splatnet2] Response didn\'t include iksm_session cookie', response, body);
         }
 
         const iksm_session = decodeURIComponent(match[1]);
@@ -263,8 +262,6 @@ ${colour}
         debug('iksm_session %s, expires %s', iksm_session, expires);
 
         const expires_at = expires ? Date.parse(expires) : Date.now() + 24 * 60 * 60 * 1000;
-
-        const body = await response.text();
 
         const ml = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+lang=(?:"([^"]*)"|([^\s>]*))/i);
         const mr = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-region=(?:"([^"]*)"|([^\s>]*))/i);

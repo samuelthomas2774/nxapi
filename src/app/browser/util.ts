@@ -1,4 +1,6 @@
 import * as React from 'react';
+import fetch, { RequestInfo, RequestInit, Response } from 'node-fetch';
+import { ErrorResponse } from '../../index.js';
 
 export enum RequestState {
     NOT_LOADING,
@@ -39,28 +41,6 @@ export function useFetch<T>(requestInfo: RequestInfo | null, init?: RequestInit,
 
     return useAsync<T | Response>(requestInfo ? f : null);
 }
-
-export class ErrorResponse extends Error {
-    readonly data: any | undefined = undefined;
-
-    constructor(message: string, readonly response: Response, readonly body?: string) {
-        super(message);
-
-        try {
-            this.data = body ? JSON.parse(body) : undefined;
-        } catch (err) {}
-    }
-}
-
-Object.defineProperty(ErrorResponse, Symbol.hasInstance, {
-    configurable: true,
-    value: (instance: ErrorResponse) => {
-        return instance instanceof Error &&
-            'response' in instance &&
-            'body' in instance &&
-            'data' in instance;
-    },
-});
 
 export function useFetchJson<T>(requestInfo: RequestInfo | null, init?: RequestInit) {
     return useFetch(requestInfo, init, response => {

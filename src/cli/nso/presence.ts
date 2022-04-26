@@ -1,4 +1,3 @@
-import * as path from 'path';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';

@@ -51,78 +51,73 @@ export default class ZncApi {
         return data;
     }
 
-    async getAnnouncements() {
-        return this.fetch<Announcements>('/v1/Announcement/List', 'POST', '{"parameter":{}}');
-    }
-
-    async getFriendList() {
-        return this.fetch<Friends>('/v3/Friend/List', 'POST', '{"parameter":{}}');
-    }
-
-    async addFavouriteFriend(nsaid: string) {
-        return this.fetch<{}>('/v3/Friend/Favorite/Create', 'POST', JSON.stringify({
-            parameter: {
-                nsaId: nsaid,
-            },
-        }));
-    }
-
-    async removeFavouriteFriend(nsaid: string) {
-        return this.fetch<{}>('/v3/Friend/Favorite/Delete', 'POST', JSON.stringify({
-            parameter: {
-                nsaId: nsaid,
-            },
-        }));
-    }
-
-    async getWebServices() {
+    async call<T = unknown>(url: string, parameter = {}) {
         const uuid = uuidgen();
 
-        return this.fetch<WebServices>('/v1/Game/ListWebServices', 'POST', JSON.stringify({
+        return this.fetch<T>(url, 'POST', JSON.stringify({
+            parameter,
             requestId: uuid,
         }));
     }
 
+    async getAnnouncements() {
+        return this.call<Announcements>('/v1/Announcement/List');
+    }
+
+    async getFriendList() {
+        return this.call<Friends>('/v3/Friend/List');
+    }
+
+    async addFavouriteFriend(nsaid: string) {
+        return this.call<{}>('/v3/Friend/Favorite/Create', {
+            nsaId: nsaid,
+        });
+    }
+
+    async removeFavouriteFriend(nsaid: string) {
+        return this.call<{}>('/v3/Friend/Favorite/Delete', {
+            nsaId: nsaid,
+        });
+    }
+
+    async getWebServices() {
+        return this.call<WebServices>('/v1/Game/ListWebServices');
+    }
+
     async getActiveEvent() {
-        return this.fetch<GetActiveEventResult>('/v1/Event/GetActiveEvent', 'POST', '{"parameter":{}}');
+        return this.call<GetActiveEventResult>('/v1/Event/GetActiveEvent');
     }
 
     async getEvent(id: number) {
-        return this.fetch<Event>('/v1/Event/Show', 'POST', JSON.stringify({
-            parameter: {
-                id,
-            },
-        }));
+        return this.call<Event>('/v1/Event/Show', {
+            id,
+        });
     }
 
     async getUser(id: number) {
-        return this.fetch<User>('/v3/User/Show', 'POST', JSON.stringify({
-            parameter: {
-                id,
-            },
-        }));
+        return this.call<User>('/v3/User/Show', {
+            id,
+        });
     }
 
     async getCurrentUser() {
-        return this.fetch<CurrentUser>('/v3/User/ShowSelf', 'POST', '{"parameter":{}}');
+        return this.call<CurrentUser>('/v3/User/ShowSelf');
     }
 
     async getCurrentUserPermissions() {
-        return this.fetch<CurrentUserPermissions>('/v3/User/Permissions/ShowSelf', 'POST', '{"parameter":{}}');
+        return this.call<CurrentUserPermissions>('/v3/User/Permissions/ShowSelf');
     }
 
     async updateCurrentUserPermissions(to: PresencePermissions, from: PresencePermissions, etag: string) {
-        return this.fetch<{}>('/v3/User/Permissions/UpdateSelf', 'POST', JSON.stringify({
-            parameter: {
-                permissions: {
-                    presence: {
-                        toValue: to,
-                        fromValue: from,
-                    },
+        return this.call<{}>('/v3/User/Permissions/UpdateSelf', {
+            permissions: {
+                presence: {
+                    toValue: to,
+                    fromValue: from,
                 },
-                etag,
             },
-        }));
+            etag,
+        });
     }
 
     async getWebServiceToken(id: string) {
@@ -142,9 +137,7 @@ export default class ZncApi {
             timestamp,
         };
 
-        return this.fetch<WebServiceToken>('/v2/Game/GetWebServiceToken', 'POST', JSON.stringify({
-            parameter: req,
-        }));
+        return this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req);
     }
 
     async getToken(token: string, user: NintendoAccountUser) {
@@ -168,9 +161,7 @@ export default class ZncApi {
             naIdToken: id_token,
         };
 
-        const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
-            parameter: req,
-        }));
+        const data = await this.call<AccountToken>('/v3/Account/GetToken', req);
 
         return {
             uuid,

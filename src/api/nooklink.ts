@@ -42,10 +42,7 @@ export default class NooklinkApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200 && response.status !== 201) {
-            const data = response.headers.get('Content-Type')?.match(/\bapplication\/json\b/i) ?
-                await response.json() : await response.text();
-
-            throw new ErrorResponse('[nooklink] Unknown error', response, data);
+            throw new ErrorResponse('[nooklink] Unknown error', response, await response.text());
         }
 
         const data = await response.json() as T | WebServiceError;
@@ -113,15 +110,17 @@ export default class NooklinkApi {
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
+        const body = await response.text();
+
         if (response.status !== 200) {
-            throw new ErrorResponse('Unknown error', response);
+            throw new ErrorResponse('[nooklink] Unknown error', response, body);
         }
 
         const cookies = response.headers.get('Set-Cookie');
         const match = cookies?.match(/\b_gtoken=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);
 
         if (!match) {
-            throw new ErrorResponse('Response didn\'t include _gtoken cookie', response);
+            throw new ErrorResponse('[nooklink] Response didn\'t include _gtoken cookie', response, body);
         }
 
         const gtoken = decodeURIComponent(match[1]);
@@ -131,8 +130,6 @@ export default class NooklinkApi {
         debug('_gtoken %s, expires %s', gtoken, expires);
 
         const expires_at = expires ? Date.parse(expires) : Date.now() + webserviceToken.expiresIn * 1000;
-
-        const body = await response.text();
 
         return {
             webserviceToken,
@@ -178,10 +175,7 @@ export class NooklinkUserApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200 && response.status !== 201) {
-            const data = response.headers.get('Content-Type')?.match(/\bapplication\/json\b/i) ?
-                await response.json() : await response.text();
-
-            throw new ErrorResponse('[nooklink] Unknown error', response, data);
+            throw new ErrorResponse('[nooklink] Unknown error', response, await response.text());
         }
 
         const data = await response.json() as T | WebServiceError;

@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { AccountToken, ActiveEvent, Announcements, CurrentUser, Event, Friend, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Event, Friend, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { SavedToken, version } from '../util.js';
@@ -34,12 +34,16 @@ export default class ZncProxyApi implements ZncApi {
         if (response.status === 204) return null!;
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[zncproxy] Unknown error', response);
+            throw new ErrorResponse('[zncproxy] Unknown error', response, await response.text());
         }
 
         const data = await response.json() as T;
 
         return data;
+    }
+
+    async call<T = unknown>(url: string, parameter = {}): Promise<ZncSuccessResponse<T>> {
+        throw new Error('Not supported in ZncProxyApi');
     }
 
     async getAnnouncements() {

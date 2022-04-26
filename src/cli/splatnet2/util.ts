@@ -1,7 +1,6 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import * as fs from 'fs';
-import * as path from 'path';
 import { getToken } from '../../util.js';
 import SplatNet2Api from '../../api/splatnet2.js';
 import { WebServiceToken } from '../../api/znc-types.js';
@@ -47,7 +46,7 @@ export async function getIksmToken(storage: persist.LocalStorage, token: string,
         await storage.setItem('IksmToken.' + token, existingToken);
 
         if (!iksm_sessions.has(existingToken.iksm_session)) {
-            iksm_sessions.set(existingToken.iksm_session, [storage, token, null]);
+            iksm_sessions.set(existingToken.iksm_session, [storage, token, null, null]);
         }
 
         return {
@@ -59,7 +58,7 @@ export async function getIksmToken(storage: persist.LocalStorage, token: string,
     debug('Using existing token');
 
     if (!iksm_sessions.has(existingToken.iksm_session)) {
-        iksm_sessions.set(existingToken.iksm_session, [storage, token, null]);
+        iksm_sessions.set(existingToken.iksm_session, [storage, token, null, null]);
     }
 
     return {
@@ -79,7 +78,7 @@ export async function renewIksmToken(splatnet: SplatNet2Api, storage: persist.Lo
     await storage.setItem('IksmToken.' + token, existingToken);
 
     if (!iksm_sessions.has(existingToken.iksm_session)) {
-        iksm_sessions.set(existingToken.iksm_session, [storage, token, null]);
+        iksm_sessions.set(existingToken.iksm_session, [storage, token, null, null]);
     }
 
     iksm_sessions.delete(splatnet.iksm_session);
@@ -88,30 +87,51 @@ export async function renewIksmToken(splatnet: SplatNet2Api, storage: persist.Lo
     splatnet.useragent = existingToken.useragent;
 }
 
-const iksm_sessions = new Map<string, [persist.LocalStorage, string, number | null]>();
+const iksm_sessions = new Map<string, [persist.LocalStorage, string, number | null, NodeJS.Timeout | null]>();
 
 export function updateIksmSessionLastUsed(iksm_session: string, last_used: number = Date.now()) {
     const match = iksm_sessions.get(iksm_session);
     if (!match) return;
 
-    const [storage, token] = match;
+    const [storage, token,, timeout] = match;
 
-    iksm_sessions.set(iksm_session, [storage, token, last_used]);
+    const new_timeout = timeout ?? setTimeout(() => {
+        const match = iksm_sessions.get(iksm_session);
+        if (!match) return;
+
+        const [storage, token, last_used, timeout] = match;
+        if (timeout === new_timeout) match[3] = null;
+
+        writeUpdatedIksmSessionLastUsed(storage, token, last_used!);
+        match[2] = null;
+    }, 1000);
+
+    iksm_sessions.set(iksm_session, [storage, token, last_used, new_timeout]);
 }
 
-process.on('exit', () => {
-    for (const [iksm_session, [storage, token, last_used]] of iksm_sessions) {
+function writeUpdatedIksmSessionLastUsed(storage: persist.LocalStorage, token: string, last_used: number) {
+    const datum_str = fs.readFileSync(storage.getDatumPath('IksmToken.' + token), 'utf-8');
+    const datum: persist.Datum = storage.parse(datum_str);
+    const data: SavedIksmSessionToken = datum.value;
+
+    if (data.last_used && data.last_used >= last_used) return;
+
+    data.last_used = last_used;
+
+    const new_datum_str = storage.stringify(datum);
+    fs.writeFileSync(storage.getDatumPath('IksmToken.' + token), new_datum_str, 'utf-8');
+}
+
+function writeUpdatedIksmSessionsLastUsed() {
+    for (const [iksm_session, data] of iksm_sessions) {
+        const [storage, token, last_used, timeout] = data;
+        if (timeout) clearTimeout(timeout), data[3] = null;
         if (!last_used) continue;
 
-        const datum_str = fs.readFileSync(storage.getDatumPath('IksmToken.' + token), 'utf-8');
-        const datum: persist.Datum = storage.parse(datum_str);
-        const data: SavedIksmSessionToken = datum.value;
-
-        if (data.last_used && data.last_used >= last_used) continue;
-
-        data.last_used = last_used;
-
-        const new_datum_str = storage.stringify(datum);
-        fs.writeFileSync(storage.getDatumPath('IksmToken.' + token), new_datum_str, 'utf-8');
+        writeUpdatedIksmSessionLastUsed(storage, token, last_used);
+        data[2] = null;
     }
-});
+}
+
+process.on('exit', () => writeUpdatedIksmSessionsLastUsed());
+process.on('uncaughtExceptionMonitor', () => writeUpdatedIksmSessionsLastUsed());

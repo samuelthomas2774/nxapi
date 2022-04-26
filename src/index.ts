@@ -14,6 +14,12 @@ export {
     ShareColour as SplatNet2ProfileColour,
 } from './api/splatnet2.js';
 export * as splatnet2 from './api/splatnet2-types.js';
+export {
+    default as NooklinkApi,
+    NooklinkUserApi,
+    MessageType as NooklinkMessageType,
+} from './api/nooklink.js';
+export * as nooklink from './api/nooklink-types.js';
 
 export { getTitleIdFromEcUrl } from './util.js';
 export { ErrorResponse } from './api/util.js';

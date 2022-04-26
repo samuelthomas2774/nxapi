@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron';
 import createDebug from 'debug';
 
 // Logs are written to the browser window developer tools, and are hidden by default (enable verbose logs)
