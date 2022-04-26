@@ -29,9 +29,10 @@ export const dev = (() => {
         return null;
     }
 
-    const revision = child_process.execSync('git rev-parse HEAD').toString().trim();
-    const branch = child_process.execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-    const changed_files = child_process.execSync('git diff --name-only HEAD').toString().trim();
+    const options: child_process.ExecSyncOptions = {cwd: dir};
+    const revision = child_process.execSync('git rev-parse HEAD', options).toString().trim();
+    const branch = child_process.execSync('git rev-parse --abbrev-ref HEAD', options).toString().trim();
+    const changed_files = child_process.execSync('git diff --name-only HEAD', options).toString().trim();
 
     return {
         revision,
