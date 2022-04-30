@@ -22,7 +22,7 @@ export function builder(yargs: Argv<ParentArguments>) {
                 'Screen name',
                 'Nickname',
                 'Country',
-                'Nintendo Switch ID',
+                'NSA ID',
                 'Nintendo Switch username',
                 'Parental Controls',
             ],
@@ -86,15 +86,26 @@ export function builder(yargs: Argv<ParentArguments>) {
 
         const selected: string | undefined = await storage.getItem('SelectedUser');
         const nsoToken: string | undefined = await storage.getItem('NintendoAccountToken.' + argv.user);
+        const nsoCache: SavedToken | undefined = nsoToken ? await storage.getItem('NsoToken.' + nsoToken) : undefined;
         const moonToken: string | undefined = await storage.getItem('NintendoAccountToken-pctl.' + argv.user);
 
-        if (!nsoToken || !moonToken) {
+        if (!nsoToken && !moonToken) {
             throw new Error('Unknown user');
         }
 
         if (selected === argv.user) {
             await storage.removeItem('SelectedUser');
             await storage.removeItem('SessionToken');
+        }
+
+        await storage.removeItem('IksmToken.' + nsoToken);
+        await storage.removeItem('NookToken.' + nsoToken);
+        await storage.removeItem('NookUsers.' + nsoToken);
+
+        for (const key of await storage.keys()) {
+            if (key.startsWith('NookAuthToken.' + nsoToken + '.')) await storage.removeItem(key);
+            if (nsoCache && key.startsWith('WebServicePersistentData.' + nsoCache.nsoAccount.user.nsaId + '.'))
+                await storage.removeItem(key);
         }
 
         await storage.removeItem('NintendoAccountToken.' + argv.user);
