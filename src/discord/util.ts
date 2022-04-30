@@ -105,13 +105,18 @@ export function getTitleConfiguration(game: Game, id: string) {
     });
 }
 
+type SystemModuleTitleId = `01000000000000${string}`;
+type SystemDataTitleId = `01000000000008${string}`;
+type SystemAppletTitleId = `0100000000001${string}`;
+type ApplicationTitleId = `0100${string}${'0' | '2' | '4' | '6' | '8' | 'a' | 'c' | 'e'}000`;
+
 export interface Title {
     /**
      * Lowercase hexadecimal title ID.
      *
-     * Valid title IDs are 16 characters long, and should start with `0100` and end with `0000`, `2000`, `4000`, `6000`, `8000`, `a000`, `c000`, `e000` (this is because applications have 4^16 title IDs for the application itself, plus addon content and update data).
+     * Valid application title IDs are 16 characters long, and should start with `0100` and end with `0000`, `2000`, `4000`, `6000`, `8000`, `a000`, `c000`, `e000` (this is because applications have 16^4 title IDs for the application itself, plus addon content and update data).
      */
-    id: string;
+    id: ApplicationTitleId | '0000000000000000';
     /**
      * Discord client ID
      */
@@ -133,7 +138,7 @@ export interface Title {
     largeImageKey?: string;
     largeImageText?: string;
     /**
-     * By default this will not be set.
+     * By default the user's icon and friend code will be used if the user is sharing their friend code; otherwise it will not be set.
      */
     smallImageKey?: string;
     smallImageText?: string;
