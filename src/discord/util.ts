@@ -1,11 +1,11 @@
 import DiscordRPC from 'discord-rpc';
 import { ActiveEvent, CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
 import { defaultTitle, titles } from './titles.js';
-import { dev, getTitleIdFromEcUrl, hrduration, version } from '../util.js';
+import { dev, getTitleIdFromEcUrl, git, hrduration, version } from '../util.js';
 import { ZncDiscordPresence } from '../cli/nso/presence.js';
 
 const product = 'nxapi ' + version +
-    (dev ? '-' + dev.revision.substr(0, 7) + (dev.branch ? ' (' + dev.branch + ')' : '') : '');
+    (git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : dev ? '-dev' : '') : '');
 
 export function getDiscordPresence(
     state: PresenceState, game: Game, context?: DiscordPresenceContext

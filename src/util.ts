@@ -22,7 +22,7 @@ export const paths = getPaths('nxapi');
 export const dir = path.resolve(import.meta.url.substr(7), '..', '..');
 export const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
 export const version = pkg.version;
-export const dev = (() => {
+export const git = (() => {
     try {
         fs.statSync(path.join(dir, '.git'));
     } catch (err) {
@@ -40,6 +40,7 @@ export const dev = (() => {
         changed_files: changed_files.length ? changed_files.split('\n') : [],
     };
 })();
+export const dev = !!git || process.env.NODE_ENV === 'development';
 
 export type YargsArguments<T extends yargs.Argv> = T extends yargs.Argv<infer R> ? R : any;
 export type Argv<T = {}> = yargs.Argv<T>;

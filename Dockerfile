@@ -30,6 +30,10 @@ COPY bin /app/bin
 COPY resources /app/resources
 COPY --from=build /app/dist /app/dist
 
+RUN ln -s /app/bin/nxapi.js /usr/local/bin/nxapi
+ENV NXAPI_DATA_PATH=/data
+ENV NODE_ENV=production
+
 RUN ln -s /data/android /root/.android
 
 VOLUME [ "/data" ]
