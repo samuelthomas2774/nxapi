@@ -455,6 +455,11 @@ export class ZncDiscordPresence extends ZncNotifications {
     }
 }
 
+type PresenceUrlResponse =
+    Presence | {presence: Presence} |
+    CurrentUser | {user: CurrentUser} |
+    Friend | {friend: Friend};
+
 export class ZncProxyDiscordPresence extends ZncDiscordPresence {
     constructor(
         readonly argv: ArgumentsCamelCase<Arguments>,
@@ -480,9 +485,24 @@ export class ZncProxyDiscordPresence extends ZncDiscordPresence {
             console.error('Non-200 status code', await response.text());
             throw new Error('Unknown error');
         }
-        const presence = await response.json() as Presence;
+        const data = await response.json() as PresenceUrlResponse;
 
-        await this.updatePresenceForDiscord(presence);
+        const user: CurrentUser | Friend | undefined =
+            'user' in data ? data.user :
+            'friend' in data ? data.friend :
+            'nsaId' in data ? data :
+            undefined;
+        const presence: Presence =
+            'presence' in data ? data.presence :
+            'user' in data ? data.user.presence :
+            'friend' in data ? data.friend.presence :
+            data;
+
+        if (!('state' in presence)) {
+            throw new Error('Invalid presence data');
+        }
+
+        await this.updatePresenceForDiscord(presence, user);
         await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
     }
 }
