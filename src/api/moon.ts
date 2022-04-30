@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
-import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, SmartDevices, User } from './moon-types.js';
+import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
 
 const debug = createDebug('api:moon');
 
@@ -76,7 +76,7 @@ export default class MoonApi {
     }
 
     async getParentalControlSettingState(id: string) {
-        return this.fetch<unknown>('/v1/devices/' + id + '/parental_control_setting_state');
+        return this.fetch<ParentalControlSettingState>('/v1/devices/' + id + '/parental_control_setting_state');
     }
 
     static async createWithSessionToken(token: string) {
