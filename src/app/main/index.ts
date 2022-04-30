@@ -181,6 +181,7 @@ export class PresenceMonitorManager {
             showInactivePresence: false,
             showEvent: false,
             friendNsaid: undefined,
+            discordPreconnect: false,
         }, this.store.storage, token, nso, data);
 
         i.notifications = this.notifications;

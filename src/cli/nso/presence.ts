@@ -54,6 +54,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('presence-url', {
         describe: 'URL to get user presence from, for use with `nxapi nso http-server`',
         type: 'string',
+    }).option('discord-preconnect', {
+        describe: 'Stay connected to Discord while not playing',
+        type: 'boolean',
+        default: false,
     }).option('splatnet2-monitor', {
         describe: 'Download new SplatNet 2 data when you are playing Splatoon 2 online',
         type: 'boolean',
@@ -183,6 +187,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
 export class ZncDiscordPresence extends ZncNotifications {
     presence_user: string | null;
+    discord_preconnect = false;
     show_friend_code = false;
     force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
     show_console_online = false;
@@ -191,7 +196,8 @@ export class ZncDiscordPresence extends ZncNotifications {
     constructor(
         argv: Pick<ArgumentsCamelCase<Arguments>,
             'userNotifications' | 'friendNotifications' | 'updateInterval' |
-            'friendCode' | 'showInactivePresence' | 'showEvent' | 'friendNsaid'
+            'friendCode' | 'showInactivePresence' | 'showEvent' | 'friendNsaid' |
+            'discordPreconnect'
         >,
         storage: persist.LocalStorage,
         token: string,
@@ -209,6 +215,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         this.show_active_event = argv.showEvent;
 
         this.presence_user = argv.friendNsaid ?? data?.nsoAccount.user.nsaId;
+        this.discord_preconnect = argv.discordPreconnect;
     }
 
     async init() {
@@ -243,6 +250,10 @@ export class ZncDiscordPresence extends ZncNotifications {
         return LoopResult.OK;
     }
 
+    get presence_enabled() {
+        return !!this.presence_user;
+    }
+
     rpc: {client: DiscordRPC.Client, id: string} | null = null;
     title: {id: string; since: number} | null = null;
     i = 0;
@@ -270,10 +281,21 @@ export class ZncDiscordPresence extends ZncNotifications {
             (this.show_console_online && presence?.state === PresenceState.INACTIVE);
 
         if (!presence || !show_presence) {
-            if (this.rpc) {
+            if (this.presence_enabled && this.discord_preconnect && !this.rpc) {
+                debugDiscord('No presence but Discord preconnect enabled - connecting');
+                const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
+                const client = await this.createDiscordClient(discordpresence.id);
+                this.rpc = {client, id: discordpresence.id};
+                return;
+            }
+
+            if (this.rpc && !(this.presence_enabled && this.discord_preconnect)) {
                 const client = this.rpc.client;
                 this.rpc = null;
                 await client.destroy();
+            } else if (this.rpc && this.title) {
+                debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
+                await this.rpc.client.clearActivity();
             }
 
             this.title = null;
@@ -298,55 +320,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         }
 
         if (!this.rpc) {
-            const client = new DiscordRPC.Client({transport: 'ipc'});
-            let attempts = 0;
-            let connected = false;
-
-            while (attempts < 10) {
-                if (attempts === 0) debugDiscord('RPC connecting');
-                else debugDiscord('RPC connecting, attempt %d', attempts + 1);
-
-                try {
-                    await client.connect(discordpresence.id);
-                    debugDiscord('RPC connected');
-                    connected = true;
-                    break;
-                } catch (err) {}
-
-                attempts++;
-                await new Promise(rs => setTimeout(rs, 5000));
-            }
-
-            if (!connected) throw new Error('Failed to connect to Discord');
-
-            // @ts-expect-error
-            client.transport.on('close', async () => {
-                if (this.rpc?.client !== client) return;
-
-                debugDiscord('RPC client disconnected, attempting to reconnect');
-                let attempts = 0;
-                let connected = false;
-
-                while (attempts < 10) {
-                    if (this.rpc?.client !== client) return;
-
-                    debugDiscord('RPC reconnecting, attempt %d', attempts + 1);
-                    try {
-                        await client.connect(discordpresence.id);
-                        debugDiscord('RPC reconnected');
-                        connected = true;
-                        break;
-                    } catch (err) {}
-
-                    attempts++;
-                    await new Promise(rs => setTimeout(rs, 5000));
-                }
-
-                if (!connected) throw new Error('Failed to reconnect to Discord');
-
-                throw new Error('Discord disconnected');
-            });
-
+            const client = await this.createDiscordClient(discordpresence.id);
             this.rpc = {client, id: discordpresence.id};
         }
 
@@ -365,6 +339,69 @@ export class ZncDiscordPresence extends ZncNotifications {
         this.rpc.client.setActivity(discordpresence.activity);
 
         this.update_presence_errors = 0;
+    }
+
+    async createDiscordClient(clientid: string) {
+        let client: DiscordRPC.Client;
+        let attempts = 0;
+        let connected = false;
+
+        while (attempts < 10) {
+            if (attempts === 0) debugDiscord('RPC connecting', clientid);
+            else debugDiscord('RPC connecting, attempt %d', attempts + 1, clientid);
+
+            try {
+                client = new DiscordRPC.Client({transport: 'ipc'});
+                await client.connect(clientid);
+                debugDiscord('RPC connected', clientid, client.application, client.user);
+                connected = true;
+                break;
+            } catch (err) {}
+
+            attempts++;
+            await new Promise(rs => setTimeout(rs, 5000));
+        }
+
+        if (!connected) throw new Error('Failed to connect to Discord');
+
+        const reconnect = async () => {
+            if (this.rpc?.client !== client) return;
+
+            debugDiscord('RPC client disconnected, attempting to reconnect', clientid);
+            let attempts = 0;
+            let connected = false;
+
+            while (attempts < 10) {
+                if (this.rpc?.client !== client) return;
+
+                debugDiscord('RPC reconnecting, attempt %d', attempts + 1, clientid);
+                try {
+                    const newclient = new DiscordRPC.Client({transport: 'ipc'});
+                    await newclient.connect(clientid);
+                    debugDiscord('RPC reconnected', clientid, newclient.application, newclient.user);
+
+                    // @ts-expect-error
+                    client.transport.on('close', reconnect);
+
+                    this.rpc.client = newclient;
+                    client = newclient;
+                    connected = true;
+                    break;
+                } catch (err) {
+                    debugDiscord('RPC reconnect failed, attempt %d', attempts + 1, clientid, err);
+                }
+
+                attempts++;
+                await new Promise(rs => setTimeout(rs, 5000));
+            }
+
+            if (!connected) throw new Error('Failed to reconnect to Discord');
+        };
+
+        // @ts-expect-error
+        client.transport.on('close', reconnect);
+
+        return client!;
     }
 
     async update() {
@@ -424,6 +461,10 @@ export class ZncProxyDiscordPresence extends ZncDiscordPresence {
         public presence_url: string
     ) {
         super(argv, null!, null!, null!, null!);
+    }
+
+    get presence_enabled() {
+        return true;
     }
 
     async init() {
