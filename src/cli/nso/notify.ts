@@ -184,7 +184,7 @@ export class ZncNotifications extends Loop {
                         name: '',
                         isFriend: true,
                         isFavoriteFriend: false,
-                        isServiceUser: true,
+                        isServiceUser: false,
                         friendCreatedAt: 0,
                         presence: await nso.fetch<Presence>('/friend/' + r.friend + '/presence'),
                     };
@@ -377,7 +377,7 @@ export class NotificationManager {
                     lastpresence ? ' (console was already online)' : '',
                     currenttitle.name, JSON.stringify(currenttitle.sysDescription),
                     hrduration(currenttitle.totalPlayTime),
-                    new Date((currenttitle.firstPlayedAt ?? 0) * 1000).toString());
+                    currenttitle.firstPlayedAt ? new Date(currenttitle.firstPlayedAt * 1000).toString() : 'now');
 
                 this.onFriendOnline(friend, prev, initialRun);
 
@@ -415,7 +415,7 @@ export class NotificationManager {
                         lasttitle.name, JSON.stringify(lasttitle.sysDescription),
                         lastpresence.state === PresenceState.ONLINE ? '' : ' (' + lastpresence.state + ')',
                         hrduration(currenttitle.totalPlayTime),
-                        new Date((currenttitle.firstPlayedAt ?? 0) * 1000).toString());
+                        currenttitle.firstPlayedAt ? new Date(currenttitle.firstPlayedAt * 1000).toString() : 'now');
 
                     this.onFriendPlayingChangeTitle(friend, prev, initialRun);
                 } else if (

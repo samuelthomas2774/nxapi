@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeImage, Notification } from '../electron.js';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, Notification } from '../electron.js';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
@@ -6,12 +6,13 @@ import * as persist from 'node-persist';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-import { getToken, initStorage, paths } from '../../util.js';
+import { dev, getToken, initStorage, LoopResult, paths } from '../../util.js';
 import MenuApp from './menu.js';
 import { ZncDiscordPresence } from '../../cli/nso/presence.js';
 import { WebServiceIpc } from './webservices.js';
-import { CurrentUser, Friend, Game } from '../../api/znc-types.js';
+import { CurrentUser, Friend, Game, ZncErrorResponse } from '../../api/znc-types.js';
 import { NotificationManager } from '../../cli/nso/notify.js';
+import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('app:main');
 
@@ -31,6 +32,7 @@ function createWindow() {
     });
 
     mainWindow.loadFile(path.join(bundlepath, 'index.html'));
+    if (dev) mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(async () => {
@@ -53,6 +55,7 @@ app.whenReady().then(async () => {
     ipcMain.handle('nxapi:moon:getcachedtoken', (e, token: string) => storage.getItem('MoonToken.' + token));
 
     const webserviceipc = new WebServiceIpc(store);
+    ipcMain.on('nxapi:webserviceapi:getWebServiceSync', e => e.returnValue = webserviceipc.getWebService(e));
     ipcMain.handle('nxapi:webserviceapi:invokeNativeShare', (e, data: string) => webserviceipc.invokeNativeShare(e, data));
     ipcMain.handle('nxapi:webserviceapi:invokeNativeShareUrl', (e, data: string) => webserviceipc.invokeNativeShareUrl(e, data));
     ipcMain.handle('nxapi:webserviceapi:requestGameWebToken', e => webserviceipc.requestGameWebToken(e));
@@ -239,6 +242,20 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
             debug('Monitor for user %s finished', this.data.nsoAccount.user.name);
         } finally {
             this._running = 0;
+        }
+    }
+
+    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+        try {
+            return super.handleError(err);
+        } catch (err) {
+            if (err instanceof Error) {
+                dialog.showErrorBox(err.name, err.stack ?? err.message);
+            } else {
+                dialog.showErrorBox('Error', err as any);
+            }
+
+            return LoopResult.OK;
         }
     }
 }

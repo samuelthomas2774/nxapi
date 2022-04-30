@@ -2,10 +2,10 @@ import * as path from 'path';
 import createDebug from 'debug';
 import { BrowserWindow, IpcMainInvokeEvent, session, shell, WebContents } from '../electron.js';
 import ZncApi from '../../api/znc.js';
-import { SavedToken } from '../../util.js';
+import { dev, SavedToken } from '../../util.js';
 import { WebService } from '../../api/znc-types.js';
 import { bundlepath, Store } from './index.js';
-import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/index.js';
+import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
 
 const debug = createDebug('app:main:webservices');
 
@@ -87,7 +87,7 @@ export default async function openWebService(
         webserviceToken,
     });
 
-    window.webContents.openDevTools();
+    if (dev) window.webContents.openDevTools();
 
     window.loadURL(url.toString(), {
         extraHeaders: Object.entries({
@@ -96,6 +96,11 @@ export default async function openWebService(
             'X-Requested-With': 'com.nintendo.znca',
         }).map(([key, value]) => key + ': ' + value).join('\n'),
     });
+}
+
+export interface WebServiceData {
+    webservice: WebService;
+    url: string;
 }
 
 export class WebServiceIpc {
@@ -118,6 +123,22 @@ export class WebServiceIpc {
             user: data[3].user,
             nsoAccount: data[3].nsoAccount,
             webservice: data[4],
+        };
+    }
+
+    getWebService(event: IpcMainInvokeEvent): WebServiceData {
+        const {user, webservice} = this.getWindowData(event.sender);
+
+        const url = new URL(webservice.uri);
+        url.search = new URLSearchParams({
+            lang: user.language,
+            na_country: user.country,
+            na_lang: user.language,
+        }).toString();
+    
+        return {
+            webservice,
+            url: url.toString(),
         };
     }
 

@@ -55,7 +55,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const table = new Table({
         head: [
             'ID',
-            'NA ID',
+            'NSA ID',
             'Name',
             'Status',
             'Favourite?',
@@ -73,10 +73,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             friend.name,
             online ?
                 'name' in friend.presence.game ?
-                    'Playing ' + friend.presence.game.name + '; played for ' +
+                    'Playing ' + friend.presence.game.name + ';\nplayed for ' +
                         hrduration(friend.presence.game.totalPlayTime) + ' since ' +
                         new Date(friend.presence.game.firstPlayedAt * 1000).toLocaleDateString('en-GB') :
                     'Online' :
+                friend.presence.state === PresenceState.INACTIVE ?
+                    'Console online' + (friend.presence.logoutAt ?
+                        '; last seen ' + new Date(friend.presence.logoutAt * 1000).toISOString() : '') :
                 friend.presence.logoutAt ?
                     'Last seen ' + new Date(friend.presence.logoutAt * 1000).toISOString() :
                     'Offline',

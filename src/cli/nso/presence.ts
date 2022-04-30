@@ -116,7 +116,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (argv.showEvent) throw new Error('--presence-url not compatible with --show-event');
         if (argv.friendNsaid) throw new Error('--presence-url not compatible with --friend-nsaid');
         if (argv.userNotifications) throw new Error('--presence-url not compatible with --user-notifications');
-        if (argv.friendNotifications) throw new Error('--presence-url not compatible with --user-notifications');
+        if (argv.friendNotifications) throw new Error('--presence-url not compatible with --friend-notifications');
 
         const i = new ZncProxyDiscordPresence(argv, argv.presenceUrl);
 

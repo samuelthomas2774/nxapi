@@ -66,12 +66,14 @@
         "@types/yargs": "^17.0.9",
         "caxa": "^2.1.0",
         "electron": "^17.2.0",
+        "electron-builder": "^23.0.3",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
         "react-native-web": "^0.17.7",
         "rollup": "^2.70.1",
         "rollup-plugin-polyfill-node": "^0.8.0",
         "ts-json-schema-generator": "^1.0.0",
+        "tslib": "^2.4.0",
         "typescript": "^4.7.0-dev.20220308"
     }
 }

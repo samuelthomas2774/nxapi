@@ -1,6 +1,6 @@
 import * as React from 'react';
 import fetch, { RequestInfo, RequestInit, Response } from 'node-fetch';
-import { ErrorResponse } from '../../index.js';
+import { ErrorResponse } from '../../api/util.js';
 
 export enum RequestState {
     NOT_LOADING,
