@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { ActiveEvent, Announcements, CurrentUser, Event, Friend, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { SavedToken, version } from '../util.js';
@@ -136,4 +136,38 @@ export default class ZncProxyApi implements ZncApi {
 
         return {nso, data};
     }
+}
+
+export type PresenceUrlResponse =
+    Presence | {presence: Presence} |
+    CurrentUser | {user: CurrentUser} |
+    Friend | {friend: Friend};
+
+export async function getPresenceFromUrl(presence_url: string) {
+    const response = await fetch(presence_url);
+
+    debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
+
+    if (response.status !== 200) {
+        throw new ErrorResponse('[zncproxy] Unknown error', response, await response.text());
+    }
+
+    const data = await response.json() as PresenceUrlResponse;
+
+    const user: CurrentUser | Friend | undefined =
+        'user' in data ? data.user :
+        'friend' in data ? data.friend :
+        'nsaId' in data ? data :
+        undefined;
+    const presence: Presence =
+        'presence' in data ? data.presence :
+        'user' in data ? data.user.presence :
+        'friend' in data ? data.friend.presence :
+        data;
+
+    if (!('state' in presence)) {
+        throw new Error('Invalid presence data');
+    }
+
+    return [presence, user] as const;
 }

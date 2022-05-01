@@ -1,5 +1,6 @@
 import createDebug from 'debug';
 import fetch from 'node-fetch';
+import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/znc-types.js';
 import type { Arguments as ParentArguments } from '../../cli.js';
 import { DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
@@ -125,21 +126,6 @@ async function getPresenceFromJson(json: string) {
         logoutAt: typeof data.updatedAt === 'number' ? data.logoutAt : 0,
         game: game ?? {},
     };
-
-    return [presence] as const;
-}
-
-async function getPresenceFromUrl(presence_url: string) {
-    const response = await fetch(presence_url);
-
-    debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
-
-    if (response.status !== 200) {
-        console.error('Non-200 status code', await response.text());
-        throw new Error('Unknown error');
-    }
-
-    const presence = await response.json() as Presence;
 
     return [presence] as const;
 }
