@@ -180,6 +180,7 @@ export class PresenceMonitorManager {
             friendCode: undefined,
             showInactivePresence: false,
             showEvent: false,
+            showPlayTime: 'detailed-since',
             friendNsaid: undefined,
             discordPreconnect: false,
         }, this.store.storage, token, nso, data);

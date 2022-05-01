@@ -29,8 +29,9 @@ export function getDiscordPresence(
     else if (online && title.showPlayingOnline) text.push(title.showPlayingOnline as string + event_text);
 
     if ((title.showPlayTime ?? true) && game.totalPlayTime >= 60) {
-        text.push('Played for ' + hrduration(game.totalPlayTime) +
-            ' since ' + (game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB') : 'now'));
+        const play_time_text = getPlayTimeText(context?.show_play_time ??
+            DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE, game);
+        if (play_time_text) text.push(play_time_text);
     }
 
     const activity: DiscordRPC.Presence = {
@@ -66,6 +67,60 @@ export function getDiscordPresence(
     };
 }
 
+function getPlayTimeText(type: DiscordPresencePlayTime, game: Game) {
+    if (type === DiscordPresencePlayTime.NINTENDO) {
+        const days = Math.floor(Date.now() / 1000 / 86400) - Math.floor(game.firstPlayedAt / 86400);
+        if (days <= 10) return getFirstPlayedText(game.firstPlayedAt);
+        if (game.totalPlayTime < 60) return 'Played for a little while';
+        return 'Played for ' + hrduration(getApproximatePlayTime(game.totalPlayTime)) + ' or more';
+    }
+
+    if (type === DiscordPresencePlayTime.HIDDEN || game.totalPlayTime < 0) return null;
+
+    const since = game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB') : 'now';
+
+    switch (type) {
+        case DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME:
+            if (game.totalPlayTime < 60) return null;
+            return 'Played for ' + hrduration(getApproximatePlayTime(game.totalPlayTime)) + ' or more';
+        case DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE:
+            if (game.totalPlayTime < 60) return null;
+            return 'Played for ' + hrduration(getApproximatePlayTime(game.totalPlayTime)) + ' or more since ' + since;
+        case DiscordPresencePlayTime.DETAILED_PLAY_TIME:
+            return 'Played for ' + hrduration(game.totalPlayTime);
+        case DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE:
+            return 'Played for ' + hrduration(game.totalPlayTime) + ' since ' + since;
+    }
+
+    return null;
+}
+
+function getFirstPlayedText(first_played_at: number) {
+    const minutes = Math.floor(Date.now() / 1000 / 60) - Math.floor(first_played_at / 60);
+    if (minutes <= 0) return null;
+
+    if (minutes <= 60) {
+        return 'First played ' + minutes + ' minute' + (minutes === 1 ? '' : 's') + ' ago';
+    }
+
+    const hours = Math.floor(Date.now() / 1000 / 3600) - Math.floor(first_played_at / 3600);
+    if (hours <= 24) {
+        return 'First played ' + hours + ' hour' + (hours === 1 ? '' : 's') + ' ago';
+    }
+
+    const days = Math.floor(Date.now() / 1000 / 86400) - Math.floor(first_played_at / 86400);
+    return 'First played ' + days + ' day' + (days === 1 ? '' : 's') + ' ago';
+}
+
+function getApproximatePlayTime(minutes: number) {
+    if (minutes < 300) {
+        // Less than 5 hours
+        return Math.floor(minutes / 60) * 60;
+    } else {
+        return Math.floor(minutes / 300) * 300;
+    }
+}
+
 export function getInactiveDiscordPresence(
     state: PresenceState, logoutAt: number, context?: DiscordPresenceContext
 ): DiscordPresence {
@@ -85,6 +140,7 @@ export function getInactiveDiscordPresence(
 export interface DiscordPresenceContext {
     friendcode?: CurrentUser['links']['friendCode'];
     activeevent?: ActiveEvent;
+    show_play_time?: DiscordPresencePlayTime;
     znc_discord_presence?: ZncDiscordPresence;
     nsaid?: string;
     user?: CurrentUser | Friend;
@@ -177,4 +233,19 @@ export interface Title {
      * A function to call to customise the Discord activity.
      */
     callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) => void;
+}
+
+export enum DiscordPresencePlayTime {
+    /** Don't show play time */
+    HIDDEN,
+    /** "First played x minutes/hours/days ago" or "Played for [x5] hours or more" */
+    NINTENDO,
+    /** "Played for [x5] hours or more" */
+    APPROXIMATE_PLAY_TIME,
+    /** "Played for [x5] hours or more since dd/mm/yyyy" */
+    APPROXIMATE_PLAY_TIME_SINCE,
+    /** "Played for x hours and x minutes" */
+    DETAILED_PLAY_TIME,
+    /** "Played for x hours and x minutes since dd/mm/yyyy" */
+    DETAILED_PLAY_TIME_SINCE,
 }

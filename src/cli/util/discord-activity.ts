@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/znc-types.js';
 import type { Arguments as ParentArguments } from '../../cli.js';
-import { DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
+import { DiscordPresenceContext, DiscordPresencePlayTime, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../../util.js';
 
 const debug = createDebug('cli:util:discord-activity');
@@ -36,6 +36,10 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Show event (Online Lounge/voice chat) details - this shows the number of players in game (experimental)',
         type: 'boolean',
         default: false,
+    }).option('show-play-time', {
+        describe: 'Play time format ("hidden", "nintendo", "approximate", "approximate-since", "detailed", "detailed-since")',
+        type: 'string',
+        default: 'detailed-since',
     }).option('friend-nsaid', {
         describe: 'Friend\'s Nintendo Switch account ID',
         type: 'string',
@@ -179,9 +183,18 @@ function getActivityFromPresence(
             {id: match[2] + '-' + match[3] + '-' + match[4], regenerable: false, regenerableAt: 0} : undefined;
     const show_friend_code = !!force_friend_code || argv.friendCode === '' || argv.friendCode === '-';
 
+    const show_play_time = argv.showPlayTime.toLowerCase() === 'hidden' ? DiscordPresencePlayTime.HIDDEN :
+        argv.showPlayTime.toLowerCase() === 'nintendo' ? DiscordPresencePlayTime.NINTENDO :
+        argv.showPlayTime.toLowerCase() === 'approximate' ? DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME :
+        argv.showPlayTime.toLowerCase() === 'approximate-since' ? DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE :
+        argv.showPlayTime.toLowerCase() === 'detailed' ? DiscordPresencePlayTime.DETAILED_PLAY_TIME :
+        argv.showPlayTime.toLowerCase() === 'detailed-since' ? DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE :
+        DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
+
     const presencecontext: DiscordPresenceContext = {
         friendcode: show_friend_code ? force_friend_code ?? friendcode : undefined,
         activeevent,
+        show_play_time,
         // znc_discord_presence: this,
         nsaid: argv.friendNsaid ?? user?.nsaId,
         user,

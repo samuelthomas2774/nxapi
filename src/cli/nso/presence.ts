@@ -1,12 +1,11 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
-import fetch from 'node-fetch';
 import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, getToken, initStorage, LoopResult, SavedToken, YargsArguments } from '../../util.js';
-import { DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
+import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { handleEnableSplatNet2Monitoring, ZncNotifications } from './notify.js';
 import { ErrorResponse } from '../../index.js';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
@@ -33,6 +32,10 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Show event (Online Lounge/voice chat) details - this shows the number of players in game (experimental)',
         type: 'boolean',
         default: false,
+    }).option('show-play-time', {
+        describe: 'Play time format ("hidden", "nintendo", "approximate", "approximate-since", "detailed", "detailed-since")',
+        type: 'string',
+        default: 'detailed-since',
     }).option('friend-nsaid', {
         alias: ['friend-naid'],
         describe: 'Friend\'s Nintendo Switch account ID',
@@ -193,12 +196,13 @@ export class ZncDiscordPresence extends ZncNotifications {
     force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
     show_console_online = false;
     show_active_event = true;
+    show_play_time = DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
 
     constructor(
         argv: Pick<ArgumentsCamelCase<Arguments>,
             'userNotifications' | 'friendNotifications' | 'updateInterval' |
             'friendCode' | 'showInactivePresence' | 'showEvent' | 'friendNsaid' |
-            'discordPreconnect'
+            'showPlayTime' | 'discordPreconnect'
         >,
         storage: persist.LocalStorage,
         token: string,
@@ -214,6 +218,14 @@ export class ZncDiscordPresence extends ZncNotifications {
         this.show_friend_code = !!this.force_friend_code || argv.friendCode === '' || argv.friendCode === '-';
         this.show_console_online = argv.showInactivePresence;
         this.show_active_event = argv.showEvent;
+
+        this.show_play_time = argv.showPlayTime.toLowerCase() === 'hidden' ? DiscordPresencePlayTime.HIDDEN :
+            argv.showPlayTime.toLowerCase() === 'nintendo' ? DiscordPresencePlayTime.NINTENDO :
+            argv.showPlayTime.toLowerCase() === 'approximate' ? DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME :
+            argv.showPlayTime.toLowerCase() === 'approximate-since' ? DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE :
+            argv.showPlayTime.toLowerCase() === 'detailed' ? DiscordPresencePlayTime.DETAILED_PLAY_TIME :
+            argv.showPlayTime.toLowerCase() === 'detailed-since' ? DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE :
+            DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
 
         this.presence_user = argv.friendNsaid ?? data?.nsoAccount.user.nsaId;
         this.discord_preconnect = argv.discordPreconnect;
@@ -305,7 +317,8 @@ export class ZncDiscordPresence extends ZncNotifications {
 
         const presencecontext: DiscordPresenceContext = {
             friendcode: this.show_friend_code ? this.force_friend_code ?? friendcode : undefined,
-            activeevent,
+            activeevent: this.show_active_event ? activeevent : undefined,
+            show_play_time: this.show_play_time,
             znc_discord_presence: this,
             nsaid: this.presence_user!,
             user,
