@@ -19,7 +19,7 @@ const debug = createDebug('cli');
 
 export const paths = getPaths('nxapi');
 
-export const dir = path.resolve(import.meta.url.substr(7), '..', '..');
+export const dir = path.resolve(import.meta.url.substr(process.platform === 'win32' ? 8 : 7), '..', '..');
 export const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
 export const version = pkg.version;
 export const git = (() => {
