@@ -1,4 +1,4 @@
-image: node:latest
+image: node:17
 
 cache:
     paths:
