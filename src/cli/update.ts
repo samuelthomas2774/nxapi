@@ -3,15 +3,13 @@ import * as fs from 'fs/promises';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { paths, version } from '../util.js';
+import { dir, paths, version } from '../util.js';
 
 const debug = createDebug('cli:update');
 
 const RELEASES_URL = 'https://api.github.com/repos/samuelthomas2774/nxapi/releases';
 
 export async function checkUpdates() {
-    const dir = path.resolve(import.meta.url.substr(7), '..', '..', '..');
-
     try {
         await fs.stat(path.join(dir, '.git'));
 

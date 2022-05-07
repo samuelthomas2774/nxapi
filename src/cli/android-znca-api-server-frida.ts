@@ -6,7 +6,7 @@ import frida, { Session } from 'frida';
 import express from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, getJwks, initStorage, YargsArguments } from '../util.js';
+import { ArgumentsCamelCase, Argv, dir, getJwks, initStorage, YargsArguments } from '../util.js';
 import { Jwt } from '../api/util.js';
 import { NintendoAccountIdTokenJwtPayload } from '../api/na.js';
 import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
@@ -271,7 +271,7 @@ async function setup(argv: ArgumentsCamelCase<Arguments>) {
         '-s',
         argv.device,
         'push',
-        path.join(import.meta.url.substr(7), '..', '..', '..', 'resources', 'android-znca-api-server.sh'),
+        path.join(dir, 'resources', 'android-znca-api-server.sh'),
         '/data/local/tmp/android-znca-api-server.sh',
     ], {
         stdio: 'inherit',
