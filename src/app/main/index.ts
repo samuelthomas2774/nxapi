@@ -6,7 +6,7 @@ import * as persist from 'node-persist';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-import { dev, getToken, initStorage, LoopResult, paths } from '../../util.js';
+import { dev, dir, getToken, initStorage, LoopResult, paths } from '../../util.js';
 import MenuApp from './menu.js';
 import { ZncDiscordPresence } from '../../cli/nso/presence.js';
 import { WebServiceIpc } from './webservices.js';
@@ -16,8 +16,7 @@ import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('app:main');
 
-const __dirname = path.join(import.meta.url.substr(7), '..');
-export const bundlepath = path.join(import.meta.url.substr(7), '..', '..', 'bundle');
+export const bundlepath = path.resolve(dir, 'dist', 'bundle');
 
 function createWindow() {
     // Create the browser window.
