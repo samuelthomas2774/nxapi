@@ -1,9 +1,9 @@
 import createDebug from 'debug';
-// @ts-expect-error
-import Table from 'cli-table/lib/index.js';
+import Table from '../util/table.js';
 import { PresenceState } from '../../api/znc-types.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, getToken, hrduration, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, hrduration, initStorage, YargsArguments } from '../../util.js';
+import { getToken } from './util.js';
 
 const debug = createDebug('cli:nso:friends');
 

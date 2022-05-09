@@ -1,6 +1,5 @@
 import createDebug from 'debug';
-// @ts-expect-error
-import Table from 'cli-table/lib/index.js';
+import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../nooklink.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
 import { getWebServiceToken } from './util.js';

@@ -1,8 +1,9 @@
 import createDebug from 'debug';
-// @ts-expect-error
-import Table from 'cli-table/lib/index.js';
+import Table from './util/table.js';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { Argv, initStorage, SavedMoonToken, SavedToken } from '../util.js';
+import { Argv, initStorage } from '../util.js';
+import { SavedToken } from './nso/util.js';
+import { SavedMoonToken } from './pctl/util.js';
 
 const debug = createDebug('cli:users');
 

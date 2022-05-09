@@ -2,10 +2,11 @@ import * as path from 'path';
 import createDebug from 'debug';
 import { BrowserWindow, IpcMainInvokeEvent, session, shell, WebContents } from '../electron.js';
 import ZncApi from '../../api/znc.js';
-import { dev, SavedToken } from '../../util.js';
+import { dev } from '../../util.js';
 import { WebService } from '../../api/znc-types.js';
 import { bundlepath, Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
+import { SavedToken } from '../../cli/nso/util.js';
 
 const debug = createDebug('app:main:webservices');
 

@@ -2,22 +2,20 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
 import * as yargs from 'yargs';
-import type * as yargstypes from '../node_modules/@types/yargs/index.js';
+// import type * as yargstypes from '../node_modules/@types/yargs/index.js';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import getPaths from 'env-paths';
 import fetch from 'node-fetch';
-import { FlapgApiResponse } from './api/f.js';
-import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from './api/na.js';
-import { AccountLogin } from './api/znc-types.js';
-import ZncApi, { ZNCA_CLIENT_ID } from './api/znc.js';
-import ZncProxyApi from './api/znc-proxy.js';
-import MoonApi, { ZNMA_CLIENT_ID } from './api/moon.js';
-import { Jwks, Jwt } from './api/util.js';
+import { Jwks } from './api/util.js';
 
 const debug = createDebug('cli');
 
 export const paths = getPaths('nxapi');
+
+//
+// Package/version info
+//
 
 export const dir = path.resolve(decodeURI(import.meta.url.substr(process.platform === 'win32' ? 8 : 7)), '..', '..');
 export const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
@@ -42,29 +40,40 @@ export const git = (() => {
 })();
 export const dev = !!git || process.env.NODE_ENV === 'development';
 
+//
+// Yargs types
+//
+
 export type YargsArguments<T extends yargs.Argv> = T extends yargs.Argv<infer R> ? R : any;
 export type Argv<T = {}> = yargs.Argv<T>;
-export type ArgumentsCamelCase<T = {}> = yargstypes.ArgumentsCamelCase<T>;
+// export type ArgumentsCamelCase<T = {}> = yargstypes.ArgumentsCamelCase<T>;
 
-export interface SavedToken {
-    uuid: string;
-    timestamp: string;
-    nintendoAccountToken: NintendoAccountToken;
-    user: NintendoAccountUser;
-    flapg: FlapgApiResponse['result'];
-    nsoAccount: AccountLogin;
-    credential: AccountLogin['webApiServerCredential'];
+/** Convert literal string types like 'foo-bar' to 'FooBar' */
+type PascalCase<S extends string> = string extends S ?
+    string : S extends `${infer T}-${infer U}` ?
+    `${Capitalize<T>}${PascalCase<U>}` : Capitalize<S>;
 
-    expires_at: number;
-    proxy_url?: string;
-}
+/** Convert literal string types like 'foo-bar' to 'fooBar' */
+type CamelCase<S extends string> = string extends S ?
+    string : S extends `${infer T}-${infer U}` ?
+    `${T}${PascalCase<U>}` : S;
 
-export interface SavedMoonToken {
-    nintendoAccountToken: NintendoAccountToken;
-    user: NintendoAccountUser;
+/** Convert literal string types like 'foo-bar' to 'fooBar', allowing all `PropertyKey` types */
+type CamelCaseKey<K extends PropertyKey> = K extends string ? Exclude<CamelCase<K>, ''> : K;
 
-    expires_at: number;
-}
+/** Arguments type, with camelcased keys */
+export type ArgumentsCamelCase<T = {}> = { [key in keyof T as key | CamelCaseKey<key>]: T[key] } & {
+    /** Non-option arguments */
+    _: Array<string | number>;
+    /** The script name or node command */
+    $0: string;
+    /** All remaining options */
+    [argName: string]: unknown;
+};
+
+//
+// Other
+//
 
 export async function initStorage(dir: string) {
     const storage = persist.create({
@@ -73,120 +82,6 @@ export async function initStorage(dir: string) {
     });
     await storage.init();
     return storage;
-}
-
-export async function getToken(storage: persist.LocalStorage, token: string, proxy_url: string): Promise<{
-    nso: ZncProxyApi;
-    data: SavedToken;
-}>
-export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string): Promise<{
-    nso: ZncApi;
-    data: SavedToken;
-}>
-export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string) {
-    if (!token) {
-        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi nso token`.');
-        throw new Error('Invalid token');
-    }
-
-    const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-
-    if (jwt.payload.iss !== 'https://accounts.nintendo.com') {
-        throw new Error('Invalid Nintendo Account session token issuer');
-    }
-    if (jwt.payload.typ !== 'session_token') {
-        throw new Error('Invalid Nintendo Account session token type');
-    }
-    if (jwt.payload.aud !== ZNCA_CLIENT_ID) {
-        throw new Error('Invalid Nintendo Account session token audience');
-    }
-    if (jwt.payload.exp <= (Date.now() / 1000)) {
-        throw new Error('Nintendo Account session token expired');
-    }
-
-    // Nintendo Account session tokens use a HMAC SHA256 signature, so we can't verify this is valid
-
-    const existingToken: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
-
-    if (!existingToken || existingToken.expires_at <= Date.now()) {
-        console.warn('Authenticating to Nintendo Switch Online app');
-        debug('Authenticating to znc with session token');
-
-        const {nso, data} = proxy_url ?
-            await ZncProxyApi.createWithSessionToken(proxy_url, token) :
-            await ZncApi.createWithSessionToken(token);
-
-        const existingToken: SavedToken = {
-            ...data,
-            expires_at: Date.now() + (data.credential.expiresIn * 1000),
-        };
-
-        await storage.setItem('NsoToken.' + token, existingToken);
-        await storage.setItem('NintendoAccountToken.' + data.user.id, token);
-
-        return {nso, data: existingToken};
-    }
-
-    debug('Using existing token');
-    await storage.setItem('NintendoAccountToken.' + existingToken.user.id, token);
-
-    return {
-        nso: proxy_url ?
-            new ZncProxyApi(proxy_url, token) :
-            new ZncApi(existingToken.credential.accessToken),
-        data: existingToken,
-    };
-}
-
-export async function getPctlToken(storage: persist.LocalStorage, token: string) {
-    if (!token) {
-        console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi pctl auth`.');
-        throw new Error('Invalid token');
-    }
-
-    const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-
-    if (jwt.payload.iss !== 'https://accounts.nintendo.com') {
-        throw new Error('Invalid Nintendo Account session token issuer');
-    }
-    if (jwt.payload.typ !== 'session_token') {
-        throw new Error('Invalid Nintendo Account session token type');
-    }
-    if (jwt.payload.aud !== ZNMA_CLIENT_ID) {
-        throw new Error('Invalid Nintendo Account session token audience');
-    }
-    if (jwt.payload.exp <= (Date.now() / 1000)) {
-        throw new Error('Nintendo Account session token expired');
-    }
-
-    // Nintendo Account session tokens use a HMAC SHA256 signature, so we can't verify this is valid
-
-    const existingToken: SavedMoonToken | undefined = await storage.getItem('MoonToken.' + token);
-
-    if (!existingToken || existingToken.expires_at <= Date.now()) {
-        console.warn('Authenticating to Nintendo Switch Parental Controls app');
-        debug('Authenticating to pctl with session token');
-
-        const {moon, data} = await MoonApi.createWithSessionToken(token);
-
-        const existingToken: SavedMoonToken = {
-            ...data,
-            expires_at: Date.now() + (data.nintendoAccountToken.expires_in * 1000),
-        };
-
-        await storage.setItem('MoonToken.' + token, existingToken);
-        await storage.setItem('NintendoAccountToken-pctl.' + data.user.id, token);
-
-        return {moon, data: existingToken};
-    }
-
-    debug('Using existing token');
-    await storage.setItem('NintendoAccountToken-pctl.' + existingToken.user.id, token);
-
-    return {
-        moon: new MoonApi(existingToken.nintendoAccountToken.access_token!, existingToken.user.id),
-        data: existingToken,
-    };
 }
 
 export function getTitleIdFromEcUrl(url: string) {
@@ -271,6 +166,12 @@ export enum LoopResult {
     OK = LoopRunOk as any,
     OK_SKIP_INTERVAL = LoopRunOkSkipInterval as any,
 }
+
+//
+// JSON Web Key Sets
+//
+// Used for verifying JSON Web Tokens
+//
 
 interface SavedJwks {
     jwks: Jwks;

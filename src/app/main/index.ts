@@ -6,32 +6,25 @@ import * as persist from 'node-persist';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-import { dev, dir, getToken, initStorage, LoopResult, paths } from '../../util.js';
+import { dir, initStorage, LoopResult, paths } from '../../util.js';
 import MenuApp from './menu.js';
-import { ZncDiscordPresence } from '../../cli/nso/presence.js';
 import { WebServiceIpc } from './webservices.js';
+import { createWindow, getWindowConfiguration } from './windows.js';
+import { WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, ZncErrorResponse } from '../../api/znc-types.js';
-import { NotificationManager } from '../../cli/nso/notify.js';
 import { ErrorResponse } from '../../api/util.js';
+import { ZncDiscordPresence } from '../../cli/nso/presence.js';
+import { NotificationManager } from '../../cli/nso/notify.js';
+import { getToken } from '../../cli/nso/util.js';
 
 const debug = createDebug('app:main');
 
-export const bundlepath = path.resolve(dir, 'dist', 'bundle');
+export const bundlepath = path.resolve(dir, 'dist', 'app', 'bundle');
 
-function createWindow() {
-    // Create the browser window.
-    const mainWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
-        vibrancy: 'content',
-        webPreferences: {
-            preload: path.join(bundlepath, 'preload.cjs'),
-            scrollBounce: true,
-        },
-    });
+function createMainWindow() {
+    const window = createWindow(WindowType.MAIN_WINDOW, {});
 
-    mainWindow.loadFile(path.join(bundlepath, 'index.html'));
-    if (dev) mainWindow.webContents.openDevTools();
+    return window;
 }
 
 app.whenReady().then(async () => {
@@ -46,6 +39,8 @@ app.whenReady().then(async () => {
 
     const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
     const store = new Store(storage);
+
+    ipcMain.on('nxapi:browser:getwindowdata', e => e.returnValue = getWindowConfiguration(e.sender));
 
     ipcMain.handle('nxapi:accounts:list', () => storage.getItem('NintendoAccountIds'));
     ipcMain.handle('nxapi:nso:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
@@ -71,7 +66,7 @@ app.whenReady().then(async () => {
     const menu = new MenuApp(store, monitors);
 
     app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
     });
 
     debug('App started');
@@ -248,7 +243,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
     async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
-            return super.handleError(err);
+            return await super.handleError(err);
         } catch (err) {
             if (err instanceof Error) {
                 dialog.showErrorBox(err.name, err.stack ?? err.message);

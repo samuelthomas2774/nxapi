@@ -2,9 +2,10 @@ import { app, dialog, Menu, Tray, nativeImage, MenuItem } from '../electron.js';
 import createDebug from 'debug';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { PresenceMonitorManager, Store } from './index.js';
-import { getToken, SavedMoonToken, SavedToken } from '../../util.js';
 import { WebService } from '../../api/znc-types.js';
 import openWebService from './webservices.js';
+import { getToken, SavedToken } from '../../cli/nso/util.js';
+import { SavedMoonToken } from '../../cli/pctl/util.js';
 
 const debug = createDebug('app:main:menu');
 

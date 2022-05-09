@@ -1,6 +1,7 @@
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../../cli.js';
-import { ArgumentsCamelCase, Argv, getPctlToken, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { getPctlToken } from './util.js';
 
 const debug = createDebug('cli:pctl:user');
 

@@ -1,8 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { EventEmitter } from 'events';
-import { SavedMoonToken, SavedToken } from '../../util.js';
+import { WindowConfiguration } from '../common/types.js';
+import { SavedToken } from '../../cli/nso/util.js';
+import { SavedMoonToken } from '../../cli/pctl/util.js';
 
 const ipc = {
+    getWindowData: () => ipcRenderer.sendSync('nxapi:browser:getwindowdata') as WindowConfiguration,
+
     listNintendoAccounts: () => ipcRenderer.invoke('nxapi:accounts:list') as Promise<string[] | undefined>,
     getNintendoAccountNsoToken: (id: string) => ipcRenderer.invoke('nxapi:nso:gettoken', id) as Promise<string | undefined>,
     getSavedNsoToken: (token: string) => ipcRenderer.invoke('nxapi:nso:getcachedtoken', token) as Promise<SavedToken | undefined>,

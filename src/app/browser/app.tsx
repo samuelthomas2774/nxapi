@@ -1,9 +1,14 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { NintendoAccountUser } from '../../api/na.js';
-import { SavedMoonToken, SavedToken } from '../../util.js';
+import { SavedToken } from '../../cli/nso/util.js';
+import { SavedMoonToken } from '../../cli/pctl/util.js';
 import ipc from './ipc.js';
 import { useAsync } from './util.js';
+
+export interface AppProps {
+    //
+}
 
 async function getAccounts() {
     const ids = await ipc.listNintendoAccounts();
@@ -29,7 +34,7 @@ async function getAccounts() {
     return accounts;
 }
 
-function App() {
+function App(props: AppProps) {
     const theme = useColorScheme() === 'light' ? light : dark;
 
     const [users] = useAsync(useCallback(() => getAccounts(), [ipc]));

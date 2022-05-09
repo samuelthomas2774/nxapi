@@ -1,7 +1,8 @@
 import * as util from 'util';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, getToken, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { getToken } from './util.js';
 
 const debug = createDebug('cli:nso:token');
 
