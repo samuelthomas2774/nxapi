@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { ErrorResponse, JwtPayload } from './util.js';
+import { ErrorResponse } from './util.js';
+import { JwtPayload } from '../util.js';
 
 const debug = createDebug('api:na');
 

@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { FlapgApiResponse } from '../../api/f.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
-import { Jwt } from '../../api/util.js';
+import { Jwt } from '../../util.js';
 import { AccountLogin } from '../../api/znc-types.js';
 import ZncApi, { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import ZncProxyApi from '../../api/znc-proxy.js';

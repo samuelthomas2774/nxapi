@@ -4,7 +4,8 @@ import createDebug from 'debug';
 import { flapg, FlapgIid, genfc } from './f.js';
 import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
-import { ErrorResponse, JwtPayload } from './util.js';
+import { ErrorResponse } from './util.js';
+import { JwtPayload } from '../util.js';
 
 const debug = createDebug('api:znc');
 

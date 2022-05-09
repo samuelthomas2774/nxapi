@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
-import { Jwt } from '../../api/util.js';
+import { Jwt } from '../../util.js';
 import MoonApi from '../../api/moon.js';
 
 const debug = createDebug('cli:nso');

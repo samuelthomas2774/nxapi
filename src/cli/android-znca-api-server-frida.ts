@@ -7,7 +7,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, dir, getJwks, initStorage, YargsArguments } from '../util.js';
-import { Jwt } from '../api/util.js';
+import { Jwt } from '../util.js';
 import { NintendoAccountIdTokenJwtPayload } from '../api/na.js';
 import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
 

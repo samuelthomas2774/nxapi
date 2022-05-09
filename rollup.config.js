@@ -7,7 +7,7 @@ import nodeResolve from '@rollup/plugin-node-resolve';
 import nodePolyfill from 'rollup-plugin-polyfill-node';
 import html from '@rollup/plugin-html';
 
-const preload = {
+const app_preload = {
     input: 'src/app/preload/index.ts',
     output: {
         file: 'dist/app/bundle/preload.cjs',
@@ -23,13 +23,17 @@ const preload = {
             extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
         }),
+        nodeResolve({
+            browser: true,
+            preferBuiltins: true,
+        }),
     ],
     external: [
         'electron',
     ],
 };
 
-const preload_webservice = {
+const app_preload_webservice = {
     input: 'src/app/preload-webservice/index.ts',
     output: {
         file: 'dist/app/bundle/preload-webservice.cjs',
@@ -45,17 +49,21 @@ const preload_webservice = {
             extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
         }),
+        nodeResolve({
+            browser: true,
+            preferBuiltins: true,
+        }),
     ],
     external: [
         'electron',
     ],
 };
 
-const browser = {
+const app_browser = {
     input: 'src/app/browser/index.ts',
     output: {
         file: 'dist/app/bundle/browser.js',
-        format: 'es',
+        format: 'iife',
     },
     plugins: [
         html({
@@ -84,7 +92,7 @@ const browser = {
 };
 
 export default [
-    preload,
-    preload_webservice,
-    browser,
+    app_preload,
+    app_preload_webservice,
+    app_browser,
 ];
