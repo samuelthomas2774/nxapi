@@ -23,9 +23,10 @@ build:
             - dist
             - nxapi.tgz
             - app
-            - '!app/mac'
-            - '!app/win-unpacked'
-            - '!app/linux-unpacked'
+        exclude:
+            - app/mac
+            - app/win-unpacked
+            - app/linux-unpacked
 
 publish-npm:
     stage: deploy
