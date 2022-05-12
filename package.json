@@ -11,6 +11,9 @@
     },
     "files": [
         "dist",
+        "!dist/app",
+        "!dist/app-main-bundle.cjs",
+        "!dist/cli-bundle.js",
         "bin",
         "resources"
     ],
@@ -18,12 +21,7 @@
         "nxapi": "bin/nxapi.js"
     },
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "cli": "node bin/nxapi.js",
-        "build-macos-linux": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nxapi -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nxapi.js\"",
-        "build-macosapp": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nxapi.app -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nxapi.js\" \"presence\"",
-        "build-windows": "caxa --input . --exclude src dist/bin data node_modules --prepare-command \"npm ci --production\" --output dist/bin/nxapi.exe -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/bin/nxapi.js\"",
-        "start": "node bin/nxapi.js presence"
+        "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
         "body-parser": "^1.19.2",
@@ -48,6 +46,7 @@
         "@rollup/plugin-alias": "^3.1.9",
         "@rollup/plugin-commonjs": "^21.0.3",
         "@rollup/plugin-html": "^0.2.4",
+        "@rollup/plugin-json": "^4.1.0",
         "@rollup/plugin-node-resolve": "^13.1.3",
         "@rollup/plugin-replace": "^4.0.0",
         "@rollup/plugin-typescript": "^8.3.1",
@@ -75,5 +74,28 @@
         "ts-json-schema-generator": "^1.0.0",
         "tslib": "^2.4.0",
         "typescript": "^4.7.0-dev.20220308"
+    },
+    "build": {
+        "appId": "uk.org.fancy.nxapi.app",
+        "productName": "Nintendo Switch Online",
+        "copyright": "Copyright © 2022 Samuel Elliott",
+        "npmRebuild": false,
+        "files": [
+            "dist/app/bundle",
+            "dist/app-main-bundle.cjs",
+            "dist/cli-bundle.js",
+            "!dist/app/package",
+            "resources"
+        ],
+        "asar": false,
+        "extraMetadata": {
+            "main": "dist/app-main-bundle.cjs"
+        },
+        "directories": {
+            "output": "dist/app/package"
+        },
+        "mac": {
+            "identity": null
+        }
     }
 }

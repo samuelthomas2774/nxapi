@@ -11,19 +11,21 @@ build:
     stage: build
     script:
         - npx tsc
+        - npx rollup --config
+
         - PACKAGE=`npm --color="always" pack`
         - mv "$PACKAGE" nxapi.tgz
 
-        # - npm run build-macos-linux
-        # - npm run build-windows
-        # - mv dist/bin/nxapi .
-        # - mv dist/bin/nxapi.exe .
+        - npx electron-builder build --macos --windows --linux
+        - mv dist/app/package app
     artifacts:
         paths:
             - dist
             - nxapi.tgz
-            # - nxapi
-            # - nxapi.exe
+            - app
+            - '!app/mac'
+            - '!app/win-unpacked'
+            - '!app/linux-unpacked'
 
 publish-npm:
     stage: deploy
