@@ -16,7 +16,7 @@ build:
         - PACKAGE=`npm --color="always" pack`
         - mv "$PACKAGE" nxapi.tgz
 
-        - npx electron-builder build --macos zip --windows --linux
+        - npx electron-builder build --macos zip --linux --publish never
         - mv dist/app/package app
     artifacts:
         paths:
