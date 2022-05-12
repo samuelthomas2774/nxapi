@@ -648,7 +648,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         const nintendoAccountSessionToken = req.headers['authorization']!.substr(3);
         const i = new ZncNotifications({
             ...argv,
-            userNotifications: true,
+            userNotifications: false,
             friendNotifications: true,
         }, storage, nintendoAccountSessionToken, req.znc!, req.zncAuth!);
 
@@ -702,25 +702,25 @@ class EventStreamNotificationManager extends NotificationManager {
         this.res.write('\n');
     }
 
-    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_ONLINE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
-    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_OFFLINE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
-    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_CHANGE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
-    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_STATECHANGE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });

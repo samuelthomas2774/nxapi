@@ -218,22 +218,27 @@ export class ZncNotifications extends Loop {
             this.splatnet2_monitors.size ? 'user' : null,
         ]);
 
-        await this.updatePresenceForNotifications(user, friends, true);
+        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
 
         return LoopResult.OK;
     }
 
-    async updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], initialRun?: boolean) {
-        this.notifications.updateFriendsStatusForNotifications(friends, initialRun);
+    async updateFriendsStatusForNotifications(
+        friends: (CurrentUser | Friend)[],
+        naid = this.data.user.id,
+        initialRun?: boolean
+    ) {
+        this.notifications.updateFriendsStatusForNotifications(friends, naid, initialRun);
     }
 
     async updatePresenceForNotifications(
-        user: CurrentUser | undefined, friends: Friend[] | undefined, initialRun?: boolean
+        user: CurrentUser | undefined, friends: Friend[] | undefined,
+        naid = this.data.user.id, initialRun?: boolean
     ) {
         await this.updateFriendsStatusForNotifications(([] as (CurrentUser | Friend)[])
             .concat(this.user_notifications && user ? [user] : [])
-            .concat(this.friend_notifications && friends ? friends : []), initialRun);
+            .concat(this.friend_notifications && friends ? friends : []), naid, initialRun);
     }
 
     async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
@@ -312,7 +317,7 @@ export class ZncNotifications extends Loop {
 }
 
 export class NotificationManager {
-    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         notifier.notify({
@@ -324,7 +329,7 @@ export class NotificationManager {
         });
     }
 
-    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         notifier.notify({
             title: friend.name,
             message: 'Offline',
@@ -332,7 +337,7 @@ export class NotificationManager {
         });
     }
 
-    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         notifier.notify({
@@ -344,7 +349,7 @@ export class NotificationManager {
         });
     }
 
-    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         notifier.notify({
@@ -356,18 +361,32 @@ export class NotificationManager {
         });
     }
 
-    onlinefriends: (CurrentUser | Friend)[] = [];
+    onlinefriends = new Map</** NA ID */ string, (CurrentUser | Friend)[]>();
+    accounts = new Map</** NSA ID */ string, /** NA ID */ string>();
 
-    async updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], initialRun?: boolean) {
+    updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], naid: string, initialRun?: boolean) {
         const newonlinefriends: (CurrentUser | Friend)[] = [];
 
         for (const friend of friends) {
-            const prev = this.onlinefriends.find(f => f.nsaId === friend.nsaId);
+            const prev = this.onlinefriends.get(naid)?.find(f => f.nsaId === friend.nsaId);
             const lastpresence = prev?.presence;
             const online = friend.presence.state === PresenceState.ONLINE ||
                 friend.presence.state === PresenceState.PLAYING;
             const wasonline = lastpresence?.state === PresenceState.ONLINE ||
                 lastpresence?.state === PresenceState.PLAYING;
+            const consolewasonline = wasonline ||
+                lastpresence?.state === PresenceState.INACTIVE;
+
+            if (friend.presence.state !== PresenceState.OFFLINE || friend.presence.updatedAt) {
+                if (!this.accounts.has(friend.nsaId)) {
+                    this.accounts.set(friend.nsaId, naid);
+                }
+            }
+
+            newonlinefriends.push(friend);
+
+            // Another account is monitoring this user's presence
+            if (this.accounts.get(friend.nsaId) !== naid) continue;
 
             if (!wasonline && online) {
                 // Friend has come online
@@ -375,16 +394,14 @@ export class NotificationManager {
 
                 debugFriends('%s is now online%s%s, title %s %s - played for %s since %s', friend.name,
                     friend.presence.state === PresenceState.ONLINE ? '' : ' (' + friend.presence.state + ')',
-                    lastpresence ? ' (console was already online)' : '',
+                    consolewasonline ? ' (console was already online)' : '',
                     currenttitle.name, JSON.stringify(currenttitle.sysDescription),
                     hrduration(currenttitle.totalPlayTime),
                     currenttitle.firstPlayedAt ? new Date(currenttitle.firstPlayedAt * 1000).toString() : 'now');
 
-                this.onFriendOnline(friend, prev, initialRun);
+                this.onFriendOnline(friend, prev, naid, initialRun);
 
-                newonlinefriends.push(friend);
-
-                if (lastpresence) {
+                if (consolewasonline) {
                     // Friend's console was already online
                 }
             } else if (wasonline && !online) {
@@ -395,11 +412,10 @@ export class NotificationManager {
                     friend.presence.state !== PresenceState.OFFLINE ? ' (console still online)' : '',
                     lasttitle.name, JSON.stringify(lasttitle.sysDescription));
 
-                this.onFriendOffline(friend, prev, initialRun);
+                this.onFriendOffline(friend, prev, naid, initialRun);
 
                 if (friend.presence.state !== PresenceState.OFFLINE) {
                     // Friend's console is still online
-                    newonlinefriends.push(friend);
                 }
             } else if (wasonline && online) {
                 // Friend is still online
@@ -418,7 +434,7 @@ export class NotificationManager {
                         hrduration(currenttitle.totalPlayTime),
                         currenttitle.firstPlayedAt ? new Date(currenttitle.firstPlayedAt * 1000).toString() : 'now');
 
-                    this.onFriendPlayingChangeTitle(friend, prev, initialRun);
+                    this.onFriendPlayingChangeTitle(friend, prev, naid, initialRun);
                 } else if (
                     lastpresence.state !== friend.presence.state ||
                     lasttitle.sysDescription !== currenttitle.sysDescription
@@ -430,7 +446,7 @@ export class NotificationManager {
                         friend.presence.state, JSON.stringify(currenttitle.sysDescription),
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
 
-                    this.onFriendTitleStateChange(friend, prev, initialRun);
+                    this.onFriendTitleStateChange(friend, prev, naid, initialRun);
                 } else if (
                     lastpresence.state !== friend.presence.state ||
                     lasttitle.sysDescription !== currenttitle.sysDescription
@@ -442,26 +458,62 @@ export class NotificationManager {
                         friend.presence.state, JSON.stringify(currenttitle.sysDescription),
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
                 }
-
-                newonlinefriends.push(friend);
-            } else if (!lastpresence && friend.presence.state !== PresenceState.OFFLINE) {
+            } else if (!consolewasonline && friend.presence.state !== PresenceState.OFFLINE) {
                 // Friend's console is now online, but the user is not playing
 
                 debugFriends('%s\'s console is now online', friend.name);
-
-                newonlinefriends.push(friend);
-            } else if (lastpresence && friend.presence.state !== PresenceState.OFFLINE) {
+            } else if (consolewasonline && friend.presence.state !== PresenceState.OFFLINE) {
                 // Friend's console is still online, the user is still not playing
-
-                newonlinefriends.push(friend);
-            } else if (lastpresence && friend.presence.state === PresenceState.OFFLINE) {
+            } else if (consolewasonline && friend.presence.state === PresenceState.OFFLINE) {
                 // Friend's console is now offline
 
                 debugFriends('%s\'s console is now offline', friend.name);
             }
         }
 
-        this.onlinefriends = newonlinefriends;
+        for (const friend of this.onlinefriends.get(naid) ?? []) {
+            const updated = newonlinefriends.find(f => f.nsaId === friend.nsaId);
+
+            if (!updated) {
+                // The authenticated user is no longer friends with this user, or received an empty presence
+                // object (no longer has permission to view the user's status?)
+
+                if (this.accounts.get(friend.nsaId) !== naid) continue;
+                this.accounts.delete(friend.nsaId);
+
+                for (const [naid, onlinefriends] of this.onlinefriends) {
+                    if (onlinefriends.find(f => f.nsaId === friend.nsaId &&
+                        (f.presence.state !== PresenceState.OFFLINE || f.presence.updatedAt)
+                    )) {
+                        this.accounts.set(friend.nsaId, naid);
+                        break;
+                    }
+                }
+            }
+        }
+
+        this.onlinefriends.set(naid, newonlinefriends);
+    }
+
+    removeAccount(naid: string) {
+        const onlinefriends = this.onlinefriends.get(naid);
+        if (!onlinefriends) return;
+
+        this.onlinefriends.delete(naid);
+
+        for (const friend of onlinefriends) {
+            if (this.accounts.get(friend.nsaId) !== naid) continue;
+            this.accounts.delete(friend.nsaId);
+
+            for (const [naid, onlinefriends] of this.onlinefriends) {
+                if (onlinefriends.find(f => f.nsaId === friend.nsaId &&
+                    (f.presence.state !== PresenceState.OFFLINE || f.presence.updatedAt)
+                )) {
+                    this.accounts.set(friend.nsaId, naid);
+                    break;
+                }
+            }
+        }
     }
 }
 

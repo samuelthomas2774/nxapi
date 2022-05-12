@@ -6,6 +6,7 @@ import { WebService } from '../../api/znc-types.js';
 import openWebService from './webservices.js';
 import { getToken, SavedToken } from '../../cli/nso/util.js';
 import { SavedMoonToken } from '../../cli/pctl/util.js';
+import { dev } from '../../util.js';
 
 const debug = createDebug('app:main:menu');
 
@@ -48,9 +49,11 @@ export default class MenuApp {
                     {label: 'NSA ID: ' + data.nsoAccount.user.nsaId, enabled: false},
                     {type: 'separator'},
                     {label: 'Enable Discord Presence', type: 'checkbox', checked: discordPresenceActive,
+                        enabled: discordPresenceActive,
                         click: () => this.setActiveDiscordPresenceUser(discordPresenceActive ? null : data.user.id)},
                     {label: 'Enable notifications for this user\'s presence', type: 'checkbox',
                         checked: monitor?.user_notifications,
+                        enabled: !!monitor?.user_notifications,
                         click: () => this.setUserNotificationsActive(data.user.id, !monitor?.user_notifications)},
                     {label: 'Enable notifications for this friends of this user\'s presence', type: 'checkbox',
                         checked: monitor?.friend_notifications,
@@ -88,6 +91,10 @@ export default class MenuApp {
         menu.append(new MenuItem({label: 'Add account', click: this.addPctlAccount}));
 
         menu.append(new MenuItem({type: 'separator'}));
+        if (dev) menu.append(new MenuItem({label: 'Dump notifications state', click: () => {
+            debug('Accounts', this.monitors.notifications.accounts);
+            debug('Friends', this.monitors.notifications.onlinefriends);
+        }}));
         menu.append(new MenuItem({label: 'Quit', click: () => app.quit()}));
 
         this.tray.setContextMenu(menu);

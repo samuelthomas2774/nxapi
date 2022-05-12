@@ -197,6 +197,8 @@ export class PresenceMonitorManager {
             this.monitors.splice(index, 1);
 
             i.disable();
+
+            this.notifications.removeAccount(id);
         }
     }
 }
@@ -267,7 +269,7 @@ export class ElectronNotificationManager extends NotificationManager {
         return undefined;
     }
 
-    async onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    async onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         new Notification({
@@ -278,7 +280,7 @@ export class ElectronNotificationManager extends NotificationManager {
         }).show();
     }
 
-    async onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    async onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         new Notification({
             title: friend.name,
             body: 'Offline',
@@ -286,7 +288,7 @@ export class ElectronNotificationManager extends NotificationManager {
         }).show();
     }
 
-    async onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    async onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         new Notification({
@@ -297,7 +299,7 @@ export class ElectronNotificationManager extends NotificationManager {
         }).show();
     }
 
-    async onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, ir?: boolean) {
+    async onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         new Notification({
