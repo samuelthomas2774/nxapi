@@ -1,11 +1,11 @@
 import createDebug from 'debug';
-import DiscordRPC from 'discord-rpc';
-import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse } from '../api/znc-types.js';
-import { Loop, LoopResult } from '../util.js';
+import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { ZncNotifications } from './notify.js';
-import { ErrorResponse } from '../api/util.js';
+import { LoopResult } from '../util.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
+import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse } from '../api/znc-types.js';
+import { ErrorResponse } from '../api/util.js';
 
 const debug = createDebug('nxapi:nso:presence');
 const debugProxy = createDebug('nxapi:nso:presence:proxy');
@@ -56,7 +56,8 @@ export class ZncDiscordPresence extends ZncNotifications {
         return !!this.presence_user;
     }
 
-    rpc: {client: DiscordRPC.Client, id: string} | null = null;
+    rpc: {client: DiscordRpcClient, id: string} | null = null;
+    discord_client_filter: ((client: DiscordRpcClient, id?: number) => boolean) | undefined = undefined;
     title: {id: string; since: number} | null = null;
     i = 0;
 
@@ -82,11 +83,17 @@ export class ZncDiscordPresence extends ZncNotifications {
             (online && 'name' in presence.game) ||
             (this.show_console_online && presence?.state === PresenceState.INACTIVE);
 
+        if (this.rpc && this.discord_client_filter && !this.discord_client_filter.call(null, this.rpc.client)) {
+            const client = this.rpc.client;
+            this.rpc = null;
+            await client.destroy();
+        }
+
         if (!presence || !show_presence) {
             if (this.presence_enabled && this.discord_preconnect && !this.rpc) {
                 debugDiscord('No presence but Discord preconnect enabled - connecting');
                 const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
-                const client = await this.createDiscordClient(discordpresence.id);
+                const client = await this.createDiscordClient(discordpresence.id, this.discord_client_filter);
                 this.rpc = {client, id: discordpresence.id};
                 return;
             }
@@ -124,7 +131,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         }
 
         if (!this.rpc) {
-            const client = await this.createDiscordClient(discordpresence.id);
+            const client = await this.createDiscordClient(discordpresence.id, this.discord_client_filter);
             this.rpc = {client, id: discordpresence.id};
         }
 
@@ -145,19 +152,22 @@ export class ZncDiscordPresence extends ZncNotifications {
         this.update_presence_errors = 0;
     }
 
-    async createDiscordClient(clientid: string) {
-        let client: DiscordRPC.Client;
+    async createDiscordClient(
+        clientid: string,
+        filter = (client: DiscordRpcClient, id: number) => true
+    ) {
+        let client: DiscordRpcClient;
         let attempts = 0;
         let connected = false;
+        let id;
 
         while (attempts < 10) {
             if (attempts === 0) debugDiscord('RPC connecting', clientid);
             else debugDiscord('RPC connecting, attempt %d', attempts + 1, clientid);
 
             try {
-                client = new DiscordRPC.Client({transport: 'ipc'});
-                await client.connect(clientid);
-                debugDiscord('RPC connected', clientid, client.application, client.user);
+                [id, client] = await findDiscordRpcClient(clientid, filter);
+                debugDiscord('RPC connected', id, clientid, client.application, client.user);
                 connected = true;
                 break;
             } catch (err) {}
@@ -180,15 +190,13 @@ export class ZncDiscordPresence extends ZncNotifications {
 
                 debugDiscord('RPC reconnecting, attempt %d', attempts + 1, clientid);
                 try {
-                    const newclient = new DiscordRPC.Client({transport: 'ipc'});
-                    await newclient.connect(clientid);
-                    debugDiscord('RPC reconnected', clientid, newclient.application, newclient.user);
+                    [id, client] = await findDiscordRpcClient(clientid, filter);
+                    debugDiscord('RPC reconnected', id, clientid, client.application, client.user);
 
                     // @ts-expect-error
                     client.transport.on('close', reconnect);
 
-                    this.rpc.client = newclient;
-                    client = newclient;
+                    this.rpc.client = client;
                     connected = true;
                     break;
                 } catch (err) {
