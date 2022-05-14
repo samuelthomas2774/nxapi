@@ -24,9 +24,9 @@ build:
             - nxapi.tgz
             - app
         exclude:
-            - app/mac
-            - app/win-unpacked
-            - app/linux-unpacked
+            - app/mac/**/*
+            - app/win-unpacked/**/*
+            - app/linux-unpacked/**/*
 
 publish-npm:
     stage: deploy

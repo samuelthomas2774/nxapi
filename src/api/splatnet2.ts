@@ -8,7 +8,7 @@ import ZncApi from './znc.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
 import { updateIksmSessionLastUsed } from '../cli/splatnet2/util.js';
 
-const debug = createDebug('api:splatnet2');
+const debug = createDebug('nxapi:api:splatnet2');
 
 export const SPLATNET2_WEBSERVICE_ID = '5741031244955648';
 export const SPLATNET2_WEBSERVICE_URL = 'https://app.splatoon2.nintendo.net/';

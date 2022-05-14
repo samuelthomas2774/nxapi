@@ -8,7 +8,7 @@ import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
 import { getToken, SavedToken } from './util.js';
-import { NotificationManager, ZncNotifications } from './notify.js';
+import { NotificationManager, ZncNotifications } from '../../common/notify.js';
 
 declare global {
     namespace Express {
@@ -646,11 +646,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         res.setHeader('Content-Type', 'text/event-stream');
 
         const nintendoAccountSessionToken = req.headers['authorization']!.substr(3);
-        const i = new ZncNotifications({
-            ...argv,
-            userNotifications: false,
-            friendNotifications: true,
-        }, storage, nintendoAccountSessionToken, req.znc!, req.zncAuth!);
+        const i = new ZncNotifications(storage, nintendoAccountSessionToken, req.znc!, req.zncAuth!);
+
+        i.user_notifications = false;
+        i.friend_notifications = true;
+        i.update_interval = argv.updateInterval;
 
         const es = i.notifications = new EventStreamNotificationManager(req, res);
 

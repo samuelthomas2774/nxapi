@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util.js';
 
-const debug = createDebug('api:na');
+const debug = createDebug('nxapi:api:na');
 
 export async function getNintendoAccountSessionToken(code: string, verifier: string, client_id: string) {
     debug('Getting Nintendo Account session token');

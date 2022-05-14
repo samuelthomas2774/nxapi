@@ -6,7 +6,7 @@ import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 
-const debug = createDebug('api:nooklink');
+const debug = createDebug('nxapi:api:nooklink');
 
 export const NOOKLINK_WEBSERVICE_ID = '4953919198265344';
 export const NOOKLINK_WEBSERVICE_URL = 'https://web.sd.lp1.acbaa.srv.nintendo.net';

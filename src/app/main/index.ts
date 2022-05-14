@@ -13,8 +13,8 @@ import { createWindow, getWindowConfiguration } from './windows.js';
 import { WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, ZncErrorResponse } from '../../api/znc-types.js';
 import { ErrorResponse } from '../../api/util.js';
-import { ZncDiscordPresence } from '../../cli/nso/presence.js';
-import { NotificationManager } from '../../cli/nso/notify.js';
+import { ZncDiscordPresence } from '../../common/presence.js';
+import { NotificationManager } from '../../common/notify.js';
 import { getToken } from '../../cli/nso/util.js';
 
 const debug = createDebug('app:main');
@@ -167,17 +167,7 @@ export class PresenceMonitorManager {
             return;
         }
 
-        const i = new EmbeddedPresenceMonitor({
-            userNotifications: false,
-            friendNotifications: false,
-            updateInterval: 60,
-            friendCode: undefined,
-            showInactivePresence: false,
-            showEvent: false,
-            showPlayTime: 'detailed-since',
-            friendNsaid: undefined,
-            discordPreconnect: false,
-        }, this.store.storage, token, nso, data);
+        const i = new EmbeddedPresenceMonitor(this.store.storage, token, nso, data);
 
         i.notifications = this.notifications;
         i.presence_user = null;

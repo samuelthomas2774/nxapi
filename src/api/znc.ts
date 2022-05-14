@@ -7,7 +7,7 @@ import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } 
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util.js';
 
-const debug = createDebug('api:znc');
+const debug = createDebug('nxapi:api:znc');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '8.0.0';

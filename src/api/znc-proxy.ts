@@ -7,7 +7,7 @@ import { version } from '../util.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../cli/nso/util.js';
 
-const debug = createDebug('api:znc-proxy');
+const debug = createDebug('nxapi:api:znc-proxy');
 
 export default class ZncProxyApi implements ZncApi {
     static useragent: string | null = null;

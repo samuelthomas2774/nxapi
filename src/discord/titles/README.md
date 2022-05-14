@@ -52,6 +52,25 @@ nxapi pctl daily-summaries 0123456789abcdef --json | jq '[ .items | .[] | .playe
 nxapi pctl monthly-summary 0123456789abcdef 2022-03 --json | jq '.playedApps | unique_by(.applicationId)'
 ```
 
-### 4. titledb
+### 4. Captures
+
+Screenshots and screen recordings taken using the capture button are saved to the SD card (or system memory) using the following path format:
+
+```
+Album/YYYY/MM/DD/YYYYMMDDHHMMSSII-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.jpg
+```
+
+`Y`, `M`, `D`, `H`, `M` and `S` are the timestamp, and `I` is used to identify multiple captures taken on the same second.
+
+`C` is the capture ID, which is used to identify the application/applet open when the capture was taken. The capture ID is just the title ID encrypted using a static key.
+
+Capture IDs can be decrypted using nxapi by running:
+
+```sh
+# 397A963DA4660090D65D330174AC6B04 is the capture ID
+nxapi util captureid decrypt 397A963DA4660090D65D330174AC6B04
+```
+
+### 5. titledb
 
 Title IDs for most titles can be found at https://github.com/blawar/titledb (although some demo title IDs are unavailable).

@@ -3,9 +3,9 @@ import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
 import { version } from '../util.js';
 
-const debugS2s = createDebug('api:s2s');
-const debugFlapg = createDebug('api:flapg');
-const debugZncaApi = createDebug('api:znca-api');
+const debugS2s = createDebug('nxapi:api:s2s');
+const debugFlapg = createDebug('nxapi:api:flapg');
+const debugZncaApi = createDebug('nxapi:api:znca-api');
 
 export async function getLoginHash(token: string, timestamp: string | number, useragent?: string) {
     debugS2s('Getting login hash');

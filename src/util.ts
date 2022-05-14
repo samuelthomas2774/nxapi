@@ -8,7 +8,7 @@ import persist from 'node-persist';
 import getPaths from 'env-paths';
 import fetch from 'node-fetch';
 
-const debug = createDebug('cli');
+const debug = createDebug('nxapi:util');
 
 export const paths = getPaths('nxapi');
 

@@ -4,7 +4,7 @@ import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
 
-const debug = createDebug('api:moon');
+const debug = createDebug('nxapi:api:moon');
 
 const MOON_URL = 'https://api-lp1.pctl.srv.nintendo.net/moon';
 export const ZNMA_CLIENT_ID = '54789befb391a838';
