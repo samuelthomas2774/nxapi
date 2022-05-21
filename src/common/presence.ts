@@ -137,7 +137,13 @@ export class ZncDiscordPresence extends ZncNotifications {
 
         if (discordpresence.title) {
             if (discordpresence.title !== this.title?.id) {
-                this.title = {id: discordpresence.title, since: Date.now()};
+                // Use the timestamp the user's presence was last updated according to Nintendo
+                // This may be incorrect as this will also change when the state/description changes in the
+                // same title, but this shouldn't matter unless the process is restarted or presence tracking
+                // is reset for some other reason (e.g. using the Electron app)
+                const since = Math.min(presence.updatedAt * 1000, Date.now());
+
+                this.title = {id: discordpresence.title, since};
             }
 
             if (discordpresence.showTimestamp) {

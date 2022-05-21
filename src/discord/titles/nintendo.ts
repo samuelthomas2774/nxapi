@@ -23,8 +23,29 @@ export const titles: Title[] = [
         showActiveEvent: true,
     },
     {
-        // Splatoon 2: Splatfest World Premiere [Europe, The Americas]
+        // Splatoon 2 Global Testfire [The Americas]
+        id: '010000a00218e000',
+        client: '950886725398429726',
+        largeImageText: 'Global Testfire',
+        showPlayingOnline: true,
+    },
+    {
+        // Splatoon 2: Splatfest World Premiere [Europe]
+        id: '010086f0040fc000',
+        client: '950886725398429726',
+        largeImageText: 'Splatfest World Premiere',
+        showPlayingOnline: true,
+    },
+    {
+        // Splatoon 2: Splatfest World Premiere [The Americas]
         id: '01003870040fa000',
+        client: '950886725398429726',
+        largeImageText: 'Splatfest World Premiere',
+        showPlayingOnline: true,
+    },
+    {
+        // Splatoon 2: Splatfest World Premiere [Japan] ???
+        id: '0100d070040f8000',
         client: '950886725398429726',
         largeImageText: 'Splatfest World Premiere',
         showPlayingOnline: true,

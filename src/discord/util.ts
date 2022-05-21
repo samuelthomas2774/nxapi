@@ -13,7 +13,7 @@ export function getDiscordPresence(
     const titleid = getTitleIdFromEcUrl(game.shopUri);
     const title = titles.find(t => t.id === titleid) || defaultTitle;
 
-    const text = [];
+    const text: (string | undefined)[] = [];
 
     if (title.titleName === true) text.push(game.name);
     else if (title.titleName) text.push(title.titleName);
@@ -27,6 +27,10 @@ export function getDiscordPresence(
     if ((title.showDescription ?? true) && game.sysDescription) text.push(game.sysDescription + event_text);
     else if (online && title.showPlayingOnline === true) text.push('Playing online' + event_text);
     else if (online && title.showPlayingOnline) text.push(title.showPlayingOnline as string + event_text);
+
+    // Always show play time as `state`, not `details`
+    // This doesn't normally have a noticeable effect, but the Active Now panel does show details/state differently
+    if (!text.length) text.push(undefined);
 
     if ((title.showPlayTime ?? true) && game.totalPlayTime >= 60) {
         const play_time_text = getPlayTimeText(context?.show_play_time ??
@@ -63,7 +67,7 @@ export function getDiscordPresence(
         id: title.client || defaultTitle.client,
         title: titleid,
         activity,
-        showTimestamp: title.showTimestamp,
+        showTimestamp: title.showTimestamp ?? true,
     };
 }
 
@@ -199,9 +203,13 @@ export interface Title {
     smallImageKey?: string;
     smallImageText?: string;
     /**
-     * Whether to show the timestamp the user started playing the title in Discord. Discord shows this as the number of minutes and seconds since the timestamp; this will be inaccurate as it may take up to a minute (by default) to detect the user's presence, so this is disabled by default.
+     * Whether to show the timestamp the user started playing the title in Discord. Discord shows this as the number of minutes and seconds since the timestamp.
      *
-     * @default false
+     * If enabled this is set to the time the user's presence was last updated as reported by Nintendo. Any changes to the updated timestamp will be ignored as long as the title doesn't change. The timestamp may change if the presence tracking is reset for any reason.
+     *
+     * This is now enabled by default as it's required for the activity to show in the Active Now panel.
+     *
+     * @default true
      */
     showTimestamp?: boolean;
     /**
