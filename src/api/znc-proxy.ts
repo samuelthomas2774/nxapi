@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
-import { version } from '../util.js';
+import { version } from '../util/product.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/nso.js';
 

@@ -1,7 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, Notification, WebContents } from '../electron.js';
+import { BrowserWindow, WebContents } from './electron.js';
 import * as path from 'path';
 import { bundlepath } from './index.js';
-import { dev } from '../../util.js';
+import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';
 
 const windows = new Map<WebContents, WindowConfiguration>();

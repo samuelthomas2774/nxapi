@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
-import { JwtPayload } from '../util.js';
+import { JwtPayload } from '../util/jwt.js';
 
 const debug = createDebug('nxapi:api:na');
 

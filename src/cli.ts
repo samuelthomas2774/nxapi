@@ -3,9 +3,11 @@ import createDebug from 'debug';
 import Yargs from 'yargs';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-import { dev, paths, YargsArguments } from './util.js';
 import * as commands from './cli/index.js';
 import { checkUpdates } from './cli/update.js';
+import { dev } from './util/product.js';
+import { paths } from './util/storage.js';
+import { YargsArguments } from './util/yargs.js';
 
 const debug = createDebug('cli');
 

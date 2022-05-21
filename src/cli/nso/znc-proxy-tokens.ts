@@ -2,9 +2,10 @@ import createDebug from 'debug';
 import fetch from 'node-fetch';
 import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { Argv, initStorage } from '../../util.js';
 import { getToken } from '../../common/auth/nso.js';
 import { AuthPolicy, AuthToken } from './http-server.js';
+import { Argv } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
 
 const debug = createDebug('cli:nso:znc-proxy-tokens');
 

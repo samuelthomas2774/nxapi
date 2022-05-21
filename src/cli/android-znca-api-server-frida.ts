@@ -6,10 +6,12 @@ import frida, { Session } from 'frida';
 import express from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, dir, getJwks, initStorage, YargsArguments } from '../util.js';
-import { Jwt } from '../util.js';
 import { NintendoAccountIdTokenJwtPayload } from '../api/na.js';
 import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
+import { dir } from '../util/product.js';
+import { initStorage } from '../util/storage.js';
+import { getJwks, Jwt } from '../util/jwt.js';
 
 const debug = createDebug('cli:android-znca-api-server-frida');
 const debugApi = createDebug('cli:android-znca-api-server-frida:api');

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, Notification } from '../electron.js';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, Notification } from './electron.js';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
@@ -6,7 +6,6 @@ import * as persist from 'node-persist';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-import { dir, initStorage, LoopResult, paths } from '../../util.js';
 import MenuApp from './menu.js';
 import { WebServiceIpc } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
@@ -16,6 +15,9 @@ import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
 import { getToken } from '../../common/auth/nso.js';
+import { dir } from '../../util/product.js';
+import { initStorage, paths } from '../../util/storage.js';
+import { LoopResult } from '../../util/loop.js';
 
 const debug = createDebug('app:main');
 

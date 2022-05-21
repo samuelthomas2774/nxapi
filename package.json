@@ -12,8 +12,7 @@
     "files": [
         "dist",
         "!dist/app",
-        "!dist/app-main-bundle.cjs",
-        "!dist/cli-bundle.js",
+        "!dist/bundle",
         "bin",
         "resources"
     ],
@@ -82,14 +81,13 @@
         "npmRebuild": false,
         "files": [
             "dist/app/bundle",
-            "dist/app-main-bundle.cjs",
-            "dist/cli-bundle.js",
+            "dist/bundle",
             "!dist/app/package",
             "resources"
         ],
         "asar": false,
         "extraMetadata": {
-            "main": "dist/app-main-bundle.cjs"
+            "main": "dist/bundle/app-main-bundle.cjs"
         },
         "directories": {
             "output": "dist/app/package"

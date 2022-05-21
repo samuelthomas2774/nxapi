@@ -1,7 +1,8 @@
 import createDebug from 'debug';
 import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../nooklink.js';
-import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
 import { getUserToken } from '../../common/auth/nooklink.js';
 
 const debug = createDebug('cli:nooklink:newspaper');

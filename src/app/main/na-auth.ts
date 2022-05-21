@@ -2,13 +2,13 @@ import * as crypto from 'crypto';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
 import fetch from 'node-fetch';
-import { BrowserWindow, nativeImage, Notification, session, shell } from '../electron.js';
+import { BrowserWindow, nativeImage, Notification, session, shell } from './electron.js';
 import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
-import { Jwt } from '../../util.js';
 import { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
+import { Jwt } from '../../util/jwt.js';
 
 const debug = createDebug('app:main:na-auth');
 

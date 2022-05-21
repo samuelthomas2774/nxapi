@@ -3,7 +3,8 @@ import * as fs from 'fs/promises';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../splatnet2.js';
-import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { dumpChallenges, dumpHeroRecords, dumpProfileImage, dumpRecords } from '../../common/splatnet2/dump-records.js';
 

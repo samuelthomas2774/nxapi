@@ -2,7 +2,9 @@ import createDebug from 'debug';
 import Table from '../util/table.js';
 import { PresenceState } from '../../api/znc-types.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, hrduration, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
+import { hrduration } from '../../util/misc.js';
 import { getToken } from '../../common/auth/nso.js';
 
 const debug = createDebug('cli:nso:friends');

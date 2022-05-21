@@ -1,4 +1,4 @@
-import { app, dialog, Menu, Tray, nativeImage, MenuItem } from '../electron.js';
+import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
 import createDebug from 'debug';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { PresenceMonitorManager, Store } from './index.js';
@@ -6,7 +6,7 @@ import { WebService } from '../../api/znc-types.js';
 import openWebService from './webservices.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
-import { dev } from '../../util.js';
+import { dev } from '../../util/product.js';
 
 const debug = createDebug('app:main:menu');
 

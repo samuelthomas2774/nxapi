@@ -4,7 +4,8 @@ import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/znc-types.js';
 import type { Arguments as ParentArguments } from '../util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
-import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/nso.js';
 
 const debug = createDebug('cli:util:discord-activity');

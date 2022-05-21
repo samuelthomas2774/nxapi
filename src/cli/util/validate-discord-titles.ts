@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
-import { ArgumentsCamelCase } from '../../util.js';
+import { ArgumentsCamelCase } from '../../util/yargs.js';
 import * as publishers from '../../discord/titles/index.js';
 
 const debug = createDebug('cli:util:validate-discord-titles');

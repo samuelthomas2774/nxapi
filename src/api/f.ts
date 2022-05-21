@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
-import { version } from '../util.js';
+import { version } from '../util/product.js';
 
 const debugS2s = createDebug('nxapi:api:s2s');
 const debugFlapg = createDebug('nxapi:api:flapg');

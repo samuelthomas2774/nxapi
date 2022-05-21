@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { Argv, YargsArguments } from '../util.js';
+import { Argv, YargsArguments } from '../util/yargs.js';
 import * as commands from './splatnet2/index.js';
 
 const debug = createDebug('cli:splatnet2');

@@ -3,7 +3,8 @@ import * as path from 'path';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../nooklink.js';
-import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
 import { getUserToken } from '../../common/auth/nooklink.js';
 
 const debug = createDebug('cli:nooklink:dump-newspapers');

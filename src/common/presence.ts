@@ -2,10 +2,10 @@ import createDebug from 'debug';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { ZncNotifications } from './notify.js';
-import { LoopResult } from '../util.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse } from '../api/znc-types.js';
 import { ErrorResponse } from '../api/util.js';
+import { LoopResult } from '../util/loop.js';
 
 const debug = createDebug('nxapi:nso:presence');
 const debugProxy = createDebug('nxapi:nso:presence:proxy');

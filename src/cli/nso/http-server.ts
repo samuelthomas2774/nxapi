@@ -6,7 +6,8 @@ import { v4 as uuidgen } from 'uuid';
 import { Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { NotificationManager, ZncNotifications } from '../../common/notify.js';
 

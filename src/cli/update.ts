@@ -3,7 +3,8 @@ import * as fs from 'fs/promises';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { dir, paths, version } from '../util.js';
+import { dir, version } from '../util/product.js';
+import { paths } from '../util/storage.js';
 
 const debug = createDebug('cli:update');
 

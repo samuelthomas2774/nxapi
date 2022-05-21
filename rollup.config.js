@@ -14,7 +14,7 @@ import json from '@rollup/plugin-json';
 const cli = {
     input: 'src/cli-entry.ts',
     output: {
-        file: 'dist/cli-bundle.js',
+        file: 'dist/bundle/cli-bundle.js',
         format: 'es',
         inlineDynamicImports: true,
     },
@@ -48,7 +48,7 @@ const cli = {
 const app = {
     input: 'src/app/main/app-entry.cts',
     output: {
-        file: 'dist/app-main-bundle.cjs',
+        file: 'dist/bundle/app-main-bundle.cjs',
         format: 'cjs',
         inlineDynamicImports: true,
     },

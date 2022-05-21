@@ -1,7 +1,8 @@
 import createDebug from 'debug';
 import Table from './util/table.js';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { Argv, initStorage } from '../util.js';
+import { Argv } from '../util/yargs.js';
+import { initStorage } from '../util/storage.js';
 import { SavedToken } from '../common/auth/nso.js';
 import { SavedMoonToken } from '../common/auth/moon.js';
 

@@ -5,11 +5,11 @@ import persist from 'node-persist';
 import mkdirp from 'mkdirp';
 import SplatNet2Api from '../../api/splatnet2.js';
 import { renewIksmToken } from '../auth/splatnet2.js';
-import { Loop, LoopResult } from '../../util.js';
 import { Records, Stages, WebServiceError } from '../../api/splatnet2-types.js';
 import { dumpCoopResults, dumpResults } from './dump-results.js';
 import { dumpProfileImage, dumpRecords } from './dump-records.js';
 import { ErrorResponse } from '../../api/util.js';
+import Loop, { LoopResult } from '../../util/loop.js';
 
 const debug = createDebug('nxapi:splatnet2:monitor');
 

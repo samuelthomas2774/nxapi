@@ -2,7 +2,7 @@ import { createRequire } from 'module';
 import { execFileSync } from 'child_process';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { ArgumentsCamelCase, Argv, YargsArguments } from '../util.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 
 const debug = createDebug('cli:app');
 

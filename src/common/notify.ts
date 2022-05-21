@@ -1,12 +1,13 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
-import { getTitleIdFromEcUrl, hrduration, Loop, LoopResult } from '../util.js';
 import ZncApi from '../api/znc.js';
 import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, ZncErrorResponse } from '../api/znc-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/nso.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
+import Loop, { LoopResult } from '../util/loop.js';
+import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
 
 const debug = createDebug('nxapi:nso:notify');
 const debugFriends = createDebug('nxapi:nso:notify:friends');

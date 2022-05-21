@@ -1,8 +1,8 @@
 import * as path from 'path';
 import createDebug from 'debug';
-import { BrowserWindow, IpcMainInvokeEvent, session, shell, WebContents } from '../electron.js';
+import { BrowserWindow, IpcMainInvokeEvent, session, shell, WebContents } from './electron.js';
 import ZncApi from '../../api/znc.js';
-import { dev } from '../../util.js';
+import { dev } from '../../util/product.js';
 import { WebService } from '../../api/znc-types.js';
 import { bundlepath, Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
