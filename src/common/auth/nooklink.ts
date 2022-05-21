@@ -1,11 +1,11 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
-import { getToken } from '../nso/util.js';
+import { getToken } from './nso.js';
 import NooklinkApi, { NooklinkUserApi } from '../../api/nooklink.js';
 import { AuthToken, Users } from '../../api/nooklink-types.js';
 import { WebServiceToken } from '../../api/znc-types.js';
 
-const debug = createDebug('cli:nooklink');
+const debug = createDebug('nxapi:auth:nooklink');
 
 export interface SavedToken {
     webserviceToken: WebServiceToken;

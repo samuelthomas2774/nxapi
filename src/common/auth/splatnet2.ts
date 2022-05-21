@@ -1,11 +1,11 @@
+import * as fs from 'fs';
 import createDebug from 'debug';
 import persist from 'node-persist';
-import * as fs from 'fs';
-import { getToken } from '../nso/util.js';
-import SplatNet2Api from '../../api/splatnet2.js';
+import { getToken } from './nso.js';
+import SplatNet2Api, { updateIksmSessionLastUsed } from '../../api/splatnet2.js';
 import { WebServiceToken } from '../../api/znc-types.js';
 
-const debug = createDebug('cli:splatnet2');
+const debug = createDebug('nxapi:auth:splatnet2');
 
 export interface SavedIksmSessionToken {
     webserviceToken: WebServiceToken;
@@ -89,7 +89,7 @@ export async function renewIksmToken(splatnet: SplatNet2Api, storage: persist.Lo
 
 const iksm_sessions = new Map<string, [persist.LocalStorage, string, number | null, NodeJS.Timeout | null]>();
 
-export function updateIksmSessionLastUsed(iksm_session: string, last_used: number = Date.now()) {
+updateIksmSessionLastUsed.handler = (iksm_session: string, last_used: number = Date.now()) => {
     const match = iksm_sessions.get(iksm_session);
     if (!match) return;
 
@@ -107,7 +107,7 @@ export function updateIksmSessionLastUsed(iksm_session: string, last_used: numbe
     }, 1000);
 
     iksm_sessions.set(iksm_session, [storage, token, last_used, new_timeout]);
-}
+};
 
 function writeUpdatedIksmSessionLastUsed(storage: persist.LocalStorage, token: string, last_used: number) {
     const datum_str = fs.readFileSync(storage.getDatumPath('IksmToken.' + token), 'utf-8');

@@ -4,8 +4,8 @@ import persist from 'node-persist';
 import notifier from 'node-notifier';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getToken } from './util.js';
-import { getIksmToken } from '../splatnet2/util.js';
+import { getToken } from '../../common/auth/nso.js';
+import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { EmbeddedSplatNet2Monitor, NotificationManager, ZncNotifications } from '../../common/notify.js';
 import { CurrentUser, Friend, Game } from '../../api/znc-types.js';
 

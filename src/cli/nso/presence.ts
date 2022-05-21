@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getToken } from './util.js';
+import { getToken } from '../../common/auth/nso.js';
 import { DiscordPresencePlayTime } from '../../discord/util.js';
 import { handleEnableSplatNet2Monitoring } from './notify.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';

@@ -5,7 +5,7 @@ import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { version } from '../util.js';
 import { NintendoAccountUser } from './na.js';
-import { SavedToken } from '../cli/nso/util.js';
+import { SavedToken } from '../common/auth/nso.js';
 
 const debug = createDebug('nxapi:api:znc-proxy');
 

@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../splatnet2.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getIksmToken } from './util.js';
+import { getIksmToken } from '../../common/auth/splatnet2.js';
 
 const debug = createDebug('cli:splatnet2:user');
 

@@ -6,7 +6,7 @@ import { dev } from '../../util.js';
 import { WebService } from '../../api/znc-types.js';
 import { bundlepath, Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
-import { SavedToken } from '../../cli/nso/util.js';
+import { SavedToken } from '../../common/auth/nso.js';
 
 const debug = createDebug('app:main:webservices');
 

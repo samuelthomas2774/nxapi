@@ -18,31 +18,35 @@ if (process.env.NXAPI_DATA_PATH) dotenvExpand.expand(dotenv.config({
 
 if (process.env.DEBUG) createDebug.enable(process.env.DEBUG);
 
-const yargs = Yargs(process.argv.slice(2)).option('data-path', {
-    describe: 'Data storage path',
-    type: 'string',
-    default: process.env.NXAPI_DATA_PATH || paths.data,
-});
+export function createYargs(argv: string[]) {
+    const yargs = Yargs(argv).option('data-path', {
+        describe: 'Data storage path',
+        type: 'string',
+        default: process.env.NXAPI_DATA_PATH || paths.data,
+    });
 
-export type Arguments = YargsArguments<typeof yargs>;
+    for (const command of Object.values(commands)) {
+        if (command.command === 'app' && !dev) continue;
 
-for (const command of Object.values(commands)) {
-    if (command.command === 'app' && !dev) continue;
+        // @ts-expect-error
+        yargs.command(command);
+    }
 
-    // @ts-expect-error
-    yargs.command(command);
+    yargs
+        .scriptName('nxapi')
+        .demandCommand()
+        .help()
+        // .version(false)
+        .showHelpOnFail(false, 'Specify --help for available options');
+
+    return yargs;
 }
 
-yargs
-    .scriptName('nxapi')
-    .demandCommand()
-    .help()
-    // .version(false)
-    .showHelpOnFail(false, 'Specify --help for available options');
+export type Arguments = YargsArguments<ReturnType<typeof createYargs>>;
 
-export default yargs;
+export async function main(argv = process.argv.slice(2)) {
+    const yargs = createYargs(argv);
 
-export async function main() {
     if (!process.env.NXAPI_SKIP_UPDATE_CHECK) await checkUpdates();
 
     yargs.argv;

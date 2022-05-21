@@ -1,9 +1,9 @@
 import * as util from 'util';
 import * as crypto from 'crypto';
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../../cli.js';
+import type { Arguments as ParentArguments } from '../pctl.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getPctlToken } from './util.js';
+import { getPctlToken } from '../../common/auth/moon.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 

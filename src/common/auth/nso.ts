@@ -7,7 +7,7 @@ import { AccountLogin } from '../../api/znc-types.js';
 import ZncApi, { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
-const debug = createDebug('cli:nso');
+const debug = createDebug('nxapi:auth:nso');
 
 export interface SavedToken {
     uuid: string;

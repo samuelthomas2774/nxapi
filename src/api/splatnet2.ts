@@ -6,7 +6,6 @@ import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
-import { updateIksmSessionLastUsed } from '../cli/splatnet2/util.js';
 
 const debug = createDebug('nxapi:api:splatnet2');
 
@@ -18,6 +17,10 @@ const SPLATNET2_URL = SPLATNET2_WEBSERVICE_URL + 'api';
 
 const XPOWERRANKING_SEASON = /^(\d{2})(\d{2})01T00_(\d{2})(\d{2})01T00$/;
 const LEAGUE_ID = /^(\d{2})(\d{2})(\d{2})(\d{2})(T|P)$/;
+
+export const updateIksmSessionLastUsed: {
+    handler?: ((iksm_session: string) => void);
+} = {};
 
 export default class SplatNet2Api {
     constructor(
@@ -46,7 +49,7 @@ export default class SplatNet2Api {
             throw new ErrorResponse('[splatnet2] Unknown error', response, await response.text());
         }
 
-        updateIksmSessionLastUsed(this.iksm_session);
+        updateIksmSessionLastUsed.handler?.call(null, this.iksm_session);
 
         const data = await response.json() as T | WebServiceError;
 

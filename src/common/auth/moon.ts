@@ -5,7 +5,7 @@ import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAc
 import { Jwt } from '../../util.js';
 import MoonApi from '../../api/moon.js';
 
-const debug = createDebug('cli:nso');
+const debug = createDebug('nxapi:auth:moon');
 
 export interface SavedMoonToken {
     nintendoAccountToken: NintendoAccountToken;

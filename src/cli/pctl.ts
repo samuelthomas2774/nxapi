@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { Argv } from '../util.js';
+import { Argv, YargsArguments } from '../util.js';
 import * as commands from './pctl/index.js';
 
 const debug = createDebug('cli:pctl');
@@ -13,4 +13,8 @@ export function builder(yargs: Argv<ParentArguments>) {
         // @ts-expect-error
         yargs.command(command);
     }
+
+    return yargs;
 }
+
+export type Arguments = YargsArguments<ReturnType<typeof builder>>;

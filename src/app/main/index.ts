@@ -15,7 +15,7 @@ import { CurrentUser, Friend, Game, ZncErrorResponse } from '../../api/znc-types
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
-import { getToken } from '../../cli/nso/util.js';
+import { getToken } from '../../common/auth/nso.js';
 
 const debug = createDebug('app:main');
 

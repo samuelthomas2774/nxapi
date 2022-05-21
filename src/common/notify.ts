@@ -5,7 +5,7 @@ import ZncApi from '../api/znc.js';
 import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, ZncErrorResponse } from '../api/znc-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
-import { SavedToken } from '../cli/nso/util.js';
+import { SavedToken } from './auth/nso.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
 
 const debug = createDebug('nxapi:nso:notify');

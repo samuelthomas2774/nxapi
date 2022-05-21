@@ -1,13 +1,13 @@
+import * as net from 'net';
 import createDebug from 'debug';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
-import * as net from 'net';
 import { v4 as uuidgen } from 'uuid';
 import { Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/znc-types.js';
 import ZncApi from '../../api/znc.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getToken, SavedToken } from './util.js';
+import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { NotificationManager, ZncNotifications } from '../../common/notify.js';
 
 declare global {

@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import mkdirp from 'mkdirp';
 import SplatNet2Api from '../../api/splatnet2.js';
-import { renewIksmToken } from '../../cli/splatnet2/util.js';
+import { renewIksmToken } from '../auth/splatnet2.js';
 import { Loop, LoopResult } from '../../util.js';
 import { Records, Stages, WebServiceError } from '../../api/splatnet2-types.js';
 import { dumpCoopResults, dumpResults } from './dump-results.js';

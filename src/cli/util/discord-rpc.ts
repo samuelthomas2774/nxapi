@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../../cli.js';
+import type { Arguments as ParentArguments } from '../util.js';
 import { DiscordRpcClient, getAllIpcSockets } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util.js';

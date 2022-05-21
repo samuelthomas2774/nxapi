@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import { Buffer } from 'buffer';
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../../cli.js';
+import type { Arguments as ParentArguments } from '../util.js';
 import { Argv } from '../../util.js';
 
 const debug = createDebug('cli:util:captureid');

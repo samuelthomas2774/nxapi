@@ -2,9 +2,9 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import type { Arguments as ParentArguments } from '../../cli.js';
+import type { Arguments as ParentArguments } from '../pctl.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getPctlToken } from './util.js';
+import { getPctlToken } from '../../common/auth/moon.js';
 import { DailySummaryResult } from '../../api/moon-types.js';
 import MoonApi from '../../api/moon.js';
 

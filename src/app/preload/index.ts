@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { EventEmitter } from 'events';
 import { WindowConfiguration } from '../common/types.js';
-import { SavedToken } from '../../cli/nso/util.js';
-import { SavedMoonToken } from '../../cli/pctl/util.js';
+import { SavedToken } from '../../common/auth/nso.js';
+import { SavedMoonToken } from '../../common/auth/moon.js';
 
 const ipc = {
     getWindowData: () => ipcRenderer.sendSync('nxapi:browser:getwindowdata') as WindowConfiguration,

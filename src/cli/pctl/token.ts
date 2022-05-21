@@ -1,8 +1,8 @@
 import * as util from 'util';
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../../cli.js';
+import type { Arguments as ParentArguments } from '../pctl.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getPctlToken } from './util.js';
+import { getPctlToken } from '../../common/auth/moon.js';
 
 const debug = createDebug('cli:pctl:token');
 

@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import * as crypto from 'crypto';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getToken } from './util.js';
+import { getToken } from '../../common/auth/nso.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/znc.js';
 

@@ -7,8 +7,8 @@ import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../
 import { Jwt } from '../../util.js';
 import { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
-import { getToken, SavedToken } from '../../cli/nso/util.js';
-import { getPctlToken, SavedMoonToken } from '../../cli/pctl/util.js';
+import { getToken, SavedToken } from '../../common/auth/nso.js';
+import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
 
 const debug = createDebug('app:main:na-auth');
 

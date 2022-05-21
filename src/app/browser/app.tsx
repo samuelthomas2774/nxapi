@@ -1,8 +1,8 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { NintendoAccountUser } from '../../api/na.js';
-import { SavedToken } from '../../cli/nso/util.js';
-import { SavedMoonToken } from '../../cli/pctl/util.js';
+import { SavedToken } from '../../common/auth/nso.js';
+import { SavedMoonToken } from '../../common/auth/moon.js';
 import ipc from './ipc.js';
 import { useAsync } from './util.js';
 

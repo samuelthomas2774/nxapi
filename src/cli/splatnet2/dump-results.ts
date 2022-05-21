@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../splatnet2.js';
 import { ArgumentsCamelCase, Argv, initStorage, YargsArguments } from '../../util.js';
-import { getIksmToken } from './util.js';
+import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { dumpCoopResults, dumpResults } from '../../common/splatnet2/dump-results.js';
 
 const debug = createDebug('cli:splatnet2:dump-results');

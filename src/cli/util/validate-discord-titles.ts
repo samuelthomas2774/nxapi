@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import type { Arguments as ParentArguments } from '../../cli.js';
+import type { Arguments as ParentArguments } from '../util.js';
 import { ArgumentsCamelCase } from '../../util.js';
 import * as publishers from '../../discord/titles/index.js';
 

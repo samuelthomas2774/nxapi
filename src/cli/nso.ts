@@ -10,7 +10,7 @@ export const desc = 'Nintendo Switch Online';
 
 export function builder(yargs: Argv<ParentArguments>) {
     for (const command of Object.values(commands)) {
-        // @ts-ignore
+        // @ts-expect-error
         yargs.command(command);
     }
 
