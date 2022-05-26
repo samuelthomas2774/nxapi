@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { FlapgApiResponse } from '../../api/f.js';
+import { FlapgApiResponse, FResult } from '../../api/f.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
 import { AccountLogin } from '../../api/znc-types.js';
@@ -14,7 +14,8 @@ export interface SavedToken {
     timestamp: string;
     nintendoAccountToken: NintendoAccountToken;
     user: NintendoAccountUser;
-    flapg: FlapgApiResponse['result'];
+    f: FResult;
+    flapg?: FlapgApiResponse['result'];
     nsoAccount: AccountLogin;
     credential: AccountLogin['webApiServerCredential'];
 

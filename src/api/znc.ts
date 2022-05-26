@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
-import { flapg, FlapgIid, genfc } from './f.js';
+import { f, FlapgIid } from './f.js';
 import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
@@ -126,9 +126,7 @@ export default class ZncApi {
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
         const useragent = this.useragent ?? undefined;
-        const data = process.env.ZNCA_API_URL ?
-            await genfc(process.env.ZNCA_API_URL + '/f', this.token, timestamp, uuid, FlapgIid.APP, useragent) :
-            await flapg(this.token, timestamp, uuid, FlapgIid.APP, useragent);
+        const data = await f(this.token, timestamp, uuid, FlapgIid.APP, useragent);
 
         const req = {
             id,
@@ -150,14 +148,12 @@ export default class ZncApi {
 
         const id_token = nintendoAccountToken.id_token;
         const useragent = this.useragent ?? undefined;
-        const flapgdata = process.env.ZNCA_API_URL ?
-            await genfc(process.env.ZNCA_API_URL + '/f', id_token, timestamp, uuid, FlapgIid.NSO, useragent) :
-            await flapg(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
+        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
 
         const req = {
             naBirthday: user.birthday,
             timestamp,
-            f: flapgdata.f,
+            f: fdata.f,
             requestId: uuid,
             naIdToken: id_token,
         };
@@ -169,7 +165,7 @@ export default class ZncApi {
             timestamp,
             nintendoAccountToken,
             // user,
-            flapg: flapgdata,
+            f: fdata,
             nsoAccount: data.result,
             credential: data.result.webApiServerCredential,
         };
@@ -203,9 +199,7 @@ export default class ZncApi {
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
         const id_token = nintendoAccountToken.id_token;
-        const flapgdata = process.env.ZNCA_API_URL ?
-            await genfc(process.env.ZNCA_API_URL + '/f', id_token, timestamp, uuid, FlapgIid.NSO, useragent ?? undefined) :
-            await flapg(id_token, timestamp, uuid, FlapgIid.NSO, useragent ?? undefined);
+        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, useragent ?? undefined);
 
         debug('Getting Nintendo Switch Online app token');
 
@@ -225,11 +219,12 @@ export default class ZncApi {
                     language: user.language,
                     timestamp,
                     requestId: uuid,
-                    f: flapgdata.f,
+                    f: fdata.f,
                 },
             }),
         });
 
+        debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
         const data = await response.json() as ZncResponse<AccountLogin>;
 
         if ('errorMessage' in data) {
@@ -246,7 +241,7 @@ export default class ZncApi {
             timestamp,
             nintendoAccountToken,
             user,
-            flapg: flapgdata,
+            f: fdata,
             nsoAccount: data.result,
             credential: data.result.webApiServerCredential,
         };

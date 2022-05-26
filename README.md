@@ -9,7 +9,8 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
 - Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
 - Automated login to the Nintendo Switch Online app API
     - This uses splatnet2statink and flapg APIs by default.
-    - Alternatively a custom server using a rooted Android device/emulator is included.
+    - Alternatively the imink API or a custom server can be used.
+    - A custom server using a rooted Android device/emulator is included.
 - Get Nintendo Switch account information, friends list and game-specific services
 - Show Discord Rich Presence using your own or a friend's Nintendo Switch presence
     - Show your account's friend code (or a custom friend code)
@@ -313,7 +314,9 @@ The splatnet2statink and flapg APIs are used by default to automate authenticati
 
 Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
 
-Alternatively nxapi includes a custom server using Frida on an Android device/emulator that can be used instead of these.
+Alternatively the [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) can be used by setting the `NXAPI_ZNCA_API` environment variable to `imink`. (`NXAPI_ZNCA_API=imink nxapi nso ...`)
+
+nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
 
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
 
@@ -477,7 +480,7 @@ nxapi nooklink island
 # Use a specific NookLink user linked to the selected Nintendo Account
 # If more than 1 NookLink users exist by default the first user will be used
 nxapi nooklink user --islander 0x0123456789abcdef
-# --user can also be used to selecte a different Nintendo Account
+# --user can also be used to select a different Nintendo Account
 nxapi nooklink user --user 0123456789abcdef
 nxapi nooklink user --user 0123456789abcdef --islander 0x0123456789abcdef
 ```
@@ -639,14 +642,14 @@ NXAPI_DATA_PATH=`pwd`/data nxapi ...
 
 #### Debug logs
 
-Logging uses the `debug` package and can be controlled using the `DEBUG` environment variable. All nxapi logging uses the `api` and `cli` namespaces.
+Logging uses the `debug` package and can be controlled using the `DEBUG` environment variable. All nxapi logging uses the `nxapi` and `cli` namespaces.
 
 ```sh
 # Show all debug logs from nxapi
-DEBUG=api,api:*,cli,cli:* nxapi ...
+DEBUG=nxapi:*,cli,cli:* nxapi ...
 
 # Show all API requests
-DEBUG=api:* nxapi ...
+DEBUG=nxapi:api:* nxapi ...
 
 # Show all debug logs
 DEBUG=* nxapi ...
