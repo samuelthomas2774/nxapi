@@ -680,6 +680,9 @@ nxapi android-znca-api-server-frida android.local:5555 --listen "[::1]:12345"
 # "{cmd}" will be replaced with the path to a temporary script in double quotes
 nxapi android-znca-api-server-frida android.local:5555 --exec-command "/system/bin/su -c {cmd}"
 
+# Specify a different location to the frida-server executable
+nxapi android-znca-api-server-frida android.local:5555 --frida-server-path "/data/local/tmp/frida-server-15.1.17-android-arm"
+
 # Make API requests using curl
 curl --header "Content-Type: application/json" --data '{"type": "nso", "token": "...", "timestamp": "...", "uuid": "..."}' "http://[::1]:12345/api/znca/f"
 

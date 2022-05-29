@@ -2,19 +2,23 @@ import process from 'node:process';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import * as net from 'node:net';
+import * as fs from 'node:fs/promises';
+import * as crypto from 'node:crypto';
 import createDebug from 'debug';
 import express from 'express';
 import bodyParser from 'body-parser';
+import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { NintendoAccountIdTokenJwtPayload } from '../api/na.js';
 import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
-import { dir } from '../util/product.js';
-import { initStorage } from '../util/storage.js';
+import { initStorage, paths } from '../util/storage.js';
 import { getJwks, Jwt } from '../util/jwt.js';
 
 const debug = createDebug('cli:android-znca-api-server-frida');
 const debugApi = createDebug('cli:android-znca-api-server-frida:api');
+
+const script_dir = path.join(paths.temp, 'android-znca-api-server');
 
 export const command = 'android-znca-api-server-frida <device>';
 export const desc = 'Connect to a rooted Android device with frida-server over ADB running the Nintendo Switch Online app and start a HTTP server to generate f parameters';
@@ -27,6 +31,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('exec-command', {
         describe: 'Command to use to run a file on the device',
         type: 'string',
+    }).option('frida-server-path', {
+        describe: 'Path to the frida-server executable on the device',
+        type: 'string',
+        default: '/data/local/tmp/frida-server',
     }).option('validate-tokens', {
         describe: 'Validate tokens before passing them to znca',
         type: 'boolean',
@@ -41,6 +49,8 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    await mkdirp(script_dir);
+
     const storage = await initStorage(argv.dataPath);
     await setup(argv);
 
@@ -53,16 +63,18 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         genAudioH2(token: string, timestamp: string, uuid: string): Promise<string>;
     } = script.exports as any;
 
-    const onexit = () => {
+    const onexit = (code: number | NodeJS.Signals) => {
+        // @ts-expect-error
+        process.removeListener('exit', onexit);
+        // @ts-expect-error
+        process.removeListener('SIGTERM', onexit);
+        // @ts-expect-error
+        process.removeListener('SIGINT', onexit);
+
+        debug('Exiting', code);
         debug('Releasing wake lock', argv.device);
-        execFileSync('adb', [
-            '-s',
-            argv.device,
-            'shell',
-            'sh -c "echo androidzncaapiserver > /sys/power/wake_unlock"',
-        ], {
-            stdio: 'inherit',
-        });
+        execScript(argv.device, '/data/local/tmp/android-znca-api-server-shutdown.sh', argv.execCommand);
+        process.exit(typeof code === 'number' ? code : 0);
     };
 
     process.on('exit', onexit);
@@ -254,6 +266,42 @@ rpc.exports = {
 };
 `;
 
+const setup_script = (options: {
+    frida_server_path: string;
+}) => `#!/system/bin/sh
+
+# Ensure frida-server is running
+echo "Running frida-server"
+killall ${JSON.stringify(path.basename(options.frida_server_path))}
+nohup ${JSON.stringify(options.frida_server_path)} >/dev/null 2>&1 &
+
+if [ "$?" != "0" ]; then
+    echo "Failed to start frida-server"
+    exit 1
+fi
+
+sleep 1
+
+# Ensure the app is running
+echo "Starting com.nintendo.znca"
+am start-foreground-service com.nintendo.znca/com.google.firebase.messaging.FirebaseMessagingService
+am start-service com.nintendo.znca/com.google.firebase.messaging.FirebaseMessagingService
+
+if [ "$?" != "0" ]; then
+    echo "Failed to start com.nintendo.znca"
+    exit 1
+fi
+
+echo "Acquiring wake lock"
+echo androidzncaapiserver > /sys/power/wake_lock
+`;
+
+const shutdown_script = `#!/system/bin/sh
+
+echo "Releasing wake lock"
+echo androidzncaapiserver > /sys/power/wake_unlock
+`;
+
 async function setup(argv: ArgumentsCamelCase<Arguments>) {
     debug('Connecting to device %s', argv.device);
     let co = execFileSync('adb', [
@@ -267,12 +315,10 @@ async function setup(argv: ArgumentsCamelCase<Arguments>) {
         console.log('');
         await new Promise(rs => setTimeout(rs, 5 * 1000));
 
-        co = execFileSync('adb', [
+        execAdb([
             'disconnect',
             argv.device,
-        ], {
-            stdio: 'inherit',
-        });
+        ]);
 
         debug('Connecting to device %s', argv.device);
         co = execFileSync('adb', [
@@ -282,24 +328,11 @@ async function setup(argv: ArgumentsCamelCase<Arguments>) {
     }
 
     debug('Pushing scripts');
-    execFileSync('adb', [
-        '-s',
-        argv.device,
-        'push',
-        path.join(dir, 'resources', 'android-znca-api-server.sh'),
-        '/data/local/tmp/android-znca-api-server.sh',
-    ], {
-        stdio: 'inherit',
-    });
 
-    execFileSync('adb', [
-        '-s',
-        argv.device,
-        'shell',
-        'chmod 755 /data/local/tmp/android-znca-api-server.sh',
-    ], {
-        stdio: 'inherit',
-    });
+    await pushScript(argv.device, setup_script({
+        frida_server_path: argv.fridaServerPath,
+    }), '/data/local/tmp/android-znca-api-server-setup.sh');
+    await pushScript(argv.device, shutdown_script, '/data/local/tmp/android-znca-api-server-shutdown.sh');
 }
 
 async function attach(argv: ArgumentsCamelCase<Arguments>) {
@@ -307,16 +340,7 @@ async function attach(argv: ArgumentsCamelCase<Arguments>) {
     type Session = import('frida').Session;
 
     debug('Running scripts');
-    execFileSync('adb', [
-        '-s',
-        argv.device,
-        'shell',
-        argv.execCommand ?
-            argv.execCommand.replace('{cmd}', JSON.stringify('/data/local/tmp/android-znca-api-server.sh')) :
-            '/data/local/tmp/android-znca-api-server.sh',
-    ], {
-        stdio: 'inherit',
-    });
+    execScript(argv.device, '/data/local/tmp/android-znca-api-server-setup.sh', argv.execCommand);
 
     debug('Done');
 
@@ -342,4 +366,49 @@ async function attach(argv: ArgumentsCamelCase<Arguments>) {
     await script.load();
 
     return {session, script};
+}
+
+function execAdb(args: string[], device?: string) {
+    execFileSync('adb', device ? ['-s', device, ...args] : args, {
+        stdio: 'inherit',
+    });
+}
+
+async function getScriptPath(content: string) {
+    const filename = path.join(script_dir, crypto.createHash('sha256').update(content).digest('hex') + '.sh');
+
+    await fs.writeFile(filename, content);
+    await fs.chmod(filename, 0o755);
+
+    return filename;
+}
+
+async function pushScript(device: string, content: string, path: string) {
+    const filename = await getScriptPath(content);
+
+    debug('Pushing script', path, filename);
+
+    execAdb([
+        'push',
+        filename,
+        path,
+    ], device);
+
+    execAdb([
+        'shell',
+        'chmod 755 ' + JSON.stringify(path),
+    ], device);
+}
+
+function execScript(device: string, path: string, exec_command?: string) {
+    const command = exec_command ?
+        exec_command.replace('{cmd}', JSON.stringify(path)) :
+        path;
+
+    debug('Running script', command);
+
+    execAdb([
+        'shell',
+        command,
+    ], device);
 }

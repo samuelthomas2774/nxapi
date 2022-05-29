@@ -1,2 +1,0 @@
-#!/usr/bin/env sh
-"$(dirname "$0")/../node_modules/.bin/node" "$(dirname "$0")/nxapi.js" $@
