@@ -1,5 +1,4 @@
-import * as util from 'util';
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../pctl.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -7,6 +6,7 @@ import { initStorage } from '../../util/storage.js';
 import { getPctlToken } from '../../common/auth/moon.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
+import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:pctl:auth');
 
@@ -72,14 +72,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf54789befb391a838://auth".');
     console.log('');
 
-    const read = await import('read');
-    // @ts-expect-error
-    const prompt = util.promisify(read.default as typeof read);
-
     const applink = await prompt({
         prompt: `Paste the link: `,
-        // silent: true,
-        output: process.stderr,
     });
 
     console.log('');

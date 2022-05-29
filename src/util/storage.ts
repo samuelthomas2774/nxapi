@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import getPaths from 'env-paths';

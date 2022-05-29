@@ -1,5 +1,6 @@
-import { createRequire } from 'module';
-import { execFileSync } from 'child_process';
+import process from 'node:process';
+import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';

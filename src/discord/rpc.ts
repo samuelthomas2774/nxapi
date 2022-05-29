@@ -1,5 +1,6 @@
-import * as net from 'net';
-import { createRequire } from 'module';
+import process from 'node:process';
+import * as net from 'node:net';
+import { createRequire } from 'node:module';
 import createDebug from 'debug';
 import fetch from 'node-fetch';
 import DiscordRPC from 'discord-rpc';

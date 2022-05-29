@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Notification } from './electron.js';
-import * as path from 'path';
-import { EventEmitter } from 'events';
+import process from 'node:process';
+import * as path from 'node:path';
+import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
 import dotenv from 'dotenv';
@@ -173,6 +174,8 @@ export class PresenceMonitorManager {
 
         i.notifications = this.notifications;
         i.presence_user = null;
+        i.user_notifications = false;
+        i.friend_notifications = false;
 
         this.monitors.push(i);
 

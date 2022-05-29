@@ -1,5 +1,5 @@
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../nooklink.js';

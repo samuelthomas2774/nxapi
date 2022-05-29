@@ -1,7 +1,8 @@
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-import * as fs from 'fs';
-import * as child_process from 'child_process';
+import process from 'node:process';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import * as fs from 'node:fs';
+import * as child_process from 'node:child_process';
 import createDebug from 'debug';
 
 const debug = createDebug('nxapi:util:product');

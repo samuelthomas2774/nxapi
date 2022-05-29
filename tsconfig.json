@@ -1,13 +1,18 @@
 {
     "compilerOptions": {
         "strict": true,
-        "target": "es2015",
+        "target": "es2020",
         "module": "es2022",
         "jsx": "react",
-        "moduleResolution": "node12",
+        "moduleResolution": "node16",
+        "allowSyntheticDefaultImports": true,
         "declaration": true,
+        "importHelpers": true,
         "rootDir": "src",
         "outDir": "dist",
+        "lib": [
+            "es2020"
+        ],
         "skipLibCheck": true,
         "allowJs": true
     },

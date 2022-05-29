@@ -1,8 +1,8 @@
-import * as path from 'path';
+import process from 'node:process';
+import * as path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import * as net from 'node:net';
 import createDebug from 'debug';
-import { execFileSync } from 'child_process';
-import * as net from 'net';
-import frida, { Session } from 'frida';
 import express from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from '../cli.js';
@@ -27,6 +27,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('exec-command', {
         describe: 'Command to use to run a file on the device',
         type: 'string',
+    }).option('validate-tokens', {
+        describe: 'Validate tokens before passing them to znca',
+        type: 'boolean',
+        default: true,
     }).option('listen', {
         describe: 'Server address and port',
         type: 'array',
@@ -49,7 +53,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         genAudioH2(token: string, timestamp: string, uuid: string): Promise<string>;
     } = script.exports as any;
 
-    process.on('exit', () => {
+    const onexit = () => {
         debug('Releasing wake lock', argv.device);
         execFileSync('adb', [
             '-s',
@@ -59,7 +63,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         ], {
             stdio: 'inherit',
         });
-    });
+    };
+
+    process.on('exit', onexit);
+    process.on('SIGTERM', onexit);
+    process.on('SIGINT', onexit);
 
     function reattach() {
         // Already attempting to reattach
@@ -157,10 +165,15 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                     else debug('JWT signature is not valid or not checked');
                 }
             } catch (err) {
-                res.statusCode = 400;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({error: 'invalid_token', error_message: (err as Error).message}));
-                return;
+                if (argv.validateTokens) {
+                    debug('Error validating token from %s', req.ip, err);
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({error: 'invalid_token', error_message: (err as Error).message}));
+                    return;
+                } else {
+                    debug('Error validating token from %s, continuing anyway', req.ip, err);
+                }
             }
 
             debugApi('Calling %s', data.type === 'app' ? 'genAudioH2' : 'genAudioH');
@@ -290,6 +303,9 @@ async function setup(argv: ArgumentsCamelCase<Arguments>) {
 }
 
 async function attach(argv: ArgumentsCamelCase<Arguments>) {
+    const frida = await import('frida');
+    type Session = import('frida').Session;
+
     debug('Running scripts');
     execFileSync('adb', [
         '-s',

@@ -1,4 +1,5 @@
-import * as path from 'path';
+import process from 'node:process';
+import * as path from 'node:path';
 import createDebug from 'debug';
 import Yargs from 'yargs';
 import dotenv from 'dotenv';

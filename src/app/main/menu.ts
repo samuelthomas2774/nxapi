@@ -1,4 +1,5 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
+import process from 'node:process';
 import createDebug from 'debug';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { PresenceMonitorManager, Store } from './index.js';

@@ -1,4 +1,5 @@
-import * as fs from 'fs';
+import process from 'node:process';
+import * as fs from 'node:fs';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import { getToken } from './nso.js';

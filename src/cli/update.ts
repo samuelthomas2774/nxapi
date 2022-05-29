@@ -1,5 +1,5 @@
-import * as path from 'path';
-import * as fs from 'fs/promises';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';

@@ -1,5 +1,5 @@
 import { BrowserWindow, WebContents } from './electron.js';
-import * as path from 'path';
+import * as path from 'node:path';
 import { bundlepath } from './index.js';
 import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';

@@ -1,7 +1,7 @@
-import * as path from 'path';
-import { constants } from 'fs';
-import * as fs from 'fs/promises';
-import { Buffer } from 'buffer';
+import * as path from 'node:path';
+import { constants } from 'node:fs';
+import * as fs from 'node:fs/promises';
+import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
 import { app, BrowserWindow, IpcMainInvokeEvent, session, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';

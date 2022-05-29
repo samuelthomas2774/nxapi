@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../splatnet2.js';

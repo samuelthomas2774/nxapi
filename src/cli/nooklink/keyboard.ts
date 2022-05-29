@@ -1,9 +1,9 @@
-import { promisify } from 'util';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../nooklink.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getUserToken } from '../../common/auth/nooklink.js';
+import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:nooklink:keyboard');
 
@@ -30,13 +30,8 @@ type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (!argv.message) {
-        const read = await import('read');
-        // @ts-expect-error
-        const prompt = promisify(read.default as typeof read);
-
         argv.message = await prompt({
-            prompt: `Message: `,
-            output: process.stderr,
+            prompt: 'Message: ',
         });
     }
 

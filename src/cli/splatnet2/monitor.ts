@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 import createDebug from 'debug';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';

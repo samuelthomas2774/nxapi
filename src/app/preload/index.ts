@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import { WindowConfiguration } from '../common/types.js';
 import { SavedToken } from '../../common/auth/nso.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';

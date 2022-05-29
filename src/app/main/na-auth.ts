@@ -1,4 +1,5 @@
-import * as crypto from 'crypto';
+import process from 'node:process';
+import * as crypto from 'node:crypto';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { BrowserWindow, Notification, session, shell } from './electron.js';

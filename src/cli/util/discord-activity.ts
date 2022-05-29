@@ -1,3 +1,4 @@
+import process from 'node:process';
 import createDebug from 'debug';
 import fetch from 'node-fetch';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';

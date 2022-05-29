@@ -146,7 +146,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
 
         i.discord_preconnect = argv.discordPreconnect;
-        if (argv.discordUser) i.discord_client_filter = (client, id) => client.user.id === argv.discordUser;
+        if (argv.discordUser) i.discord_client_filter = (client, id) => client.user?.id === argv.discordUser;
 
         if (argv.splatnet2Monitor) {
             const storage = await initStorage(argv.dataPath);
@@ -213,7 +213,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     i.presence_user = argv.friendNsaid ?? data?.nsoAccount.user.nsaId;
     i.discord_preconnect = argv.discordPreconnect;
-    if (argv.discordUser) i.discord_client_filter = (client, id) => client.user.id === argv.discordUser;
+    if (argv.discordUser) i.discord_client_filter = (client, id) => client.user?.id === argv.discordUser;
 
     console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);

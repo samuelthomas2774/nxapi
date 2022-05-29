@@ -1,4 +1,4 @@
-import * as net from 'net';
+import * as net from 'node:net';
 import createDebug from 'debug';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';

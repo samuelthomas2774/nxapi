@@ -1,3 +1,4 @@
+import process from 'node:process';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';

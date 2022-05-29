@@ -1,12 +1,12 @@
-import * as util from 'util';
+import * as crypto from 'node:crypto';
 import createDebug from 'debug';
-import * as crypto from 'crypto';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/nso.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/znc.js';
+import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:nso:auth');
 
@@ -59,13 +59,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf71b963c1b7b6d119://auth".');
     console.log('');
 
-    const read = await import('read');
-    // @ts-expect-error
-    const prompt = util.promisify(read.default as typeof read);
-
     const applink = await prompt({
         prompt: `Paste the link: `,
-        output: process.stderr,
     });
 
     console.log('');

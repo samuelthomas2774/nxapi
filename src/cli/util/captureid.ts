@@ -1,5 +1,5 @@
-import * as crypto from 'crypto';
-import { Buffer } from 'buffer';
+import * as crypto from 'node:crypto';
+import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
 import { Argv } from '../../util/yargs.js';

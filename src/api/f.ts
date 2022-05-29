@@ -1,3 +1,4 @@
+import process from 'node:process';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
