@@ -1,9 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, Notification } from './electron.js';
+import { app, BrowserWindow, dialog, ipcMain, Notification } from './electron.js';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import MenuApp from './menu.js';
@@ -18,6 +17,7 @@ import { getToken } from '../../common/auth/nso.js';
 import { dir } from '../../util/product.js';
 import { initStorage, paths } from '../../util/storage.js';
 import { LoopResult } from '../../util/loop.js';
+import { tryGetNativeImageFromUrl } from './util.js';
 
 const debug = createDebug('app:main');
 
@@ -251,16 +251,6 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 }
 
 export class ElectronNotificationManager extends NotificationManager {
-    private async getNativeImageFromUrl(url: string) {
-        try {
-            const response = await fetch(url);
-            const image = await response.buffer();
-            return nativeImage.createFromBuffer(image);
-        } catch (err) {}
-
-        return undefined;
-    }
-
     async onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
@@ -268,7 +258,7 @@ export class ElectronNotificationManager extends NotificationManager {
             title: friend.name,
             body: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-            icon: await this.getNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
 
@@ -276,7 +266,7 @@ export class ElectronNotificationManager extends NotificationManager {
         new Notification({
             title: friend.name,
             body: 'Offline',
-            icon: await this.getNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
 
@@ -287,7 +277,7 @@ export class ElectronNotificationManager extends NotificationManager {
             title: friend.name,
             body: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-            icon: await this.getNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
 
@@ -298,7 +288,7 @@ export class ElectronNotificationManager extends NotificationManager {
             title: friend.name,
             body: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-            icon: await this.getNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
 }

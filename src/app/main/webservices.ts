@@ -1,6 +1,10 @@
 import * as path from 'path';
+import { constants } from 'fs';
+import * as fs from 'fs/promises';
+import { Buffer } from 'buffer';
 import createDebug from 'debug';
-import { BrowserWindow, IpcMainInvokeEvent, session, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, IpcMainInvokeEvent, session, ShareMenu, shell, WebContents } from './electron.js';
+import fetch from 'node-fetch';
 import ZncApi from '../../api/znc.js';
 import { dev } from '../../util/product.js';
 import { WebService } from '../../api/znc-types.js';
@@ -149,6 +153,51 @@ export class WebServiceIpc {
         const data: NativeShareRequest = JSON.parse(json);
 
         debug('invokeNativeShare', webservice.name, nsoAccount.user.name, data);
+
+        const texts: string[] = [];
+        if (data.text) texts.push(data.text);
+        if (data.hashtags) texts.push(data.hashtags.map(t => '#' + t).join(' '));
+
+        const imagepath = await this.downloadShareImage(data);
+
+        const menu = new ShareMenu({
+            texts,
+            filePaths: [imagepath],
+        });
+
+        menu.popup({window: BrowserWindow.fromWebContents(event.sender)!});
+    }
+
+    private async downloadShareImage(req: NativeShareRequest) {
+        const dir = app.getPath('downloads');
+        const basename = path.basename(new URL(req.image_url).pathname);
+        const extname = path.extname(basename);
+        let filename;
+        let i = 0;
+
+        do {
+            i++;
+
+            filename = i === 1 ? basename : basename.substr(0, basename.length - extname.length) + ' ' + i + extname;
+        } while (await this.pathExists(path.join(dir, filename)));
+
+        debug('Downloading image %s to %s as %s', req.image_url, dir, filename);
+
+        const response = await fetch(req.image_url);
+        const image = await response.arrayBuffer();
+        await fs.writeFile(path.join(dir, filename), Buffer.from(image));
+
+        return path.join(dir, filename);
+    }
+
+    private async pathExists(path: string) {
+        try {
+            await fs.access(path, constants.F_OK);
+            return true;
+        } catch (err) {
+            if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+            return false;
+        }
     }
 
     async invokeNativeShareUrl(event: IpcMainInvokeEvent, json: string): Promise<void> {
@@ -157,6 +206,13 @@ export class WebServiceIpc {
         const data: NativeShareUrlRequest = JSON.parse(json);
 
         debug('invokeNativeShareUrl', webservice.name, nsoAccount.user.name, data);
+
+        const menu = new ShareMenu({
+            texts: [data.text],
+            urls: [data.url],
+        });
+
+        menu.popup({window: BrowserWindow.fromWebContents(event.sender)!});
     }
 
     async requestGameWebToken(event: IpcMainInvokeEvent): Promise<string> {

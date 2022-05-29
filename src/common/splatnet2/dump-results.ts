@@ -46,7 +46,7 @@ export async function dumpResults(
 
         debug('Fetching battle results summary image');
         const image_response = await fetch(share.url);
-        const image = await image_response.buffer();
+        const image = await image_response.arrayBuffer();
 
         debug('Writing battle results summary image data %s', filename);
         await fs.writeFile(file, JSON.stringify({
@@ -54,7 +54,7 @@ export async function dumpResults(
         }, null, 4) + '\n', 'utf-8');
 
         debug('Writing battle results summary image %s', filename);
-        await fs.writeFile(image_file, image);
+        await fs.writeFile(image_file, Buffer.from(image));
     }
 
     const skipped = [];
@@ -103,7 +103,7 @@ export async function dumpResults(
 
                 debug('Fetching battle results image');
                 const image_response = await fetch(share.url);
-                const image = await image_response.buffer();
+                const image = await image_response.arrayBuffer();
 
                 debug('Writing battle results image data %s', filename);
                 await fs.writeFile(file, JSON.stringify({
@@ -111,7 +111,7 @@ export async function dumpResults(
                 }, null, 4) + '\n', 'utf-8');
 
                 debug('Writing battle results image %s', filename);
-                await fs.writeFile(image_file, image);
+                await fs.writeFile(image_file, Buffer.from(image));
             }
         }
     }

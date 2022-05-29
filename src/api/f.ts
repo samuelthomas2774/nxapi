@@ -266,7 +266,7 @@ function getEnvApi(): FApi {
         throw new Error('Unknown znca API provider');
     }
 
-    if (process.env.ZNCA_API_URL?.startsWith('https://')) {
+    if (process.env.ZNCA_API_URL) {
         return ['nxapi', process.env.ZNCA_API_URL + '/f'];
     }
 

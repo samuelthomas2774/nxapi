@@ -1,14 +1,14 @@
 import * as crypto from 'crypto';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import fetch from 'node-fetch';
-import { BrowserWindow, nativeImage, Notification, session, shell } from './electron.js';
+import { BrowserWindow, Notification, session, shell } from './electron.js';
 import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
 import { Jwt } from '../../util/jwt.js';
+import { tryGetNativeImageFromUrl } from './util.js';
 
 const debug = createDebug('app:main:na-auth');
 
@@ -157,18 +157,10 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
 
             debug('Already authenticated', data);
 
-            let icon = undefined;
-
-            try {
-                const response = await fetch(data!.nsoAccount.user.imageUri);
-                const image = await response.buffer();
-                icon = nativeImage.createFromBuffer(image);
-            } catch (err) {}
-
             new Notification({
                 title: 'Nintendo Switch Online',
                 body: 'Already signed in as ' + data?.nsoAccount.user.name + ' (' + data?.user.nickname + ')',
-                icon,
+                icon: await tryGetNativeImageFromUrl(data!.nsoAccount.user.imageUri),
             }).show();
 
             return getToken(storage, nsotoken, process.env.ZNC_PROXY_URL);
@@ -184,18 +176,10 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
         users.add(data.user.id);
         await storage.setItem('NintendoAccountIds', [...users]);
 
-        let icon = undefined;
-
-        try {
-            const response = await fetch(data.nsoAccount.user.imageUri);
-            const image = await response.buffer();
-            icon = nativeImage.createFromBuffer(image);
-        } catch (err) {}
-
         new Notification({
             title: 'Nintendo Switch Online',
             body: 'Authenticated as ' + data.nsoAccount.user.name + ' (NSO ' + data.user.nickname + ')',
-            icon,
+            icon: await tryGetNativeImageFromUrl(data.nsoAccount.user.imageUri),
         }).show();
 
         return {nso, data};

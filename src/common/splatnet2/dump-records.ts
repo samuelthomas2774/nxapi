@@ -99,7 +99,7 @@ export async function dumpProfileImage(
 
     debug('Fetching profile image');
     const image_response = await fetch(share.url);
-    const image = await image_response.buffer();
+    const image = await image_response.arrayBuffer();
 
     debug('Writing profile image data %s', filename);
     await fs.writeFile(file, JSON.stringify({
@@ -109,7 +109,7 @@ export async function dumpProfileImage(
     }, null, 4) + '\n', 'utf-8');
 
     debug('Writing profile image %s', image_filename);
-    await fs.writeFile(image_file, image);
+    await fs.writeFile(image_file, Buffer.from(image));
 
     await fs.writeFile(latest_file, JSON.stringify({timestamp, etag, etag_data}, null, 4) + '\n', 'utf-8');
 }
@@ -136,13 +136,13 @@ export async function dumpChallenges(
 
         debug('Fetching challenge image for %s', challenge.key);
         const image_response = await fetch(share.url);
-        const image = await image_response.buffer();
+        const image = await image_response.arrayBuffer();
 
         debug('Writing challenge image data %s', filename);
         await fs.writeFile(file, JSON.stringify({share}, null, 4) + '\n', 'utf-8');
 
         debug('Writing challenge image %s', filename);
-        await fs.writeFile(image_file, image);
+        await fs.writeFile(image_file, Buffer.from(image));
     }
 }
 

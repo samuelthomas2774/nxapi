@@ -12,6 +12,7 @@ export const MenuItem = electron.MenuItem;
 export const nativeImage = electron.nativeImage;
 export const Notification = electron.Notification;
 export const session = electron.session;
+export const ShareMenu = electron.ShareMenu;
 export const shell = electron.shell;
 export const Tray = electron.Tray;
 
@@ -20,5 +21,6 @@ export type IpcMainInvokeEvent = import('electron').IpcMainInvokeEvent;
 export type Menu = import('electron').Menu;
 export type MenuItem = import('electron').MenuItem;
 export type Notification = import('electron').Notification;
+export type ShareMenu = import('electron').ShareMenu;
 export type Tray = import('electron').Tray;
 export type WebContents = import('electron').WebContents;
