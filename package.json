@@ -13,8 +13,7 @@
         "dist",
         "!dist/app",
         "!dist/bundle",
-        "bin",
-        "resources"
+        "bin"
     ],
     "bin": {
         "nxapi": "bin/nxapi.js"
@@ -81,8 +80,7 @@
         "files": [
             "dist/app/bundle",
             "dist/bundle",
-            "!dist/app/package",
-            "resources"
+            "!dist/app/package"
         ],
         "asar": false,
         "extraMetadata": {
