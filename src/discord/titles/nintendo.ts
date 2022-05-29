@@ -1046,9 +1046,33 @@ export const titles: Title[] = [
     },
 
     {
+        // Mario Strikers: Battle League Football
+        id: '010019401051c000',
+        client: '966534341662482462',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Mario Strikers: Battle League Football - First Kick
+        id: '01008a30182f2000',
+        client: '966534341662482462',
+        largeImageText: 'First Kick',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
         // Fire Emblem Warriors: Three Hopes
         id: '010071f0143ea000',
         client: '966534448168439872',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Live A Live
+        id: '0100cf801776c000',
+        client: '966534559929860167',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
