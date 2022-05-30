@@ -1,9 +1,10 @@
 import createDebug from 'debug';
 import * as persist from 'node-persist';
+import { Response } from 'node-fetch';
 import { FlapgApiResponse, FResult } from '../../api/f.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
-import { AccountLogin } from '../../api/znc-types.js';
+import { AccountLogin, ZncErrorResponse } from '../../api/znc-types.js';
 import ZncApi, { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
@@ -69,6 +70,8 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
             expires_at: Date.now() + (data.credential.expiresIn * 1000),
         };
 
+        nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, existingToken);
+
         await storage.setItem('NsoToken.' + token, existingToken);
         await storage.setItem('NintendoAccountToken.' + data.user.id, token);
 
@@ -78,10 +81,34 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
     debug('Using existing token');
     await storage.setItem('NintendoAccountToken.' + existingToken.user.id, token);
 
-    return {
-        nso: proxy_url ?
-            new ZncProxyApi(proxy_url, token) :
-            new ZncApi(existingToken.credential.accessToken),
-        data: existingToken,
+    const nso = proxy_url ?
+        new ZncProxyApi(proxy_url, token) :
+        new ZncApi(existingToken.credential.accessToken);
+
+    nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, existingToken);
+
+    return {nso, data: existingToken};
+}
+
+function createTokenExpiredHandler(
+    storage: persist.LocalStorage, token: string, nso: ZncApi, existingToken: SavedToken
+) {
+    return (data: ZncErrorResponse, response: Response) => {
+        debug('Token expired', existingToken.user.id, data);
+        return renewToken(storage, token, nso, existingToken);
     };
+}
+
+async function renewToken(
+    storage: persist.LocalStorage, token: string, nso: ZncApi, previousToken: SavedToken
+) {
+    const data = await nso.renewToken(token, previousToken.user);
+
+    const existingToken: SavedToken = {
+        user: previousToken.user,
+        ...data,
+        expires_at: Date.now() + (data.credential.expiresIn * 1000),
+    };
+
+    await storage.setItem('NsoToken.' + token, existingToken);
 }

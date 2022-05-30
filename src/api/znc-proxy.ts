@@ -1,6 +1,6 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
-import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, ZncStatus, ZncSuccessResponse } from './znc-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, ZncErrorResponse, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { version } from '../util/product.js';
@@ -11,6 +11,11 @@ const debug = createDebug('nxapi:api:znc-proxy');
 
 export default class ZncProxyApi implements ZncApi {
     static useragent: string | null = null;
+
+    // Not used by ZncProxyApi
+    onTokenExpired: ((data: ZncErrorResponse, res: Response) => Promise<void>) | null = null;
+    /** @internal */
+    _renewToken: Promise<void> | null = null;
 
     constructor(
         private url: string,
@@ -137,6 +142,33 @@ export default class ZncProxyApi implements ZncApi {
 
         return {nso, data};
     }
+}
+
+export interface AuthToken {
+    user: string;
+    policy?: AuthPolicy;
+    created_at: number;
+}
+export interface AuthPolicy {
+    announcements?: boolean;
+    list_friends?: boolean;
+    list_friends_presence?: boolean;
+    friend?: boolean;
+    friend_presence?: boolean;
+    webservices?: boolean;
+    activeevent?: boolean;
+    current_user?: boolean;
+    current_user_presence?: boolean;
+
+    friends?: string[];
+    friends_presence?: string[];
+}
+
+export enum ZncPresenceEventStreamEvent {
+    FRIEND_ONLINE = '0',
+    FRIEND_OFFLINE = '1',
+    FRIEND_TITLE_CHANGE = '2',
+    FRIEND_TITLE_STATECHANGE = '3',
 }
 
 export type PresenceUrlResponse =

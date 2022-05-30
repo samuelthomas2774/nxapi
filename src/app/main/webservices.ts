@@ -216,9 +216,6 @@ export class WebServiceIpc {
     }
 
     async requestGameWebToken(event: IpcMainInvokeEvent): Promise<string> {
-        // TODO: if the web service token has expired the NSO app token will probably have expired as well
-        // This needs to renew that token if necessary
-
         const {nso, nsoAccount, webservice} = this.getWindowData(event.sender);
 
         debug('Web service %s, user %s, called requestGameWebToken', webservice.name, nsoAccount.user.name);

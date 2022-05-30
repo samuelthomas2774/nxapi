@@ -13,6 +13,7 @@
         "lib": [
             "es2020"
         ],
+        "stripInternal": true,
         "skipLibCheck": true,
         "allowJs": true
     },

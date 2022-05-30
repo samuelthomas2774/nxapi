@@ -10,6 +10,7 @@ import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { NotificationManager, ZncNotifications } from '../../common/notify.js';
+import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 
 declare global {
     namespace Express {
@@ -22,26 +23,6 @@ declare global {
             zncAuthPolicyToken?: string;
         }
     }
-}
-
-export interface AuthToken {
-    user: string;
-    policy?: AuthPolicy;
-    created_at: number;
-}
-export interface AuthPolicy {
-    announcements?: boolean;
-    list_friends?: boolean;
-    list_friends_presence?: boolean;
-    friend?: boolean;
-    friend_presence?: boolean;
-    webservices?: boolean;
-    activeevent?: boolean;
-    current_user?: boolean;
-    current_user_presence?: boolean;
-
-    friends?: string[];
-    friends_presence?: string[];
 }
 
 const debug = createDebug('cli:nso:http-server');
@@ -680,13 +661,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             console.log('Listening on %s, port %d', address.address, address.port);
         });
     }
-}
-
-export enum ZncPresenceEventStreamEvent {
-    FRIEND_ONLINE = '0',
-    FRIEND_OFFLINE = '1',
-    FRIEND_TITLE_CHANGE = '2',
-    FRIEND_TITLE_STATECHANGE = '3',
 }
 
 class EventStreamNotificationManager extends NotificationManager {

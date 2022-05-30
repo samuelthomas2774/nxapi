@@ -169,22 +169,7 @@ export class ZncNotifications extends Loop {
     }
 
     async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
-        if (err && 'response' in err && err.data?.status === 9404) {
-            // Token expired
-            debug('Renewing token');
-
-            const data = await this.nso.renewToken(this.token, this.data.user);
-
-            const existingToken: SavedToken = {
-                user: this.data.user,
-                ...data,
-                expires_at: Date.now() + (data.credential.expiresIn * 1000),
-            };
-
-            await this.storage.setItem('NsoToken.' + this.token, existingToken);
-
-            return LoopResult.OK_SKIP_INTERVAL;
-        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
+        if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
             debug('Request timed out, waiting %ds before retrying', this.update_interval, err);
 
             return LoopResult.OK;

@@ -1,8 +1,8 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { f, FlapgIid } from './f.js';
-import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncResponse, ZncStatus } from './znc-types.js';
+import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncErrorResponse, ZncResponse, ZncStatus, ZncSuccessResponse } from './znc-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
@@ -20,12 +20,21 @@ export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 export default class ZncApi {
     static useragent: string | null = null;
 
+    onTokenExpired: ((data: ZncErrorResponse, res: Response) => Promise<void>) | null = null;
+    /** @internal */
+    _renewToken: Promise<void> | null = null;
+
     constructor(
         public token: string,
         public useragent: string | null = ZncApi.useragent
     ) {}
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
+    async fetch<T = unknown>(
+        url: string, method = 'GET', body?: string, headers?: object,
+        /** @internal */ _attempt = 0
+    ): Promise<ZncSuccessResponse<T>> {
+        await this._renewToken;
+
         const response = await fetch(ZNC_URL + url, {
             method: method,
             headers: Object.assign({
@@ -41,6 +50,14 @@ export default class ZncApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         const data = await response.json() as ZncResponse<T>;
+
+        if (data.status === ZncStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+            // _renewToken will be awaited when calling fetch
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).finally(() => {
+                this._renewToken = null;
+            });
+            return this.fetch(url, method, body, headers, _attempt + 1);
+        }
 
         if ('errorMessage' in data) {
             throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
