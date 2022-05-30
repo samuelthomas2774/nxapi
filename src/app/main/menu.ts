@@ -59,7 +59,7 @@ export default class MenuApp {
                     {label: 'Enable notifications for this friends of this user\'s presence', type: 'checkbox',
                         checked: monitor?.friend_notifications,
                         click: () => this.setFriendNotificationsActive(data.user.id, !monitor?.friend_notifications)},
-                    {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop()},
+                    {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop(true)},
                     {type: 'separator'},
                     {label: 'Web services', enabled: false},
                     ...await this.getWebServiceItems(token) as any,

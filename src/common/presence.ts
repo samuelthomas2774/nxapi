@@ -46,7 +46,7 @@ export class ZncDiscordPresence extends ZncNotifications {
             }
         }
 
-        await this.updatePresenceForNotifications(user, friends);
+        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
 
         return LoopResult.OK;
@@ -248,7 +248,7 @@ export class ZncDiscordPresence extends ZncNotifications {
             }
         }
 
-        await this.updatePresenceForNotifications(user, friends);
+        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 

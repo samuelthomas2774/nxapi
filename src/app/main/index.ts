@@ -242,7 +242,13 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
         try {
             return await super.handleError(err);
         } catch (err) {
-            if (err instanceof Error) {
+            if (err instanceof ErrorResponse) {
+                dialog.showErrorBox('Request error',
+                    err.response.status + ' ' + err.response.statusText + ' ' +
+                    err.response.url + '\n' + 
+                    err.body + '\n\n' +
+                    (err.stack ?? err.message));
+            } else if (err instanceof Error) {
                 dialog.showErrorBox(err.name, err.stack ?? err.message);
             } else {
                 dialog.showErrorBox('Error', err as any);
@@ -250,6 +256,11 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
             return LoopResult.OK;
         }
+    }
+
+    skipIntervalInCurrentLoop(start = false) {
+        super.skipIntervalInCurrentLoop();
+        if (!this._running && start) this.enable();
     }
 }
 

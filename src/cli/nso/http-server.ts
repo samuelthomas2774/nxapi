@@ -1,5 +1,6 @@
 import * as net from 'node:net';
 import createDebug from 'debug';
+import * as persist from 'node-persist';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
@@ -9,7 +10,9 @@ import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
-import { NotificationManager, ZncNotifications } from '../../common/notify.js';
+import { NotificationManager, PresenceEvent, ZncNotifications } from '../../common/notify.js';
+import { product } from '../../util/product.js';
+import { parseListenAddress } from '../../util/net.js';
 import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 
 declare global {
@@ -49,10 +52,26 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    const updateInterval = argv.updateInterval * 1000;
-
     const storage = await initStorage(argv.dataPath);
 
+    const app = createApp(storage, argv.zncProxyUrl, argv.requireToken, argv.updateInterval * 1000);
+
+    for (const address of argv.listen) {
+        const [host, port] = parseListenAddress(address);
+        const server = app.listen(port, host ?? '::');
+        server.on('listening', () => {
+            const address = server.address() as net.AddressInfo;
+            console.log('Listening on %s, port %d', address.address, address.port);
+        });
+    }
+}
+
+function createApp(
+    storage: persist.LocalStorage,
+    znc_proxy_url?: string,
+    require_token = true,
+    update_interval = 30 * 1000
+) {
     const app = express();
 
     app.use('/api/znc', (req, res, next) => {
@@ -62,11 +81,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
             req.headers['user-agent']);
 
+        res.setHeader('Server', product + ' znc-proxy');
+
         next();
     });
 
     const localAuth: express.RequestHandler = async (req, res, next) => {
-        if (argv.requireToken || !req.query.user) return next();
+        if (require_token || !req.query.user) return next();
 
         const token = await storage.getItem('NintendoAccountToken.' + req.query.user);
         if (!token) return next();
@@ -105,6 +126,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         }));
     }
 
+    const znc_auth_promise = new Map</** session token */ string, Promise<{nso: ZncApi, data: SavedToken;}>>();
+    const znc_auth_timeout = new Map</** session token */ string, NodeJS.Timeout>();
+
     const nsoAuth: express.RequestHandler = async (req, res, next) => {
         try {
             let nintendoAccountSessionToken: string;
@@ -118,14 +142,32 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 nintendoAccountSessionToken = auth.substr(3);
             }
 
-            const {nso, data} = await getToken(storage, nintendoAccountSessionToken, argv.zncProxyUrl);
+            const promise = znc_auth_promise.get(nintendoAccountSessionToken) ?? (async () => {
+                const auth = await getToken(storage, nintendoAccountSessionToken, znc_proxy_url);
 
+                const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
+                users.add(auth.data.user.id);
+                await storage.setItem('NintendoAccountIds', [...users]);
+
+                return auth;
+            })().catch(err => {
+                znc_auth_promise.delete(nintendoAccountSessionToken);
+                clearTimeout(znc_auth_timeout.get(nintendoAccountSessionToken));
+                znc_auth_timeout.delete(nintendoAccountSessionToken);
+                throw err;
+            });
+            znc_auth_promise.set(nintendoAccountSessionToken, promise);
+
+            // Remove the authenticated ZncApi 30 minutes after last use
+            clearTimeout(znc_auth_timeout.get(nintendoAccountSessionToken));
+            znc_auth_timeout.set(nintendoAccountSessionToken, setTimeout(() => {
+                znc_auth_promise.delete(nintendoAccountSessionToken);
+                znc_auth_timeout.delete(nintendoAccountSessionToken);
+            }, 30 * 60 * 1000).unref());
+
+            const {nso, data} = await promise;
             req.znc = nso;
             req.zncAuth = data;
-
-            const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
-            users.add(data.user.id);
-            await storage.setItem('NintendoAccountIds', [...users]);
 
             next();
         } catch (err) {
@@ -249,20 +291,26 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     // Nintendo Switch user data
     //
 
-    const cached_userdata = new Map<string, [CurrentUser, number]>();
+    const user_data_promise = new Map</** NA ID */ string, Promise<void>>();
+    const cached_userdata = new Map</** NA ID */ string, [CurrentUser, number]>();
 
     const getUserData: express.RequestHandler = async (req, res, next) => {
         const cache = cached_userdata.get(req.zncAuth!.user.id);
 
-        if (cache && ((cache[1] + updateInterval) > Date.now())) {
+        if (cache && ((cache[1] + update_interval) > Date.now())) {
             debug('Using cached user data for %s', req.zncAuth!.user.id);
             next();
             return;
         }
 
         try {
-            const user = await req.znc!.getCurrentUser();
-            cached_userdata.set(req.zncAuth!.user.id, [user.result, Date.now()]);
+            const promise = user_data_promise.get(req.zncAuth!.user.id) ?? req.znc!.getCurrentUser().then(user => {
+                cached_userdata.set(req.zncAuth!.user.id, [user.result, Date.now()]);
+            }).finally(() => {
+                user_data_promise.delete(req.zncAuth!.user.id);
+            });
+            user_data_promise.set(req.zncAuth!.user.id, promise);
+            await promise;
 
             next();
         } catch (err) {
@@ -282,6 +330,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }, localAuth, nsoAuth, getUserData, async (req, res) => {
         const [user, updated] = cached_userdata.get(req.zncAuth!.user.id)!;
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({user, updated}));
     });
@@ -302,24 +351,28 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     // Nintendo Switch friends, NSO app web services, events
     //
 
-    const cached_friendsdata = new Map<string, [Friend[], number]>();
-    const cached_appdata = new Map<string, [WebService[], GetActiveEventResult, number]>();
+    const friends_data_promise = new Map</** NA ID */ string, Promise<void>>();
+    const cached_friendsdata = new Map</** NA ID */ string, [Friend[], number]>();
+    const app_data_promise = new Map</** NA ID */ string, Promise<void>>();
+    const cached_appdata = new Map</** NA ID */ string, [WebService[], GetActiveEventResult, number]>();
 
     const getFriendsData: express.RequestHandler = async (req, res, next) => {
         const cache = cached_friendsdata.get(req.zncAuth!.user.id);
 
-        if (cache && ((cache[1] + updateInterval) > Date.now())) {
+        if (cache && ((cache[1] + update_interval) > Date.now())) {
             debug('Using cached friends data for %s', req.zncAuth!.user.id);
             next();
             return;
         }
 
         try {
-            const friends = await req.znc!.getFriendList();
-
-            cached_friendsdata.set(req.zncAuth!.user.id, [
-                friends.result.friends, Date.now(),
-            ]);
+            const promise = friends_data_promise.get(req.zncAuth!.user.id) ?? req.znc!.getFriendList().then(friends => {
+                cached_friendsdata.set(req.zncAuth!.user.id, [friends.result.friends, Date.now()]);
+            }).finally(() => {
+                friends_data_promise.delete(req.zncAuth!.user.id);
+            });
+            friends_data_promise.set(req.zncAuth!.user.id, promise);
+            await promise;
 
             next();
         } catch (err) {
@@ -334,23 +387,32 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const getAppData: express.RequestHandler = async (req, res, next) => {
         const cache = cached_appdata.get(req.zncAuth!.user.id);
 
-        if (cache && ((cache[2] + updateInterval) > Date.now())) {
+        if (cache && ((cache[2] + update_interval) > Date.now())) {
             debug('Using cached app data for %s', req.zncAuth!.user.id);
             next();
             return;
         }
 
         try {
-            const friends = await req.znc!.getFriendList();
-            const webservices = await req.znc!.getWebServices();
-            const activeevent = await req.znc!.getActiveEvent();
+            const friends_promise = friends_data_promise.get(req.zncAuth!.user.id) ?? req.znc!.getFriendList().then(friends => {
+                cached_friendsdata.set(req.zncAuth!.user.id, [friends.result.friends, Date.now()]);
+            }).finally(() => {
+                friends_data_promise.delete(req.zncAuth!.user.id);
+            });
+            friends_data_promise.set(req.zncAuth!.user.id, friends_promise);
 
-            cached_friendsdata.set(req.zncAuth!.user.id, [
-                friends.result.friends, Date.now(),
-            ]);
-            cached_appdata.set(req.zncAuth!.user.id, [
-                webservices.result, activeevent.result, Date.now(),
-            ]);
+            const promise = app_data_promise.get(req.zncAuth!.user.id) ?? Promise.all([
+                friends_promise,
+                req.znc!.getWebServices(),
+                req.znc!.getActiveEvent(),
+            ]).then(([friends, webservices, activeevent]) => {
+                // Friends list was already added to cache
+                cached_appdata.set(req.zncAuth!.user.id, [webservices.result, activeevent.result, Date.now()]);
+            }).finally(() => {
+                app_data_promise.delete(req.zncAuth!.user.id);
+            });
+            app_data_promise.set(req.zncAuth!.user.id, promise);
+            await promise;
 
             next();
         } catch (err) {
@@ -370,6 +432,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
         const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
             friends: req.zncAuthPolicy?.friends ?
@@ -385,6 +448,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }, localAuth, nsoAuth, getFriendsData, async (req, res) => {
         const [friends, updated] = cached_friendsdata.get(req.zncAuth!.user.id)!;
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
             friends: friends.filter(f => {
@@ -414,6 +478,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             presence[friend.nsaId] = friend.presence;
         }
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(presence));
     });
@@ -438,6 +503,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             presence[friend.nsaId] = friend.presence;
         }
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(presence));
     });
@@ -461,6 +527,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             return;
         }
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({friend, updated}));
     });
@@ -535,6 +602,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             return;
         }
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(friend.presence));
     });
@@ -546,6 +614,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }, localAuth, nsoAuth, getAppData, async (req, res) => {
         const [webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({webservices, updated}));
     });
@@ -575,6 +644,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }, localAuth, nsoAuth, getAppData, async (req, res) => {
         const [webservices, activeevent, updated] = cached_appdata.get(req.zncAuth!.user.id)!;
 
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({activeevent, updated}));
     });
@@ -632,7 +702,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         i.user_notifications = false;
         i.friend_notifications = true;
-        i.update_interval = argv.updateInterval;
+        i.update_interval = update_interval / 1000;
 
         const es = i.notifications = new EventStreamNotificationManager(req, res);
 
@@ -651,16 +721,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         }
     });
 
-    for (const address of argv.listen) {
-        const match = address.match(/^((?:((?:\d+\.){3}\d+)|\[(.*)\]):)(\d+)$/);
-        if (!match || (match[1] && !net.isIP(match[2] || match[3]))) throw new Error('Not a valid address/port');
+    return app;
+}
 
-        const server = app.listen(parseInt(match[4]), match[2] || match[3] || '::');
-        server.on('listening', () => {
-            const address = server.address() as net.AddressInfo;
-            console.log('Listening on %s, port %d', address.address, address.port);
-        });
-    }
+function cacheMaxAge(updated_timestamp_ms: number, update_interval_ms: number) {
+    return Math.floor(((updated_timestamp_ms + update_interval_ms) - Date.now()) / 1000);
 }
 
 class EventStreamNotificationManager extends NotificationManager {
@@ -675,6 +740,15 @@ class EventStreamNotificationManager extends NotificationManager {
         if (event) this.res.write('event: ' + event + '\n');
         for (const d of data) this.res.write('data: ' + JSON.stringify(d) + '\n');
         this.res.write('\n');
+    }
+
+    onPresenceUpdated(
+        friend: CurrentUser | Friend, prev?: CurrentUser | Friend, type?: PresenceEvent,
+        naid?: string, ir?: boolean
+    ) {
+        this.sendEvent(ZncPresenceEventStreamEvent.PRESENCE_UPDATED, {
+            id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
+        });
     }
 
     onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {

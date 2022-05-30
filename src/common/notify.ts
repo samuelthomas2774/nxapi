@@ -184,6 +184,8 @@ export class ZncNotifications extends Loop {
 }
 
 export class NotificationManager {
+    onPresenceUpdated?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, type?: PresenceEvent, naid?: string, ir?: boolean): void;
+
     onFriendOnline?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
     onFriendOffline?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
     onFriendPlayingChangeTitle?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
@@ -216,8 +218,19 @@ export class NotificationManager {
             // Another account is monitoring this user's presence
             if (this.accounts.get(friend.nsaId) !== naid) continue;
 
+            if (lastpresence?.updatedAt !== friend.presence.updatedAt && !initialRun) {
+                debug('%s\'s presence updated', friend.name, new Date(friend.presence.updatedAt * 1000).toString());
+            }
+
+            let type: PresenceEvent | undefined = undefined;
+            let callback: 'onFriendOnline' | 'onFriendOffline' | 'onFriendPlayingChangeTitle' |
+                'onFriendTitleStateChange' | undefined = undefined;
+
             if (!wasonline && online) {
                 // Friend has come online
+                type = PresenceEvent.STATE_CHANGE;
+                callback = 'onFriendOnline';
+
                 const currenttitle = friend.presence.game as Game;
 
                 debugFriends('%s is now online%s%s, title %s %s - played for %s since %s', friend.name,
@@ -227,20 +240,20 @@ export class NotificationManager {
                     hrduration(currenttitle.totalPlayTime),
                     currenttitle.firstPlayedAt ? new Date(currenttitle.firstPlayedAt * 1000).toString() : 'now');
 
-                this.onFriendOnline?.(friend, prev, naid, initialRun);
-
                 if (consolewasonline) {
                     // Friend's console was already online
                 }
             } else if (wasonline && !online) {
                 // Friend has gone offline
+                type = PresenceEvent.STATE_CHANGE;
+                callback = 'onFriendOffline';
+
                 const lasttitle = lastpresence.game as Game;
 
                 debugFriends('%s is now offline%s, was playing title %s %s', friend.name,
                     friend.presence.state !== PresenceState.OFFLINE ? ' (console still online)' : '',
-                    lasttitle.name, JSON.stringify(lasttitle.sysDescription));
-
-                this.onFriendOffline?.(friend, prev, naid, initialRun);
+                    lasttitle.name, JSON.stringify(lasttitle.sysDescription),
+                    new Date(friend.presence.logoutAt * 1000).toString());
 
                 if (friend.presence.state !== PresenceState.OFFLINE) {
                     // Friend's console is still online
@@ -252,6 +265,8 @@ export class NotificationManager {
 
                 if (getTitleIdFromEcUrl(lasttitle.shopUri) !== getTitleIdFromEcUrl(currenttitle.shopUri)) {
                     // Friend is playing a different title
+                    type = PresenceEvent.TITLE_CHANGE;
+                    callback = 'onFriendPlayingChangeTitle';
 
                     debugFriends('%s title is now %s %s%s, was playing %s %s%s - played for %s since %s',
                         friend.name,
@@ -261,41 +276,44 @@ export class NotificationManager {
                         lastpresence.state === PresenceState.ONLINE ? '' : ' (' + lastpresence.state + ')',
                         hrduration(currenttitle.totalPlayTime),
                         currenttitle.firstPlayedAt ? new Date(currenttitle.firstPlayedAt * 1000).toString() : 'now');
-
-                    this.onFriendPlayingChangeTitle?.(friend, prev, naid, initialRun);
-                } else if (
-                    lastpresence.state !== friend.presence.state ||
-                    lasttitle.sysDescription !== currenttitle.sysDescription
-                ) {
-                    // Title state changed
+                } else if (lasttitle.sysDescription !== currenttitle.sysDescription) {
+                    // Title state changed (presence state may have also changed between online/playing)
+                    type = PresenceEvent.TITLE_STATE_CHANGE;
+                    callback = 'onFriendTitleStateChange';
 
                     debugFriends('%s title %s state changed, now %s %s, was %s %s',
                         friend.name, currenttitle.name,
                         friend.presence.state, JSON.stringify(currenttitle.sysDescription),
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
-
-                    this.onFriendTitleStateChange?.(friend, prev, naid, initialRun);
-                } else if (
-                    lastpresence.state !== friend.presence.state ||
-                    lasttitle.sysDescription !== currenttitle.sysDescription
-                ) {
+                } else if (lastpresence.state !== friend.presence.state) {
                     // Presence state changed (between online/playing)
+                    type = PresenceEvent.TITLE_STATE_CHANGE;
+                    callback = 'onFriendTitleStateChange';
 
                     debugFriends('%s title %s state changed%s, now %s %s, was %s %s',
-                        friend.name, currenttitle.name,
-                        friend.presence.state, JSON.stringify(currenttitle.sysDescription),
+                        friend.name, currenttitle.name, friend.presence.state,
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
                 }
             } else if (!consolewasonline && friend.presence.state !== PresenceState.OFFLINE) {
                 // Friend's console is now online, but the user is not playing
+                type = PresenceEvent.STATE_CHANGE;
 
                 debugFriends('%s\'s console is now online', friend.name);
             } else if (consolewasonline && friend.presence.state !== PresenceState.OFFLINE) {
                 // Friend's console is still online, the user is still not playing
             } else if (consolewasonline && friend.presence.state === PresenceState.OFFLINE) {
                 // Friend's console is now offline
+                type = PresenceEvent.STATE_CHANGE;
 
-                debugFriends('%s\'s console is now offline', friend.name);
+                debugFriends('%s\'s console is now offline', friend.name,
+                    new Date(friend.presence.logoutAt * 1000).toString());
+            }
+
+            if (lastpresence?.updatedAt !== friend.presence.updatedAt && !initialRun) {
+                this.onPresenceUpdated?.(friend, prev, type, naid, initialRun);
+            }
+            if (callback) {
+                this[callback]?.(friend, prev, naid, initialRun);
             }
         }
 
@@ -343,6 +361,12 @@ export class NotificationManager {
             }
         }
     }
+}
+
+export enum PresenceEvent {
+    STATE_CHANGE,
+    TITLE_CHANGE,
+    TITLE_STATE_CHANGE,
 }
 
 export class EmbeddedSplatNet2Monitor extends SplatNet2RecordsMonitor {

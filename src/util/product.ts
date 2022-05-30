@@ -33,3 +33,6 @@ export const git = (() => {
     };
 })();
 export const dev = !!git || process.env.NODE_ENV === 'development';
+
+export const product = 'nxapi ' + version +
+    (git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : dev ? '-dev' : '') : '');

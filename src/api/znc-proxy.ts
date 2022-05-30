@@ -169,6 +169,7 @@ export enum ZncPresenceEventStreamEvent {
     FRIEND_OFFLINE = '1',
     FRIEND_TITLE_CHANGE = '2',
     FRIEND_TITLE_STATECHANGE = '3',
+    PRESENCE_UPDATED = '4',
 }
 
 export type PresenceUrlResponse =

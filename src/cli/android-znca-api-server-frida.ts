@@ -14,6 +14,8 @@ import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage, paths } from '../util/storage.js';
 import { getJwks, Jwt } from '../util/jwt.js';
+import { product } from '../util/product.js';
+import { parseListenAddress } from '../util/net.js';
 
 const debug = createDebug('cli:android-znca-api-server-frida');
 const debugApi = createDebug('cli:android-znca-api-server-frida:api');
@@ -100,13 +102,20 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const app = express();
 
+    app.use('/api/znca', (req, res, next) => {
+        console.log('[%s] %s %s HTTP/%s from %s, port %d%s, %s',
+            new Date(), req.method, req.path, req.httpVersion,
+            req.socket.remoteAddress, req.socket.remotePort,
+            req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
+            req.headers['user-agent']);
+
+        res.setHeader('Server', product + ' android-znca-api-frida');
+
+        next();
+    });
+
     app.post('/api/znca/f', bodyParser.json(), async (req, res) => {
         try {
-            console.log('[%s] %s %s HTTP/%s from %s, port %d%s, %s',
-                new Date(), req.method, req.url, req.httpVersion,
-                req.socket.remoteAddress, req.socket.remotePort,
-                req.headers['x-forwarded-for'] ? ', ' + req.headers['x-forwarded-for'] : '',
-                req.headers['user-agent']);
             await ready;
 
             const data: {
@@ -216,10 +225,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     });
 
     for (const address of argv.listen) {
-        const match = address.match(/^((?:((?:\d+\.){3}\d+)|\[(.*)\]):)(\d+)$/);
-        if (!match || (match[1] && !net.isIP(match[2] || match[3]))) throw new Error('Not a valid address/port');
-
-        const server = app.listen(parseInt(match[4]), match[2] || match[3] || '::');
+        const [host, port] = parseListenAddress(address);
+        const server = app.listen(port, host ?? '::');
         server.on('listening', () => {
             const address = server.address() as net.AddressInfo;
             console.log('Listening on %s, port %d', address.address, address.port);
