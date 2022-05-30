@@ -1,4 +1,6 @@
 node_modules
 dist
 data
+docker-compose.override.yml
+.env
 .vscode/schema

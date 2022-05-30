@@ -248,7 +248,7 @@ export class ZncDiscordPresence extends ZncNotifications {
             }
         }
 
-        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
+        await this.updatePresenceForNotifications(user, friends, this.data.user.id, false);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 

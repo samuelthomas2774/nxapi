@@ -164,7 +164,7 @@ export class ZncNotifications extends Loop {
             this.splatnet2_monitors.size ? 'user' : null,
         ]);
 
-        await this.updatePresenceForNotifications(user, friends);
+        await this.updatePresenceForNotifications(user, friends, this.data.user.id, false);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
@@ -219,7 +219,8 @@ export class NotificationManager {
             if (this.accounts.get(friend.nsaId) !== naid) continue;
 
             if (lastpresence?.updatedAt !== friend.presence.updatedAt && !initialRun) {
-                debug('%s\'s presence updated', friend.name, new Date(friend.presence.updatedAt * 1000).toString());
+                debugFriends('%s\'s presence updated', friend.name,
+                    new Date(friend.presence.updatedAt * 1000).toString());
             }
 
             let type: PresenceEvent | undefined = undefined;
@@ -250,10 +251,10 @@ export class NotificationManager {
 
                 const lasttitle = lastpresence.game as Game;
 
-                debugFriends('%s is now offline%s, was playing title %s %s', friend.name,
+                debugFriends('%s is now offline%s, was playing title %s %s, logout time %s', friend.name,
                     friend.presence.state !== PresenceState.OFFLINE ? ' (console still online)' : '',
                     lasttitle.name, JSON.stringify(lasttitle.sysDescription),
-                    new Date(friend.presence.logoutAt * 1000).toString());
+                    friend.presence.logoutAt ? new Date(friend.presence.logoutAt * 1000).toString() : null);
 
                 if (friend.presence.state !== PresenceState.OFFLINE) {
                     // Friend's console is still online
@@ -305,8 +306,7 @@ export class NotificationManager {
                 // Friend's console is now offline
                 type = PresenceEvent.STATE_CHANGE;
 
-                debugFriends('%s\'s console is now offline', friend.name,
-                    new Date(friend.presence.logoutAt * 1000).toString());
+                debugFriends('%s\'s console is now offline', friend.name);
             }
 
             if (lastpresence?.updatedAt !== friend.presence.updatedAt && !initialRun) {
