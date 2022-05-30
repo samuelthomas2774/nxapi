@@ -31,9 +31,12 @@ export default class ZncApi {
 
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string, headers?: object,
+        /** @internal */ _autoRenewToken = true,
         /** @internal */ _attempt = 0
     ): Promise<ZncSuccessResponse<T>> {
-        await this._renewToken;
+        if (this._renewToken && _autoRenewToken) {
+            await this._renewToken;
+        }
 
         const response = await fetch(ZNC_URL + url, {
             method: method,
@@ -51,12 +54,12 @@ export default class ZncApi {
 
         const data = await response.json() as ZncResponse<T>;
 
-        if (data.status === ZncStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+        if (data.status === ZncStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
             // _renewToken will be awaited when calling fetch
             this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).finally(() => {
                 this._renewToken = null;
             });
-            return this.fetch(url, method, body, headers, _attempt + 1);
+            return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
         }
 
         if ('errorMessage' in data) {
@@ -69,13 +72,16 @@ export default class ZncApi {
         return data;
     }
 
-    async call<T = unknown>(url: string, parameter = {}) {
+    async call<T = unknown>(
+        url: string, parameter = {},
+        /** @internal */ _autoRenewToken = true
+    ) {
         const uuid = uuidgen();
 
         return this.fetch<T>(url, 'POST', JSON.stringify({
             parameter,
             requestId: uuid,
-        }));
+        }), {}, _autoRenewToken);
     }
 
     async getAnnouncements() {
@@ -175,7 +181,7 @@ export default class ZncApi {
             naIdToken: id_token,
         };
 
-        const data = await this.call<AccountToken>('/v3/Account/GetToken', req);
+        const data = await this.call<AccountToken>('/v3/Account/GetToken', req, false);
 
         return {
             uuid,
