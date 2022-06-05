@@ -8,6 +8,7 @@ import { SavedToken } from './auth/nso.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
 import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
+import { CoralUser } from './users.js';
 
 const debug = createDebug('nxapi:nso:notify');
 const debugFriends = createDebug('nxapi:nso:notify:friends');
@@ -26,6 +27,7 @@ export class ZncNotifications extends Loop {
         public token: string,
         public nso: ZncApi,
         public data: Omit<SavedToken, 'expires_at'>,
+        public user?: CoralUser,
     ) {
         super();
     }
@@ -51,10 +53,14 @@ export class ZncNotifications extends Loop {
         }
 
         if (req.includes('announcements')) {
-            result.announcements = (await this.nso.getAnnouncements()).result;
+            result.announcements = this.user ?
+                (await this.user?.getAnnouncements()) :
+                (await this.nso.getAnnouncements()).result;
         }
         if (req.includes('friends') || (friends && !(this.nso instanceof ZncProxyApi))) {
-            result.friends = (await this.nso.getFriendList()).result.friends;
+            result.friends = this.user ?
+                (await this.user.getFriends()) :
+                (await this.nso.getFriendList()).result.friends;
         } else if (friends && this.nso instanceof ZncProxyApi) {
             result.friends = await Promise.all(friends.map(async r => {
                 const nso = this.nso as unknown as ZncProxyApi;
@@ -76,13 +82,17 @@ export class ZncNotifications extends Loop {
                 }
 
                 return (await nso.fetch<{friend: Friend}>('/friend/' + r.friend)).friend;
-            }))
+            }));
         }
         if (req.includes('webservices')) {
-            result.webservices = (await this.nso.getWebServices()).result;
+            result.webservices = this.user ?
+                (await this.user.getWebServices()) :
+                (await this.nso.getWebServices()).result;
         }
         if (req.includes('event')) {
-            const activeevent = (await this.nso.getActiveEvent()).result;
+            const activeevent = this.user ?
+                (await this.user.getActiveEvent()) :
+                (await this.nso.getActiveEvent()).result;
             result.activeevent = 'id' in activeevent ? activeevent : undefined;
         }
         if (req.includes('user')) {

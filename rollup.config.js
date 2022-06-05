@@ -9,6 +9,13 @@ import html from '@rollup/plugin-html';
 import json from '@rollup/plugin-json';
 
 /**
+ * @type {import('rollup').RollupOptions['watch']}
+ */
+const watch = {
+    include: 'src/**',
+};
+
+/**
  * @type {import('rollup').RollupOptions}
  */
 const cli = {
@@ -40,6 +47,7 @@ const cli = {
         'node-notifier',
         'frida',
     ],
+    watch,
 };
 
 /**
@@ -73,6 +81,7 @@ const app = {
     external: [
         'electron',
     ],
+    watch,
 };
 
 /**
@@ -102,6 +111,7 @@ const app_preload = {
     external: [
         'electron',
     ],
+    watch,
 };
 
 /**
@@ -131,6 +141,7 @@ const app_preload_webservice = {
     external: [
         'electron',
     ],
+    watch,
 };
 
 /**
@@ -166,6 +177,7 @@ const app_browser = {
             preferBuiltins: false,
         }),
     ],
+    watch,
 };
 
 export default [

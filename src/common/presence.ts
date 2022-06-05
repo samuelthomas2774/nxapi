@@ -1,63 +1,20 @@
 import createDebug from 'debug';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
-import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
-import { ZncNotifications } from './notify.js';
+import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence, DiscordPresence } from '../discord/util.js';
+import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
-import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, ZncErrorResponse } from '../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, ZncErrorResponse } from '../api/znc-types.js';
 import { ErrorResponse } from '../api/util.js';
-import { LoopResult } from '../util/loop.js';
+import Loop, { LoopResult } from '../util/loop.js';
+import { getTitleIdFromEcUrl } from '../index.js';
 
 const debug = createDebug('nxapi:nso:presence');
 const debugProxy = createDebug('nxapi:nso:presence:proxy');
 const debugDiscord = createDebug('nxapi:nso:presence:discordrpc');
+const debugSplatnet2 = createDebug('nxapi:nso:presence:splatnet2');
 
-export class ZncDiscordPresence extends ZncNotifications {
-    presence_user: string | null = null;
-    discord_preconnect = false;
-    show_friend_code = false;
-    force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
-    show_console_online = false;
-    show_active_event = true;
-    show_play_time = DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
-
-    async init() {
-        const {friends, user, activeevent} = await this.fetch([
-            'announcements',
-            this.presence_user ?
-                this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
-                    {friend: this.presence_user} : null,
-            this.presence_user && this.show_active_event ? 'event' : null,
-            this.user_notifications ? 'user' : null,
-            this.friend_notifications ? 'friends' : null,
-            this.splatnet2_monitors.size ? 'user' : null,
-        ]);
-
-        if (this.presence_user) {
-            if (this.presence_user !== this.data.nsoAccount.user.nsaId) {
-                const friend = friends!.find(f => f.nsaId === this.presence_user);
-
-                if (!friend) {
-                    throw new Error('User "' + this.presence_user + '" is not friends with this user');
-                }
-
-                await this.updatePresenceForDiscord(friend.presence, friend);
-            } else {
-                await this.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
-            }
-        }
-
-        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
-        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
-
-        return LoopResult.OK;
-    }
-
-    get presence_enabled() {
-        return !!this.presence_user;
-    }
-
+class ZncDiscordPresenceClient {
     rpc: {client: DiscordRpcClient, id: string} | null = null;
-    discord_client_filter: ((client: DiscordRpcClient, id?: number) => boolean) | undefined = undefined;
     title: {id: string; since: number} | null = null;
     i = 0;
 
@@ -65,6 +22,16 @@ export class ZncDiscordPresence extends ZncNotifications {
     last_user: CurrentUser | Friend | undefined = undefined;
     last_friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
     last_event: ActiveEvent | undefined = undefined;
+
+    last_activity: DiscordPresence | null = null;
+    onUpdateActivity: ((activity: DiscordPresence | null) => void) | null = null;
+    onUpdateClient: ((client: DiscordRpcClient | null) => void) | null = null;
+
+    update_presence_errors = 0;
+
+    constructor(
+        readonly m: ZncDiscordPresence | ZncProxyDiscordPresence,
+    ) {}
 
     async updatePresenceForDiscord(
         presence: Presence | null,
@@ -81,30 +48,39 @@ export class ZncDiscordPresence extends ZncNotifications {
 
         const show_presence =
             (online && 'name' in presence.game) ||
-            (this.show_console_online && presence?.state === PresenceState.INACTIVE);
+            (this.m.show_console_online && presence?.state === PresenceState.INACTIVE);
 
-        if (this.rpc && this.discord_client_filter && !this.discord_client_filter.call(null, this.rpc.client)) {
+        if (this.rpc && this.m.discord_client_filter && !this.m.discord_client_filter.call(null, this.rpc.client)) {
             const client = this.rpc.client;
             this.rpc = null;
+            this.last_activity = null;
             await client.destroy();
+            this.onUpdateActivity?.call(null, null);
+            this.onUpdateClient?.call(null, null);
         }
 
         if (!presence || !show_presence) {
-            if (this.presence_enabled && this.discord_preconnect && !this.rpc) {
+            if (this.m.presence_enabled && this.m.discord_preconnect && !this.rpc) {
                 debugDiscord('No presence but Discord preconnect enabled - connecting');
                 const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
-                const client = await this.createDiscordClient(discordpresence.id, this.discord_client_filter);
+                const client = await this.createDiscordClient(discordpresence.id, this.m.discord_client_filter);
                 this.rpc = {client, id: discordpresence.id};
+                this.onUpdateClient?.call(null, client);
                 return;
             }
 
-            if (this.rpc && !(this.presence_enabled && this.discord_preconnect)) {
+            if (this.rpc && !(this.m.presence_enabled && this.m.discord_preconnect)) {
                 const client = this.rpc.client;
                 this.rpc = null;
+                this.last_activity = null;
                 await client.destroy();
+                this.onUpdateActivity?.call(null, null);
+                this.onUpdateClient?.call(null, null);
             } else if (this.rpc && this.title) {
                 debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
+                this.last_activity = null;
                 await this.rpc.client.clearActivity();
+                this.onUpdateActivity?.call(null, null);
             }
 
             this.title = null;
@@ -112,11 +88,11 @@ export class ZncDiscordPresence extends ZncNotifications {
         }
 
         const presencecontext: DiscordPresenceContext = {
-            friendcode: this.show_friend_code ? this.force_friend_code ?? friendcode : undefined,
-            activeevent: this.show_active_event ? activeevent : undefined,
-            show_play_time: this.show_play_time,
-            znc_discord_presence: this,
-            nsaid: this.presence_user!,
+            friendcode: this.m.show_friend_code ? this.m.force_friend_code ?? friendcode : undefined,
+            activeevent: this.m.show_active_event ? activeevent : undefined,
+            show_play_time: this.m.show_play_time,
+            znc_discord_presence: this.m,
+            nsaid: this.m.presence_user!,
             user,
         };
 
@@ -127,12 +103,16 @@ export class ZncDiscordPresence extends ZncNotifications {
         if (this.rpc && this.rpc.id !== discordpresence.id) {
             const client = this.rpc.client;
             this.rpc = null;
+            this.last_activity = null;
             await client.destroy();
+            this.onUpdateActivity?.call(null, null);
+            this.onUpdateClient?.call(null, null);
         }
 
         if (!this.rpc) {
-            const client = await this.createDiscordClient(discordpresence.id, this.discord_client_filter);
+            const client = await this.createDiscordClient(discordpresence.id, this.m.discord_client_filter);
             this.rpc = {client, id: discordpresence.id};
+            this.onUpdateClient?.call(null, client);
         }
 
         if (discordpresence.title) {
@@ -154,6 +134,9 @@ export class ZncDiscordPresence extends ZncNotifications {
         }
 
         this.rpc.client.setActivity(discordpresence.activity);
+
+        this.last_activity = discordpresence;
+        this.onUpdateActivity?.call(null, discordpresence);
 
         this.update_presence_errors = 0;
     }
@@ -222,6 +205,73 @@ export class ZncDiscordPresence extends ZncNotifications {
         return client!;
     }
 
+    async onError(err: Error) {
+        this.update_presence_errors++;
+
+        if (this.update_presence_errors > 2) {
+            // Disconnect from Discord if the last two attempts to update presence failed
+            // This prevents the user's activity on Discord being stuck
+            if (this.rpc) {
+                const client = this.rpc.client;
+                this.rpc = null;
+                await client.destroy();
+            }
+
+            this.title = null;
+        }
+    }
+}
+
+export class ZncDiscordPresence extends ZncNotifications {
+    presence_user: string | null = null;
+    discord_preconnect = false;
+    show_friend_code = false;
+    force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
+    show_console_online = false;
+    show_active_event = false;
+    show_play_time = DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
+
+    discord_client_filter: ((client: DiscordRpcClient, id?: number) => boolean) | undefined = undefined;
+
+    readonly discord = new ZncDiscordPresenceClient(this);
+
+    async init() {
+        const {friends, user, activeevent} = await this.fetch([
+            'announcements',
+            this.presence_user ?
+                this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
+                    {friend: this.presence_user} : null,
+            this.presence_user && this.presence_user !== this.data.nsoAccount.user.nsaId &&
+                this.show_active_event ? 'event' : null,
+            this.user_notifications ? 'user' : null,
+            this.friend_notifications ? 'friends' : null,
+            this.splatnet2_monitors.size ? 'user' : null,
+        ]);
+
+        if (this.presence_user) {
+            if (this.presence_user !== this.data.nsoAccount.user.nsaId) {
+                const friend = friends!.find(f => f.nsaId === this.presence_user);
+
+                if (!friend) {
+                    throw new Error('User "' + this.presence_user + '" is not friends with this user');
+                }
+
+                await this.discord.updatePresenceForDiscord(friend.presence, friend);
+            } else {
+                await this.discord.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
+            }
+        }
+
+        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
+
+        return LoopResult.OK;
+    }
+
+    get presence_enabled() {
+        return !!this.presence_user;
+    }
+
     async update() {
         const {friends, user, activeevent} = await this.fetch([
             this.presence_user ?
@@ -239,12 +289,12 @@ export class ZncDiscordPresence extends ZncNotifications {
 
                 if (!friend) {
                     // Is the authenticated user no longer friends with this user?
-                    await this.updatePresenceForDiscord(null);
+                    await this.discord.updatePresenceForDiscord(null);
                 } else {
-                    await this.updatePresenceForDiscord(friend.presence, friend);
+                    await this.discord.updatePresenceForDiscord(friend.presence, friend);
                 }
             } else {
-                await this.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
+                await this.discord.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
             }
         }
 
@@ -252,32 +302,36 @@ export class ZncDiscordPresence extends ZncNotifications {
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
-    update_presence_errors = 0;
-
     async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
-        this.update_presence_errors++;
-
-        if (this.update_presence_errors > 2) {
-            // Disconnect from Discord if the last two attempts to update presence failed
-            // This prevents the user's activity on Discord being stuck
-            if (this.rpc) {
-                const client = this.rpc.client;
-                this.rpc = null;
-                await client.destroy();
-            }
-
-            this.title = null;
-        }
+        this.discord.onError(err);
 
         return super.handleError(err);
     }
 }
 
-export class ZncProxyDiscordPresence extends ZncDiscordPresence {
+export class ZncProxyDiscordPresence extends Loop {
+    splatnet2_monitors = new Map<string, EmbeddedSplatNet2Monitor | (() => Promise<EmbeddedSplatNet2Monitor>)>();
+
+    readonly user_notifications = false;
+    readonly friend_notifications = false;
+    update_interval = 30;
+
+    presence_user: string | null = null;
+    discord_preconnect = false;
+    show_friend_code = false;
+    force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;
+    show_console_online = false;
+    readonly show_active_event = false;
+    show_play_time = DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
+
+    discord_client_filter: ((client: DiscordRpcClient, id?: number) => boolean) | undefined = undefined;
+
+    readonly discord = new ZncDiscordPresenceClient(this);
+
     constructor(
         public presence_url: string
     ) {
-        super(null!, null!, null!, null!);
+        super();
     }
 
     get presence_enabled() {
@@ -293,7 +347,41 @@ export class ZncProxyDiscordPresence extends ZncDiscordPresence {
     async update() {
         const [presence, user] = await getPresenceFromUrl(this.presence_url);
 
-        await this.updatePresenceForDiscord(presence, user);
+        await this.discord.updatePresenceForDiscord(presence, user);
         await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
+    }
+
+    async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
+        for (const friend of friends) {
+            await this.updatePresenceForSplatNet2Monitor(friend.presence, friend.nsaId, friend.name);
+        }
+    }
+
+    async updatePresenceForSplatNet2Monitor(presence: Presence, nsa_id: string, name?: string) {
+        const playing = presence.state === PresenceState.PLAYING;
+        const monitor = this.splatnet2_monitors.get(nsa_id);
+
+        if (playing && monitor) {
+            const currenttitle = presence.game as Game;
+            const titleid = getTitleIdFromEcUrl(currenttitle.shopUri);
+
+            if (titleid && EmbeddedSplatNet2Monitor.title_ids.includes(titleid)) {
+                if ('enable' in monitor) {
+                    monitor.enable();
+                    if (!monitor.enabled) debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
+                } else {
+                    const m = await monitor.call(null);
+                    this.splatnet2_monitors.set(nsa_id, m);
+                    m.enable();
+                    debugSplatnet2('Started monitor for user %s', name ?? nsa_id);
+                }
+            } else if ('disable' in monitor) {
+                if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
+                monitor.disable();
+            }
+        } else if (monitor && 'disable' in monitor) {
+            if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
+            monitor.disable();
+        }
     }
 }

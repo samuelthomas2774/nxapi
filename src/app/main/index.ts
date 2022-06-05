@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Notification } from './electron.js';
+import { app, BrowserWindow, dialog, ipcMain } from './electron.js';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -7,27 +7,50 @@ import * as persist from 'node-persist';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import MenuApp from './menu.js';
-import { WebServiceIpc } from './webservices.js';
-import { createWindow, getWindowConfiguration } from './windows.js';
-import { WindowType } from '../common/types.js';
-import { CurrentUser, Friend, Game, ZncErrorResponse } from '../../api/znc-types.js';
-import { ErrorResponse } from '../../api/util.js';
-import { ZncDiscordPresence } from '../../common/presence.js';
-import { NotificationManager } from '../../common/notify.js';
-import { getToken } from '../../common/auth/nso.js';
-import { dir } from '../../util/product.js';
+import { handleOpenWebServiceUri } from './webservices.js';
+import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor, PresenceMonitorManager } from './monitor.js';
+import { createWindow } from './windows.js';
+import { DiscordPresenceSource, WindowType } from '../common/types.js';
 import { initStorage, paths } from '../../util/storage.js';
-import { LoopResult } from '../../util/loop.js';
-import { tryGetNativeImageFromUrl } from './util.js';
+import { checkUpdates, UpdateCacheData } from '../../common/update.js';
+import Users, { CoralUser } from '../../common/users.js';
+import { setupIpc } from './ipc.js';
 
 const debug = createDebug('app:main');
 
-export const bundlepath = path.resolve(dir, 'dist', 'app', 'bundle');
+export class App {
+    readonly monitors: PresenceMonitorManager;
+    readonly updater = new Updater();
+    menu: MenuApp | null = null;
 
-function createMainWindow() {
-    const window = createWindow(WindowType.MAIN_WINDOW, {});
+    constructor(
+        readonly store: Store
+    ) {
+        this.monitors = new PresenceMonitorManager(this);
+    }
 
-    return window;
+    main_window: BrowserWindow | null = null;
+
+    showMainWindow() {
+        if (this.main_window) {
+            this.main_window.show();
+            this.main_window.focus();
+            return this.main_window;
+        }
+
+        const window = createWindow(WindowType.MAIN_WINDOW, {}, {
+            minWidth: 500,
+            minHeight: 300,
+            vibrancy: 'under-window',
+            webPreferences: {
+                scrollBounce: false,
+            },
+        });
+        
+        window.on('closed', () => this.main_window = null);
+
+        return this.main_window = window;
+    }
 }
 
 app.whenReady().then(async () => {
@@ -42,85 +65,104 @@ app.whenReady().then(async () => {
 
     const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
     const store = new Store(storage);
+    const appinstance = new App(store);
 
-    ipcMain.on('nxapi:browser:getwindowdata', e => e.returnValue = getWindowConfiguration(e.sender));
+    setupIpc(appinstance, ipcMain);
 
-    ipcMain.handle('nxapi:accounts:list', () => storage.getItem('NintendoAccountIds'));
-    ipcMain.handle('nxapi:nso:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
-    ipcMain.handle('nxapi:nso:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
-    ipcMain.handle('nxapi:moon:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken-pctl.' + id));
-    ipcMain.handle('nxapi:moon:getcachedtoken', (e, token: string) => storage.getItem('MoonToken.' + token));
+    await store.restoreMonitorState(appinstance.monitors);
 
-    const webserviceipc = new WebServiceIpc(store);
-    ipcMain.on('nxapi:webserviceapi:getWebServiceSync', e => e.returnValue = webserviceipc.getWebService(e));
-    ipcMain.handle('nxapi:webserviceapi:invokeNativeShare', (e, data: string) => webserviceipc.invokeNativeShare(e, data));
-    ipcMain.handle('nxapi:webserviceapi:invokeNativeShareUrl', (e, data: string) => webserviceipc.invokeNativeShareUrl(e, data));
-    ipcMain.handle('nxapi:webserviceapi:requestGameWebToken', e => webserviceipc.requestGameWebToken(e));
-    ipcMain.handle('nxapi:webserviceapi:restorePersistentData', e => webserviceipc.restorePersistentData(e));
-    ipcMain.handle('nxapi:webserviceapi:storePersistentData', (e, data: string) => webserviceipc.storePersistentData(e, data));
+    const menu = new MenuApp(appinstance);
+    appinstance.menu = menu;
 
-    const sendToAllWindows = (channel: string, ...args: any[]) =>
-        BrowserWindow.getAllWindows().forEach(w => w.webContents.send(channel, ...args));
-    store.on('update-nintendo-accounts', () => sendToAllWindows('nxapi:accounts:shouldrefresh'));
-
-    const monitors = new PresenceMonitorManager(store);
-    await store.restoreMonitorState(monitors);
-
-    const menu = new MenuApp(store, monitors);
+    app.on('open-url', (event, url) => {
+        if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)game\/(\d+)\/?($|\?|\#)/i)) {
+            handleOpenWebServiceUri(store, url);
+            event.preventDefault();
+        }
+    });
+    app.setAsDefaultProtocolClient('com.nintendo.znca');
 
     app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+        if (BrowserWindow.getAllWindows().length === 0) appinstance.showMainWindow();
     });
 
     debug('App started');
 
-    // createWindow();
+    appinstance.showMainWindow();
+
+    // @ts-expect-error
+    globalThis.app = appinstance;
 });
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
+class Updater {
+    private _cache: UpdateCacheData | null = null;
+    private _check: Promise<UpdateCacheData | null> | null = null;
+
+    get cache() {
+        return this._cache;
+    }
+
+    check() {
+        return this._check ?? (this._check = checkUpdates().then(data => {
+            this._cache = data;
+            return data;
+        }).finally(() => {
+            this._check = null;
+        }));
+    }
+}
+
 interface SavedMonitorState {
     users: {
         /** Nintendo Account ID */
         id: string;
-        /** NSA ID */
-        presence_user: string | null;
         user_notifications: boolean;
         friend_notifications: boolean;
     }[];
-    /** Nintendo Account ID */
-    discord_presence_user: string | null;
+    discord_presence: DiscordPresenceSource | null;
 }
 
 export class Store extends EventEmitter {
+    users: Users<CoralUser>;
+
     constructor(
         public storage: persist.LocalStorage
     ) {
         super();
+
+        this.users = Users.coral(storage, process.env.ZNC_PROXY_URL);
     }
 
     async saveMonitorState(monitors: PresenceMonitorManager) {
         const users = new Set();
         const state: SavedMonitorState = {
             users: [],
-            discord_presence_user: null,
+            discord_presence: null,
         };
 
         for (const monitor of monitors.monitors) {
-            if (users.has(monitor.data.user.id)) continue;
-            users.add(monitor.data.user.id);
+            if (monitor instanceof EmbeddedPresenceMonitor && !users.has(monitor.data.user.id)) {
+                users.add(monitor.data?.user.id);
 
-            state.users.push({
-                id: monitor.data.user.id,
-                presence_user: monitor.presence_user,
-                user_notifications: monitor.user_notifications,
-                friend_notifications: monitor.friend_notifications,
-            });
+                state.users.push({
+                    id: monitor.data?.user.id,
+                    user_notifications: monitor.user_notifications,
+                    friend_notifications: monitor.friend_notifications,
+                });
+            }
 
-            if (monitor.presence_user && !state.discord_presence_user) {
-                state.discord_presence_user = monitor.data.user.id;
+            if (monitor.presence_user && !state.discord_presence) {
+                state.discord_presence = monitor instanceof EmbeddedProxyPresenceMonitor ? {
+                    url: monitor.presence_url,
+                } : {
+                    na_id: monitor.data.user.id,
+                    friend_nsa_id: monitor.presence_user === monitor.data.nsoAccount.user.nsaId ? undefined :
+                        monitor.presence_user,
+                };
             }
         }
 
@@ -134,175 +176,30 @@ export class Store extends EventEmitter {
         if (!state) return;
 
         for (const user of state.users) {
-            if (state.discord_presence_user !== user.id &&
-                !user.user_notifications && !user.friend_notifications
+            const discord_presence_active = state.discord_presence && 'na_id' in state.discord_presence &&
+                state.discord_presence.na_id === user.id;
+
+            if (!discord_presence_active &&
+                !user.user_notifications &&
+                !user.friend_notifications
             ) continue;
 
-            await monitors.start(user.id, monitor => {
-                monitor.presence_user = state.discord_presence_user === user.id ?
-                    user.presence_user || monitor.data.nsoAccount.user.nsaId : null;
-                monitor.user_notifications = user.user_notifications;
-                monitor.friend_notifications = user.friend_notifications;
-            });
-        }
-    }
-}
+            try {
+                await monitors.start(user.id, monitor => {
+                    monitor.presence_user = state.discord_presence && 'na_id' in state.discord_presence &&
+                        state.discord_presence.na_id === user.id ?
+                            state.discord_presence.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId : null;
+                    monitor.user_notifications = user.user_notifications;
+                    monitor.friend_notifications = user.friend_notifications;
 
-export class PresenceMonitorManager {
-    monitors: EmbeddedPresenceMonitor[] = [];
-    notifications = new ElectronNotificationManager();
-
-    constructor(
-        public store: Store
-    ) {}
-
-    async start(id: string, callback?: (monitor: EmbeddedPresenceMonitor, firstRun: boolean) => void) {
-        debug('Starting monitor', id);
-
-        const token = id.length === 16 ? await this.store.storage.getItem('NintendoAccountToken.' + id) : id;
-        if (!token) throw new Error('No token for this user');
-
-        const {nso, data} = await getToken(this.store.storage, token, process.env.ZNC_PROXY_URL);
-
-        const existing = this.monitors.find(m => m.data.user.id === data.user.id);
-        if (existing) {
-            callback?.call(null, existing, false);
-            return;
-        }
-
-        const i = new EmbeddedPresenceMonitor(this.store.storage, token, nso, data);
-
-        i.notifications = this.notifications;
-        i.presence_user = null;
-        i.user_notifications = false;
-        i.friend_notifications = false;
-
-        this.monitors.push(i);
-
-        callback?.call(null, i, true);
-
-        i.enable();
-    }
-
-    async stop(id: string) {
-        let index;
-        while ((index = this.monitors.findIndex(m => m.data.user.id === id)) >= 0) {
-            const i = this.monitors[index];
-
-            this.monitors.splice(index, 1);
-
-            i.disable();
-
-            this.notifications.removeAccount(id);
-        }
-    }
-}
-
-export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
-    notifications = new ElectronNotificationManager();
-
-    enable() {
-        if (this._running !== 0) return;
-        this._run();
-    }
-
-    disable() {
-        this._running = 0;
-    }
-
-    get enabled() {
-        return this._running !== 0;
-    }
-
-    private _running = 0;
-
-    private async _run() {
-        this._running++;
-        const i = this._running;
-
-        try {
-            await this.loop(true);
-
-            while (i === this._running) {
-                await this.loop();
+                    if (monitor.presence_user) {
+                        this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
+                    }
+                });
+            } catch (err) {
+                dialog.showErrorBox('Error restoring monitor for user ' + user.id,
+                    err instanceof Error ? err.stack ?? err.message : err as any);
             }
-
-            if (this._running === 0) {
-                // Run one more time after the loop ends
-                const result = await this.loopRun();
-            }
-
-            debug('Monitor for user %s finished', this.data.nsoAccount.user.name);
-        } finally {
-            this._running = 0;
         }
-    }
-
-    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
-        try {
-            return await super.handleError(err);
-        } catch (err) {
-            if (err instanceof ErrorResponse) {
-                dialog.showErrorBox('Request error',
-                    err.response.status + ' ' + err.response.statusText + ' ' +
-                    err.response.url + '\n' + 
-                    err.body + '\n\n' +
-                    (err.stack ?? err.message));
-            } else if (err instanceof Error) {
-                dialog.showErrorBox(err.name, err.stack ?? err.message);
-            } else {
-                dialog.showErrorBox('Error', err as any);
-            }
-
-            return LoopResult.OK;
-        }
-    }
-
-    skipIntervalInCurrentLoop(start = false) {
-        super.skipIntervalInCurrentLoop();
-        if (!this._running && start) this.enable();
-    }
-}
-
-export class ElectronNotificationManager extends NotificationManager {
-    async onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
-
-        new Notification({
-            title: friend.name,
-            body: 'Playing ' + currenttitle.name +
-                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
-        }).show();
-    }
-
-    async onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        new Notification({
-            title: friend.name,
-            body: 'Offline',
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
-        }).show();
-    }
-
-    async onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
-
-        new Notification({
-            title: friend.name,
-            body: 'Playing ' + currenttitle.name +
-                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
-        }).show();
-    }
-
-    async onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
-
-        new Notification({
-            title: friend.name,
-            body: 'Playing ' + currenttitle.name +
-                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
-        }).show();
     }
 }

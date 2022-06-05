@@ -3,18 +3,20 @@ import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
-import { app, BrowserWindow, IpcMainInvokeEvent, session, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, session, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
 import ZncApi from '../../api/znc.js';
 import { dev } from '../../util/product.js';
 import { WebService } from '../../api/znc-types.js';
-import { bundlepath, Store } from './index.js';
+import { Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/nso.js';
+import { bundlepath } from './util.js';
+import Users from '../../common/users.js';
 
 const debug = createDebug('app:main:webservices');
 
-export function createWebServiceWindow(nsa_id: string, webservice: WebService) {
+export function createWebServiceWindow(nsa_id: string, webservice: WebService, title_prefix?: string) {
     const browser_session = session.fromPartition('persist:webservices-' + nsa_id, {
         cache: false,
     });
@@ -23,7 +25,7 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService) {
         width: 375,
         height: 667,
         resizable: false,
-        title: webservice.name,
+        title: (title_prefix ?? '') + webservice.name,
         webPreferences: {
             session: browser_session,
             preload: path.join(bundlepath, 'preload-webservice.cjs'),
@@ -39,7 +41,8 @@ const windows = new Map<string, BrowserWindow>();
 const windowapi = new WeakMap<WebContents, [Store, string, ZncApi, SavedToken, WebService]>();
 
 export default async function openWebService(
-    store: Store, token: string, nso: ZncApi, data: SavedToken, webservice: WebService
+    store: Store, token: string, nso: ZncApi, data: SavedToken,
+    webservice: WebService, qs?: string
 ) {
     const windowid = data.nsoAccount.user.nsaId + ':' + webservice.id;
 
@@ -59,7 +62,10 @@ export default async function openWebService(
         if (!active) throw new Error('Nintendo Switch Online membership required');
     }
 
-    const window = createWebServiceWindow(data.nsoAccount.user.nsaId, webservice);
+    const user_title_prefix = '[' + data.user.nickname +
+        (data.nsoAccount.user.name !== data.user.nickname ? '/' + data.nsoAccount.user.name : '') + '] ';
+
+    const window = createWebServiceWindow(data.nsoAccount.user.nsaId, webservice, user_title_prefix);
 
     windows.set(windowid, window);
     windowapi.set(window.webContents, [store, token, nso, data, webservice]);
@@ -70,6 +76,20 @@ export default async function openWebService(
     });
 
     window.webContents.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Mobile/15E148 Safari/604.1';
+
+    window.webContents.on('will-navigate', (event, url) => {
+        debug('Web service will navigate', webservice.uri, webservice.whiteList, url);
+
+        if (!isWebServiceUrlAllowed(webservice, url)) {
+            debug('Web service attempted to navigate to a URL not allowed by it\'s `whiteList`', webservice, url);
+            event.preventDefault();
+        }
+    });
+
+    window.on('page-title-updated', (event, title, explicitSet) => {
+        window.setTitle(user_title_prefix + (explicitSet ? title : webservice.name));
+        event.preventDefault();
+    });
 
     window.webContents.setWindowOpenHandler(details => {
         debug('open', details);
@@ -86,10 +106,17 @@ export default async function openWebService(
         na_lang: data.user.language,
     }).toString();
 
+    const deepLinkingEnabled = webservice.customAttributes.find(a => a.attrKey === 'deepLinkingEnabled');
+
+    if (deepLinkingEnabled?.attrValue === 'true' && qs) {
+        url.search += '&' + qs;
+    }
+
     debug('Loading web service', {
         url: url.toString(),
         webservice,
         webserviceToken,
+        qs,
     });
 
     if (dev) window.webContents.openDevTools();
@@ -101,6 +128,90 @@ export default async function openWebService(
             'X-Requested-With': 'com.nintendo.znca',
         }).map(([key, value]) => key + ': ' + value).join('\n'),
     });
+}
+
+function isWebServiceUrlAllowed(webservice: WebService, url: string | URL) {
+    if (!webservice.whiteList) return true;
+
+    if (typeof url === 'string') url = new URL(url);
+
+    for (const host of webservice.whiteList) {
+        if (host.startsWith('*.')) {
+            return url.hostname === host.substr(2) ||
+                url.hostname.endsWith(host.substr(1));
+        }
+
+        return url.hostname === host;
+    }
+
+    return false;
+}
+
+export async function handleOpenWebServiceUri(store: Store, uri: string) {
+    const match = uri.match(/^com\.nintendo\.znca:\/\/(znca\/)game\/(\d+)\/?($|\?|\#)/i);
+    if (!match) return;
+
+    const webservice_id = parseInt(match[2]);
+
+    const selected_user = await askUserForWebServiceUri(store, uri);
+    if (!selected_user) return;
+
+    const {nso, data, webservices} = await store.users.get(selected_user[0]);
+
+    const webservice = webservices.result.find(w => w.id === webservice_id);
+    if (!webservice) {
+        dialog.showErrorBox('Invalid web service', 'The URL did not reference an existing web service.\n\n' +
+            uri);
+        return;
+    }
+
+    const windowid = data.nsoAccount.user.nsaId + ':' + webservice.id;
+
+    if (windows.has(windowid)) {
+        const window = windows.get(windowid)!;
+        window.focus();
+        return;
+    }
+
+    return openWebService(store, selected_user[0], nso, data, webservice, new URL(uri).search.substr(1));
+}
+
+async function askUserForWebServiceUri(store: Store, uri: string): Promise<[string, SavedToken] | null> {
+    const menu = new Menu();
+
+    const ids = await store.storage.getItem('NintendoAccountIds') as string[] | undefined;
+    menu.append(new MenuItem({label: 'Select a user to open this web service', enabled: false}));
+    menu.append(new MenuItem({label: uri, enabled: false}));
+    menu.append(new MenuItem({type: 'separator'}));
+
+    let selected_user: [string, SavedToken] | null = null;
+
+    const items = await Promise.all(ids?.map(async id => {
+        const token = await store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
+        if (!token) return;
+        const data = await store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
+        if (!data) return;
+
+        return new MenuItem({
+            label: data.nsoAccount.user.name,
+            click: (menuItem, browserWindow, event) => {
+                selected_user = [token, data];
+                menu.closePopup(browserWindow);
+            },
+        });
+    }) ?? []);
+
+    if (!items.length) return null;
+
+    for (const item of items) if (item) menu.append(item);
+    menu.append(new MenuItem({type: 'separator'}));
+    menu.append(new MenuItem({label: 'Cancel', click: (i, w) => menu.closePopup(w)}));
+
+    const window = new BrowserWindow({show: false});
+    await new Promise<void>(rs => menu.popup({callback: rs}));
+    window.destroy();
+
+    return selected_user;
 }
 
 export interface WebServiceData {

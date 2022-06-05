@@ -1,4 +1,4 @@
-import type { EventEmitter } from 'node:events';
+import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import type { NxapiElectronIpc } from '../preload/index.js';
 
@@ -10,7 +10,21 @@ declare global {
     }
 }
 
-const ipc = window.nxapiElectronIpc;
+export const events = new EventEmitter();
+events.setMaxListeners(0);
+
+const ipc = {
+    ...window.nxapiElectronIpc,
+
+    events,
+};
+
+events.on('newListener', (event: string, listener: (...args: any[]) => void) => {
+    ipc.registerEventListener(event, listener);
+});
+events.on('removeListener', (event: string, listener: (...args: any[]) => void) => {
+    ipc.removeEventListener(event, listener);
+});
 
 export default ipc;
 

@@ -14,9 +14,31 @@ export enum ZncStatus {
     OK = 0,
 
     BAD_REQUEST = 9400,
+    METHOD_NOT_ALLOWED = 9401,
+    RESOURCE_NOT_FOUND = 9402,
     INVALID_TOKEN = 9403,
     TOKEN_EXPIRED = 9404,
+    FORBIDDEN = 9405,
+    UNAUTHORISED = 9406,
+    NSA_NOT_LINKED = 9407,
+    APPLICATION_ID_NOT_SUPPORTED = 9409,
+    EVENT_NOT_ACTIVATED_ERROR = 9412,
+    NOT_JOINED_VOICE_CHAT_ERROR = 9416,
+    DUPLICATE_APPLICATION_ID_ERROR = 9417,
+    OPERATION_NOT_ALLOWED_ERROR = 9422,
+    RATING_AGE_ERROR = 9423,
+    USER_NOT_ACTIVATED_ERROR = 9424,
+    INVITATION_LIMIT_EXCEEDED_ERROR = 9425,
+    MULTIPLE_LOGIN_ERROR = 9426,
     UPGRADE_REQUIRED = 9427,
+    ACCOUNT_DISABLED_ERROR = 9428,
+    MEMBERSHIP_REQUIRED_ERROR = 9450,
+    SERVICE_CLOSED_ERROR = 9499,
+    INTERNAL_SERVER_ERROR = 9500,
+    SERVICE_UNAVAILABLE = 9501,
+    MAINTENANCE_ERROR = 9511,
+    UNEXPECTED_ERROR = 9599,
+    // UNKNOWN = -1,
 }
 
 export type ZncResponse<T = unknown> = ZncSuccessResponse<T> | ZncErrorResponse;
@@ -68,6 +90,10 @@ export interface Friend {
 
 export interface Presence {
     state: PresenceState;
+    /**
+     * Timestamp (in seconds) the user's presence was last updated.
+     * This seems to change every hour if a linked console is online, even if the user's presence doesn't change.
+     */
     updatedAt: number;
     logoutAt: number;
     game: Game | {};

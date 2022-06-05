@@ -6,16 +6,18 @@ import mkdirp from 'mkdirp';
 import { dir, version } from '../util/product.js';
 import { paths } from '../util/storage.js';
 
-const debug = createDebug('cli:update');
+const debug = createDebug('nxapi:update');
 
 const RELEASES_URL = 'https://api.github.com/repos/samuelthomas2774/nxapi/releases';
 
 export async function checkUpdates() {
     try {
-        await fs.stat(path.join(dir, '.git'));
+        if (!process.versions.electron) {
+            await fs.stat(path.join(dir, '.git'));
 
-        debug('git repository exists, skipping update check');
-        return null;
+            debug('git repository exists, skipping update check');
+            return null;
+        }
     } catch (err) {}
 
     await mkdirp(paths.cache);

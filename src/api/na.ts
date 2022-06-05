@@ -218,22 +218,7 @@ export interface NintendoAccountUser {
     region: null;
     nickname: string;
     clientFriendsOptedIn: boolean;
-    mii: {
-        favoriteColor: string;
-        id: string;
-        updatedAt: number;
-        coreData: {
-            '4': string;
-        };
-        clientId: '1cfe3a55ed8924d9';
-        imageUriTemplate: string;
-        storeData: {
-            '3': string;
-        };
-        imageOrigin: string;
-        etag: string;
-        type: 'profile';
-    };
+    mii: Mii | null;
     isChild: boolean;
     eachEmailOptedIn: {
         survey: {
@@ -267,6 +252,23 @@ export interface NintendoAccountUser {
     analyticsOptedInUpdatedAt: number;
     analyticsOptedIn: boolean;
     clientFriendsOptedInUpdatedAt: number;
+}
+
+export interface Mii {
+    favoriteColor: string;
+    id: string;
+    updatedAt: number;
+    coreData: {
+        '4': string;
+    };
+    clientId: '1cfe3a55ed8924d9';
+    imageUriTemplate: string;
+    storeData: {
+        '3': string;
+    };
+    imageOrigin: string;
+    etag: string;
+    type: 'profile';
 }
 
 export interface NintendoAccountError {

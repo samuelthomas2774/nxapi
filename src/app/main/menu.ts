@@ -1,20 +1,20 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
-import process from 'node:process';
 import createDebug from 'debug';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
-import { PresenceMonitorManager, Store } from './index.js';
+import { App } from './index.js';
 import { WebService } from '../../api/znc-types.js';
 import openWebService from './webservices.js';
-import { getToken, SavedToken } from '../../common/auth/nso.js';
+import { SavedToken } from '../../common/auth/nso.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { dev } from '../../util/product.js';
+import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
 
 const debug = createDebug('app:main:menu');
 
 export default class MenuApp {
     tray: Tray;
 
-    constructor(readonly store: Store, readonly monitors: PresenceMonitorManager) {
+    constructor(readonly app: App) {
         const icon = nativeImage.createEmpty();
 
         this.tray = new Tray(icon);
@@ -22,26 +22,28 @@ export default class MenuApp {
         this.tray.setTitle('nxapi');
         this.tray.setToolTip('nxapi');
 
-        store.on('update-nintendo-accounts', () => this.updateMenu());
+        app.store.on('update-nintendo-accounts', () => this.updateMenu());
         this.updateMenu();
     }
 
     async updateMenu() {
         const menu = new Menu();
 
-        const ids = await this.store.storage.getItem('NintendoAccountIds') as string[] | undefined;
+        const ids = await this.app.store.storage.getItem('NintendoAccountIds') as string[] | undefined;
         menu.append(new MenuItem({label: 'Nintendo Switch Online', enabled: false}));
 
-        const discordPresenceMonitor = this.getActiveDiscordPresenceMonitor();
+        const discord_presence_monitor = this.getActiveDiscordPresenceMonitor();
 
         for (const id of ids ?? []) {
-            const token = await this.store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
+            const token = await this.app.store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
             if (!token) continue;
-            const data = await this.store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
+            const data = await this.app.store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
             if (!data) continue;
 
-            const monitor = this.monitors.monitors.find(m => m.data.user.id === data.user.id);
-            const discordPresenceActive = discordPresenceMonitor?.data.user.id === data.user.id;
+            const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
+                m.data.user.id === data.user.id);
+            const discord_presence_active = discord_presence_monitor instanceof EmbeddedPresenceMonitor && 
+                discord_presence_monitor?.data?.user.id === data.user.id;
 
             const item = new MenuItem({
                 label: data.nsoAccount.user.name,
@@ -49,9 +51,9 @@ export default class MenuApp {
                     {label: 'Nintendo Account ID: ' + data.user.id, enabled: false},
                     {label: 'NSA ID: ' + data.nsoAccount.user.nsaId, enabled: false},
                     {type: 'separator'},
-                    {label: 'Enable Discord Presence', type: 'checkbox', checked: discordPresenceActive,
-                        enabled: discordPresenceActive,
-                        click: () => this.setActiveDiscordPresenceUser(discordPresenceActive ? null : data.user.id)},
+                    {label: 'Enable Discord Presence', type: 'checkbox', checked: discord_presence_active,
+                        enabled: discord_presence_active,
+                        click: () => this.setActiveDiscordPresenceUser(discord_presence_active ? null : data.user.id)},
                     {label: 'Enable notifications for this user\'s presence', type: 'checkbox',
                         checked: monitor?.user_notifications,
                         enabled: !!monitor?.user_notifications,
@@ -74,9 +76,9 @@ export default class MenuApp {
         menu.append(new MenuItem({label: 'Nintendo Switch Parental Controls', enabled: false}));
 
         for (const id of ids ?? []) {
-            const token = await this.store.storage.getItem('NintendoAccountToken-pctl.' + id) as string | undefined;
+            const token = await this.app.store.storage.getItem('NintendoAccountToken-pctl.' + id) as string | undefined;
             if (!token) continue;
-            const data = await this.store.storage.getItem('MoonToken.' + token) as SavedMoonToken | undefined;
+            const data = await this.app.store.storage.getItem('MoonToken.' + token) as SavedMoonToken | undefined;
             if (!data) continue;
 
             const item = new MenuItem({
@@ -92,9 +94,10 @@ export default class MenuApp {
         menu.append(new MenuItem({label: 'Add account', click: this.addPctlAccount}));
 
         menu.append(new MenuItem({type: 'separator'}));
+        menu.append(new MenuItem({label: 'Show main window', click: () => this.app.showMainWindow()}));
         if (dev) menu.append(new MenuItem({label: 'Dump notifications state', click: () => {
-            debug('Accounts', this.monitors.notifications.accounts);
-            debug('Friends', this.monitors.notifications.onlinefriends);
+            debug('Accounts', this.app.monitors.notifications.accounts);
+            debug('Friends', this.app.monitors.notifications.onlinefriends);
         }}));
         menu.append(new MenuItem({label: 'Quit', click: () => app.quit()}));
 
@@ -102,7 +105,7 @@ export default class MenuApp {
     }
 
     addNsoAccount = () => {
-        addNsoAccount(this.store.storage).catch(err => {
+        addNsoAccount(this.app.store.storage).catch(err => {
             if (err.message === 'Canceled') return;
 
             dialog.showErrorBox('Error adding account', err.stack || err.message);
@@ -110,7 +113,7 @@ export default class MenuApp {
     };
 
     addPctlAccount = () => {
-        addPctlAccount(this.store.storage).catch(err => {
+        addPctlAccount(this.app.store.storage).catch(err => {
             if (err.message === 'Canceled') return;
 
             dialog.showErrorBox('Error adding account', err.stack || err.message);
@@ -160,7 +163,7 @@ export default class MenuApp {
     async getWebServices(token: string) {
         if (this.webservices) return this.webservices;
 
-        const {nso, data} = await getToken(this.store.storage, token, process.env.ZNC_PROXY_URL);
+        const {nso, data} = await this.app.store.users.get(token);
 
         const webservices = await nso.getWebServices();
         return this.webservices = webservices.result;
@@ -175,9 +178,9 @@ export default class MenuApp {
                 label: webservice.name,
                 click: async () => {
                     try {
-                        const {nso, data} = await getToken(this.store.storage, token, process.env.ZNC_PROXY_URL);
+                        const {nso, data} = await this.app.store.users.get(token);
 
-                        await openWebService(this.store, token, nso, data, webservice);
+                        await openWebService(this.app.store, token, nso, data, webservice);
                     } catch (err) {
                         dialog.showErrorBox('Error loading web service', (err as any).stack ?? (err as any).message);
                     }
@@ -189,8 +192,8 @@ export default class MenuApp {
     }
 
     getActiveDiscordPresenceMonitor() {
-        for (const monitor of this.monitors.monitors) {
-            if (!monitor.presence_user) continue;
+        for (const monitor of this.app.monitors.monitors) {
+            if (!monitor.presence_enabled) continue;
 
             return monitor;
         }
@@ -202,18 +205,24 @@ export default class MenuApp {
         const monitor = this.getActiveDiscordPresenceMonitor();
 
         if (monitor) {
-            if (monitor.data.user.id === id) return;
+            if (monitor instanceof EmbeddedPresenceMonitor && monitor.data.user.id === id) return;
 
-            monitor.presence_user = null;
-            // monitor.skipIntervalInCurrentLoop();
-            monitor.updatePresenceForDiscord(null);
+            monitor.discord.updatePresenceForDiscord(null);
 
-            if (!monitor.user_notifications && !monitor.friend_notifications) {
-                this.monitors.stop(monitor.data.user.id);
+            if (monitor instanceof EmbeddedPresenceMonitor) {
+                monitor.presence_user = null;
+
+                if (!monitor.user_notifications && !monitor.friend_notifications) {
+                    this.app.monitors.stop(monitor.data.user.id);
+                }
+            }
+
+            if (monitor instanceof EmbeddedProxyPresenceMonitor) {
+                this.app.monitors.stop(monitor.presence_url);
             }
         }
 
-        if (id) await this.monitors.start(id, monitor => {
+        if (id) await this.app.monitors.start(id, monitor => {
             monitor.presence_user = monitor.data.nsoAccount.user.nsaId;
             monitor.skipIntervalInCurrentLoop();
         });
@@ -222,20 +231,20 @@ export default class MenuApp {
     }
 
     async setUserNotificationsActive(id: string, active: boolean) {
-        const monitor = this.monitors.monitors.find(m => m.data.user.id === id);
+        const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === id);
 
         if (monitor?.user_notifications && !active) {
             monitor.user_notifications = false;
 
             if (!monitor.presence_user && !monitor.friend_notifications) {
-                this.monitors.stop(monitor.data.user.id);
+                this.app.monitors.stop(monitor.data.user.id);
             }
 
             monitor.skipIntervalInCurrentLoop();
             this.saveMonitorStateAndUpdateMenu();
         }
 
-        if (!monitor?.user_notifications && active) await this.monitors.start(id, monitor => {
+        if (!monitor?.user_notifications && active) await this.app.monitors.start(id, monitor => {
             monitor.user_notifications = true;
             monitor.skipIntervalInCurrentLoop();
             this.saveMonitorStateAndUpdateMenu();
@@ -243,20 +252,20 @@ export default class MenuApp {
     }
 
     async setFriendNotificationsActive(id: string, active: boolean) {
-        const monitor = this.monitors.monitors.find(m => m.data.user.id === id);
+        const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === id);
 
         if (monitor?.friend_notifications && !active) {
             monitor.friend_notifications = false;
 
             if (!monitor.presence_user && !monitor.user_notifications) {
-                this.monitors.stop(monitor.data.user.id);
+                this.app.monitors.stop(monitor.data.user.id);
             }
 
             monitor.skipIntervalInCurrentLoop();
             this.saveMonitorStateAndUpdateMenu();
         }
 
-        if (!monitor?.friend_notifications && active) await this.monitors.start(id, monitor => {
+        if (!monitor?.friend_notifications && active) await this.app.monitors.start(id, monitor => {
             monitor.friend_notifications = true;
             monitor.skipIntervalInCurrentLoop();
             this.saveMonitorStateAndUpdateMenu();
@@ -265,7 +274,7 @@ export default class MenuApp {
 
     async saveMonitorState() {
         try {
-            await this.store.saveMonitorState(this.monitors);
+            await this.app.store.saveMonitorState(this.app.monitors);
         } catch (err) {
             debug('Error saving monitor state', err);
         }

@@ -1,23 +1,31 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, Text, useColorScheme, View } from 'react-native';
-import { NintendoAccountUser } from '../../api/na.js';
-import { SavedToken } from '../../common/auth/nso.js';
-import { SavedMoonToken } from '../../common/auth/moon.js';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import type { NintendoAccountUser } from '../../api/na.js';
+import type { SavedToken } from '../../common/auth/nso.js';
+import type { SavedMoonToken } from '../../common/auth/moon.js';
 import ipc from './ipc.js';
-import { useAsync } from './util.js';
+import { Root, useAsync } from './util.js';
+import Sidebar from './main/sidebar.js';
+import Update from './main/update.js';
+import Main from './main/index.js';
+import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from './constants.js';
 
 export interface AppProps {
     //
 }
 
+export interface User {
+    user: NintendoAccountUser;
+    nso: SavedToken | null;
+    nsotoken: string | undefined;
+    moon: SavedMoonToken | null;
+    moontoken: string | undefined;
+}
+
 async function getAccounts() {
     const ids = await ipc.listNintendoAccounts();
 
-    const accounts: {
-        user: NintendoAccountUser;
-        nso: SavedToken | null;
-        moon: SavedMoonToken | null;
-    }[] = [];
+    const accounts: User[] = [];
 
     for (const id of ids ?? []) {
         const nsotoken = await ipc.getNintendoAccountNsoToken(id);
@@ -28,42 +36,74 @@ async function getAccounts() {
 
         if (!nso && !moon) continue;
 
-        accounts.push({user: nso?.user ?? moon!.user, nso, moon});
+        accounts.push({user: nso?.user ?? moon!.user, nso, nsotoken, moon, moontoken});
     }
 
     return accounts;
 }
 
 function App(props: AppProps) {
-    const theme = useColorScheme() === 'light' ? light : dark;
+    const colour_scheme = useColorScheme();
+    const theme = colour_scheme === 'light' ? light : dark;
 
     const [users] = useAsync(useCallback(() => getAccounts(), [ipc]));
 
     console.log(users);
 
-    return <View style={styles.app}>
-        <Text>Hello from React!</Text>
+    const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
+    const selectedUser = useMemo(() => users?.find(u => u.user.id === selectedUserId), [users, selectedUserId]);
 
-        {users?.map(u => <Text key={u.user.id} style={theme.text}>
-            {u.user.id} - {u.user.nickname}
-        </Text>)}
-    </View>;
+    useEffect(() => {
+        if (!selectedUser) setSelectedUserId(users?.[0]?.user.id);
+    }, [users, selectedUser]);
+
+    return <Root titleUser={selectedUser} style={styles.app}>
+        <Sidebar users={users} selectedUser={selectedUserId} onSelectUser={setSelectedUserId} />
+
+        <View style={[styles.main, theme.main]}>
+            <ScrollView style={styles.scroller} contentContainerStyle={styles.scrollerContent}>
+                <Update />
+
+                {selectedUser ? <Main key={selectedUser.user.id} user={selectedUser} /> : null}
+            </ScrollView>
+        </View>
+    </Root>;
 }
 
 const styles = StyleSheet.create({
     app: {
+        flexDirection: 'row',
+    },
+    main: {
+        flex: 1,
+    },
+    scroller: {
+        flex: 1,
+    },
+    scrollerContent: {
+        flex: 1,
+    },
+    content: {
+        paddingVertical: 16,
+        paddingHorizontal: 20,
     },
 });
 
 const light = StyleSheet.create({
+    main: {
+        backgroundColor: BACKGROUND_COLOUR_MAIN_LIGHT,
+    },
     text: {
-        color: '#212121',
+        color: TEXT_COLOUR_LIGHT,
     },
 });
 
 const dark = StyleSheet.create({
+    main: {
+        backgroundColor: BACKGROUND_COLOUR_MAIN_DARK,
+    },
     text: {
-        color: '#f5f5f5',
+        color: TEXT_COLOUR_DARK,
     },
 });
 

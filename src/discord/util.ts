@@ -3,7 +3,7 @@ import { ActiveEvent, CurrentUser, Friend, Game, PresenceState } from '../api/zn
 import { defaultTitle, titles } from './titles.js';
 import { product } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
-import { ZncDiscordPresence } from '../common/presence.js';
+import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../common/presence.js';
 
 export function getDiscordPresence(
     state: PresenceState, game: Game, context?: DiscordPresenceContext
@@ -143,7 +143,7 @@ export interface DiscordPresenceContext {
     friendcode?: CurrentUser['links']['friendCode'];
     activeevent?: ActiveEvent;
     show_play_time?: DiscordPresencePlayTime;
-    znc_discord_presence?: ZncDiscordPresence;
+    znc_discord_presence?: ZncDiscordPresence | ZncProxyDiscordPresence;
     nsaid?: string;
     user?: CurrentUser | Friend;
 }

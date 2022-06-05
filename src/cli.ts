@@ -5,7 +5,7 @@ import Yargs from 'yargs';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import * as commands from './cli/index.js';
-import { checkUpdates } from './cli/update.js';
+import { checkUpdates } from './common/update.js';
 import { dev } from './util/product.js';
 import { paths } from './util/storage.js';
 import { YargsArguments } from './util/yargs.js';
