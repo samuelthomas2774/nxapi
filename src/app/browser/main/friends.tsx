@@ -1,8 +1,7 @@
-import React from 'react';
-import { Image, ImageStyle, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc from '../ipc.js';
-import { useColourScheme } from '../util.js';
-import { User } from '../app.js';
+import { useColourScheme, User } from '../util.js';
 import { Friend, Presence, PresenceState } from '../../../api/znc-types.js';
 import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';
@@ -14,12 +13,20 @@ export default function Friends(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
 
-    const fc = <Text style={styles.friendCodeValue}>SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
+    const onFriendCodeContextMenu = useCallback(() => {
+        ipc.showFriendCodeMenu(props.user.nso!.nsoAccount.user.links.friendCode);
+    }, [ipc, props.user.nso?.nsoAccount.user.links.friendCode]);
+
+    const fc = <Text
+        style={styles.friendCodeValue}
+        // @ts-expect-error react-native-web
+        onContextMenu={onFriendCodeContextMenu}
+    >SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
 
     return <Section title="Friends" loading={props.loading}>
         {props.friends.length ? <ScrollView horizontal>
             <View style={styles.content}>
-                {props.friends.map(f => <Friend key={f.nsaId} friend={f} user={props.user.user.id} />)}
+                {props.friends.map(f => <Friend key={f.nsaId} friend={f} user={props.user} />)}
             </View>
         </ScrollView> : <View style={styles.noFriends}>
             <Text style={[styles.noFriendsText, theme.text]}>Add friends using a Nintendo Switch console.</Text>
@@ -34,9 +41,13 @@ export default function Friends(props: {
 
 function Friend(props: {
     friend: Friend;
-    user?: string;
+    user?: User;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+
+    const onContextMenu = useCallback(() => {
+        ipc.showFriendMenu(props.user!.user, props.user!.nso!.nsoAccount.user, props.friend);
+    }, [ipc, props.user?.user, props.user?.nso?.nsoAccount.user]);
 
     const game = 'name' in props.friend.presence.game ? props.friend.presence.game : null;
 
@@ -48,10 +59,17 @@ function Friend(props: {
         {props.friend.presence.updatedAt ? <FriendPresence presence={props.friend.presence} /> : null}
     </View>;
 
+    const touchable = props.user ? <TouchableOpacity onPress={() => ipc.showFriendModal(props.user!.user.id, props.friend.nsaId)}>
+        {content}
+    </TouchableOpacity> : content;
+
+    const contextmenu = Platform.OS === 'web' && props.user ? <View
+        // @ts-expect-error react-native-web
+        onContextMenu={onContextMenu}
+    >{touchable}</View> : touchable;
+
     return <View style={styles.friendContainer}>
-        {props.user ? <TouchableOpacity onPress={() => ipc.showFriendModal(props.user!, props.friend.nsaId)}>
-            {content}
-        </TouchableOpacity> : content}
+        {contextmenu}
     </View>;
 }
 
@@ -60,10 +78,8 @@ function FriendPresence(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
 
-    const game = 'name' in props.presence.game ? props.presence.game : null;
-
     if (props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) {
-        return <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>Playing {game?.name}</Text>;
+        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>Playing</Text>;
     }
 
     return <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>Offline</Text>;

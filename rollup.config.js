@@ -39,6 +39,7 @@ const cli = {
         }),
         json(),
         nodeResolve({
+            exportConditions: ['node'],
             browser: false,
             preferBuiltins: true,
         }),
@@ -59,6 +60,7 @@ const app = {
         file: 'dist/bundle/app-main-bundle.cjs',
         format: 'cjs',
         inlineDynamicImports: true,
+        sourcemap: true,
     },
     plugins: [
         typescript({
@@ -74,6 +76,7 @@ const app = {
         }),
         json(),
         nodeResolve({
+            exportConditions: ['node'],
             browser: false,
             preferBuiltins: true,
         }),
@@ -92,6 +95,7 @@ const app_preload = {
     output: {
         file: 'dist/app/bundle/preload.cjs',
         format: 'cjs',
+        sourcemap: true,
     },
     plugins: [
         typescript({
@@ -152,6 +156,7 @@ const app_browser = {
     output: {
         file: 'dist/app/bundle/browser.js',
         format: 'iife',
+        sourcemap: true,
     },
     plugins: [
         html({

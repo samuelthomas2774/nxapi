@@ -1,8 +1,7 @@
 import React from 'react';
 import { Button, Image, StyleSheet, Text, View } from 'react-native';
 import ipc from '../ipc.js';
-import { useAccentColour, useColourScheme } from '../util.js';
-import { User } from '../app.js';
+import { useAccentColour, useColourScheme, User } from '../util.js';
 import { ActiveEvent } from '../../../api/znc-types.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';

@@ -1,8 +1,7 @@
-import React from 'react';
-import { Button, Image, ImageURISource, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Image, ImageURISource, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc from '../ipc.js';
-import { RequestState, useAccentColour, useActiveDiscordPresence, useActiveDiscordUser, useAsync, useColourScheme, useDiscordPresenceSource } from '../util.js';
-import { User } from '../app.js';
+import { RequestState, useActiveDiscordPresence, useActiveDiscordUser, useColourScheme, useDiscordPresenceSource, User } from '../util.js';
 import DiscordPresenceSource from './discord.js';
 import { BORDER_COLOUR_DARK, BORDER_COLOUR_LIGHT, HIGHLIGHT_COLOUR_DARK, HIGHLIGHT_COLOUR_LIGHT, NSO_COLOUR, NSO_COLOUR_DARK, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 
@@ -10,16 +9,17 @@ export default function Sidebar(props: {
     users?: User[] | null;
     selectedUser?: string;
     onSelectUser?: (na_id: string) => void;
+    insetTitleBarControls?: boolean;
+    children?: React.ReactNode;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
-    const accent_colour = useAccentColour();
 
     const [discord_presence_source, discord_presence_source_state] = useDiscordPresenceSource();
     const presence = useActiveDiscordPresence();
     const discord_user = useActiveDiscordUser();
 
     return <View style={[styles.sidebar, theme.sidebar]}>
-        <View style={[styles.top, theme.top]}>
+        <View style={[styles.top, theme.top, props.insetTitleBarControls ? styles.insetTitleBarControls : null]}>
             <Text style={styles.topText}>nxapi</Text>
             <Text style={styles.topText}>Nintendo Switch Online</Text>
         </View>
@@ -39,19 +39,17 @@ export default function Sidebar(props: {
                     />)}
                 </View> : null}
 
-                {props.users ? <View style={styles.addUser}>
+                {props.users ? <TouchableOpacity onPress={() => ipc.showAddUserMenu()} style={styles.addUser}>
                     <Text style={theme.text}>Add user</Text>
-                    <View style={styles.addUserButton}>
-                        <Button title="Add Nintendo Switch Online account"
-                            onPress={() => ipc.addNsoAccount().then(id => props.onSelectUser?.call(null, id))}
-                            color={'#' + accent_colour} />
-                    </View>
-                    <View style={styles.addUserButton}>
-                        <Button title="Add Nintendo Switch Parental Controls account"
-                            onPress={() => ipc.addMoonAccount().then(id => props.onSelectUser?.call(null, id))}
-                            color={'#' + accent_colour} />
-                    </View>
-                </View> : null}
+                </TouchableOpacity> : null}
+
+                {discord_presence_source_state === RequestState.LOADED && !discord_presence_source ? <TouchableOpacity
+                    onPress={() => ipc.showDiscordModal()} style={styles.discordSetup}
+                >
+                    <Text style={theme.text}>Set up Discord Rich Presence</Text>
+                </TouchableOpacity> : null}
+
+                {props.children}
             </View>
         </ScrollView>
     </View>;
@@ -63,6 +61,10 @@ function User(props: {
     onPress?: () => void;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+
+    const onContextMenu = useCallback(() => {
+        ipc.showUserMenu(props.user.user, props.user.nso?.nsoAccount.user);
+    }, [ipc, props.user.user, props.user.nso?.nsoAccount.user]);
 
     const miiImageSource: ImageURISource = props.user.user.mii ? {
         uri: 'https://' + props.user.user.mii.imageOrigin + '/2.0.0/mii_images/' +
@@ -77,7 +79,7 @@ function User(props: {
         height: 32,
     };
 
-    return <TouchableOpacity onPress={props.onPress}>
+    const touchable = <TouchableOpacity onPress={props.onPress}>
         <View style={[styles.user, props.selected ? theme.userSelected : null]}>
             <View style={styles.userMii}>
                 <Image source={miiImageSource} style={styles.userMiiImage} />
@@ -96,6 +98,11 @@ function User(props: {
             </View>
         </View>
     </TouchableOpacity>;
+
+    return Platform.OS === 'web' ? <View
+        // @ts-expect-error react-native-web
+        onContextMenu={onContextMenu}
+    >{touchable}</View> : touchable;
 }
 
 const styles = StyleSheet.create({
@@ -109,6 +116,9 @@ const styles = StyleSheet.create({
         backgroundColor: NSO_COLOUR,
         paddingVertical: 28,
         paddingHorizontal: 20,
+    },
+    insetTitleBarControls: {
+        paddingTop: 58,
     },
     topText: {
         fontSize: 16,
@@ -128,11 +138,18 @@ const styles = StyleSheet.create({
     },
 
     addUser: {
-        paddingVertical: 16,
+        marginTop: 10,
+        paddingVertical: 6,
         paddingHorizontal: 20,
     },
     addUserButton: {
         marginTop: 5,
+    },
+
+    discordSetup: {
+        marginTop: 10,
+        paddingVertical: 6,
+        paddingHorizontal: 20,
     },
 
     user: {

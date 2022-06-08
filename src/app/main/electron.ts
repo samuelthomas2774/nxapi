@@ -5,6 +5,7 @@ const electron = require('electron');
 
 export const app = electron.app;
 export const BrowserWindow = electron.BrowserWindow;
+export const clipboard = electron.clipboard;
 export const dialog = electron.dialog;
 export const ipcMain = electron.ipcMain;
 export const Menu = electron.Menu;

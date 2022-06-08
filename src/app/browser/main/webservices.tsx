@@ -1,8 +1,7 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc from '../ipc.js';
-import { useColourScheme } from '../util.js';
-import { User } from '../app.js';
+import { useColourScheme, User } from '../util.js';
 import { WebService } from '../../../api/znc-types.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';

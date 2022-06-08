@@ -49,6 +49,7 @@ export default class MenuApp {
                 label: data.nsoAccount.user.name,
                 submenu: [
                     {label: 'Nintendo Account ID: ' + data.user.id, enabled: false},
+                    {label: 'Coral ID: ' + data.nsoAccount.user.id, enabled: false},
                     {label: 'NSA ID: ' + data.nsoAccount.user.nsaId, enabled: false},
                     {type: 'separator'},
                     {label: 'Enable Discord Presence', type: 'checkbox', checked: discord_presence_active,

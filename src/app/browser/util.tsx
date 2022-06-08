@@ -1,20 +1,25 @@
 import { EventEmitter } from 'node:events';
-import React, { useEffect } from 'react';
-import { ColorSchemeName, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { ColorSchemeName, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
 import type { User as DiscordUser } from 'discord-rpc';
 import { ErrorResponse } from '../../api/util.js';
 import { DiscordPresence } from '../../discord/util.js';
 import ipc, { events } from './ipc.js';
-import { User } from './app.js';
+import { NintendoAccountUser } from '../../api/na.js';
 import { SavedToken } from '../../common/auth/nso.js';
+import { SavedMoonToken } from '../../common/auth/moon.js';
+import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, DEFAULT_ACCENT_COLOUR } from './constants.js';
 
 export function Root(props: React.PropsWithChildren<{
     title?: string;
     titleUser?: User | SavedToken;
     style?: StyleProp<ViewStyle>;
     scrollable?: boolean;
+    autoresize?: boolean;
+    vibrancy?: boolean;
 }>) {
     const colour_scheme = useColorScheme();
+    const theme = colour_scheme === 'light' ? light : dark;
 
     const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
     useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
@@ -30,10 +35,37 @@ export function Root(props: React.PropsWithChildren<{
         document.title = user_prefix + (props.title ?? 'Nintendo Switch Online');
     }, [props.title, props.titleUser]);
 
+    const [preventingFocus, setPreventFocus] = useState(true);
+    const unlockFocus = useCallback(() => setPreventFocus(false), []);
+    useLayoutEffect(() => setPreventFocus(props.autoresize ?? true), [props.autoresize]);
+
+    const onLayout = useCallback(async (event: LayoutChangeEvent) => {
+        await ipc.setWindowHeight(event.nativeEvent.layout.height);
+        setPreventFocus(false);
+    }, []);
+
+    useEffect(() => {
+        document.documentElement.style.overflowY = props.scrollable ? 'auto' : 'hidden';
+    }, [props.scrollable]);
+
     return <ColourSchemeContext.Provider value={colour_scheme}>
-        <AccentColourContext.Provider value={accent_colour}>
-            <View style={[props.scrollable ? styles.appScrollable : styles.app, props.style]}>
-                {props.children}
+        <AccentColourContext.Provider value={accent_colour ?? DEFAULT_ACCENT_COLOUR}>
+            <View style={[
+                props.scrollable ? styles.appScrollable : styles.app,
+                !props.vibrancy ? theme.appNoVibrancy : null,
+                props.style,
+            ]}>
+                {props.autoresize && preventingFocus ? <View
+                    key={'focuslock'}
+                    focusable
+                    // @ts-expect-error react-native-web
+                    onFocus={unlockFocus}
+                /> : null}
+
+                {props.autoresize ? <View
+                    key={'autoresize'}
+                    onLayout={props.autoresize ? onLayout : undefined}
+                >{props.children}</View> : props.children}
             </View>
         </AccentColourContext.Provider>
     </ColourSchemeContext.Provider>;
@@ -45,6 +77,18 @@ const styles = StyleSheet.create({
     },
     appScrollable: {
         minHeight: Platform.OS === 'web' ? '100vh' : '100%',
+    },
+});
+
+const light = StyleSheet.create({
+    appNoVibrancy: {
+        backgroundColor: BACKGROUND_COLOUR_MAIN_LIGHT,
+    },
+});
+
+const dark = StyleSheet.create({
+    appNoVibrancy: {
+        backgroundColor: BACKGROUND_COLOUR_MAIN_DARK,
     },
 });
 
@@ -120,7 +164,7 @@ export function useEventListener<
     }, deps);
 }
 
-export const AccentColourContext = React.createContext<string | null>('E60012FF');
+export const AccentColourContext = React.createContext<string>(DEFAULT_ACCENT_COLOUR);
 
 export function useAccentColour() {
     return React.useContext(AccentColourContext);
@@ -130,6 +174,34 @@ export const ColourSchemeContext = React.createContext<ColorSchemeName>(null);
 
 export function useColourScheme() {
     return React.useContext(ColourSchemeContext);
+}
+
+export interface User {
+    user: NintendoAccountUser;
+    nso: SavedToken | null;
+    nsotoken: string | undefined;
+    moon: SavedMoonToken | null;
+    moontoken: string | undefined;
+}
+
+export async function getAccounts() {
+    const ids = await ipc.listNintendoAccounts();
+
+    const accounts: User[] = [];
+
+    for (const id of ids ?? []) {
+        const nsotoken = await ipc.getNintendoAccountNsoToken(id);
+        const moontoken = await ipc.getNintendoAccountMoonToken(id);
+
+        const nso = nsotoken ? await ipc.getSavedNsoToken(nsotoken) ?? null : null;
+        const moon = moontoken ? await ipc.getSavedMoonToken(moontoken) ?? null : null;
+
+        if (!nso && !moon) continue;
+
+        accounts.push({user: nso?.user ?? moon!.user, nso, nsotoken, moon, moontoken});
+    }
+
+    return accounts;
 }
 
 export function useDiscordPresenceSource() {

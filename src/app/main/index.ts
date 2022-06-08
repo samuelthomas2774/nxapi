@@ -15,6 +15,8 @@ import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
 import { setupIpc } from './ipc.js';
+import { version } from '../../util/product.js';
+import { GITLAB_URL } from '../../common/constants.js';
 
 const debug = createDebug('app:main');
 
@@ -38,10 +40,14 @@ export class App {
             return this.main_window;
         }
 
-        const window = createWindow(WindowType.MAIN_WINDOW, {}, {
+        const window = createWindow(WindowType.MAIN_WINDOW, {
+            vibrancy: process.platform === 'darwin',
+            // insetTitleBarControls: process.platform === 'darwin',
+        }, {
             minWidth: 500,
             minHeight: 300,
-            vibrancy: 'under-window',
+            vibrancy: process.platform === 'darwin' ? 'under-window' : undefined,
+            // titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
             webPreferences: {
                 scrollBounce: false,
             },

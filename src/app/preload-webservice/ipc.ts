@@ -1,8 +1,11 @@
 import { ipcRenderer } from 'electron';
+import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { WebServiceData } from '../main/webservices.js';
 
 const debug = createDebug('app:preload-webservice:ipc');
+
+export const events = new EventEmitter();
 
 const ipc = {
     getWebServiceSync: () => ipcRenderer.sendSync('nxapi:webserviceapi:getWebServiceSync') as WebServiceData,
@@ -19,3 +22,5 @@ export const {webservice, url: webserviceurl} = ipc.getWebServiceSync();
 
 debug('Web service', webservice);
 debug('Web service URL', webserviceurl);
+
+ipcRenderer.on('nxapi:window:refresh', () => events.emit('window:refresh') || location.reload());

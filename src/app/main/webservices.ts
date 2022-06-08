@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
-import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, session, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
 import ZncApi from '../../api/znc.js';
 import { dev } from '../../util/product.js';
@@ -11,31 +11,9 @@ import { WebService } from '../../api/znc-types.js';
 import { Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/nso.js';
-import { bundlepath } from './util.js';
-import Users from '../../common/users.js';
+import { createWebServiceWindow } from './windows.js';
 
 const debug = createDebug('app:main:webservices');
-
-export function createWebServiceWindow(nsa_id: string, webservice: WebService, title_prefix?: string) {
-    const browser_session = session.fromPartition('persist:webservices-' + nsa_id, {
-        cache: false,
-    });
-
-    const window = new BrowserWindow({
-        width: 375,
-        height: 667,
-        resizable: false,
-        title: (title_prefix ?? '') + webservice.name,
-        webPreferences: {
-            session: browser_session,
-            preload: path.join(bundlepath, 'preload-webservice.cjs'),
-            contextIsolation: false,
-            scrollBounce: true,
-        },
-    });
-
-    return window;
-}
 
 const windows = new Map<string, BrowserWindow>();
 const windowapi = new WeakMap<WebContents, [Store, string, ZncApi, SavedToken, WebService]>();

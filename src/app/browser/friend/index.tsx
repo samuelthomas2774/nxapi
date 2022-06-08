@@ -1,8 +1,11 @@
+/// <reference path="../react-native-web.d.ts" />
+
 import React, { useCallback, useEffect } from 'react';
-import { Button, Image, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Button, Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { CheckBox } from 'react-native-web';
 import { Game, Presence, PresencePermissions, PresenceState } from '../../../api/znc-types.js';
 import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
-import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
+import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
 import { RequestState, Root, useAsync, useColourScheme, useDiscordPresenceSource, useEventListener } from '../util.js';
 
@@ -29,14 +32,29 @@ export default function Friend(props: FriendProps) {
 
     useEffect(() => {
         if (friends_state !== RequestState.LOADED) return;
-
-        const timeout = setTimeout(forceRefreshFriends, 60 * 1000);
-
+        const timeout = setTimeout(forceRefreshFriends, 40 * 1000);
         return () => clearTimeout(timeout);
     }, [ipc, token, friends_state]);
 
+    useEventListener(events, 'window:refresh', forceRefreshFriends, []);
+
+    useEffect(() => {
+        const handler = (event: KeyboardEvent) => event.key === 'Escape' && window.close();
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
     if (friends && !friend) throw new Error('Unknown friend');
-    if (!user || !friend || discord_presence_source_state !== RequestState.LOADED) return null;
+
+    if (!user || !friend || discord_presence_source_state !== RequestState.LOADED) {
+        return <Root title={friend?.name} titleUser={user ?? undefined}
+            autoresize={!!user && discord_presence_source_state === RequestState.LOADED}
+        >
+            <View style={styles.loading}>
+                <ActivityIndicator size="large" color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+            </View>
+        </Root>;
+    }
 
     const discord_presence_active = discord_presence_source && 'na_id' in discord_presence_source &&
         discord_presence_source.na_id === user.user.id &&
@@ -44,7 +62,7 @@ export default function Friend(props: FriendProps) {
     const can_see_user_presence = user.nsoAccount.user.permissions.presence === PresencePermissions.FRIENDS ||
         (user.nsoAccount.user.permissions.presence === PresencePermissions.FAVORITE_FRIENDS && friend.isFavoriteFriend);
 
-    return <Root title={friend.name} titleUser={user} scrollable>
+    return <Root title={friend.name} titleUser={user} autoresize>
         <View style={styles.main}>
             <View style={styles.friend}>
                 <Image source={{uri: friend.imageUri, width: 130, height: 130}} style={styles.friendImage} />
@@ -60,24 +78,34 @@ export default function Friend(props: FriendProps) {
                     {(friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING) &&
                         'name' in friend.presence.game ? <FriendPresenceGame game={friend.presence.game} /> : null}
 
-                    <Text style={theme.text}>NSA ID: {friend.nsaId}</Text>
-                    <Text style={theme.text}>{friend.isServiceUser ? 'Coral user ID: ' + friend.id : 'Never used Nintendo Switch Online app'}</Text>
-                    <Text style={theme.text}>Friends since {new Date(friend.friendCreatedAt * 1000).toLocaleString('en-GB')}</Text>
-                    {friend.presence.updatedAt ? <Text style={theme.text}>Presence updated at {new Date(friend.presence.updatedAt * 1000).toLocaleString('en-GB')}</Text> : null}
-                    <Text style={theme.text}>This user {can_see_user_presence ? 'can' : 'can not'} see your presence.</Text>
+                    <Text style={[styles.friendNsaId, theme.text]}>NSA ID: <Text style={styles.friendNsaIdValue}>{friend.nsaId}</Text></Text>
+                    <Text style={[styles.friendCoralId, theme.text]}>{friend.isServiceUser ? <>
+                        Coral user ID: <Text style={styles.friendCoralIdValue}>{friend.id}</Text>
+                    </> : 'Never used Nintendo Switch Online app'}</Text>
+
+                    <Text style={[styles.friendCreatedAt, theme.text]}>Friends since {new Date(friend.friendCreatedAt * 1000).toLocaleString('en-GB')}</Text>
+                    {friend.presence.updatedAt ? <Text style={[styles.presenceUpdatedAt, theme.text]}>Presence updated at {new Date(friend.presence.updatedAt * 1000).toLocaleString('en-GB')}</Text> : null}
+                    <Text style={[styles.canSeeUserPresence, theme.text]}>This user {can_see_user_presence ? 'can' : 'can not'} see your presence.</Text>
                 </View>
 
                 <View style={styles.buttons}>
-                    {discord_presence_active ? <Button title="Stop sharing presence to Discord"
-                        onPress={() => ipc.setDiscordPresenceSource(null)}
-                        color={'#' + accent_colour} /> :
-                    friend.presence.updatedAt ? <Button title="Share presence to Discord"
-                        onPress={() => ipc.setDiscordPresenceSource({na_id: user.user.id, friend_nsa_id: friend.nsaId})}
-                        color={'#' + accent_colour} /> : null}
+                    {discord_presence_active || friend.presence.updatedAt ? <View style={styles.discord}>
+                        <CheckBox
+                            value={discord_presence_active ?? false}
+                            onValueChange={v => ipc.setDiscordPresenceSource(v ?
+                                {na_id: user.user.id, friend_nsa_id: friend.nsaId} : null)}
+                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                            style={styles.discordCheckbox}
+                        />
+                        <TouchableOpacity onPress={() => ipc.setDiscordPresenceSource(!discord_presence_active ?
+                            {na_id: user.user.id, friend_nsa_id: friend.nsaId} : null)}>
+                            <Text style={theme.text}>Share presence to Discord</Text>
+                        </TouchableOpacity>
+                    </View> : null}
 
                     <Button title="Close"
                         onPress={() => window.close()}
-                        color={'#' + accent_colour} />
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
                 </View>
             </View>
         </View>
@@ -124,8 +152,14 @@ function FriendPresenceGame(props: {
 }
 
 const styles = StyleSheet.create({
-    main: {
+    loading: {
         flex: 1,
+        paddingVertical: 50,
+        paddingHorizontal: 20,
+        justifyContent: 'center',
+    },
+
+    main: {
         paddingVertical: 20,
         paddingHorizontal: 20,
         flexDirection: 'row',
@@ -157,10 +191,50 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
+    friendNsaId: {
+        fontSize: 13,
+        opacity: 0.7,
+    },
+    friendNsaIdValue: {
+        fontFamily: 'monospace',
+        userSelect: 'all',
+    },
+    friendCoralId: {
+        fontSize: 13,
+        opacity: 0.7,
+    },
+    friendCoralIdValue: {
+        fontFamily: 'monospace',
+        userSelect: 'all',
+    },
+    friendCreatedAt: {
+        marginTop: 8,
+        fontSize: 13,
+        opacity: 0.7,
+    },
+    presenceUpdatedAt: {
+        fontSize: 13,
+        opacity: 0.7,
+    },
+    canSeeUserPresence: {
+        marginTop: 8,
+        fontSize: 13,
+        opacity: 0.7,
+    },
+
     buttons: {
         marginTop: 20,
         flexDirection: 'row',
         justifyContent: 'flex-end',
+    },
+    discord: {
+        flex: 1,
+        marginRight: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    discordCheckbox: {
+        marginRight: 10,
     },
 
     presenceText: {

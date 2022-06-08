@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { User } from 'discord-rpc';
-import ipc from '../ipc.js';
-import { RequestState, useAsync } from '../util.js';
+import ipc, { events } from '../ipc.js';
+import { RequestState, useAsync, useEventListener } from '../util.js';
 import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceZnc } from '../../common/types.js';
 import { DiscordPresence } from '../../../discord/util.js';
 import { DISCORD_COLOUR, TEXT_COLOUR_DARK } from '../constants.js';
@@ -14,10 +14,12 @@ export default function DiscordPresenceSource(props: {
 }) {
     if (!props.source) return null;
 
-    return <View style={[styles.discord, !props.source ? styles.discordInactive : null]}>
-        {renderDiscordPresenceSource(props.source)}
-        {props.presence && props.user ? <DiscordPresence presence={props.presence} user={props.user} /> : null}
-    </View>;
+    return <TouchableOpacity onPress={() => ipc.showDiscordModal()}>
+        <View style={[styles.discord, !props.source ? styles.discordInactive : null]}>
+            {renderDiscordPresenceSource(props.source)}
+            {props.presence && props.user ? <DiscordPresence presence={props.presence} user={props.user} /> : null}
+        </View>
+    </TouchableOpacity>;
 }
 
 function renderDiscordPresenceSource(source: DiscordPresenceSource | null) {
@@ -35,19 +37,17 @@ function DiscordPresenceSourceZnc(props: {
 }) {
     const [token] = useAsync(useCallback(() =>
         ipc.getNintendoAccountNsoToken(props.source.na_id), [ipc, props.source.na_id]));
-    const [user] = useAsync(useCallback(() => token ?
-        ipc.getSavedNsoToken(token) : Promise.resolve(null), [ipc, token]));
     const [friends, , friends_state, forceRefreshFriends] = useAsync(useCallback(() => token ?
         ipc.getNsoFriends(token) : Promise.resolve(null), [ipc, token]));
     const friend = friends?.find(f => f.nsaId === props.source.friend_nsa_id);
 
     useEffect(() => {
         if (friends_state !== RequestState.LOADED) return;
-
         const timeout = setTimeout(forceRefreshFriends, 60 * 1000);
-
         return () => clearTimeout(timeout);
     }, [ipc, token, friends_state]);
+
+    useEventListener(events, 'window:refresh', forceRefreshFriends, []);
 
     return <View style={styles.discordSource}>
         {friend ? <Text style={styles.discordSourceText}>
@@ -64,7 +64,10 @@ function DiscordPresenceSourceUrl(props: {
     source: DiscordPresenceSourceUrl;
 }) {
     return <View style={styles.discordSource}>
-        <Text style={styles.discordSourceText}>Discord Rich Presence active: {props.source.url}</Text>
+        <Text style={styles.discordSourceText} numberOfLines={3} ellipsizeMode="tail">
+            Discord Rich Presence active:{' '}
+            <Text style={styles.discordSourceUrlValue}>{props.source.url}</Text>
+        </Text>
     </View>;
 }
 
@@ -87,12 +90,12 @@ function DiscordPresence(props: {
     return <>
         <View style={styles.discordPresence}>
             <Image source={{uri: large_image_url, width: 18, height: 18}} style={styles.discordPresenceImage} />
-            <Text style={styles.discordPresenceText}>Playing</Text>
+            <Text style={styles.discordPresenceText} numberOfLines={1} ellipsizeMode="tail">Playing</Text>
         </View>
 
         <View style={styles.discordUser}>
             <Image source={{uri: user_image_url, width: 18, height: 18}} style={styles.discordUserImage} />
-            <Text style={styles.discordUserText}>Connected as {props.user.username}#{props.user.discriminator}</Text>
+            <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">{props.user.username}#{props.user.discriminator}</Text>
         </View>
     </>;
 }
@@ -116,9 +119,14 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         textAlignVertical: -3,
     },
+    discordSourceUrlValue: {
+        fontFamily: 'monospace',
+        fontSize: 12,
+        userSelect: 'all',
+    },
 
     discordPresence: {
-        marginTop: 16,
+        marginTop: 12,
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -131,7 +139,7 @@ const styles = StyleSheet.create({
     },
 
     discordUser: {
-        marginTop: 12,
+        marginTop: 10,
         flexDirection: 'row',
         alignItems: 'center',
     },

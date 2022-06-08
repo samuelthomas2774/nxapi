@@ -42,6 +42,12 @@ export function getAuthUrl(client_id: string, scope: string | string[]) {
     };
 }
 
+const css = `
+html {
+    overflow-x: hidden;
+}
+`;
+
 let i = 0;
 
 export function createAuthWindow() {
@@ -58,6 +64,10 @@ export function createAuthWindow() {
             session: browser_session,
             scrollBounce: true,
         },
+    });
+
+    window.webContents.on('did-finish-load', () => {
+        window.webContents.insertCSS(css);
     });
 
     return window;
