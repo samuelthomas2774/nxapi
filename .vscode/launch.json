@@ -14,7 +14,7 @@
                 "runtimeExecutable": "${workspaceFolder}/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron"
             },
             "windows": {
-                "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+                "runtimeExecutable": "${workspaceFolder}/node_modules/electron/dist/electron.exe"
             },
             "args": [
                 "dist/app/main/app-entry.cjs"

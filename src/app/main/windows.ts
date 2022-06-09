@@ -6,8 +6,8 @@ import { bundlepath } from './util.js';
 import { app_menu, createWindowMenu } from './app-menu.js';
 import { WebService } from '../../api/znc-types.js';
 
-const windows = new Map<WebContents, WindowConfiguration>();
-const menus = new Map<BrowserWindow, Menu>();
+const windows = new WeakMap<WebContents, WindowConfiguration>();
+const menus = new WeakMap<BrowserWindow, Menu>();
 
 app.on('browser-window-focus', (event, window) => {
     Menu.setApplicationMenu(menus.get(window) ?? app_menu);
@@ -44,11 +44,6 @@ export function createWindow<T extends WindowType>(
     windows.set(window.webContents, data);
     menus.set(window, createWindowMenu(window));
 
-    window.on('closed', () => {
-        windows.delete(window.webContents);
-        menus.delete(window);
-    });
-
     window.loadFile(path.join(bundlepath, 'index.html'));
     if (dev) window.webContents.openDevTools();
 
@@ -84,10 +79,6 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService, t
     });
 
     menus.set(window, createWindowMenu(window));
-
-    window.on('closed', () => {
-        menus.delete(window);
-    });
 
     return window;
 }

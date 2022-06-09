@@ -161,13 +161,13 @@ export class Store extends EventEmitter {
                 });
             }
 
-            if (monitor.presence_user && !state.discord_presence) {
+            if (monitor.presence_enabled && !state.discord_presence) {
                 state.discord_presence = monitor instanceof EmbeddedProxyPresenceMonitor ? {
                     url: monitor.presence_url,
                 } : {
                     na_id: monitor.data.user.id,
                     friend_nsa_id: monitor.presence_user === monitor.data.nsoAccount.user.nsaId ? undefined :
-                        monitor.presence_user,
+                        monitor.presence_user ?? undefined,
                 };
             }
         }
@@ -204,6 +204,15 @@ export class Store extends EventEmitter {
                 });
             } catch (err) {
                 dialog.showErrorBox('Error restoring monitor for user ' + user.id,
+                    err instanceof Error ? err.stack ?? err.message : err as any);
+            }
+        }
+
+        if (state.discord_presence && 'url' in state.discord_presence) {
+            try {
+                await monitors.startUrl(state.discord_presence.url);
+            } catch (err) {
+                dialog.showErrorBox('Error restoring monitor for presence URL ' + state.discord_presence.url,
                     err instanceof Error ? err.stack ?? err.message : err as any);
             }
         }
