@@ -1,5 +1,6 @@
 import { app, BrowserWindow, BrowserWindowConstructorOptions, Menu, session, WebContents } from './electron.js';
 import * as path from 'node:path';
+import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';
 import { bundlepath } from './util.js';
 import { app_menu, createWindowMenu } from './app-menu.js';
