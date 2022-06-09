@@ -1068,6 +1068,14 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
+    {
+        // Fire Emblem Warriors: Three Hopes Demo
+        id: '01006e6017792000',
+        client: '966534448168439872',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Live A Live
