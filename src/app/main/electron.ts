@@ -24,6 +24,7 @@ export type IpcMain = import('electron').IpcMain;
 export type IpcMainInvokeEvent = import('electron').IpcMainInvokeEvent;
 export type Menu = import('electron').Menu;
 export type MenuItem = import('electron').MenuItem;
+export type MessageBoxOptions = import('electron').MessageBoxOptions;
 export type Notification = import('electron').Notification;
 export type ShareMenu = import('electron').ShareMenu;
 export type SharingItem = import('electron').SharingItem;

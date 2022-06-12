@@ -2,7 +2,7 @@ import process from 'node:process';
 import * as crypto from 'node:crypto';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { BrowserWindow, Notification, session, shell } from './electron.js';
+import { BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
 import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/znc.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
@@ -10,6 +10,7 @@ import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
 import { Jwt } from '../../util/jwt.js';
 import { tryGetNativeImageFromUrl } from './util.js';
+import { ZNCA_API_USE_URL } from '../../common/constants.js';
 
 const debug = createDebug('app:main:na-auth');
 
@@ -79,6 +80,12 @@ export interface NintendoAccountSessionTokenCode {
     window?: BrowserWindow;
 }
 
+export function getSessionTokenCode(client_id: string, scope: string | string[], close_window: false):
+    Promise<NintendoAccountSessionTokenCode & {window: BrowserWindow}>
+export function getSessionTokenCode(client_id: string, scope: string | string[], close_window: true):
+    Promise<NintendoAccountSessionTokenCode & {window?: never}>
+export function getSessionTokenCode(client_id: string, scope: string | string[], close_window?: boolean):
+    Promise<NintendoAccountSessionTokenCode & {window?: BrowserWindow}>
 export function getSessionTokenCode(client_id: string, scope: string | string[], close_window = true) {
     return new Promise<NintendoAccountSessionTokenCode>((rs, rj) => {
         const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
@@ -155,8 +162,8 @@ const NSO_SCOPE = [
 export async function addNsoAccount(storage: persist.LocalStorage) {
     const {code, verifier, window} = await getSessionTokenCode(ZNCA_CLIENT_ID, NSO_SCOPE, false);
 
-    window?.setFocusable(false);
-    window?.blurWebView();
+    window.setFocusable(false);
+    window.blurWebView();
 
     try {
         const [jwt, sig] = Jwt.decode(code);
@@ -177,6 +184,8 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
             return getToken(storage, nsotoken, process.env.ZNC_PROXY_URL);
         }
 
+        await checkZncaApiUseAllowed(storage, window);
+
         const token = await getNintendoAccountSessionToken(code, verifier, ZNCA_CLIENT_ID);
 
         debug('session token', token);
@@ -195,8 +204,70 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
 
         return {nso, data};
     } finally {
-        window?.close();
+        window.close();
     }
+}
+
+async function checkZncaApiUseAllowed(storage: persist.LocalStorage, window?: BrowserWindow, force = false) {
+    if (!force) {
+        if (await storage.getItem('ZncaApiConsent')) {
+            return;
+        }
+
+        if (process.env.ZNC_PROXY_URL) {
+            debug('Skipping znca API consent; znc proxy URL set');
+            await storage.setItem('ZncaApiConsent', true);
+            return;
+        }
+
+        const ids: string[] | undefined = await storage.getItem('NintendoAccountIds');
+
+        for (const id of ids ?? []) {
+            const nsotoken: string | undefined = await storage.getItem('NintendoAccountToken.' + id);
+            if (!nsotoken) continue;
+
+            debug('Skipping znca API consent; Nintendo Switch Online account already linked');
+            await storage.setItem('ZncaApiConsent', true);
+            return;
+        }
+    }
+
+    if (await askZncaApiUseAllowed(window)) {
+        await storage.setItem('ZncaApiConsent', true);
+    } else {
+        throw new Error('Cannot continue without third-party APIs allowed');
+    }
+}
+
+const ZNCA_API_USE_TEXT = `To access the Nintendo Switch Online app API, nxapi must send some data to third-party APIs. This is required to generate some data to make Nintendo think you\'re using the real Nintendo Switch Online app.
+
+By default, this uses the splatnet2statink and flapg APIs, but another service can be used by setting an environment variable.
+
+The data sent includes:
+- A random UUID and the current timestamp
+- (When authenticating to the Nintendo Switch Online app) An ID token, containing your Nintendo Account ID and country, which is valid for 15 minutes
+- (When authenticating to game-specific services) An ID token, containing your Coral (Nintendo Switch Online app) user ID, Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours`;
+
+async function askZncaApiUseAllowed(window?: BrowserWindow): Promise<boolean> {
+    const options: MessageBoxOptions = {
+        message: 'Third-party API usage',
+        detail: ZNCA_API_USE_TEXT,
+        buttons: ['OK', 'Cancel', 'More information'],
+        cancelId: 1,
+    };
+
+    const result = window ?
+        await dialog.showMessageBox(window, options) :
+        await dialog.showMessageBox(options);
+
+    debug('znca API consent', result);
+
+    if (result.response === 2) {
+        shell.openExternal(ZNCA_API_USE_URL);
+        return askZncaApiUseAllowed(window);
+    }
+
+    return result.response === 0;
 }
 
 const MOON_SCOPE = [
