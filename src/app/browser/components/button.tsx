@@ -15,17 +15,26 @@ function ButtonMac(props: {
 
     const window_focused = useContext(WindowFocusedContext);
     const accent_colour = useAccentColour();
+
+    const [hovered, setMouseOver] = useState(false);
+    const onMouseOver = useCallback(() => setMouseOver(true), []);
+    const onMouseOut = useCallback(() => setMouseOver(false), []);
+
     const [pressed, setPressIn] = useState(false);
     const onPressIn = useCallback(() => setPressIn(true), []);
     const onPressOut = useCallback(() => setPressIn(false), []);
-
-    const active = window_focused && (props.primary || pressed);
+    
+    const pressed_appearance = window_focused && pressed && hovered;
+    const active = window_focused && (props.primary || pressed_appearance);
 
     return <Pressable
         style={[
             styles.button,
             active ? {backgroundColor: props.color ?? accent_colour} : null,
         ]}
+        // @ts-expect-error react-native-web
+        onMouseOver={onMouseOver}
+        onMouseOut={onMouseOut}
         onPress={props.onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -33,7 +42,7 @@ function ButtonMac(props: {
         <View style={[
             styles.inner,
             active ? styles.innerActive : null,
-            active && pressed ? styles.innerPressed : null,
+            active && pressed_appearance ? styles.innerPressed : null,
         ]}>
             <Text style={styles.text}>{props.title}</Text>
         </View>
@@ -91,6 +100,7 @@ function ButtonWindows(props: {
     const [pressed, setPressIn] = useState(false);
     const onPressIn = useCallback(() => setPressIn(true), []);
     const onPressOut = useCallback(() => setPressIn(false), []);
+
     const active = window_focused && (props.primary || pressed);
 
     return <Pressable
