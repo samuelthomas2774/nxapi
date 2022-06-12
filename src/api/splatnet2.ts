@@ -6,6 +6,7 @@ import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:splatnet2');
 
@@ -29,8 +30,9 @@ export default class SplatNet2Api {
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(SPLATNET2_URL + url, {
-            method: method,
+            method,
             headers: Object.assign({
                 'Upgrade-Insecure-Requests': '1',
                 'User-Agent': this.useragent,
@@ -40,8 +42,9 @@ export default class SplatNet2Api {
                 'Accept-Language': 'en-GB,en-US;q=0.8',
                 'X-Requested-With': 'com.nintendo.znca',
             }, headers),
-            body: body,
-        });
+            body,
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
@@ -230,6 +233,7 @@ ${colour}
             na_lang: user.language,
         }).toString();
 
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(url.toString(), {
             headers: {
                 'Upgrade-Insecure-Requests': '1',
@@ -240,7 +244,8 @@ ${colour}
                 'Accept-Language': 'en-GB,en-US;q=0.8',
                 'X-Requested-With': 'com.nintendo.znca',
             },
-        });
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 

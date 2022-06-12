@@ -2,12 +2,14 @@ import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:na');
 
 export async function getNintendoAccountSessionToken(code: string, verifier: string, client_id: string) {
     debug('Getting Nintendo Account session token');
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://accounts.nintendo.com/connect/1.0.0/api/session_token', {
         method: 'POST',
         headers: {
@@ -21,7 +23,8 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
             session_token_code: code,
             session_token_code_verifier: verifier,
         }).toString(),
-    });
+        signal,
+    }).finally(cancel);
 
     const token = await response.json() as NintendoAccountSessionToken | NintendoAccountError;
 
@@ -37,6 +40,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
 export async function getNintendoAccountToken(token: string, client_id: string) {
     debug('Getting Nintendo Account token');
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://accounts.nintendo.com/connect/1.0.0/api/token', {
         method: 'POST',
         headers: {
@@ -49,7 +53,8 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
             session_token: token,
             grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer-session-token',
         }),
-    });
+        signal,
+    }).finally(cancel);
 
     const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountError;
 
@@ -65,6 +70,7 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
 export async function getNintendoAccountUser(token: NintendoAccountToken) {
     debug('Getting Nintendo Account user info');
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://api.accounts.nintendo.com/2.0.0/users/me', {
         headers: {
             'Accept-Language': 'en-GB',
@@ -73,7 +79,8 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
             'Accept': 'application/json',
             'Authorization': 'Bearer ' + token.access_token!,
         },
-    });
+        signal,
+    }).finally(cancel);
 
     const user = await response.json() as NintendoAccountUser | NintendoAccountError;
 

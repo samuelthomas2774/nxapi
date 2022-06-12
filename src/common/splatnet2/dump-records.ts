@@ -6,6 +6,7 @@ import createDebug from 'debug';
 import fetch from 'node-fetch';
 import SplatNet2Api, { ShareColour } from '../../api/splatnet2.js';
 import { Challenge, NicknameAndIcon, Records, Stages } from '../../api/splatnet2-types.js';
+import { timeoutSignal } from '../../util/misc.js';
 
 const debug = createDebug('nxapi:splatnet2:dump-records');
 
@@ -98,16 +99,17 @@ export async function dumpProfileImage(
     debug('Fetching profile image URL');
     const share = await splatnet.shareProfile(stage?.id ?? stages.stages[0].id, favourite_colour as ShareColour);
 
-    debug('Fetching profile image');
-    const image_response = await fetch(share.url);
-    const image = await image_response.arrayBuffer();
-
     debug('Writing profile image data %s', filename);
     await fs.writeFile(file, JSON.stringify({
         share,
         stage: stage ?? stages.stages[0],
         colour: favourite_colour,
     }, null, 4) + '\n', 'utf-8');
+
+    debug('Fetching profile image', share);
+    const [signal, cancel] = timeoutSignal();
+    const image_response = await fetch(share.url, {signal}).finally(cancel);
+    const image = await image_response.arrayBuffer();
 
     debug('Writing profile image %s', image_filename);
     await fs.writeFile(image_file, Buffer.from(image));
@@ -135,12 +137,13 @@ export async function dumpChallenges(
         debug('Fetching challenge image URL for %s', challenge.key);
         const share = await splatnet.shareChallenge(challenge.key, season);
 
-        debug('Fetching challenge image for %s', challenge.key);
-        const image_response = await fetch(share.url);
-        const image = await image_response.arrayBuffer();
-
         debug('Writing challenge image data %s', filename);
         await fs.writeFile(file, JSON.stringify({share}, null, 4) + '\n', 'utf-8');
+
+        debug('Fetching challenge image for %s', challenge.key, share);
+        const [signal, cancel] = timeoutSignal();
+        const image_response = await fetch(share.url, {signal}).finally(cancel);
+        const image = await image_response.arrayBuffer();
 
         debug('Writing challenge image %s', filename);
         await fs.writeFile(image_file, Buffer.from(image));

@@ -5,6 +5,7 @@ import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:nooklink');
 
@@ -22,8 +23,9 @@ export default class NooklinkApi {
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(NOOKLINK_URL + url, {
-            method: method,
+            method,
             headers: Object.assign({
                 'Upgrade-Insecure-Requests': '1',
                 'User-Agent': this.useragent,
@@ -36,8 +38,9 @@ export default class NooklinkApi {
                 'Content-Type': 'application/json',
                 'X-Blanco-Version': BLANCO_VERSION,
             }, headers),
-            body: body,
-        });
+            body,
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
@@ -96,6 +99,7 @@ export default class NooklinkApi {
             na_lang: user.language,
         }).toString();
 
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(url.toString(), {
             headers: {
                 'Upgrade-Insecure-Requests': '1',
@@ -106,7 +110,8 @@ export default class NooklinkApi {
                 'Accept-Language': 'en-GB,en-US;q=0.8',
                 'X-Requested-With': 'com.nintendo.znca',
             },
-        });
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
@@ -154,8 +159,9 @@ export class NooklinkUserApi {
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(NOOKLINK_URL + url, {
-            method: method,
+            method,
             headers: Object.assign({
                 'Upgrade-Insecure-Requests': '1',
                 'User-Agent': this.useragent,
@@ -169,8 +175,9 @@ export class NooklinkUserApi {
                 'Authorization': 'Bearer ' + this.auth_token,
                 'X-Blanco-Version': BLANCO_VERSION,
             }, headers),
-            body: body,
-        });
+            body,
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
 

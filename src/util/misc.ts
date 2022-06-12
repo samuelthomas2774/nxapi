@@ -18,3 +18,13 @@ export function hrduration(duration: number, short = false) {
         return minutes + ' ' + minute_str + (minutes === 1 ? '' : 's');
     }
 }
+
+export function timeoutSignal(ms = 10 * 1000) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+        controller.abort(new Error('Timeout'));
+    }, ms);
+
+    return [controller.signal, () => clearTimeout(timeout)] as const;
+}

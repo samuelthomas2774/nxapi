@@ -6,6 +6,7 @@ import ZncApi from './znc.js';
 import { version } from '../util/product.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/nso.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:znc-proxy');
 
@@ -26,14 +27,16 @@ export default class ZncProxyApi implements ZncApi {
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(this.url + url, {
-            method: method,
+            method,
             headers: Object.assign({
                 'Authorization': 'na ' + this.token,
                 'User-Agent': (this.useragent ? this.useragent + ' ' : '') + 'nxapi/' + version,
             }, headers),
-            body: body,
-        });
+            body,
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
@@ -178,7 +181,8 @@ export type PresenceUrlResponse =
     Friend | {friend: Friend};
 
 export async function getPresenceFromUrl(presence_url: string) {
-    const response = await fetch(presence_url);
+    const [signal, cancel] = timeoutSignal();
+    const response = await fetch(presence_url, {signal}).finally(cancel);
 
     debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
 

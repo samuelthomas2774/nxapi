@@ -5,6 +5,7 @@ import createDebug from 'debug';
 import fetch from 'node-fetch';
 import SplatNet2Api from '../../api/splatnet2.js';
 import { NicknameAndIcon } from '../../api/splatnet2-types.js';
+import { timeoutSignal } from '../../util/misc.js';
 
 const debug = createDebug('nxapi:splatnet2:dump-results');
 
@@ -45,14 +46,15 @@ export async function dumpResults(
         debug('Fetching battle results summary image URL');
         const share = await splatnet.shareResultsSummary();
 
-        debug('Fetching battle results summary image');
-        const image_response = await fetch(share.url);
-        const image = await image_response.arrayBuffer();
-
         debug('Writing battle results summary image data %s', filename);
         await fs.writeFile(file, JSON.stringify({
             share,
         }, null, 4) + '\n', 'utf-8');
+
+        debug('Fetching battle results summary image', share);
+        const [signal, cancel] = timeoutSignal();
+        const image_response = await fetch(share.url, {signal}).finally(cancel);
+        const image = await image_response.arrayBuffer();
 
         debug('Writing battle results summary image %s', filename);
         await fs.writeFile(image_file, Buffer.from(image));
@@ -102,14 +104,15 @@ export async function dumpResults(
                 debug('Fetching battle results image URL');
                 const share = await splatnet.shareResult(item.battle_number);
 
-                debug('Fetching battle results image');
-                const image_response = await fetch(share.url);
-                const image = await image_response.arrayBuffer();
-
                 debug('Writing battle results image data %s', filename);
                 await fs.writeFile(file, JSON.stringify({
                     share,
                 }, null, 4) + '\n', 'utf-8');
+
+                debug('Fetching battle results image', share);
+                const [signal, cancel] = timeoutSignal();
+                const image_response = await fetch(share.url, {signal}).finally(cancel);
+                const image = await image_response.arrayBuffer();
 
                 debug('Writing battle results image %s', filename);
                 await fs.writeFile(image_file, Buffer.from(image));

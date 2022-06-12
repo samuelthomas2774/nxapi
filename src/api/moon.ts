@@ -3,6 +3,7 @@ import createDebug from 'debug';
 import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:moon');
 
@@ -19,8 +20,9 @@ export default class MoonApi {
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(MOON_URL + url, {
-            method: method,
+            method,
             headers: Object.assign({
                 'Authorization': 'Bearer ' + this.token,
                 'Cache-Control': 'no-store',
@@ -37,8 +39,9 @@ export default class MoonApi {
                 'User-Agent': 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; build:' + ZNMA_BUILD +
                     '; ANDROID 26)',
             }, headers),
-            body: body,
-        });
+            body,
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
 

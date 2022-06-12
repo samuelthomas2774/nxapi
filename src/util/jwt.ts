@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import fetch from 'node-fetch';
+import { timeoutSignal } from './misc.js';
 
 const debug = createDebug('nxapi:util:jwt');
 
@@ -135,7 +136,8 @@ export async function getJwks(url: string, storage?: persist.LocalStorage) {
     if (!cached_keyset || cached_keyset.expires_at <= Date.now()) {
         debug('Downloading JSON Web Key Set from %s', url);
 
-        const response = await fetch(url);
+        const [signal, cancel] = timeoutSignal();
+        const response = await fetch(url, {signal}).finally(cancel);
 
         const jwks = await response.json() as Jwks;
 

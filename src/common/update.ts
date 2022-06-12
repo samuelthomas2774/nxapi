@@ -5,6 +5,7 @@ import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import { dir, version } from '../util/product.js';
 import { paths } from '../util/storage.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:update');
 
@@ -41,7 +42,8 @@ export async function checkUpdates() {
     debug('Checking for updates');
 
     try {
-        const response = await fetch(RELEASES_URL);
+        const [signal, cancel] = timeoutSignal();
+        const response = await fetch(RELEASES_URL, {signal}).finally(cancel);
         const releases = await response.json() as Release[];
 
         const current = releases.find(r => r.tag_name === 'v' + version);

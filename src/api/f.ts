@@ -3,6 +3,7 @@ import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
 import { version } from '../util/product.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debugS2s = createDebug('nxapi:api:s2s');
 const debugFlapg = createDebug('nxapi:api:flapg');
@@ -16,6 +17,7 @@ const debugZncaApi = createDebug('nxapi:api:znca-api');
 export async function getLoginHash(token: string, timestamp: string | number, useragent?: string) {
     debugS2s('Getting login hash');
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://elifessler.com/s2s/api/gen2', {
         method: 'POST',
         headers: {
@@ -26,7 +28,8 @@ export async function getLoginHash(token: string, timestamp: string | number, us
             naIdToken: token,
             timestamp: '' + timestamp,
         }).toString(),
-    });
+        signal,
+    }).finally(cancel);
 
     const data = await response.json() as LoginHashApiResponse | LoginHashApiError;
 
@@ -56,6 +59,7 @@ export async function flapg(
         token, timestamp, guid, iid,
     });
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://flapg.com/ika2/api/login?public', {
         headers: {
             'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
@@ -66,7 +70,8 @@ export async function flapg(
             'x-ver': '3',
             'x-iid': iid,
         },
-    });
+        signal,
+    }).finally(cancel);
 
     const data = await response.json() as FlapgApiResponse;
 
@@ -110,6 +115,7 @@ export async function iminkf(
         request_id: uuid,
     };
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://api.imink.app/f', {
         method: 'POST',
         headers: {
@@ -117,7 +123,8 @@ export async function iminkf(
             'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
         },
         body: JSON.stringify(req),
-    });
+        signal,
+    }).finally(cancel);
 
     const data = await response.json() as IminkFResponse | IminkFError;
 
@@ -163,6 +170,7 @@ export async function genf(
         uuid,
     };
 
+    const [signal, cancel] = timeoutSignal();
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -170,7 +178,8 @@ export async function genf(
             'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
         },
         body: JSON.stringify(req),
-    });
+        signal,
+    }).finally(cancel);
 
     const data = await response.json() as AndroidZncaFResponse | AndroidZncaFError;
 
