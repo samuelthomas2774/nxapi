@@ -104,6 +104,7 @@ export default class NooklinkApi {
             headers: {
                 'Upgrade-Insecure-Requests': '1',
                 'User-Agent': NOOKLINK_WEBSERVICE_USERAGENT,
+                'x-appcolorscheme': 'DARK',
                 'x-gamewebtoken': webserviceToken.accessToken,
                 'dnt': '1',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',

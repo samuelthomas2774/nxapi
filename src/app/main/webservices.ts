@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
-import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, nativeTheme, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
 import ZncApi from '../../api/znc.js';
 import { dev } from '../../util/product.js';
@@ -101,6 +101,7 @@ export default async function openWebService(
 
     window.loadURL(url.toString(), {
         extraHeaders: Object.entries({
+            'x-appcolorscheme': nativeTheme.shouldUseDarkColors ? 'DARK' : 'LIGHT',
             'x-gamewebtoken': webserviceToken.result.accessToken,
             'dnt': '1',
             'X-Requested-With': 'com.nintendo.znca',

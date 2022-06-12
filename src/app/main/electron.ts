@@ -11,6 +11,7 @@ export const ipcMain = electron.ipcMain;
 export const Menu = electron.Menu;
 export const MenuItem = electron.MenuItem;
 export const nativeImage = electron.nativeImage;
+export const nativeTheme = electron.nativeTheme;
 export const Notification = electron.Notification;
 export const session = electron.session;
 export const ShareMenu = electron.ShareMenu;
