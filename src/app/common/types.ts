@@ -15,6 +15,12 @@ export interface WindowConfiguration<T extends WindowType = WindowType> {
     props: WindowProps[T];
 }
 
+export interface DiscordPresenceConfiguration {
+    source: DiscordPresenceSource;
+    /** Discord user ID */
+    user?: string;
+}
+
 export type DiscordPresenceSource = DiscordPresenceSourceZnc | DiscordPresenceSourceUrl;
 export interface DiscordPresenceSourceZnc {
     na_id: string;

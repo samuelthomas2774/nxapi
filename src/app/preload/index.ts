@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import * as process from 'node:process';
 import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
-import type { DiscordPresenceSource, WindowConfiguration } from '../common/types.js';
+import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/nso.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
@@ -40,10 +40,13 @@ const ipc = {
     openWebService: (webservice: WebService, token: string, qs?: string) => inv<number>('nso:openwebservice', webservice, token, qs),
     getNsoActiveEvent: (token: string) => inv<GetActiveEventResult>('nso:activeevent', token),
 
+    getDiscordPresenceConfig: () => inv<DiscordPresenceConfiguration | null>('discord:config'),
+    setDiscordPresenceConfig: (config: DiscordPresenceConfiguration | null) => inv<void>('discord:setconfig', config),
     getDiscordPresenceSource: () => inv<DiscordPresenceSource | null>('discord:source'),
     setDiscordPresenceSource: (source: DiscordPresenceSource | null) => inv<void>('discord:setsource', source),
     getDiscordPresence: () => inv<DiscordPresence | null>('discord:presence'),
     getDiscordUser: () => inv<User | null>('discord:user'),
+    getDiscordUsers: () => inv<User[]>('discord:users'),
 
     getNintendoAccountMoonToken: (id: string) => inv<string | undefined>('moon:gettoken', id),
     getSavedMoonToken: (token: string) => inv<SavedMoonToken | undefined>('moon:getcachedtoken', token),

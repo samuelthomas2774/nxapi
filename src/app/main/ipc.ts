@@ -1,16 +1,18 @@
 import { BrowserWindow, clipboard, dialog, IpcMain, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
 import createDebug from 'debug';
+import { User } from 'discord-rpc';
 import openWebService, { WebServiceIpc } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
-import { DiscordPresenceSource, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/znc-types.js';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { App } from './index.js';
-import { DiscordPresence } from '../../discord/util.js';
-import { User } from 'discord-rpc';
 import { NintendoAccountUser } from '../../api/na.js';
 import { hrduration } from '../../util/misc.js';
+import { DiscordPresence } from '../../discord/util.js';
+import { getDiscordRpcClients } from '../../discord/rpc.js';
+import { defaultTitle } from '../../discord/titles.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -112,10 +114,22 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         window.show();
     });
 
+    ipcMain.handle('nxapi:discord:config', () => appinstance.monitors.getDiscordPresenceConfiguration());
+    ipcMain.handle('nxapi:discord:setconfig', (e, config: DiscordPresenceConfiguration | null) => appinstance.monitors.setDiscordPresenceConfiguration(config));
     ipcMain.handle('nxapi:discord:source', () => appinstance.monitors.getDiscordPresenceSource());
     ipcMain.handle('nxapi:discord:setsource', (e, source: DiscordPresenceSource | null) => appinstance.monitors.setDiscordPresenceSource(source));
     ipcMain.handle('nxapi:discord:presence', () => appinstance.monitors.getDiscordPresence());
     ipcMain.handle('nxapi:discord:user', () => appinstance.monitors.getActiveDiscordPresenceMonitor()?.discord.rpc?.client.user ?? null);
+    ipcMain.handle('nxapi:discord:users', async () => {
+        const users: User[] = [];
+
+        for (const client of await getDiscordRpcClients()) {
+            await client.connect(defaultTitle.client);
+            if (client.user && !users.find(u => u.id === client.user!.id)) users.push(client.user);
+        }
+
+        return users;
+    });
 
     ipcMain.handle('nxapi:moon:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken-pctl.' + id));
     ipcMain.handle('nxapi:moon:getcachedtoken', (e, token: string) => storage.getItem('MoonToken.' + token));

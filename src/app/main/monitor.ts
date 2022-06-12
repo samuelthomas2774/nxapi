@@ -7,7 +7,7 @@ import { NotificationManager } from '../../common/notify.js';
 import { LoopResult } from '../../util/loop.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { App } from './index.js';
-import { DiscordPresenceSource } from '../common/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceSource } from '../common/types.js';
 import { DiscordPresence } from '../../discord/util.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 
@@ -32,7 +32,7 @@ export class PresenceMonitorManager {
         const existing = this.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === user.data.user.id);
         if (existing) {
             callback?.call(null, existing as EmbeddedPresenceMonitor, false);
-            return;
+            return existing;
         }
 
         const i = new EmbeddedPresenceMonitor(this.app.store.storage, token, user.nso, user.data, user);
@@ -54,13 +54,15 @@ export class PresenceMonitorManager {
         callback?.call(null, i, true);
 
         i.enable();
+
+        return i;
     }
 
     async startUrl(presence_url: string) {
         debug('Starting monitor', presence_url);
 
         const existing = this.monitors.find(m => m instanceof EmbeddedProxyPresenceMonitor && m.presence_url === presence_url);
-        if (existing) return;
+        if (existing) return existing;
 
         const i = new EmbeddedProxyPresenceMonitor(presence_url);
 
@@ -76,6 +78,8 @@ export class PresenceMonitorManager {
         this.monitors.push(i);
 
         i.enable();
+
+        return i;
     }
 
     async stop(id: string) {
@@ -102,6 +106,45 @@ export class PresenceMonitorManager {
         return this.getActiveDiscordPresenceMonitor()?.discord.last_activity ?? null;
     }
 
+    getDiscordPresenceConfiguration(): DiscordPresenceConfiguration | null {
+        const monitor = this.getActiveDiscordPresenceMonitor();
+        const source = this.getDiscordPresenceSource();
+
+        if (!monitor || !source) return null;
+
+        return {
+            source,
+            user: this.getDiscordClientFilterConfiguration(monitor.discord_client_filter),
+        };
+    }
+
+    async setDiscordPresenceConfiguration(config: DiscordPresenceConfiguration | null) {
+        if (!config) return this.setDiscordPresenceSource(null);
+
+        await this.setDiscordPresenceSource(config.source, monitor => {
+            monitor.discord_client_filter = config.user ? this.createDiscordClientFilter(config.user) : undefined;
+            monitor.skipIntervalInCurrentLoop();
+        });
+
+        await this.app.store.saveMonitorState(this);
+    }
+
+    private discord_client_filter_config = new WeakMap<
+        Exclude<ZncDiscordPresence['discord_client_filter'], undefined>,
+        /** Discord user ID */
+        string
+    >();
+
+    createDiscordClientFilter(user: string) {
+        const filter: ZncDiscordPresence['discord_client_filter'] = (client, id) => client.user?.id === user;
+        this.discord_client_filter_config.set(filter, user);
+        return filter;
+    }
+
+    getDiscordClientFilterConfiguration(filter: ZncDiscordPresence['discord_client_filter']) {
+        return filter ? this.discord_client_filter_config.get(filter) : undefined;
+    }
+
     getDiscordPresenceSource(): DiscordPresenceSource | null {
         const monitor = this.getActiveDiscordPresenceMonitor();
         if (!monitor) return null;
@@ -115,16 +158,21 @@ export class PresenceMonitorManager {
         };
     }
 
-    async setDiscordPresenceSource(source: DiscordPresenceSource | null) {
-        const monitor = this.getActiveDiscordPresenceMonitor();
+    async setDiscordPresenceSource(
+        source: DiscordPresenceSource | null,
+        callback?: (monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor) => void
+    ) {
+        const existing = this.getActiveDiscordPresenceMonitor();
 
         if (source && 'na_id' in source &&
-            monitor && monitor instanceof EmbeddedPresenceMonitor &&
-            monitor.data.user.id === source.na_id &&
-            monitor.presence_user !== (source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId)
+            existing && existing instanceof EmbeddedPresenceMonitor &&
+            existing.data.user.id === source.na_id &&
+            existing.presence_user !== (source.friend_nsa_id ?? existing.data.nsoAccount.user.nsaId)
         ) {
             await this.start(source.na_id, monitor => {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
+                monitor.discord_client_filter = existing.discord_client_filter;
+                callback?.call(null, monitor);
                 monitor.skipIntervalInCurrentLoop();
             });
             this.app.store.saveMonitorState(this);
@@ -132,35 +180,44 @@ export class PresenceMonitorManager {
             return;
         }
 
-        if (monitor) {
-            if (source && 'na_id' in source && monitor instanceof EmbeddedPresenceMonitor && monitor.data.user.id === source.na_id) return;
-            if (source && 'url' in source && monitor instanceof EmbeddedProxyPresenceMonitor && monitor.presence_url === source.url) return;
+        if (existing) {
+            if (source && (
+                ('na_id' in source && existing instanceof EmbeddedPresenceMonitor && existing.data.user.id === source.na_id) ||
+                ('url' in source && existing instanceof EmbeddedProxyPresenceMonitor && existing.presence_url === source.url)
+            )) {
+                callback?.call(null, existing);
+                return;
+            }
 
-            monitor.discord.updatePresenceForDiscord(null);
+            existing.discord.updatePresenceForDiscord(null);
 
-            if (monitor instanceof EmbeddedPresenceMonitor) {
-                monitor.presence_user = null;
+            if (existing instanceof EmbeddedPresenceMonitor) {
+                existing.presence_user = null;
 
-                if (!monitor.user_notifications && !monitor.friend_notifications) {
-                    this.stop(monitor.data.user.id);
+                if (!existing.user_notifications && !existing.friend_notifications) {
+                    this.stop(existing.data.user.id);
                 }
             }
 
-            if (monitor instanceof EmbeddedProxyPresenceMonitor) {
-                this.stop(monitor.presence_url);
+            if (existing instanceof EmbeddedProxyPresenceMonitor) {
+                this.stop(existing.presence_url);
             }
         }
 
         if (source && 'na_id' in source) {
             await this.start(source.na_id, monitor => {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
+                monitor.discord_client_filter = existing?.discord_client_filter;
+                callback?.call(null, monitor);
                 monitor.skipIntervalInCurrentLoop();
             });
         } else if (source && 'url' in source) {
-            await this.startUrl(source.url);
+            const monitor = await this.startUrl(source.url);
+            monitor.discord_client_filter = existing?.discord_client_filter;
+            callback?.call(null, monitor);
         }
 
-        if (monitor || source) {
+        if (existing || source) {
             this.app.store.saveMonitorState(this);
             this.app.menu?.updateMenu();
             this.app.store.emit('update-discord-presence-source', source);

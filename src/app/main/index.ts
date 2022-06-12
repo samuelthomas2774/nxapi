@@ -8,15 +8,13 @@ import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
-import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor, PresenceMonitorManager } from './monitor.js';
+import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createWindow } from './windows.js';
-import { DiscordPresenceSource, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, WindowType } from '../common/types.js';
 import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
 import { setupIpc } from './ipc.js';
-import { version } from '../../util/product.js';
-import { GITLAB_URL } from '../../common/constants.js';
 
 const debug = createDebug('app:main');
 
@@ -75,6 +73,9 @@ app.whenReady().then(async () => {
 
     setupIpc(appinstance, ipcMain);
 
+    // @ts-expect-error
+    globalThis.app = appinstance;
+
     await store.restoreMonitorState(appinstance.monitors);
 
     const menu = new MenuApp(appinstance);
@@ -95,9 +96,6 @@ app.whenReady().then(async () => {
     debug('App started');
 
     appinstance.showMainWindow();
-
-    // @ts-expect-error
-    globalThis.app = appinstance;
 });
 
 app.on('window-all-closed', () => {
@@ -129,7 +127,7 @@ interface SavedMonitorState {
         user_notifications: boolean;
         friend_notifications: boolean;
     }[];
-    discord_presence: DiscordPresenceSource | null;
+    discord_presence: DiscordPresenceConfiguration | null;
 }
 
 export class Store extends EventEmitter {
@@ -160,17 +158,9 @@ export class Store extends EventEmitter {
                     friend_notifications: monitor.friend_notifications,
                 });
             }
-
-            if (monitor.presence_enabled && !state.discord_presence) {
-                state.discord_presence = monitor instanceof EmbeddedProxyPresenceMonitor ? {
-                    url: monitor.presence_url,
-                } : {
-                    na_id: monitor.data.user.id,
-                    friend_nsa_id: monitor.presence_user === monitor.data.nsoAccount.user.nsaId ? undefined :
-                        monitor.presence_user ?? undefined,
-                };
-            }
         }
+
+        state.discord_presence = monitors.getDiscordPresenceConfiguration();
 
         debug('Saving monitor state', state);
         await this.storage.setItem('AppMonitors', state);
@@ -182,8 +172,8 @@ export class Store extends EventEmitter {
         if (!state) return;
 
         for (const user of state.users) {
-            const discord_presence_active = state.discord_presence && 'na_id' in state.discord_presence &&
-                state.discord_presence.na_id === user.id;
+            const discord_presence_active = state.discord_presence && 'na_id' in state.discord_presence.source &&
+                state.discord_presence.source.na_id === user.id;
 
             if (!discord_presence_active &&
                 !user.user_notifications &&
@@ -192,13 +182,15 @@ export class Store extends EventEmitter {
 
             try {
                 await monitors.start(user.id, monitor => {
-                    monitor.presence_user = state.discord_presence && 'na_id' in state.discord_presence &&
-                        state.discord_presence.na_id === user.id ?
-                            state.discord_presence.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId : null;
+                    monitor.presence_user = state.discord_presence && 'na_id' in state.discord_presence.source &&
+                        state.discord_presence.source.na_id === user.id ?
+                            state.discord_presence.source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId : null;
                     monitor.user_notifications = user.user_notifications;
                     monitor.friend_notifications = user.friend_notifications;
 
                     if (monitor.presence_user) {
+                        monitor.discord_client_filter = state.discord_presence?.user ?
+                            monitors.createDiscordClientFilter(state.discord_presence.user) : undefined;
                         this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
                     }
                 });
@@ -208,11 +200,13 @@ export class Store extends EventEmitter {
             }
         }
 
-        if (state.discord_presence && 'url' in state.discord_presence) {
+        if (state.discord_presence && 'url' in state.discord_presence.source) {
             try {
-                await monitors.startUrl(state.discord_presence.url);
+                const monitor = await monitors.startUrl(state.discord_presence.source.url);
+                monitor.discord_client_filter = state.discord_presence?.user ?
+                    monitors.createDiscordClientFilter(state.discord_presence.user) : undefined;
             } catch (err) {
-                dialog.showErrorBox('Error restoring monitor for presence URL ' + state.discord_presence.url,
+                dialog.showErrorBox('Error restoring monitor for presence URL ' + state.discord_presence.source.url,
                     err instanceof Error ? err.stack ?? err.message : err as any);
             }
         }
