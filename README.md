@@ -5,7 +5,7 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
 
 ### Features
 
-- Command line and menu bar app interfaces
+- Command line and Electron app interfaces
 - Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
 - Automated login to the Nintendo Switch Online app API
     - This uses splatnet2statink and flapg APIs by default.
@@ -20,10 +20,10 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
         or other custom Discord features. [See here for Discord title overrides](src/discord/titles) or
         [create an issue if you'd like another title added](https://github.com/samuelthomas2774/nxapi/issues/new/choose).
 
-    ![Screenshot showing Splatoon 2 as a Discord activity](resources/Screenshot%202022-03-31%20at%2017.56.47%203.png)
+    ![Screenshot showing Splatoon 2 as a Discord activity](resources/discord-activity.png)
 - Show notifications for friend Nintendo Switch presences
 
-    ![Screenshot showing a presence notification](resources/Screenshot%202022-03-31%20at%2017.56.47%202.png)
+    ![Screenshot showing a presence notification](resources/notification.png)
 - [Electron app] Open game-specific services
     - Including NookLink, which doesn't work in web browsers as it requires custom JavaScript APIs.
 - Nintendo Switch Online app API proxy server
@@ -38,6 +38,35 @@ Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs
 - Download all Nintendo Switch Parental Controls usage records
 
 The API library and types are exported for use in JavaScript/TypeScript software. The app/commands properly cache access tokens and try to handle requests to appear as Nintendo's apps - if using nxapi as a library you will need to handle this yourself.
+
+#### Electron app
+
+nxapi includes an Electron app, which can be downloaded [here](https://github.com/samuelthomas2774/nxapi/releases). The app can be used to:
+
+- Login to a Nintendo Account, both for the Nintendo Switch Online app and Parental Controls app.
+    - This will open the Nintendo Account login page in the app, just like signing into Nintendo's own apps.
+    - Accounts are shared with the nxapi command line interface.
+- Share Nintendo Switch presence to Discord.
+    - Using a custom presence URL or a friend's presence is supported.
+    - Using the authenticated user's presence is not supported, as this is no longer available from the API ([#1](https://github.com/samuelthomas2774/nxapi/issues/1)).
+- Showing notifications for friend presences.
+    - Multiple users can be selected.
+- Access game-specific services.
+    - These will be opened in the app.
+
+![Screenshot of the app](resources/app.png)
+
+![Screenshot of the menu bar app with SplatNet 2 and NookLink open in the background](resources/menu-app.png)
+
+The app includes the nxapi command line at `dist/bundle/cli-bundle.js`. Node.js must be installed separately to use this.
+
+```sh
+# macOS
+node Nintendo\ Switch\ Online.app/Contents/Resources/app/dist/bundle/cli-bundle.js ...
+
+# Windows
+node 'Nintendo Switch Online/resources/app/dist/bundle/cli-bundle.js' ...
+```
 
 #### Do I need a Nintendo Switch Online membership?
 
@@ -72,33 +101,6 @@ Currently it's too hard to do this locally. nxapi includes a service to do this 
 This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `genAudioH`/`genAudioH2`, always returns a different result, even when given the same inputs.)
 
 The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
-
-### Electron app
-
-nxapi includes an Electron menu bar app. Currently it can only be used by installing from source (there's no packaged version yet).
-
-The app can currently be used to:
-
-- Login to a Nintendo Account, both for the Nintendo Switch Online app and Parental Controls app.
-    - This will open the Nintendo Account login page in the app, just like signing into Nintendo's own apps.
-    - Accounts are shared with the nxapi command line interface.
-- Share an authenticated Nintendo Account's presence to Discord.
-    - Using a custom presence URL or a friend's presence is not supported.
-    - Only one user can be selected - selecting another user will stop sharing the first user's presence.
-- Showing notifications for an authenticated user/friend's presence.
-    - Multiple users can be selected, but this doesn't work yet.
-- Access game-specific services.
-    - These will be opened in the app.
-
-![Screenshot of the menu bar app open with SplatNet 2 and NookLink open in the background](resources/Screenshot%202022-04-17%20at%2023.56.08%202.png)
-
-After installing nxapi from source the app can be run using this command:
-
-```sh
-nxapi app
-```
-
-This command has no options, but environment variables can still be used.
 
 ### Install
 
@@ -630,6 +632,16 @@ nxapi users set 0123456789abcdef
 nxapi users forget 0123456789abcdef
 ```
 
+#### Electron app
+
+When installing nxapi from source the app can be run using this command:
+
+```sh
+nxapi app
+```
+
+This command has no options, but environment variables can still be used.
+
 #### Data location
 
 Data will be stored in an OS-specific local data location by default in the `nxapi-nodejs` directory.
@@ -694,6 +706,8 @@ ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
 #### .env file
 
 Some options can be set using environment variables. These can be stored in a `.env` file in the data location. Environment variables will be read from the `.env` file in the default location, then the `.env` file in `NXAPI_DATA_PATH` location. `.env` files will not be read from the location set in the `--data-path` option.
+
+This can be used with the Electron app (including when using the packaged version).
 
 ### Links
 
