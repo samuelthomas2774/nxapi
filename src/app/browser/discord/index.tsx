@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
+import { StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
 import { Picker } from 'react-native-web';
+import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, HIGHLIGHT_COLOUR_DARK, HIGHLIGHT_COLOUR_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
-import { getAccounts, RequestState, Root, useAsync, useDiscordPresenceSource, useEventListener, User } from '../util.js';
+import { getAccounts, RequestState, Root, useAsync, useDiscordPresenceSource, useEventListener } from '../util.js';
 
 export interface DiscordSetupProps {
     //
@@ -149,6 +150,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                 <View style={styles.button}>
                     <Button title="Save"
                         onPress={save}
+                        primary
                         color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
                 </View>
             </View>

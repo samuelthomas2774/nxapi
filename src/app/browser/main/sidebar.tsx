@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     sidebar: {
         flex: 1,
         maxWidth: 250,
-        borderRightWidth: 1,
+        borderRightWidth: ipc.platform === 'win32' ? 0 : 1,
     },
 
     top: {

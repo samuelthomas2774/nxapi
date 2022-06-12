@@ -1,10 +1,11 @@
 import React from 'react';
-import { Button, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import ipc from '../ipc.js';
 import { useAccentColour, useColourScheme, User } from '../util.js';
 import { ActiveEvent } from '../../../api/znc-types.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';
+import { Button } from '../components/index.js';
 
 export default function Event(props: {
     user: User;
@@ -44,7 +45,7 @@ export default function Event(props: {
 const styles = StyleSheet.create({
     content: {
         paddingBottom: 16,
-        paddingHorizontal: 20,
+        paddingHorizontal: ipc.platform === 'win32' ? 24 : 20,
         flexDirection: 'row',
     },
     image: {

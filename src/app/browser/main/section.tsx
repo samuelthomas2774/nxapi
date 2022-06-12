@@ -1,7 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useAccentColour, useColourScheme } from '../util.js';
-import { BORDER_COLOUR_DARK, BORDER_COLOUR_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
+import { BORDER_COLOUR_LIGHT, BORDER_COLOUR_SECONDARY_DARK, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
+import ipc from '../ipc.js';
 
 export default function Section(props: React.PropsWithChildren<{
     title: string;
@@ -23,15 +24,17 @@ export default function Section(props: React.PropsWithChildren<{
 
 const styles = StyleSheet.create({
     container: {
-        borderBottomWidth: 1,
+        marginBottom: ipc.platform === 'win32' ? 10 : 0,
+        borderBottomWidth: ipc.platform === 'win32' ? 0 : 1,
     },
     header: {
-        paddingVertical: 16,
-        paddingHorizontal: 20,
+        paddingVertical: ipc.platform === 'win32' ? 20 : 16,
+        paddingHorizontal: ipc.platform === 'win32' ? 24 : 20,
         flexDirection: 'row',
     },
     headerText: {
         flex: 1,
+        fontSize: ipc.platform === 'win32' ? 24 : 14,
     },
     activityIndicator: {
         marginLeft: 10,
@@ -49,7 +52,7 @@ const light = StyleSheet.create({
 
 const dark = StyleSheet.create({
     container: {
-        borderBottomColor: BORDER_COLOUR_DARK,
+        borderBottomColor: BORDER_COLOUR_SECONDARY_DARK,
     },
     text: {
         color: TEXT_COLOUR_DARK,

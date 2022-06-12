@@ -88,7 +88,7 @@ function FriendPresence(props: {
 const styles = StyleSheet.create({
     footer: {
         paddingBottom: 16,
-        paddingHorizontal: 20,
+        paddingHorizontal: ipc.platform === 'win32' ? 24 : 20,
     },
     friendCode: {
         fontSize: 12,
@@ -100,7 +100,8 @@ const styles = StyleSheet.create({
     },
     content: {
         paddingBottom: 16,
-        paddingLeft: 20,
+        paddingLeft: ipc.platform === 'win32' ? 24 : 20,
+        paddingRight: ipc.platform === 'win32' ? 4 : 0,
         flexDirection: 'row',
     },
 

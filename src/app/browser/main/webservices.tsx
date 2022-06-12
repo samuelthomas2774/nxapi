@@ -44,8 +44,8 @@ function WebService(props: {
 const styles = StyleSheet.create({
     content: {
         paddingBottom: 16,
-        paddingLeft: 20,
-        paddingRight: 6,
+        paddingLeft: ipc.platform === 'win32' ? 24 : 20,
+        paddingRight: ipc.platform === 'win32' ? 10 : 6,
         flexDirection: 'row',
     },
 
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     webserviceImage: {
-        borderRadius: 2,
+        borderRadius: ipc.platform === 'win32' ? 0 : 2,
         marginBottom: 12,
     },
     webserviceName: {

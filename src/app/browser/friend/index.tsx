@@ -1,10 +1,11 @@
 /// <reference path="../react-native-web.d.ts" />
 
 import React, { useCallback, useEffect } from 'react';
-import { ActivityIndicator, Button, Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { CheckBox } from 'react-native-web';
 import { Game, Presence, PresencePermissions, PresenceState } from '../../../api/znc-types.js';
 import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
+import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
 import { RequestState, Root, useAsync, useColourScheme, useDiscordPresenceSource, useEventListener } from '../util.js';
@@ -105,7 +106,8 @@ export default function Friend(props: FriendProps) {
 
                     <Button title="Close"
                         onPress={() => window.close()}
-                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                        primary autoFocus />
                 </View>
             </View>
         </View>

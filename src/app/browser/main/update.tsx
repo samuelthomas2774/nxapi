@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import ipc from '../ipc.js';
 import { useAccentColour, useEventListener } from '../util.js';
 import type { UpdateCacheData } from '../../../common/update.js';
 import { TEXT_COLOUR_DARK, UPDATE_COLOUR } from '../constants.js';
+import { Button } from '../components/index.js';
 
 export default function Update() {
     const accent_colour = useAccentColour();

@@ -10,6 +10,8 @@ import { SavedToken } from '../../common/auth/nso.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, DEFAULT_ACCENT_COLOUR } from './constants.js';
 
+export const WindowFocusedContext = React.createContext(false);
+
 export function Root(props: React.PropsWithChildren<{
     title?: string;
     titleUser?: User | SavedToken;
@@ -23,6 +25,18 @@ export function Root(props: React.PropsWithChildren<{
 
     const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
     useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
+
+    const [window_focused, setWindowFocus] = useState(true);
+
+    useEffect(() => {
+        const handler = (event: FocusEvent) => setWindowFocus(event.type === 'focus');
+        window.addEventListener('focus', handler);
+        window.addEventListener('blur', handler);
+        return () => {
+            window.removeEventListener('focus', handler);
+            window.removeEventListener('blur', handler);
+        };
+    }, []);
 
     useEffect(() => {
         const user_na = props.titleUser?.user;
@@ -48,25 +62,29 @@ export function Root(props: React.PropsWithChildren<{
         document.documentElement.style.overflowY = props.scrollable ? 'auto' : 'hidden';
     }, [props.scrollable]);
 
+    const content = <View style={[
+        props.scrollable ? styles.appScrollable : styles.app,
+        !props.vibrancy ? theme.appNoVibrancy : null,
+        props.style,
+    ]}>
+        {props.autoresize && preventingFocus ? <View
+            key={'focuslock'}
+            focusable
+            // @ts-expect-error react-native-web
+            onFocus={unlockFocus}
+        /> : null}
+
+        {props.autoresize ? <View
+            key={'autoresize'}
+            onLayout={props.autoresize ? onLayout : undefined}
+        >{props.children}</View> : props.children}
+    </View>;
+
     return <ColourSchemeContext.Provider value={colour_scheme}>
         <AccentColourContext.Provider value={accent_colour ?? DEFAULT_ACCENT_COLOUR}>
-            <View style={[
-                props.scrollable ? styles.appScrollable : styles.app,
-                !props.vibrancy ? theme.appNoVibrancy : null,
-                props.style,
-            ]}>
-                {props.autoresize && preventingFocus ? <View
-                    key={'focuslock'}
-                    focusable
-                    // @ts-expect-error react-native-web
-                    onFocus={unlockFocus}
-                /> : null}
-
-                {props.autoresize ? <View
-                    key={'autoresize'}
-                    onLayout={props.autoresize ? onLayout : undefined}
-                >{props.children}</View> : props.children}
-            </View>
+            <WindowFocusedContext.Provider value={window_focused}>
+                {content}
+            </WindowFocusedContext.Provider>
         </AccentColourContext.Provider>
     </ColourSchemeContext.Provider>;
 }

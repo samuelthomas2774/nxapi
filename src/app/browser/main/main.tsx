@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Button, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAccentColour, useAsync, useColourScheme, useEventListener, User } from '../util.js';
 import Friends from './friends.js';
@@ -8,6 +8,7 @@ import Event from './event.js';
 import Section from './section.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import SetupDiscordPresence from './discord-setup.js';
+import { Button } from '../components/index.js';
 
 export default function Main(props: {
     user: User;
@@ -69,7 +70,7 @@ function MoonOnlyUser() {
             <Text style={[styles.moonOnlyUserText, theme.text]}>Login to the Nintendo Switch Online app to view details here, or use the nxapi command to access Parental Controls data.</Text>
 
             <View style={styles.moonOnlyUserButton}>
-                <Button title="Login" onPress={() => ipc.addNsoAccount()} color={'#' + accent_colour} />
+                <Button title="Login" onPress={() => ipc.addNsoAccount()} color={'#' + accent_colour} primary />
             </View>
         </View>
     </Section>;

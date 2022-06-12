@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { CheckBox } from 'react-native-web';
 import ipc, { events } from '../ipc.js';
 import { AccentColourContext, getAccounts, Root, useAsync, useEventListener } from '../util.js';
 import Sidebar from './sidebar.js';
@@ -38,12 +39,18 @@ export default function App(props: AppProps) {
         <Sidebar users={users} selectedUser={selectedUserId} onSelectUser={setSelectedUserId}
             insetTitleBarControls={props.insetTitleBarControls}
         >
-            <View style={[styles.content, styles.button]}>
+            <View style={[styles.content, styles.checkboxContainer]}>
                 <AccentColourContext.Consumer children={accent_colour => (
-                    <Button title={auto_refresh ? 'Disable auto refresh' : 'Enable auto refresh'}
-                        onPress={() => setAutoRefresh(auto_refresh ? undefined : 30 * 1000)}
-                        color={'#' + accent_colour} />
+                    <CheckBox
+                        value={!!auto_refresh}
+                        onValueChange={v => setAutoRefresh(v ? 30 * 1000 : undefined)}
+                        color={'#' + accent_colour}
+                        style={styles.checkbox}
+                    />
                 )} />
+                <TouchableOpacity onPress={() => setAutoRefresh(auto_refresh ? undefined : 30 * 1000)}>
+                    <Text style={theme.text}>Enable auto refresh</Text>
+                </TouchableOpacity>
             </View>
         </Sidebar>
 
@@ -51,7 +58,8 @@ export default function App(props: AppProps) {
             <ScrollView style={styles.scroller} contentContainerStyle={styles.scrollerContent}>
                 <Update />
 
-                {selectedUser ? <Main key={selectedUser.user.id} user={selectedUser} /> : null}
+                {selectedUser ? <Main key={selectedUser.user.id} user={selectedUser}
+                    autoRefresh={auto_refresh} /> : null}
             </ScrollView>
         </View>
     </Root>;
@@ -74,8 +82,14 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 20,
     },
-    button: {
+    checkboxContainer: {
+        flex: 1,
+        marginRight: 20,
         flexDirection: 'row',
+        alignItems: 'center',
+    },
+    checkbox: {
+        marginRight: 10,
     },
 });
 

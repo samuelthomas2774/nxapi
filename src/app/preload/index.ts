@@ -64,6 +64,8 @@ const ipc = {
     removeEventListener: (event: string, listener: (args: any[]) => void) => events.removeListener(event, listener),
 
     getAccentColour: () => accent_colour,
+
+    platform: process.platform,
 };
 
 export type NxapiElectronIpc = typeof ipc;
