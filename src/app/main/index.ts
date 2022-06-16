@@ -19,13 +19,13 @@ import { setupIpc } from './ipc.js';
 const debug = createDebug('app:main');
 
 export class App {
+    readonly store: Store;
     readonly monitors: PresenceMonitorManager;
     readonly updater = new Updater();
     menu: MenuApp | null = null;
 
-    constructor(
-        readonly store: Store
-    ) {
+    constructor(storage: persist.LocalStorage) {
+        this.store = new Store(this, storage);
         this.monitors = new PresenceMonitorManager(this);
     }
 
@@ -68,22 +68,21 @@ app.whenReady().then(async () => {
     if (process.env.DEBUG) createDebug.enable(process.env.DEBUG);
 
     const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
-    const store = new Store(storage);
-    const appinstance = new App(store);
+    const appinstance = new App(storage);
 
     setupIpc(appinstance, ipcMain);
 
     // @ts-expect-error
     globalThis.app = appinstance;
 
-    await store.restoreMonitorState(appinstance.monitors);
+    appinstance.store.restoreMonitorState(appinstance.monitors);
 
     const menu = new MenuApp(appinstance);
     appinstance.menu = menu;
 
     app.on('open-url', (event, url) => {
         if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)game\/(\d+)\/?($|\?|\#)/i)) {
-            handleOpenWebServiceUri(store, url);
+            handleOpenWebServiceUri(appinstance.store, url);
             event.preventDefault();
         }
     });
@@ -131,10 +130,11 @@ interface SavedMonitorState {
 }
 
 export class Store extends EventEmitter {
-    users: Users<CoralUser>;
+    readonly users: Users<CoralUser>;
 
     constructor(
-        public storage: persist.LocalStorage
+        readonly app: App,
+        readonly storage: persist.LocalStorage
     ) {
         super();
 
@@ -210,5 +210,7 @@ export class Store extends EventEmitter {
                     err instanceof Error ? err.stack ?? err.message : err as any);
             }
         }
+
+        await this.app.menu?.updateMenu();
     }
 }
