@@ -86,6 +86,7 @@ const styles_mac = StyleSheet.create({
     text: {
         fontSize: 13,
         color: '#eaeaea',
+        textAlign: 'center',
     },
     textLight: {
         color: '#0a0a0a',
@@ -159,6 +160,7 @@ const styles_windows = StyleSheet.create({
 
     text: {
         color: '#eaeaea',
+        textAlign: 'center',
     },
     textLight: {
         color: TEXT_COLOUR_LIGHT,

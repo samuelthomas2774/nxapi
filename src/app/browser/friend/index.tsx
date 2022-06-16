@@ -8,7 +8,7 @@ import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
-import { RequestState, Root, useAsync, useColourScheme, useDiscordPresenceSource, useEventListener } from '../util.js';
+import { RequestState, Root, useAccentColour, useAsync, useColourScheme, useDiscordPresenceSource, useEventListener } from '../util.js';
 
 export interface FriendProps {
     user: string;
@@ -136,6 +136,11 @@ function FriendPresenceGame(props: {
     game: Game;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+    const accent_colour = useAccentColour();
+
+    const openShop = useCallback(() => {
+        ipc.openExternalUrl(props.game.shopUri);
+    }, [ipc, props.game.shopUri]);
 
     const titleid = getTitleIdFromEcUrl(props.game.shopUri);
     const first_played = props.game.firstPlayedAt ? new Date(props.game.firstPlayedAt * 1000) : null;
@@ -149,6 +154,10 @@ function FriendPresenceGame(props: {
             <Text style={[styles.gameTotalPlayTime, theme.text]}>Played for {hrduration(props.game.totalPlayTime)}</Text>
             <Text style={[styles.gameFirstPlayed, theme.text]}>First played {first_played?.toLocaleString('en-GB') ?? 'now'}</Text>
             {titleid ? <Text style={[styles.gameTitleId, theme.text]}>Title ID: <Text style={styles.gameTitleIdValue}>{titleid}</Text></Text> : null}
+
+            <View style={styles.gameShopButton}>
+                <Button title="Nintendo eShop" onPress={openShop} color={'#' + accent_colour} />
+            </View>
         </View>
     </View>;
 }
@@ -252,7 +261,7 @@ const styles = StyleSheet.create({
     },
 
     game: {
-        marginBottom: 20,
+        marginBottom: 15,
         flexDirection: 'row',
     },
     gameIcon: {
@@ -286,6 +295,10 @@ const styles = StyleSheet.create({
     gameTitleIdValue: {
         fontFamily: 'monospace',
         userSelect: 'all',
+    },
+    gameShopButton: {
+        marginTop: 10,
+        flexDirection: 'row',
     },
 });
 
