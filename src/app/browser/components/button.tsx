@@ -14,6 +14,7 @@ function ButtonMac(props: {
     const styles = styles_mac;
 
     const window_focused = useContext(WindowFocusedContext);
+    const colour_scheme = useColourScheme();
     const accent_colour = useAccentColour();
 
     const [hovered, setMouseOver] = useState(false);
@@ -30,6 +31,7 @@ function ButtonMac(props: {
     return <Pressable
         style={[
             styles.button,
+            colour_scheme === 'light' ? styles.buttonLight : null,
             active ? {backgroundColor: props.color ?? accent_colour} : null,
         ]}
         // @ts-expect-error react-native-web
@@ -44,7 +46,10 @@ function ButtonMac(props: {
             active ? styles.innerActive : null,
             active && pressed_appearance ? styles.innerPressed : null,
         ]}>
-            <Text style={styles.text}>{props.title}</Text>
+            <Text style={[
+                styles.text,
+                colour_scheme === 'light' && !active ? styles.textLight : null,
+            ]}>{props.title}</Text>
         </View>
     </Pressable>;
 }
@@ -55,6 +60,10 @@ const styles_mac = StyleSheet.create({
         lineHeight: 19,
         borderRadius: 3,
         boxShadow: '#00000030 0px 0px 1px',
+    },
+    buttonLight: {
+        backgroundColor: '#ffffff',
+        boxShadow: '#0000008a 0px 0px 1px',
     },
 
     inner: {
@@ -77,6 +86,9 @@ const styles_mac = StyleSheet.create({
     text: {
         fontSize: 13,
         color: '#eaeaea',
+    },
+    textLight: {
+        color: '#0a0a0a',
     },
 });
 

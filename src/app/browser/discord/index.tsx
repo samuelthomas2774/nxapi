@@ -114,6 +114,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                     style={[styles.picker, theme.picker]}
                 >
                     {users.filter(u => u.nso).map(u => <Picker.Item
+                        key={u.user.id}
                         label={u.user.nickname +
                             (u.user.nickname !== u.nso!.nsoAccount.user.name ? '/' + u.nso!.nsoAccount.user.name : '')}
                         value={u.user.id}
@@ -127,7 +128,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                     <Picker<string> selectedValue={selectedFriendNsaId ?? ''} onValueChange={setSelectedFriendNsaId}
                         style={[styles.picker, theme.picker]}
                     >
-                        {friends_with_presence.map(f => <Picker.Item label={f.name} value={f.nsaId} />)}
+                        {friends_with_presence.map(f => <Picker.Item key={f.nsaId} label={f.name} value={f.nsaId} />)}
                     </Picker>
                 </> : null}
             </> : null}
