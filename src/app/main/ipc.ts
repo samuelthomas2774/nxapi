@@ -13,6 +13,8 @@ import { hrduration } from '../../util/misc.js';
 import { DiscordPresence } from '../../discord/util.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
+import type { FriendProps } from '../browser/friend/index.js';
+import type { DiscordSetupProps } from '../browser/discord/index.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -71,10 +73,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
             }))));
     ipcMain.handle('nxapi:nso:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
 
-    ipcMain.handle('nxapi:window:showfriend', (e, na_id: string, nsa_id: string) => createWindow(WindowType.FRIEND, {
-        user: na_id,
-        friend: nsa_id,
-    }, {
+    ipcMain.handle('nxapi:window:showfriend', (e, props: FriendProps) => createWindow(WindowType.FRIEND, props, {
         parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
         modal: true,
         show: false,
@@ -87,7 +86,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         minHeight: 300,
         maxHeight: 300,
     }).id);
-    ipcMain.handle('nxapi:window:discord', e => createWindow(WindowType.DISCORD_PRESENCE, {}, {
+    ipcMain.handle('nxapi:window:discord', (e, props: DiscordSetupProps) => createWindow(WindowType.DISCORD_PRESENCE, props, {
         parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
         modal: true,
         show: false,

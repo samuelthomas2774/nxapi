@@ -2,15 +2,17 @@ import { contextBridge, ipcRenderer } from 'electron';
 import * as process from 'node:process';
 import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
+import type { User } from 'discord-rpc';
+import type { SharingItem } from '../main/electron.js';
 import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/nso.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
-import { Announcements, CurrentUser, Friend, GetActiveEventResult, WebService, WebServices } from '../../api/znc-types.js';
-import { DiscordPresence } from '../../discord/util.js';
-import { User } from 'discord-rpc';
-import { SharingItem } from '../main/electron.js';
-import { NintendoAccountUser } from '../../api/na.js';
+import type { Announcements, CurrentUser, Friend, GetActiveEventResult, WebService, WebServices } from '../../api/znc-types.js';
+import type { DiscordPresence } from '../../discord/util.js';
+import type { NintendoAccountUser } from '../../api/na.js';
+import type { DiscordSetupProps } from '../browser/discord/index.js';
+import type { FriendProps } from '../browser/friend/index.js';
 
 const debug = createDebug('app:preload');
 
@@ -51,8 +53,8 @@ const ipc = {
     getNintendoAccountMoonToken: (id: string) => inv<string | undefined>('moon:gettoken', id),
     getSavedMoonToken: (token: string) => inv<SavedMoonToken | undefined>('moon:getcachedtoken', token),
 
-    showFriendModal: (na_id: string, nsa_id: string) => inv<number>('window:showfriend', na_id, nsa_id),
-    showDiscordModal: () => inv<number>('window:discord'),
+    showFriendModal: (props: FriendProps) => inv<number>('window:showfriend', props),
+    showDiscordModal: (props: DiscordSetupProps = {}) => inv<number>('window:discord', props),
     setWindowHeight: (height: number) => inv('window:setheight', height),
 
     openExternalUrl: (url: string) => inv('misc:open-url', url),

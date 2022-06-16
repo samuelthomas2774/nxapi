@@ -7,7 +7,8 @@ import ipc, { events } from '../ipc.js';
 import { getAccounts, RequestState, Root, useAsync, useDiscordPresenceSource, useEventListener } from '../util.js';
 
 export interface DiscordSetupProps {
-    //
+    users?: string[];
+    friend_nsa_id?: string;
 }
 
 enum DiscordSourceType {
@@ -28,14 +29,16 @@ export default function DiscordSetup(props: DiscordSetupProps) {
 
     const [discord_presence_source, discord_presence_source_state] = useDiscordPresenceSource();
 
-    const [selectedMode, setSelectedMode] = useState(DiscordSourceType.NONE);
+    const [selectedMode, setSelectedMode] = useState(props.users?.length && props.friend_nsa_id ?
+        DiscordSourceType.ZNC : DiscordSourceType.NONE);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-    const [selectedFriendNsaId, setSelectedFriendNsaId] = useState<string | null>(null);
+    const [selectedFriendNsaId, setSelectedFriendNsaId] = useState<string | null>(props.friend_nsa_id ?? null);
     const [presenceUrl, setPresenceUrl] = useState('');
 
     useEffect(() => {
         if (!discord_presence_source) {
-            setSelectedMode(DiscordSourceType.NONE);
+            setSelectedMode(props.users?.length && props.friend_nsa_id ?
+                DiscordSourceType.ZNC : DiscordSourceType.NONE);
         } else if ('na_id' in discord_presence_source) {
             setSelectedMode(DiscordSourceType.ZNC);
             setSelectedUserId(discord_presence_source.na_id);
@@ -55,11 +58,14 @@ export default function DiscordSetup(props: DiscordSetupProps) {
     const friend = useMemo(() => selectedFriendNsaId ? friends?.find(f => f.nsaId === selectedFriendNsaId) : undefined,
         [selectedFriendNsaId, friends]);
 
+    const filtered_users = useMemo(() => users?.filter(u => selectedUserId === u.user.id ||
+        (u.nso && (!props.users || props.users.includes(u.user.id)))), [users, props.users, selectedUserId]);
+
     useEventListener(events, 'window:refresh', () => (forceRefreshAccounts(), forceRefreshFriends()), []);
 
     useEffect(() => {
-        if (users?.length && !user) setSelectedUserId(users[0].user.id);
-    }, [users, user]);
+        if (filtered_users?.length && !user) setSelectedUserId(filtered_users[0].user.id);
+    }, [filtered_users, user]);
 
     useEffect(() => {
         if (friends?.length && !friend) setSelectedFriendNsaId(friends[0].nsaId);
@@ -113,7 +119,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                 <Picker<string> selectedValue={selectedUserId ?? ''} onValueChange={setSelectedUserId}
                     style={[styles.picker, theme.picker]}
                 >
-                    {users.filter(u => u.nso).map(u => <Picker.Item
+                    {filtered_users?.map(u => <Picker.Item
                         key={u.user.id}
                         label={u.user.nickname +
                             (u.user.nickname !== u.nso!.nsoAccount.user.name ? '/' + u.nso!.nsoAccount.user.name : '')}
@@ -121,7 +127,18 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                     />)}
                 </Picker>
 
-                {user && friends_with_presence ? <>
+                {props.friend_nsa_id && (!selectedFriendNsaId || selectedFriendNsaId === props.friend_nsa_id) ? <>
+                    <Text style={[styles.header, theme.text]}>3. Select friend</Text>
+                    <Text style={[styles.help, theme.text]}>This is the user you want to share.</Text>
+
+                    <Picker<string> selectedValue={selectedFriendNsaId ?? ''} onValueChange={setSelectedFriendNsaId}
+                        style={[styles.picker, theme.picker]}
+                        enabled={false}
+                    >
+                        <Picker.Item key={props.friend_nsa_id} label={friend?.name ?? props.friend_nsa_id}
+                            value={props.friend_nsa_id} />
+                    </Picker>
+                </> : user && friends_with_presence ? <>
                     <Text style={[styles.header, theme.text]}>3. Select friend</Text>
                     <Text style={[styles.help, theme.text]}>This is the user you want to share.</Text>
 

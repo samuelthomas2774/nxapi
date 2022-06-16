@@ -43,6 +43,13 @@ export default function SetupDiscordPresence(props: {
                 {u.nso!.nsoAccount.user.name !== u.user.nickname ? ' (' + u.user.nickname + ')' : ''}
             </React.Fragment>)}.
         </Text>
+
+        <View style={styles.button}>
+            <Button title="Setup" onPress={() => ipc.showDiscordModal({
+                users: added_friends.map(u => u.user.id),
+                friend_nsa_id: props.user.nso!.nsoAccount.user.nsaId,
+            })} color={'#' + accent_colour} />
+        </View>
     </> :!source && users ? <>
         <Text style={[styles.text, theme.text]}>Add a Nintendo Switch Online account with this user as a friend to set up Discord Rich Presence.</Text>
     </> : source && 'na_id' in source && source.na_id === props.user.user.id && !source.friend_nsa_id ? <>

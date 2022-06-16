@@ -45,6 +45,12 @@ function Friend(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
 
+    const onPress = useCallback(() => {
+        ipc.showFriendModal({
+            user: props.user!.user.id,
+            friend: props.friend.nsaId,
+        });
+    }, [ipc, props.user?.user.id, props.friend.nsaId]);
     const onContextMenu = useCallback(() => {
         ipc.showFriendMenu(props.user!.user, props.user!.nso!.nsoAccount.user, props.friend);
     }, [ipc, props.user?.user, props.user?.nso?.nsoAccount.user]);
@@ -59,7 +65,7 @@ function Friend(props: {
         {props.friend.presence.updatedAt ? <FriendPresence presence={props.friend.presence} /> : null}
     </View>;
 
-    const touchable = props.user ? <TouchableOpacity onPress={() => ipc.showFriendModal(props.user!.user.id, props.friend.nsaId)}>
+    const touchable = props.user ? <TouchableOpacity onPress={onPress}>
         {content}
     </TouchableOpacity> : content;
 
