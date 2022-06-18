@@ -57,7 +57,14 @@ export class App {
     }
 }
 
-app.whenReady().then(async () => {
+export async function init() {
+    if (!app.requestSingleInstanceLock()) {
+        debug('Failed to acquire single instance lock');
+        console.warn('Failed to acquire single instance lock. Another instance of the app is running and will be focused.');
+        setTimeout(() => app.quit(), 1000);
+        return;
+    }
+
     dotenvExpand.expand(dotenv.config({
         path: path.join(paths.data, '.env'),
     }));
@@ -80,7 +87,15 @@ app.whenReady().then(async () => {
     const menu = new MenuApp(appinstance);
     appinstance.menu = menu;
 
+    app.on('second-instance', (event, command_line, working_directory, additional_data) => {
+        debug('Second instance', command_line, working_directory, additional_data);
+
+        appinstance.showMainWindow();
+    });
+
     app.on('open-url', (event, url) => {
+        debug('Open URL', url);
+
         if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)game\/(\d+)\/?($|\?|\#)/i)) {
             handleOpenWebServiceUri(appinstance.store, url);
             event.preventDefault();
@@ -95,11 +110,7 @@ app.whenReady().then(async () => {
     debug('App started');
 
     appinstance.showMainWindow();
-});
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
-});
+}
 
 class Updater {
     private _cache: UpdateCacheData | null = null;
