@@ -84,11 +84,18 @@
         ],
         "asar": false,
         "extraMetadata": {
+            "name": "nxapi-app",
             "main": "dist/bundle/app-main-bundle.cjs"
         },
         "directories": {
             "output": "dist/app/package"
         },
+        "protocols": [
+            {
+                "name": "Nintendo Switch Online",
+                "schemes": ["com.nintendo.znca"]
+            }
+        ],
         "mac": {
             "identity": null
         }
