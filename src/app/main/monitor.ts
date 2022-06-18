@@ -8,7 +8,7 @@ import { LoopResult } from '../../util/loop.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { App } from './index.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource } from '../common/types.js';
-import { DiscordPresence } from '../../discord/util.js';
+import { DiscordPresence, DiscordPresencePlayTime } from '../../discord/util.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 
 const debug = createDebug('app:main:monitor');
@@ -115,6 +115,11 @@ export class PresenceMonitorManager {
         return {
             source,
             user: this.getDiscordClientFilterConfiguration(monitor.discord_client_filter),
+            friend_code: monitor.show_friend_code && monitor.force_friend_code ?
+                monitor.force_friend_code.id : undefined,
+            show_console_online: monitor.show_console_online,
+            show_active_event: monitor.show_active_event,
+            show_play_time: monitor.show_play_time,
         };
     }
 
@@ -122,11 +127,24 @@ export class PresenceMonitorManager {
         if (!config) return this.setDiscordPresenceSource(null);
 
         await this.setDiscordPresenceSource(config.source, monitor => {
-            monitor.discord_client_filter = config.user ? this.createDiscordClientFilter(config.user) : undefined;
+            this.setDiscordPresenceConfigurationForMonitor(monitor, config);
             monitor.skipIntervalInCurrentLoop();
         });
 
         await this.app.store.saveMonitorState(this);
+    }
+
+    setDiscordPresenceConfigurationForMonitor(
+        monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
+        config: DiscordPresenceConfiguration
+    ) {
+        monitor.discord_client_filter = config.user ? this.createDiscordClientFilter(config.user) : undefined;
+        monitor.show_friend_code = !!config.friend_code;
+        monitor.force_friend_code = config.friend_code ?
+            {id: config.friend_code, regenerable: false, regenerableAt: 0} : undefined;
+        monitor.show_console_online = config.show_console_online ?? false;
+        if (monitor instanceof ZncDiscordPresence) monitor.show_active_event = config.show_active_event ?? false;
+        monitor.show_play_time = config.show_play_time ?? DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
     }
 
     private discord_client_filter_config = new WeakMap<
@@ -171,7 +189,7 @@ export class PresenceMonitorManager {
         ) {
             await this.start(source.na_id, monitor => {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
-                monitor.discord_client_filter = existing.discord_client_filter;
+                this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
                 callback?.call(null, monitor);
                 monitor.skipIntervalInCurrentLoop();
             });
@@ -207,13 +225,13 @@ export class PresenceMonitorManager {
         if (source && 'na_id' in source) {
             await this.start(source.na_id, monitor => {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
-                monitor.discord_client_filter = existing?.discord_client_filter;
+                if (existing) this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
                 callback?.call(null, monitor);
                 monitor.skipIntervalInCurrentLoop();
             });
         } else if (source && 'url' in source) {
             const monitor = await this.startUrl(source.url);
-            monitor.discord_client_filter = existing?.discord_client_filter;
+            if (existing) this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
             callback?.call(null, monitor);
         }
 
@@ -222,6 +240,18 @@ export class PresenceMonitorManager {
             this.app.menu?.updateMenu();
             this.app.store.emit('update-discord-presence-source', source);
         }
+    }
+
+    private setDiscordPresenceSourceCopyConfiguration(
+        monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
+        existing: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
+    ) {
+        monitor.discord_client_filter = existing.discord_client_filter;
+        monitor.show_friend_code = existing.show_friend_code && !!existing.force_friend_code;
+        monitor.force_friend_code = existing.force_friend_code;
+        monitor.show_console_online = existing.show_console_online;
+        if (monitor instanceof ZncDiscordPresence) monitor.show_active_event = existing.show_active_event;
+        monitor.show_play_time = existing.show_play_time;
     }
 }
 

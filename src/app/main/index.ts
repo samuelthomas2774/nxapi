@@ -200,8 +200,7 @@ export class Store extends EventEmitter {
                     monitor.friend_notifications = user.friend_notifications;
 
                     if (monitor.presence_user) {
-                        monitor.discord_client_filter = state.discord_presence?.user ?
-                            monitors.createDiscordClientFilter(state.discord_presence.user) : undefined;
+                        monitors.setDiscordPresenceConfigurationForMonitor(monitor, state.discord_presence!);
                         this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
                     }
                 });
@@ -214,8 +213,8 @@ export class Store extends EventEmitter {
         if (state.discord_presence && 'url' in state.discord_presence.source) {
             try {
                 const monitor = await monitors.startUrl(state.discord_presence.source.url);
-                monitor.discord_client_filter = state.discord_presence?.user ?
-                    monitors.createDiscordClientFilter(state.discord_presence.user) : undefined;
+                monitors.setDiscordPresenceConfigurationForMonitor(monitor, state.discord_presence);
+                this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
             } catch (err) {
                 dialog.showErrorBox('Error restoring monitor for presence URL ' + state.discord_presence.source.url,
                     err instanceof Error ? err.stack ?? err.message : err as any);

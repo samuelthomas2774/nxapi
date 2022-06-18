@@ -1,3 +1,5 @@
+import { DiscordPresencePlayTime } from '../../discord/util.js';
+
 export enum WindowType {
     MAIN_WINDOW = 'App',
     FRIEND = 'Friend',
@@ -19,6 +21,11 @@ export interface DiscordPresenceConfiguration {
     source: DiscordPresenceSource;
     /** Discord user ID */
     user?: string;
+    /** Friend code in the format "0000-0000-0000" */
+    friend_code?: string;
+    show_console_online?: boolean;
+    show_active_event?: boolean;
+    show_play_time?: DiscordPresencePlayTime;
 }
 
 export type DiscordPresenceSource = DiscordPresenceSourceZnc | DiscordPresenceSourceUrl;
