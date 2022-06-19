@@ -15,6 +15,7 @@ import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
 import { setupIpc } from './ipc.js';
+import { dev, dir } from '../../util/product.js';
 
 const debug = createDebug('app:main');
 
@@ -90,26 +91,48 @@ export async function init() {
     app.on('second-instance', (event, command_line, working_directory, additional_data) => {
         debug('Second instance', command_line, working_directory, additional_data);
 
-        appinstance.showMainWindow();
+        if (!tryHandleUrl(appinstance, command_line[command_line.length - 1])) {
+            appinstance.showMainWindow();
+        }
     });
 
     app.on('open-url', (event, url) => {
         debug('Open URL', url);
 
-        if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)game\/(\d+)\/?($|\?|\#)/i)) {
-            handleOpenWebServiceUri(appinstance.store, url);
-            event.preventDefault();
+        if (!tryHandleUrl(appinstance, url)) {
+            appinstance.showMainWindow();
         }
     });
-    app.setAsDefaultProtocolClient('com.nintendo.znca');
+
+    if (dev && process.platform === 'win32') {
+        app.setAsDefaultProtocolClient('com.nintendo.znca', process.execPath, [
+            path.join(dir, 'dist', 'app', 'main', 'app-entry.cjs'),
+        ]);
+    } else {
+        app.setAsDefaultProtocolClient('com.nintendo.znca');
+    }
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) appinstance.showMainWindow();
     });
 
+    app.on('window-all-closed', () => {
+        // Listen to the window-all-closed event to prevent Electron quitting the app
+        // https://www.electronjs.org/docs/latest/api/app#event-window-all-closed
+    });
+
     debug('App started');
 
     appinstance.showMainWindow();
+}
+
+function tryHandleUrl(app: App, url: string) {
+    if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)?game\/(\d+)\/?($|\?|\#)/i)) {
+        handleOpenWebServiceUri(app.store, url);
+        return true;
+    }
+
+    return false;
 }
 
 class Updater {
