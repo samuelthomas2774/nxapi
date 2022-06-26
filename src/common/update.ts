@@ -27,9 +27,7 @@ export async function checkUpdates() {
     try {
         const data: UpdateCacheData = JSON.parse(await fs.readFile(update_cache_path, 'utf-8'));
 
-        if (data && data.expires_at > Date.now()) {
-            if (data.current_version !== version) return data;
-
+        if (data && data.current_version === version && data.expires_at > Date.now()) {
             if ('update_available' in data && data.update_available) {
                 console.warn('[nxapi] Update available - current version %s, latest %s',
                     data.current_version, data.latest_version);
