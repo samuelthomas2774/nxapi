@@ -13,6 +13,13 @@ export interface SavedIksmSessionToken {
     url: string;
     cookies: string;
 
+    body: string;
+    language: string | null;
+    region: string | null;
+    /** Splatoon 2 player ID aka. unique_id */
+    user_id: string | null;
+    nsa_id: string | null;
+
     iksm_session: string;
     expires_at: number;
     useragent: string;

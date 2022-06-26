@@ -4,10 +4,10 @@ import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
 
-const debug = createDebug('cli:splatnet2:user');
+const debug = createDebug('cli:splatnet2:token');
 
-export const command = 'user';
-export const desc = 'Get the authenticated Nintendo Account\'s player record';
+export const command = 'token';
+export const desc = 'Get the authenticated Nintendo Account\'s SplatNet 2 user data and iksm_session cookie';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.option('user', {
@@ -16,6 +16,12 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('token', {
         describe: 'Nintendo Account session token',
         type: 'string',
+    }).option('json', {
+        describe: 'Output raw JSON',
+        type: 'boolean',
+    }).option('json-pretty-print', {
+        describe: 'Output pretty-printed JSON',
+        type: 'boolean',
     });
 }
 
@@ -25,22 +31,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const storage = await initStorage(argv.dataPath);
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
-    const token: string = argv.token ||
-        await storage.getItem('NintendoAccountToken.' + usernsid);
+    const token: string = argv.token || await storage.getItem('NintendoAccountToken.' + usernsid);
     const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
-    const [records, stages, activefestivals, timeline] = await Promise.all([
-        splatnet.getRecords(),
-        splatnet.getStages(),
-        splatnet.getActiveFestivals(),
-        splatnet.getTimeline(),
-    ]);
-    const nickname_and_icons = await splatnet.getUserNicknameAndIcon([records.records.player.principal_id]);
+    if (argv.json || argv.jsonPrettyPrint) {
+        const result = {
+            iksm_session: data.iksm_session,
+            language: data.language,
+            region: data.region,
+            user_id: data.user_id,
+            nsa_id: data.nsa_id,
+        };
 
-    console.log('Player %s (Splatoon 2 ID %s, NSA ID %s) level %d',
-        records.records.player.nickname,
-        records.records.unique_id,
-        records.records.player.principal_id,
-        records.records.player.player_rank,
-        records.records.player.player_type);
+        console.log(JSON.stringify(result, null, argv.jsonPrettyPrint ? 4 : 0));
+        return;
+    }
+
+    console.log(data.iksm_session);
 }

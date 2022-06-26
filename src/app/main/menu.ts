@@ -59,7 +59,7 @@ export default class MenuApp {
                         checked: monitor?.user_notifications,
                         enabled: !!monitor?.user_notifications,
                         click: () => this.setUserNotificationsActive(data.user.id, !monitor?.user_notifications)},
-                    {label: 'Enable notifications for this friends of this user\'s presence', type: 'checkbox',
+                    {label: 'Enable notifications for friends of this user\'s presence', type: 'checkbox',
                         checked: monitor?.friend_notifications,
                         click: () => this.setFriendNotificationsActive(data.user.id, !monitor?.friend_notifications)},
                     {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop(true)},

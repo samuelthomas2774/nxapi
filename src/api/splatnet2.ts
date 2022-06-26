@@ -268,7 +268,7 @@ ${colour}
         const expires = decodeURIComponent(match[8] || '')
             .replace(/(\b)(\d{1,2})-([a-z]{3})-(\d{4})(\b)/gi, '$1$2 $3 $4$5');
 
-        debug('iksm_session %s, expires %s', iksm_session, expires);
+        debug('iksm_session %s, expires %s', iksm_session.replace(/^(.{6}).*/, '$1****'), expires);
 
         const expires_at = expires ? Date.parse(expires) : Date.now() + 24 * 60 * 60 * 1000;
 
@@ -278,7 +278,12 @@ ${colour}
         const mn = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-nsa-id=(?:"([^"]*)"|([^\s>]*))/i);
         const [language, region, user_id, nsa_id] = [ml, mr, mu, mn].map(m => m?.[1] || m?.[2] || null);
 
-        debug('SplatNet 2 user', {language, region, user_id, nsa_id});
+        debug('SplatNet 2 user', {
+            language,
+            region,
+            user_id: user_id?.replace(/^(.{6}).*/, '$1****'),
+            nsa_id: nsa_id?.replace(/^(.{6}).*/, '$1****'),
+        });
 
         return {
             webserviceToken,

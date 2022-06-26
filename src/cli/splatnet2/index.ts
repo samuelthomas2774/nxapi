@@ -1,4 +1,5 @@
 export * as user from './user.js';
+export * as token from './token.js';
 export * as stages from './stages.js';
 export * as challenges from './challenges.js';
 export * as weapons from './weapons.js';
