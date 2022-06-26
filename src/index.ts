@@ -8,11 +8,20 @@ export * as f from './api/f.js';
 
 export {
     default as SplatNet2Api,
-    XPowerRankingRule as SplatNet2XPowerRankingRule,
     LeagueType as SplatNet2LeagueType,
     LeagueRegion as SplatNet2LeagueRegion,
     ShareColour as SplatNet2ProfileColour,
+    toLeagueId as toSplatNet2LeagueId,
 } from './api/splatnet2.js';
+export {
+    Season as SplatNet2XRankSeason,
+    Rule as SplatNet2XPowerRankingRule,
+    getAllSeasons as getSplatNet2XRankSeasons,
+    getSeason as getSplatNet2XRankSeason,
+    getNextSeason as getSplatNet2NextXRankSeason,
+    getPreviousSeason as getSplatNet2PreviousXRankSeason,
+    toSeasonId as toSplatNet2XRankSeasonId,
+} from './api/splatnet2-xrank.js';
 export * as splatnet2 from './api/splatnet2-types.js';
 export {
     default as NooklinkApi,

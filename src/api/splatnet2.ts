@@ -7,6 +7,7 @@ import { ErrorResponse } from './util.js';
 import ZncApi from './znc.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
 import { timeoutSignal } from '../util/misc.js';
+import { toSeasonId, Rule as XPowerRankingRule } from './splatnet2-xrank.js';
 
 const debug = createDebug('nxapi:api:splatnet2');
 
@@ -300,28 +301,6 @@ ${colour}
             useragent: SPLATNET2_WEBSERVICE_USERAGENT,
         };
     }
-}
-
-export function toSeasonId(year: number, month: number) {
-    const nextyear = month === 12 ? year + 1 : year;
-    const nextmonth = month === 12 ? 1 : month + 1;
-
-    if (year < 2000) throw new Error('Invalid season ID');
-    if (nextyear >= 2100) throw new Error('Invalid season ID');
-
-    return ('' + (year - 2000)).padStart(2, '0') +
-        ('' + month).padStart(2, '0') +
-        '01T00_' +
-        ('' + (nextyear - 2000)).padStart(2, '0') +
-        ('' + nextmonth).padStart(2, '0') +
-        '01T00';
-}
-
-export enum XPowerRankingRule {
-    SPLAT_ZONES = 'splat_zones',
-    TOWER_CONTROL = 'tower_control',
-    RAINMAKER = 'rainmaker',
-    CLAM_BLITZ = 'clam_blitz',
 }
 
 export function toLeagueId(date: Date, type: LeagueType) {

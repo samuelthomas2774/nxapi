@@ -9,3 +9,4 @@ export * as schedule from './schedule.js';
 export * as dumpResults from './dump-results.js';
 export * as dumpRecords from './dump-records.js';
 export * as monitor from './monitor.js';
+export * as xRankSeasons from './x-rank-seasons.js';
