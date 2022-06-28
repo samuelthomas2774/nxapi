@@ -1,15 +1,26 @@
 import process from 'node:process';
 import * as net from 'node:net';
-import { createRequire } from 'node:module';
+import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import fetch from 'node-fetch';
 import DiscordRPC from 'discord-rpc';
+// @ts-expect-error
+import __BaseIpcTransport from 'discord-rpc/src/transports/ipc.js';
 
 const debug = createDebug('nxapi:discord:rpc');
 
-const require = createRequire(import.meta.url);
+declare class _BaseIpcTransport extends EventEmitter {
+    constructor(client: DiscordRPC.Client);
+    connect(): Promise<void>;
+    onClose(e: boolean): void;
+    send(data: unknown, op?: OPCode): void;
+    close(): Promise<boolean>;
+    ping(): void;
+    static encode(op: OPCode, data: unknown): Buffer;
+    static decode(socket: net.Socket, callback: (op: OPCode, data: unknown) => void): void;
+}
 
-const BaseIpcTransport = require('discord-rpc/src/transports/ipc.js');
+const BaseIpcTransport = __BaseIpcTransport as typeof _BaseIpcTransport;
 
 export async function getDiscordRpcClients() {
     const sockets = await getAllIpcSockets();

@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import createDebug from 'debug';
 import persist from 'node-persist';
-import notifier from 'node-notifier';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -105,6 +104,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncNotifications(storage, token, nso, data);
 
+    i.notifications = new TerminalNotificationManager(await import('node-notifier'));
     i.user_notifications = argv.userNotifications;
     i.friend_notifications = argv.friendNotifications;
     i.update_interval = argv.updateInterval;
@@ -127,10 +127,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 }
 
 export class TerminalNotificationManager extends NotificationManager {
+    constructor(private readonly notifier: typeof import('node-notifier')) {
+        super();
+    }
+
     onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
-        notifier.notify({
+        this.notifier.notify({
             title: friend.name,
             message: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
@@ -140,7 +144,7 @@ export class TerminalNotificationManager extends NotificationManager {
     }
 
     onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        notifier.notify({
+        this.notifier.notify({
             title: friend.name,
             message: 'Offline',
             icon: friend.imageUri,
@@ -150,7 +154,7 @@ export class TerminalNotificationManager extends NotificationManager {
     onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
-        notifier.notify({
+        this.notifier.notify({
             title: friend.name,
             message: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
@@ -162,7 +166,7 @@ export class TerminalNotificationManager extends NotificationManager {
     onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
-        notifier.notify({
+        this.notifier.notify({
             title: friend.name,
             message: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),

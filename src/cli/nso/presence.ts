@@ -4,7 +4,7 @@ import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/nso.js';
 import { DiscordPresencePlayTime } from '../../discord/util.js';
-import { handleEnableSplatNet2Monitoring } from './notify.js';
+import { handleEnableSplatNet2Monitoring, TerminalNotificationManager } from './notify.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 
 const debug = createDebug('cli:nso:presence');
@@ -191,6 +191,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncDiscordPresence(storage, token, nso, data);
 
+    i.notifications = new TerminalNotificationManager(await import('node-notifier'));
     i.user_notifications = argv.userNotifications;
     i.friend_notifications = argv.friendNotifications;
     i.update_interval = argv.updateInterval;

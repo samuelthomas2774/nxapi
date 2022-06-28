@@ -84,12 +84,16 @@
         "files": [
             "dist/app/bundle",
             "dist/bundle",
-            "!dist/app/package"
+            "!dist/app/package",
+            "!**/node_modules/**/*"
         ],
         "asar": false,
         "extraMetadata": {
             "name": "nxapi-app",
-            "main": "dist/bundle/app-main-bundle.cjs"
+            "main": "dist/bundle/app-main-bundle.cjs",
+            "dependencies": {},
+            "optionalDependencies": {},
+            "devDependencies": {}
         },
         "directories": {
             "output": "dist/app/package"
