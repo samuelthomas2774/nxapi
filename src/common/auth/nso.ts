@@ -4,8 +4,8 @@ import { Response } from 'node-fetch';
 import { FlapgApiResponse, FResult } from '../../api/f.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
-import { AccountLogin, ZncErrorResponse } from '../../api/znc-types.js';
-import ZncApi, { ZNCA_CLIENT_ID } from '../../api/znc.js';
+import { AccountLogin, CoralErrorResponse } from '../../api/coral-types.js';
+import CoralApi, { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 
 const debug = createDebug('nxapi:auth:nso');
@@ -29,7 +29,7 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
     data: SavedToken;
 }>
 export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string): Promise<{
-    nso: ZncApi;
+    nso: CoralApi;
     data: SavedToken;
 }>
 export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string) {
@@ -63,7 +63,7 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
 
         const {nso, data} = proxy_url ?
             await ZncProxyApi.createWithSessionToken(proxy_url, token) :
-            await ZncApi.createWithSessionToken(token);
+            await CoralApi.createWithSessionToken(token);
 
         const existingToken: SavedToken = {
             ...data,
@@ -83,7 +83,7 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
 
     const nso = proxy_url ?
         new ZncProxyApi(proxy_url, token) :
-        new ZncApi(existingToken.credential.accessToken);
+        new CoralApi(existingToken.credential.accessToken);
 
     nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, existingToken);
 
@@ -91,16 +91,16 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
 }
 
 function createTokenExpiredHandler(
-    storage: persist.LocalStorage, token: string, nso: ZncApi, existingToken: SavedToken
+    storage: persist.LocalStorage, token: string, nso: CoralApi, existingToken: SavedToken
 ) {
-    return (data: ZncErrorResponse, response: Response) => {
+    return (data: CoralErrorResponse, response: Response) => {
         debug('Token expired', existingToken.user.id, data);
         return renewToken(storage, token, nso, existingToken);
     };
 }
 
 async function renewToken(
-    storage: persist.LocalStorage, token: string, nso: ZncApi, previousToken: SavedToken
+    storage: persist.LocalStorage, token: string, nso: CoralApi, previousToken: SavedToken
 ) {
     const data = await nso.renewToken(token, previousToken.user);
 

@@ -10,6 +10,14 @@ const debugFlapg = createDebug('nxapi:api:flapg');
 const debugImink = createDebug('nxapi:api:imink');
 const debugZncaApi = createDebug('nxapi:api:znca-api');
 
+abstract class ZncaApi {
+    constructor(
+        public useragent?: string
+    ) {}
+
+    abstract genf(token: string, timestamp: string, uuid: string, type: FlapgIid): Promise<FResult>;
+}
+
 //
 // splatnet2statink + flapg
 //
@@ -96,6 +104,23 @@ export interface FlapgApiResponse {
     };
 }
 
+export class ZncaApiFlapg extends ZncaApi {
+    async getLoginHash(id_token: string, timestamp: string) {
+        return getLoginHash(id_token, timestamp, this.useragent);
+    }
+
+    async genf(token: string, timestamp: string, uuid: string, type: FlapgIid) {
+        const result = await flapg(token, timestamp, uuid, type, this.useragent);
+
+        return {
+            provider: 'flapg' as const,
+            token, timestamp, uuid, type,
+            f: result.result.f,
+            result,
+        };
+    }
+}
+
 //
 // imink
 //
@@ -149,6 +174,19 @@ export interface IminkFResponse {
 export interface IminkFError {
     reason: string;
     error: true;
+}
+
+export class ZncaApiImink extends ZncaApi {
+    async genf(token: string, timestamp: string, uuid: string, type: FlapgIid) {
+        const result = await iminkf(token, timestamp, uuid, type === FlapgIid.APP ? '2' : '1', this.useragent);
+
+        return {
+            provider: 'imink' as const,
+            token, timestamp, uuid, type,
+            f: result.f,
+            result,
+        };
+    }
 }
 
 //
@@ -206,43 +244,32 @@ export interface AndroidZncaFError {
     error: string;
 }
 
-export async function f(
-    token: string, timestamp: string | number, uuid: string, type: FlapgIid,
-    useragent?: string,
-    provider: FApi = getEnvApi()
-): Promise<FResult> {
-    if (provider === 'flapg') {
-        const result = await flapg(token, timestamp, uuid, type, useragent);
-        return {
-            provider: 'flapg',
-            token, timestamp: '' + timestamp, uuid, type,
-            f: result.result.f, result,
-        };
-    }
-    if (provider === 'imink') {
-        const result = await iminkf(token, timestamp, uuid, type === FlapgIid.APP ? '2' : '1', useragent);
-        return {
-            provider: 'imink',
-            token, timestamp: '' + timestamp, uuid, type,
-            f: result.f, result,
-        };
-    }
-    if (provider[0] === 'nxapi') {
-        const result = await genf(provider[1], token, timestamp, uuid, type, useragent);
-        return {
-            provider: 'nxapi', url: provider[1],
-            token, timestamp: '' + timestamp, uuid, type,
-            f: result.f, result,
-        };
+export class ZncaApiNxapi extends ZncaApi {
+    constructor(readonly url: string, useragent?: string) {
+        super(useragent);
     }
 
-    throw new Error('Unknown znca API provider');
+    async genf(token: string, timestamp: string, uuid: string, type: FlapgIid) {
+        const result = await genf(this.url + '/f', token, timestamp, uuid, type, this.useragent);
+
+        return {
+            provider: 'nxapi' as const,
+            url: this.url + '/f',
+            token, timestamp, uuid, type,
+            f: result.f,
+            result,
+        };
+    }
 }
 
-export type FApi =
-    'flapg' |
-    'imink' |
-    ['nxapi', string];
+export async function f(
+    token: string, timestamp: string | number, uuid: string, type: FlapgIid,
+    useragent?: string
+): Promise<FResult> {
+    const provider = getZncaApiFromEnvironment(useragent);
+
+    return provider.genf(token, '' + timestamp, uuid, type);
+}
 
 export type FResult = {
     provider: string;
@@ -264,21 +291,21 @@ export type FResult = {
     result: AndroidZncaFResponse;
 });
 
-function getEnvApi(): FApi {
+function getZncaApiFromEnvironment(useragent?: string): ZncaApi {
     if (process.env.NXAPI_ZNCA_API) {
         if (process.env.NXAPI_ZNCA_API === 'flapg') {
-            return 'flapg';
+            return new ZncaApiFlapg(useragent);
         }
         if (process.env.NXAPI_ZNCA_API === 'imink') {
-            return 'imink';
+            return new ZncaApiImink(useragent);
         }
 
         throw new Error('Unknown znca API provider');
     }
 
     if (process.env.ZNCA_API_URL) {
-        return ['nxapi', process.env.ZNCA_API_URL + '/f'];
+        return new ZncaApiNxapi(process.env.ZNCA_API_URL, useragent);
     }
 
-    return 'flapg';
+    return new ZncaApiFlapg(useragent);
 }

@@ -2,7 +2,7 @@ import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
 import createDebug from 'debug';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { App } from './index.js';
-import { WebService } from '../../api/znc-types.js';
+import { WebService } from '../../api/coral-types.js';
 import openWebService from './webservices.js';
 import { SavedToken } from '../../common/auth/nso.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';

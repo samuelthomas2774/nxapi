@@ -3,7 +3,7 @@ import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence, DiscordPresence } from '../discord/util.js';
 import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
-import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, ZncErrorResponse } from '../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
 import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl } from '../index.js';
@@ -302,7 +302,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
-    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         this.discord.onError(err);
 
         return super.handleError(err);

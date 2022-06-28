@@ -1,5 +1,5 @@
 import DiscordRPC from 'discord-rpc';
-import { ActiveEvent, CurrentUser, Friend, Game, PresenceState } from '../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, PresenceState } from '../api/coral-types.js';
 import { defaultTitle, titles } from './titles.js';
 import { product } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';

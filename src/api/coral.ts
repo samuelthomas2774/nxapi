@@ -2,12 +2,12 @@ import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { f, FlapgIid } from './f.js';
-import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, ZncErrorResponse, ZncResponse, ZncStatus, ZncSuccessResponse } from './znc-types.js';
+import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
 
-const debug = createDebug('nxapi:api:znc');
+const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '8.0.0';
@@ -17,23 +17,23 @@ const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZN
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 
-export default class ZncApi {
+export default class CoralApi {
     static useragent: string | null = null;
 
-    onTokenExpired: ((data: ZncErrorResponse, res: Response) => Promise<void>) | null = null;
+    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
     constructor(
         public token: string,
-        public useragent: string | null = ZncApi.useragent
+        public useragent: string | null = CoralApi.useragent
     ) {}
 
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _autoRenewToken = true,
         /** @internal */ _attempt = 0
-    ): Promise<ZncSuccessResponse<T>> {
+    ): Promise<CoralSuccessResponse<T>> {
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -52,9 +52,9 @@ export default class ZncApi {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
-        const data = await response.json() as ZncResponse<T>;
+        const data = await response.json() as CoralResponse<T>;
 
-        if (data.status === ZncStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
+        if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
             // _renewToken will be awaited when calling fetch
             this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).finally(() => {
                 this._renewToken = null;
@@ -65,7 +65,7 @@ export default class ZncApi {
         if ('errorMessage' in data) {
             throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
-        if (data.status !== ZncStatus.OK) {
+        if (data.status !== CoralStatus.OK) {
             throw new ErrorResponse('[znc] Unknown error', response, data);
         }
 
@@ -194,7 +194,7 @@ export default class ZncApi {
         };
     }
 
-    static async createWithSessionToken(token: string, useragent = ZncApi.useragent) {
+    static async createWithSessionToken(token: string, useragent = CoralApi.useragent) {
         const data = await this.loginWithSessionToken(token, useragent);
 
         return {
@@ -211,7 +211,7 @@ export default class ZncApi {
         return data;
     }
 
-    static async loginWithSessionToken(token: string, useragent = ZncApi.useragent) {
+    static async loginWithSessionToken(token: string, useragent = CoralApi.useragent) {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
@@ -248,7 +248,7 @@ export default class ZncApi {
         });
 
         debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
-        const data = await response.json() as ZncResponse<AccountLogin>;
+        const data = await response.json() as CoralResponse<AccountLogin>;
 
         if ('errorMessage' in data) {
             throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
@@ -271,7 +271,7 @@ export default class ZncApi {
     }
 }
 
-export interface ZncJwtPayload extends JwtPayload {
+export interface CoralJwtPayload extends JwtPayload {
     isChildRestricted: boolean;
     membership: {
         active: boolean;
@@ -280,18 +280,18 @@ export interface ZncJwtPayload extends JwtPayload {
     exp: number;
     iat: number;
     iss: 'api-lp1.znc.srv.nintendo.net';
-    /** User ID (CurrentUser.id, not CurrentUser.nsaID) */
+    /** Coral user ID (CurrentUser.id, not CurrentUser.nsaID) */
     sub: number;
     typ: 'id_token';
 }
-export interface ZncWebServiceJwtPayload extends JwtPayload {
+export interface CoralWebServiceJwtPayload extends JwtPayload {
     isChildRestricted: boolean;
     aud: string;
     exp: number;
     iat: number;
     iss: 'api-lp1.znc.srv.nintendo.net';
     jti: string;
-    /** User ID (CurrentUser.id, not CurrentUser.nsaID) */
+    /** Coral user ID (CurrentUser.id, not CurrentUser.nsaID) */
     sub: number;
     links: {
         networkServiceAccount: {

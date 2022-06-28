@@ -28,8 +28,8 @@ export interface DiscordPresenceConfiguration {
     show_play_time?: DiscordPresencePlayTime;
 }
 
-export type DiscordPresenceSource = DiscordPresenceSourceZnc | DiscordPresenceSourceUrl;
-export interface DiscordPresenceSourceZnc {
+export type DiscordPresenceSource = DiscordPresenceSourceCoral | DiscordPresenceSourceUrl;
+export interface DiscordPresenceSourceCoral {
     na_id: string;
     friend_nsa_id?: string;
 }

@@ -12,7 +12,7 @@ export interface DiscordSetupProps {
 }
 
 enum DiscordSourceType {
-    ZNC,
+    CORAL,
     URL,
     NONE,
 }
@@ -30,7 +30,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
     const [discord_presence_source, discord_presence_source_state] = useDiscordPresenceSource();
 
     const [selectedMode, setSelectedMode] = useState(props.users?.length && props.friend_nsa_id ?
-        DiscordSourceType.ZNC : DiscordSourceType.NONE);
+        DiscordSourceType.CORAL : DiscordSourceType.NONE);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [selectedFriendNsaId, setSelectedFriendNsaId] = useState<string | null>(props.friend_nsa_id ?? null);
     const [presenceUrl, setPresenceUrl] = useState('');
@@ -38,9 +38,9 @@ export default function DiscordSetup(props: DiscordSetupProps) {
     useEffect(() => {
         if (!discord_presence_source) {
             setSelectedMode(props.users?.length && props.friend_nsa_id ?
-                DiscordSourceType.ZNC : DiscordSourceType.NONE);
+                DiscordSourceType.CORAL : DiscordSourceType.NONE);
         } else if ('na_id' in discord_presence_source) {
-            setSelectedMode(DiscordSourceType.ZNC);
+            setSelectedMode(DiscordSourceType.CORAL);
             setSelectedUserId(discord_presence_source.na_id);
             setSelectedFriendNsaId(discord_presence_source.friend_nsa_id ?? null);
         } else if ('url' in discord_presence_source) {
@@ -72,7 +72,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
     }, [friends, user]);
 
     const save = useCallback(async () => {
-        if (selectedMode === DiscordSourceType.ZNC) {
+        if (selectedMode === DiscordSourceType.CORAL) {
             if (!selectedUserId?.match(/^[0-9a-f]{16}$/)) throw new Error('Invalid Nintendo Account ID');
             if (!selectedFriendNsaId?.match(/^[0-9a-f]{16}$/)) throw new Error('Invalid friend Network Service Account ID');
 
@@ -106,13 +106,13 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                 style={[styles.picker, theme.picker]}
             >
                 <Picker.Item label="Select a user that is friends with the user you want to share"
-                    value={DiscordSourceType.ZNC} />
+                    value={DiscordSourceType.CORAL} />
                 <Picker.Item label="Enter a URL that returns the presence data you want to share"
                     value={DiscordSourceType.URL} />
                 <Picker.Item label="Disable" value={DiscordSourceType.NONE} />
             </Picker>
 
-            {selectedMode === DiscordSourceType.ZNC ? <>
+            {selectedMode === DiscordSourceType.CORAL ? <>
                 <Text style={[styles.header, theme.text]}>2. Select user</Text>
                 <Text style={[styles.help, theme.text]}>This user must be friends with the user you want to share.</Text>
 

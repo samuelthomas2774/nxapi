@@ -28,6 +28,8 @@ https://ec.nintendo.com/apps/0100f8f0000a2000/GB?lang=en-GB
 
 In this link, the title ID is `0100f8f0000a2000`.
 
+The title ID of friends games can also be found using the Electron app, by pressing a friend's name.
+
 ### 2. Nintendo Switch Parental Controls title download notifications
 
 The title ID of any applications you download are recorded in daily summaries in the Nintendo Switch Parental Controls app. The title doesn't need to be used and the download can be cancelled immediately - it only needs to be queued. This is recorded when queuing downloads of application titles and does not include addon content or update data titles, so the application must be archived or deleted for this to be recorded again.

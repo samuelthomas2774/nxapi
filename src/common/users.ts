@@ -1,8 +1,8 @@
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import ZncApi from '../api/znc.js';
+import CoralApi from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, GetActiveEventResult, WebServices, ZncSuccessResponse } from '../api/znc-types.js';
+import { Announcements, Friends, GetActiveEventResult, WebServices, CoralSuccessResponse } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/nso.js';
 import { Jwt } from '../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../api/na.js';
@@ -65,16 +65,16 @@ export default class Users<T extends UserData> {
     }
 }
 
-export interface CoralUserData<T extends ZncApi = ZncApi> extends UserData {
+export interface CoralUserData<T extends CoralApi = CoralApi> extends UserData {
     nso: T;
     data: SavedToken;
-    announcements: ZncSuccessResponse<Announcements>;
-    friends: ZncSuccessResponse<Friends>;
-    webservices: ZncSuccessResponse<WebServices>;
-    active_event: ZncSuccessResponse<GetActiveEventResult>;
+    announcements: CoralSuccessResponse<Announcements>;
+    friends: CoralSuccessResponse<Friends>;
+    webservices: CoralSuccessResponse<WebServices>;
+    active_event: CoralSuccessResponse<GetActiveEventResult>;
 }
 
-export class CoralUser<T extends ZncApi = ZncApi> implements CoralUserData<T> {
+export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T> {
     created_at = Date.now();
     expires_at = Infinity;
 
@@ -90,10 +90,10 @@ export class CoralUser<T extends ZncApi = ZncApi> implements CoralUserData<T> {
     constructor(
         public nso: T,
         public data: SavedToken,
-        public announcements: ZncSuccessResponse<Announcements>,
-        public friends: ZncSuccessResponse<Friends>,
-        public webservices: ZncSuccessResponse<WebServices>,
-        public active_event: ZncSuccessResponse<GetActiveEventResult>,
+        public announcements: CoralSuccessResponse<Announcements>,
+        public friends: CoralSuccessResponse<Friends>,
+        public webservices: CoralSuccessResponse<WebServices>,
+        public active_event: CoralSuccessResponse<GetActiveEventResult>,
     ) {}
 
     private async update(key: keyof CoralUser['updated'], callback: () => Promise<void>, ttl: number) {

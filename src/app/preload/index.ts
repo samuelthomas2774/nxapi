@@ -8,7 +8,7 @@ import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfigu
 import type { SavedToken } from '../../common/auth/nso.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
-import type { Announcements, CurrentUser, Friend, GetActiveEventResult, WebService, WebServices } from '../../api/znc-types.js';
+import type { Announcements, CurrentUser, Friend, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';
 import type { DiscordPresence } from '../../discord/util.js';
 import type { NintendoAccountUser } from '../../api/na.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';

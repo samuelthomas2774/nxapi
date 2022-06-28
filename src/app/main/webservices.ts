@@ -5,9 +5,9 @@ import { Buffer } from 'node:buffer';
 import createDebug from 'debug';
 import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, nativeTheme, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
-import ZncApi from '../../api/znc.js';
+import CoralApi from '../../api/coral.js';
 import { dev } from '../../util/product.js';
-import { WebService } from '../../api/znc-types.js';
+import { WebService } from '../../api/coral-types.js';
 import { Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/nso.js';
@@ -16,10 +16,10 @@ import { createWebServiceWindow } from './windows.js';
 const debug = createDebug('app:main:webservices');
 
 const windows = new Map<string, BrowserWindow>();
-const windowapi = new WeakMap<WebContents, [Store, string, ZncApi, SavedToken, WebService]>();
+const windowapi = new WeakMap<WebContents, [Store, string, CoralApi, SavedToken, WebService]>();
 
 export default async function openWebService(
-    store: Store, token: string, nso: ZncApi, data: SavedToken,
+    store: Store, token: string, nso: CoralApi, data: SavedToken,
     webservice: WebService, qs?: string
 ) {
     const windowid = data.nsoAccount.user.nsaId + ':' + webservice.id;

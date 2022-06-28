@@ -4,7 +4,7 @@ import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';
 import { bundlepath } from './util.js';
 import { app_menu, createWindowMenu } from './app-menu.js';
-import { WebService } from '../../api/znc-types.js';
+import { WebService } from '../../api/coral-types.js';
 
 const windows = new WeakMap<WebContents, WindowConfiguration>();
 const menus = new WeakMap<BrowserWindow, Menu>();

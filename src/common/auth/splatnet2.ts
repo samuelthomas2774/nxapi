@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import { getToken } from './nso.js';
 import SplatNet2Api, { updateIksmSessionLastUsed } from '../../api/splatnet2.js';
-import { WebServiceToken } from '../../api/znc-types.js';
+import { WebServiceToken } from '../../api/coral-types.js';
 
 const debug = createDebug('nxapi:auth:splatnet2');
 
@@ -49,7 +49,7 @@ export async function getIksmToken(storage: persist.LocalStorage, token: string,
 
         const {nso, data} = await getToken(storage, token, proxy_url);
 
-        const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithZnc(nso, data.user);
+        const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithCoral(nso, data.user);
 
         await storage.setItem('IksmToken.' + token, existingToken);
 
@@ -81,7 +81,7 @@ export async function renewIksmToken(splatnet: SplatNet2Api, storage: persist.Lo
 
     const {nso, data} = await getToken(storage, token, proxy_url);
 
-    const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithZnc(nso, data.user);
+    const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithCoral(nso, data.user);
 
     await storage.setItem('IksmToken.' + token, existingToken);
 

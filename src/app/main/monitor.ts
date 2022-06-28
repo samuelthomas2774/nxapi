@@ -1,6 +1,6 @@
 import { dialog, Notification } from './electron.js';
 import createDebug from 'debug';
-import { CurrentUser, Friend, Game, ZncErrorResponse } from '../../api/znc-types.js';
+import { CurrentUser, Friend, Game, CoralErrorResponse } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
@@ -295,7 +295,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
         }
     }
 
-    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
         } catch (err) {
@@ -361,7 +361,7 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
         }
     }
 
-    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
         } catch (err) {

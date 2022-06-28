@@ -4,8 +4,8 @@ import * as persist from 'node-persist';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
-import { Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/znc-types.js';
-import ZncApi from '../../api/znc.js';
+import { Announcement, CurrentUser, Friend, GetActiveEventResult, Presence, WebService } from '../../api/coral-types.js';
+import CoralApi from '../../api/coral.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -18,7 +18,7 @@ import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/zn
 declare global {
     namespace Express {
         interface Request {
-            znc?: ZncApi;
+            znc?: CoralApi;
             zncAuth?: SavedToken;
 
             zncAuthPolicy?: AuthPolicy;
@@ -126,7 +126,7 @@ function createApp(
         }));
     }
 
-    const znc_auth_promise = new Map</** session token */ string, Promise<{nso: ZncApi, data: SavedToken;}>>();
+    const znc_auth_promise = new Map</** session token */ string, Promise<{nso: CoralApi, data: SavedToken;}>>();
     const znc_auth_timeout = new Map</** session token */ string, NodeJS.Timeout>();
 
     const nsoAuth: express.RequestHandler = async (req, res, next) => {

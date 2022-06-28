@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
 import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
-import { ZNCA_CLIENT_ID } from '../../api/znc.js';
+import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { getToken, SavedToken } from '../../common/auth/nso.js';
 import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';

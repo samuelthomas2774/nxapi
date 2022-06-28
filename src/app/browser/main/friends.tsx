@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc from '../ipc.js';
 import { useColourScheme, User } from '../util.js';
-import { Friend, Presence, PresenceState } from '../../../api/znc-types.js';
+import { Friend, Presence, PresenceState } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';
 

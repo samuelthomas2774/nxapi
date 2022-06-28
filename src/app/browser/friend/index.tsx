@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { CheckBox } from 'react-native-web';
-import { Game, Presence, PresencePermissions, PresenceState } from '../../../api/znc-types.js';
+import { Game, Presence, PresencePermissions, PresenceState } from '../../../api/coral-types.js';
 import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';

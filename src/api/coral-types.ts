@@ -1,16 +1,16 @@
 
-export interface ZncSuccessResponse<T = unknown> {
-    status: ZncStatus.OK;
+export interface CoralSuccessResponse<T = unknown> {
+    status: CoralStatus.OK;
     result: T;
     correlationId: string;
 }
 
-export interface ZncErrorResponse {
-    status: ZncStatus | number;
+export interface CoralErrorResponse {
+    status: CoralStatus | number;
     errorMessage: string;
     correlationId: string;
 }
-export enum ZncStatus {
+export enum CoralStatus {
     OK = 0,
 
     BAD_REQUEST = 9400,
@@ -43,7 +43,7 @@ export enum ZncStatus {
     // UNKNOWN = -1,
 }
 
-export type ZncResponse<T = unknown> = ZncSuccessResponse<T> | ZncErrorResponse;
+export type CoralResponse<T = unknown> = CoralSuccessResponse<T> | CoralErrorResponse;
 
 /** /v3/Account/Login */
 export interface AccountLogin {

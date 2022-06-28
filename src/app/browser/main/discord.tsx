@@ -3,7 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { User } from 'discord-rpc';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAsync, useEventListener } from '../util.js';
-import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceZnc } from '../../common/types.js';
+import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral } from '../../common/types.js';
 import { DiscordPresence } from '../../../discord/util.js';
 import { DISCORD_COLOUR, TEXT_COLOUR_DARK } from '../constants.js';
 
@@ -24,7 +24,7 @@ export default function DiscordPresenceSource(props: {
 
 function renderDiscordPresenceSource(source: DiscordPresenceSource | null) {
     if (source && 'na_id' in source) {
-        return <DiscordPresenceSourceZnc source={source} />;
+        return <DiscordPresenceSourceCoral source={source} />;
     } else if (source && 'url' in source) {
         return <DiscordPresenceSourceUrl source={source} />;
     } else {
@@ -32,8 +32,8 @@ function renderDiscordPresenceSource(source: DiscordPresenceSource | null) {
     }
 }
 
-function DiscordPresenceSourceZnc(props: {
-    source: DiscordPresenceSourceZnc;
+function DiscordPresenceSourceCoral(props: {
+    source: DiscordPresenceSourceCoral;
 }) {
     const [token] = useAsync(useCallback(() =>
         ipc.getNintendoAccountNsoToken(props.source.na_id), [ipc, props.source.na_id]));

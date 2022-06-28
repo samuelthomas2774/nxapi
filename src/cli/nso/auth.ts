@@ -5,7 +5,7 @@ import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/nso.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
-import { ZNCA_CLIENT_ID } from '../../api/znc.js';
+import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:nso:auth');

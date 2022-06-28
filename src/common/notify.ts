@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
-import ZncApi from '../api/znc.js';
-import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, ZncErrorResponse } from '../api/znc-types.js';
+import CoralApi from '../api/coral.js';
+import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralErrorResponse } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/nso.js';
@@ -25,7 +25,7 @@ export class ZncNotifications extends Loop {
     constructor(
         public storage: persist.LocalStorage,
         public token: string,
-        public nso: ZncApi,
+        public nso: CoralApi,
         public data: Omit<SavedToken, 'expires_at'>,
         public user?: CoralUser,
     ) {
@@ -178,7 +178,7 @@ export class ZncNotifications extends Loop {
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
-    async handleError(err: ErrorResponse<ZncErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
             debug('Request timed out, waiting %ds before retrying', this.update_interval, err);
 

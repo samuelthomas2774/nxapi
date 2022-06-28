@@ -1,10 +1,10 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
-import { WebServiceToken } from './znc-types.js';
+import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
-import ZncApi from './znc.js';
+import CoralApi from './coral.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
 import { timeoutSignal } from '../util/misc.js';
 import { toSeasonId, Rule as XPowerRankingRule } from './splatnet2-xrank.js';
@@ -211,8 +211,8 @@ ${colour}
         });
     }
 
-    static async createWithZnc(nso: ZncApi, user: NintendoAccountUser) {
-        const data = await this.loginWithZnc(nso, user);
+    static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+        const data = await this.loginWithCoral(nso, user);
 
         return {
             splatnet: new this(data.iksm_session, data.useragent),
@@ -220,7 +220,7 @@ ${colour}
         };
     }
 
-    static async loginWithZnc(nso: ZncApi, user: NintendoAccountUser) {
+    static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
         const webserviceToken = await nso.getWebServiceToken(SPLATNET2_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken.result, user);

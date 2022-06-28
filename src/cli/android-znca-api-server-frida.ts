@@ -10,7 +10,7 @@ import bodyParser from 'body-parser';
 import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { NintendoAccountIdTokenJwtPayload } from '../api/na.js';
-import { ZNCA_CLIENT_ID, ZncJwtPayload } from '../api/znc.js';
+import { CoralJwtPayload, ZNCA_CLIENT_ID } from '../api/coral.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage, paths } from '../util/storage.js';
 import { getJwks, Jwt } from '../util/jwt.js';
@@ -139,7 +139,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             }
 
             try {
-                const [jwt, sig] = Jwt.decode<NintendoAccountIdTokenJwtPayload | ZncJwtPayload>(data.token);
+                const [jwt, sig] = Jwt.decode<NintendoAccountIdTokenJwtPayload | CoralJwtPayload>(data.token);
 
                 const check_signature = jwt.payload.iss === 'https://accounts.nintendo.com';
 

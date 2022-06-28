@@ -5,7 +5,7 @@ import { User } from 'discord-rpc';
 import openWebService, { WebServiceIpc } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
-import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/znc-types.js';
+import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { addNsoAccount, addPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { NintendoAccountUser } from '../../api/na.js';

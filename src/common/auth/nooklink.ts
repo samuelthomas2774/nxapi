@@ -3,7 +3,7 @@ import persist from 'node-persist';
 import { getToken } from './nso.js';
 import NooklinkApi, { NooklinkUserApi } from '../../api/nooklink.js';
 import { AuthToken, Users } from '../../api/nooklink-types.js';
-import { WebServiceToken } from '../../api/znc-types.js';
+import { WebServiceToken } from '../../api/coral-types.js';
 
 const debug = createDebug('nxapi:auth:nooklink');
 
@@ -38,7 +38,7 @@ export async function getWebServiceToken(
 
         const {nso, data} = await getToken(storage, token, proxy_url);
 
-        const existingToken: SavedToken = await NooklinkApi.loginWithZnc(nso, data.user);
+        const existingToken: SavedToken = await NooklinkApi.loginWithCoral(nso, data.user);
 
         await storage.setItem('NookToken.' + token, existingToken);
 

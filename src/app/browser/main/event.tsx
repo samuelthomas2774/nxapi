@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import ipc from '../ipc.js';
 import { useAccentColour, useColourScheme, User } from '../util.js';
-import { ActiveEvent } from '../../../api/znc-types.js';
+import { ActiveEvent } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';
 import { Button } from '../components/index.js';

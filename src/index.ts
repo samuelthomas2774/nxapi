@@ -1,6 +1,9 @@
-export { default as ZncApi } from './api/znc.js';
+export { default as CoralApi } from './api/coral.js';
+export { /** @deprecated */ default as ZncApi } from './api/coral.js';
 export { default as ZncProxyApi } from './api/znc-proxy.js';
-export * as znc from './api/znc-types.js';
+export * as coral from './api/coral-types.js';
+/** @deprecated */
+export * as znc from './api/coral-types.js';
 export { default as MoonApi } from './api/moon.js';
 export * as moon from './api/moon-types.js';
 export * as na from './api/na.js';

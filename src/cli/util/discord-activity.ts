@@ -2,7 +2,7 @@ import process from 'node:process';
 import createDebug from 'debug';
 import fetch from 'node-fetch';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
-import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/znc-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from '../util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -84,7 +84,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const [presence, user, friendcode, activeevent] =
         argv.presenceJson ? await getPresenceFromJson(argv.presenceJson) :
         argv.presenceUrl ? await getPresenceFromUrl(argv.presenceUrl) :
-        await getPresenceFromZnc(argv);
+        await getPresenceFromCoral(argv);
 
     const discordpresence = getActivityFromPresence(argv, presence, user, friendcode, activeevent);
     const application = argv.showDiscordApplication ?
@@ -137,7 +137,7 @@ async function getPresenceFromJson(json: string) {
     return [presence] as const;
 }
 
-async function getPresenceFromZnc(argv: ArgumentsCamelCase<Arguments>) {
+async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
     const storage = await initStorage(argv.dataPath);
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');

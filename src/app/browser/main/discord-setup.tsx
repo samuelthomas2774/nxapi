@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import ipc, { events } from '../ipc.js';
 import { getAccounts, RequestState, useAccentColour, useAsync, useColourScheme, useDiscordPresenceSource, useEventListener, User } from '../util.js';
-import { Friend, PresencePermissions } from '../../../api/znc-types.js';
+import { Friend, PresencePermissions } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';
 import { Button } from '../components/index.js';

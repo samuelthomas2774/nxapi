@@ -1,9 +1,9 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { WebServiceToken } from './znc-types.js';
+import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
-import ZncApi from './znc.js';
+import CoralApi from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 import { timeoutSignal } from '../util/misc.js';
 
@@ -76,8 +76,8 @@ export default class NooklinkApi {
         };
     }
 
-    static async createWithZnc(nso: ZncApi, user: NintendoAccountUser) {
-        const data = await this.loginWithZnc(nso, user);
+    static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+        const data = await this.loginWithCoral(nso, user);
 
         return {
             nooklink: new this(data.gtoken, data.useragent),
@@ -85,7 +85,7 @@ export default class NooklinkApi {
         };
     }
 
-    static async loginWithZnc(nso: ZncApi, user: NintendoAccountUser) {
+    static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
         const webserviceToken = await nso.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken.result, user);
