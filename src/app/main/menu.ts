@@ -1,6 +1,6 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
 import createDebug from 'debug';
-import { addNsoAccount, addPctlAccount } from './na-auth.js';
+import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { WebService } from '../../api/coral-types.js';
 import openWebService from './webservices.js';
@@ -105,21 +105,8 @@ export default class MenuApp {
         this.tray.setContextMenu(menu);
     }
 
-    addNsoAccount = () => {
-        addNsoAccount(this.app.store.storage).catch(err => {
-            if (err.message === 'Canceled') return;
-
-            dialog.showErrorBox('Error adding account', err.stack || err.message);
-        });
-    };
-
-    addPctlAccount = () => {
-        addPctlAccount(this.app.store.storage).catch(err => {
-            if (err.message === 'Canceled') return;
-
-            dialog.showErrorBox('Error adding account', err.stack || err.message);
-        });
-    };
+    addNsoAccount = () => askAddNsoAccount(this.app.store.storage);
+    addPctlAccount = () => askAddPctlAccount(this.app.store.storage);
 
     // Hardcode these temporarily until they are cached
     webservices: WebService[] | null = [

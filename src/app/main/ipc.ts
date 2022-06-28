@@ -6,7 +6,7 @@ import openWebService, { WebServiceIpc } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
-import { addNsoAccount, addPctlAccount } from './na-auth.js';
+import { addNsoAccount, addPctlAccount, askAddNsoAccount, askAddPctlAccount, AuthoriseError } from './na-auth.js';
 import { App } from './index.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import { hrduration } from '../../util/misc.js';
@@ -45,8 +45,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     }, 60 * 60 * 1000);
 
     ipcMain.handle('nxapi:accounts:list', () => storage.getItem('NintendoAccountIds'));
-    ipcMain.handle('nxapi:accounts:add-coral', () => addNsoAccount(store.storage).then(u => u.data.user.id));
-    ipcMain.handle('nxapi:accounts:add-moon', () => addPctlAccount(store.storage).then(u => u.data.user.id));
+    ipcMain.handle('nxapi:accounts:add-coral', () => askAddNsoAccount(store.storage).then(u => u?.data.user.id));
+    ipcMain.handle('nxapi:accounts:add-moon', () => askAddPctlAccount(store.storage).then(u => u?.data.user.id));
 
     ipcMain.handle('nxapi:nso:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
     ipcMain.handle('nxapi:nso:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
@@ -147,8 +147,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         new MenuItem({label: 'Use the nxapi command to remove this user', enabled: false}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:add-user', e => (Menu.buildFromTemplate([
-        new MenuItem({label: 'Add Nintendo Switch Online account', click: () => addNsoAccount(storage)}),
-        new MenuItem({label: 'Add Nintendo Switch Parental Controls account', click: () => addPctlAccount(storage)}),
+        new MenuItem({label: 'Add Nintendo Switch Online account', click: () => askAddNsoAccount(storage)}),
+        new MenuItem({label: 'Add Nintendo Switch Parental Controls account', click: () => askAddPctlAccount(storage)}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
         new MenuItem({label: 'SW-' + fc.id, enabled: false}),

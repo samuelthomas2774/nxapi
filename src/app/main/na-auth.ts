@@ -80,6 +80,23 @@ export interface NintendoAccountSessionTokenCode {
     window?: BrowserWindow;
 }
 
+export class AuthoriseError extends Error {
+    constructor(readonly code: string, message?: string) {
+        super(message);
+    }
+
+    static fromSearchParams(qs: URLSearchParams) {
+        const code = qs.get('error') ?? 'unknown_error';
+        return new AuthoriseError(code, qs.get('error_description') ?? code);
+    }
+}
+
+export class AuthoriseCancelError extends AuthoriseError {
+    constructor(message?: string) {
+        super('access_denied', message);
+    }
+}
+
 export function getSessionTokenCode(client_id: string, scope: string | string[], close_window: false):
     Promise<NintendoAccountSessionTokenCode & {window: BrowserWindow}>
 export function getSessionTokenCode(client_id: string, scope: string | string[], close_window: true):
@@ -91,34 +108,57 @@ export function getSessionTokenCode(client_id: string, scope: string | string[],
         const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
         const window = createAuthWindow();
 
+        const handleAuthUrl = (url: URL) => {
+            const authorisedparams = new URLSearchParams(url.hash.substr(1));
+            debug('Redirect URL parameters', [...authorisedparams.entries()]);
+
+            if (authorisedparams.get('state') !== state) {
+                rj(new Error('Invalid state'));
+                window.close();
+                return;
+            }
+
+            if (authorisedparams.has('error')) {
+                rj(AuthoriseError.fromSearchParams(authorisedparams));
+                window.close();
+                return;
+            }
+
+            if (!authorisedparams.has('session_token_code')) {
+                rj(new Error('Response didn\'t include a session token code'));
+                window.close();
+                return;
+            }
+
+            const code = authorisedparams.get('session_token_code')!;
+            const [jwt, sig] = Jwt.decode(code);
+
+            debug('code', code, jwt, sig);
+
+            if (close_window) {
+                rs({
+                    code,
+                    verifier,
+                });
+
+                window.close();
+            } else {
+                rs({
+                    code,
+                    verifier,
+                    window,
+                });
+            }
+        };
+
         window.webContents.on('will-navigate', (event, url_string) => {
             const url = new URL(url_string);
 
             debug('will navigate', url);
 
             if (url.protocol === 'npf' + client_id + ':' && url.host === 'auth') {
-                const authorisedparams = new URLSearchParams(url.hash.substr(1));
-                debug('Redirect URL parameters', [...authorisedparams.entries()]);
-
-                const code = authorisedparams.get('session_token_code')!;
-                const [jwt, sig] = Jwt.decode(code);
-
-                debug('code', code, jwt, sig);
-
-                if (close_window) {
-                    rs({
-                        code,
-                        verifier,
-                    });
-
-                    window.close();
-                } else {
-                    rs({
-                        code,
-                        verifier,
-                        window,
-                    });
-                }
+                handleAuthUrl(url);
+                event.preventDefault();
             } else if (url.origin === 'https://accounts.nintendo.com') {
                 // Ok
             } else {
@@ -127,7 +167,7 @@ export function getSessionTokenCode(client_id: string, scope: string | string[],
         });
 
         window.on('closed', () => {
-            rj(new Error('Canceled'));
+            rj(new AuthoriseCancelError('Canceled'));
         });
 
         window.webContents.on('did-fail-load', e => rj(e));
@@ -135,8 +175,16 @@ export function getSessionTokenCode(client_id: string, scope: string | string[],
         window.webContents.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Mobile/15E148 Safari/604.1';
 
         window.webContents.setWindowOpenHandler(details => {
+            const url = new URL(details.url);
+
             debug('open', details);
-            shell.openExternal(details.url);
+
+            if (url.protocol === 'npf' + client_id + ':' && url.host === 'auth') {
+                handleAuthUrl(url);
+            } else {
+                shell.openExternal(details.url);
+            }
+
             return {action: 'deny'};
         });
 
@@ -205,6 +253,16 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
         return {nso, data};
     } finally {
         window.close();
+    }
+}
+
+export async function askAddNsoAccount(storage: persist.LocalStorage) {
+    try {
+        return await addNsoAccount(storage);
+    } catch (err: any) {
+        if (err instanceof AuthoriseError && err.code === 'access_denied') return;
+
+        dialog.showErrorBox('Error adding account', err.stack || err.message);
     }
 }
 
@@ -328,5 +386,15 @@ export async function addPctlAccount(storage: persist.LocalStorage) {
         return {moon, data};
     } finally {
         window?.close();
+    }
+}
+
+export async function askAddPctlAccount(storage: persist.LocalStorage) {
+    try {
+        return await addPctlAccount(storage);
+    } catch (err: any) {
+        if (err instanceof AuthoriseError && err.code === 'access_denied') return;
+
+        dialog.showErrorBox('Error adding account', err.stack || err.message);
     }
 }
