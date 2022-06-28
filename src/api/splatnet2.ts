@@ -5,9 +5,9 @@ import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
-import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingSummary } from './splatnet2-types.js';
+import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, LeagueMatchRankings, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingRecords, XPowerRankingSummary } from './splatnet2-types.js';
 import { timeoutSignal } from '../util/misc.js';
-import { toSeasonId, Rule as XPowerRankingRule } from './splatnet2-xrank.js';
+import { toSeasonId, Rule as XPowerRankingRule, Season } from './splatnet2-xrank.js';
 
 const debug = createDebug('nxapi:api:splatnet2');
 
@@ -93,7 +93,11 @@ export default class SplatNet2Api {
         return this.fetch<HeroRecords>('/records/hero');
     }
 
-    async getXPowerRankingSummary(season: string | Date) {
+    async getXPowerRankingSummary(season: string | Date | Season) {
+        if (typeof season === 'object' && 'start' in season) {
+            season = season.id;
+        }
+
         if (season instanceof Date) {
             season = toSeasonId(season.getUTCFullYear(), season.getUTCMonth() + 1);
         }
@@ -110,7 +114,11 @@ export default class SplatNet2Api {
         return this.fetch<XPowerRankingSummary>('/x_power_ranking/' + season + '/summary');
     }
 
-    async getXPowerRankingLeaderboard(season: string | Date, rule: XPowerRankingRule, page: number = 1) {
+    async getXPowerRankingLeaderboard(season: string | Date | Season, rule: XPowerRankingRule, page: number = 1) {
+        if (typeof season === 'object' && 'start' in season) {
+            season = season.id;
+        }
+
         if (season instanceof Date) {
             season = toSeasonId(season.getUTCFullYear(), season.getUTCMonth() + 1);
         }
@@ -124,19 +132,27 @@ export default class SplatNet2Api {
             throw new Error('Invalid season ID');
         }
 
-        return this.fetch<unknown>('/x_power_ranking/' + season + '/' + rule + '?page=' + page);
+        return this.fetch<XPowerRankingRecords>('/x_power_ranking/' + season + '/' + rule + '?page=' + page);
     }
 
     async getPastFestivals() {
         return this.fetch<PastFestivals>('/festivals/pasts');
     }
 
-    async getLeagueMatchRanking(id: string, region: LeagueRegion) {
+    async getLeagueMatchRanking(id: string, region: LeagueRegion): Promise<LeagueMatchRankings>
+    async getLeagueMatchRanking(date: Date, type: LeagueType, region: LeagueRegion): Promise<LeagueMatchRankings>
+    async getLeagueMatchRanking(id: string | Date, arg1: LeagueRegion | LeagueType, arg2?: LeagueRegion) {
+        const region = id instanceof Date ? arg2! : arg1 as LeagueRegion;
+
+        if (id instanceof Date) {
+            id = toLeagueId(id, arg1 as LeagueType);
+        }
+
         if (!id.match(LEAGUE_ID)) {
             throw new Error('Invalid league ID');
         }
 
-        return this.fetch<PastFestivals>('/league_match_ranking/' + id + '/' + region);
+        return this.fetch<LeagueMatchRankings>('/league_match_ranking/' + id + '/' + region);
     }
 
     async getResults() {

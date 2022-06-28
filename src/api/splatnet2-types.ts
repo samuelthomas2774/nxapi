@@ -101,7 +101,7 @@ interface SpecialWeapon {
 }
 
 interface Player {
-    clothes: Gear & {kind: 'clothes'};
+    clothes: Gear & {kind: GearType.CLOTHES};
     star_rank: number;
     head_skills: Skills;
     nickname: string;
@@ -109,13 +109,13 @@ interface Player {
     weapon: Weapon;
     player_rank: number;
     max_league_point_team: number;
-    shoes: Gear & {kind: 'shoes'};
+    shoes: Gear & {kind: GearType.SHOES};
     clothes_skills: Skills;
     udemae_tower: Rank;
     udemae_clam: Rank;
     udemae_rainmaker: Rank;
     player_type: PlayerType;
-    head: Gear & {kind: 'head'};
+    head: Gear & {kind: GearType.HEAD};
     max_league_point_pair: number;
     principal_id: string;
     udemae_zones: Rank;
@@ -127,8 +127,13 @@ interface Gear {
     id: string;
     rarity: number;
     image: string;
-    kind: 'clothes' | 'shoes' | 'head';
+    kind: GearType;
     thumbnail: string;
+}
+export enum GearType {
+    CLOTHES = 'clothes',
+    SHOES = 'shoes',
+    HEAD = 'head',
 }
 interface Brand {
     image: string;
@@ -232,38 +237,6 @@ export interface Timeline {
     };
 }
 
-interface ShopMerchandise {
-    skill: Skill;
-    end_time: number;
-    gear: Gear;
-    id: string;
-    price: number;
-    kind: string;
-}
-
-interface CoopSchedule {
-    weapons: CoopWeapon[];
-    stage: {
-        image: string;
-        name: string;
-    };
-    start_time: number;
-    end_time: number;
-}
-
-type CoopWeapon = CoopStandardWeapon | CoopSpecialWeapon;
-interface CoopStandardWeapon {
-    weapon: Omit<Weapon, 'sub' | 'special'>;
-    id: string;
-}
-interface CoopSpecialWeapon {
-    id: string;
-    coop_special_weapon: {
-        image: string;
-        name: string;
-    };
-}
-
 interface CoopRewardGear {
     available_time: number;
     gear: Gear;
@@ -300,17 +273,19 @@ interface ScheduleItem {
 /** GET /records/hero */
 export interface HeroRecords {
     stage_infos: StageInfo[];
-    summary: {
-        weapon_cleared_info: Record<string, boolean>;
-        honor: {
-            code: string;
-            name: string;
-        };
-        clear_rate: number;
-    };
+    summary: HeroRecordsSummary;
     weapon_map: Record<string, HeroWeapon>;
 }
 
+interface HeroRecordsSummary {
+    weapon_cleared_info: Record<string, boolean>;
+    honor: HeroHonor;
+    clear_rate: number;
+}
+interface HeroHonor {
+    code: string;
+    name: string;
+}
 interface StageInfo {
     clear_weapons: Record<string, StageCleared>;
     stage: HeroStage;
@@ -338,16 +313,22 @@ export interface XPowerRankingSummary {
     splat_zones: XPowerRankingRecords;
 }
 
-interface XPowerRankingRecords {
+/** GET /x_power_ranking/{season}/{rule} */
+export interface XPowerRankingRecords {
     weapon_ranking: null;
     season_id: string;
     top_rankings_count: number;
     top_rankings: XPowerRankingRecordsRanking[];
-    status: string;
+    status: XPowerRankingStatus;
     rule: Rule;
     start_time: number;
     end_time: number;
     my_ranking: null;
+}
+
+export enum XPowerRankingStatus {
+    CALCULATED = 'calculated',
+    ONGOING = 'ongoing',
 }
 interface XPowerRankingRecordsRanking {
     name: string;
@@ -367,34 +348,35 @@ export interface PastFestivals {
 }
 
 interface Festival {
-    colors: {
-        middle: InkColour;
-        bravo: InkColour;
-        alpha: InkColour;
-    };
+    colors: FestivalInkColours;
     festival_id: number;
-    names: {
-        bravo_short: string;
-        bravo_long: string;
-        alpha_short: string;
-        alpha_long: string;
-    };
-    images: {
-        bravo: string;
-        alpha: string;
-        panel: string;
-    };
-    times: {
-        start: number;
-        announce: number;
-        end: number;
-        result: number;
-    };
-    special_stage: {
-        name: string;
-        id: string;
-        image: string;
-    };
+    names: FestivalTeamNames;
+    images: FestivalImages;
+    times: FestivalTimes;
+    special_stage: Stage;
+}
+
+interface FestivalTeamNames {
+    bravo_short: string;
+    bravo_long: string;
+    alpha_short: string;
+    alpha_long: string;
+}
+interface FestivalImages {
+    bravo: string;
+    alpha: string;
+    panel: string;
+}
+interface FestivalTimes {
+    start: number;
+    announce: number;
+    end: number;
+    result: number;
+}
+interface FestivalInkColours {
+    middle: InkColour;
+    bravo: InkColour;
+    alpha: InkColour;
 }
 
 interface InkColour {
@@ -450,18 +432,20 @@ interface FestivalResults1 {
 /** GET /league_match_ranking/{league}/{region} */
 export interface LeagueMatchRankings {
     start_time: number;
-    league_type: {
-        name: string;
-        key: string;
-    };
-    league_ranking_region: {
-        code: string;
-        id: number;
-    };
+    league_type: LeagueType;
+    league_ranking_region: LeagueRankingRegion;
     rankings: LeagueMatchRanking[];
     league_id: string;
 }
 
+interface LeagueType {
+    key: string; // "team", "pair"
+    name: string; // "Mode: Team", "Mode: Pair"
+}
+interface LeagueRankingRegion {
+    id: number; // 0, 1, 2, 4
+    code: string; // ALL, JP, US, EU
+}
 interface LeagueMatchRanking {
     tag_members: LeagueTagMember[];
     point: number;
@@ -479,16 +463,18 @@ interface LeagueTagMember {
 export interface Results {
     results: MatchResults[];
     unique_id: string;
-    summary: {
-        kill_count_average: number;
-        victory_count: number;
-        count: number;
-        defeat_count: number;
-        special_count_average: number;
-        victory_rate: number;
-        death_count_average: number;
-        assist_count_average: number;
-    };
+    summary: ResultsSummary;
+}
+
+interface ResultsSummary {
+    kill_count_average: number;
+    victory_count: number;
+    count: number;
+    defeat_count: number;
+    special_count_average: number;
+    victory_rate: number;
+    death_count_average: number;
+    assist_count_average: number;
 }
 
 type MatchResults = RegularMatchResults | RankedMatchResults;
@@ -669,6 +655,18 @@ interface CoopWaveWaterLevel {
     key: string;
     name: string;
 }
+type CoopWeapon = CoopStandardWeapon | CoopSpecialWeapon;
+interface CoopStandardWeapon {
+    weapon: Omit<Weapon, 'sub' | 'special'>;
+    id: string;
+}
+interface CoopSpecialWeapon {
+    id: string;
+    coop_special_weapon: {
+        image: string;
+        name: string;
+    };
+}
 
 interface CoopSummaryResult {
     schedule: CoopSchedule;
@@ -710,6 +708,15 @@ export interface CoopSchedules {
     schedules: CoopScheduleTimes[];
 }
 
+interface CoopSchedule {
+    weapons: CoopWeapon[];
+    stage: {
+        image: string;
+        name: string;
+    };
+    start_time: number;
+    end_time: number;
+}
 interface CoopScheduleTimes {
     start_time: number;
     end_time: number;
@@ -719,6 +726,15 @@ interface CoopScheduleTimes {
 export interface ShopMerchandises {
     merchandises: ShopMerchandise[];
     ordered_info: null;
+}
+
+interface ShopMerchandise {
+    skill: Skill;
+    end_time: number;
+    gear: Gear;
+    id: string;
+    price: number;
+    kind: GearType;
 }
 
 /** POST /share/profile, POST /share/results/summary, POST /share/results/1 */
