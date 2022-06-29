@@ -49,6 +49,8 @@ export class PresenceMonitorManager {
             this.app.store.emit('update-discord-user', client?.user ?? null);
         };
 
+        i.onError = err => this.handleError(i, err);
+
         this.monitors.push(i);
 
         callback?.call(null, i, true);
@@ -74,6 +76,8 @@ export class PresenceMonitorManager {
         i.discord.onUpdateClient = (client: DiscordRpcClient | null) => {
             this.app.store.emit('update-discord-user', client?.user ?? null);
         };
+
+        i.onError = err => this.handleError(i, err);
 
         this.monitors.push(i);
 
@@ -253,10 +257,38 @@ export class PresenceMonitorManager {
         if (monitor instanceof ZncDiscordPresence) monitor.show_active_event = existing.show_active_event;
         monitor.show_play_time = existing.show_play_time;
     }
+
+    async handleError(
+        monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
+        err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException
+    ): Promise<LoopResult> {
+        const {response} = await dialog.showMessageBox(err instanceof ErrorResponse ? {
+            message: 'Request error updating presence monitor',
+            detail: err.response.status + ' ' + err.response.statusText + ' ' +
+                err.response.url + '\n' + 
+                err.body + '\n\n' +
+                (err.stack ?? err.message),
+            type: 'error',
+            buttons: ['OK', 'Retry'],
+        } : {
+            message: 'Error updating presence monitor',
+            detail: err instanceof Error ? err.stack ?? err.message : err as any,
+            type: 'error',
+            buttons: ['OK', 'Retry'],
+        });
+
+        if (response === 1) {
+            return LoopResult.OK_SKIP_INTERVAL;
+        }
+
+        return LoopResult.OK;
+    }
 }
 
 export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
     notifications = new ElectronNotificationManager();
+    onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
+        Promise<LoopResult | void> | LoopResult | void = undefined;
 
     enable() {
         if (this._running !== 0) return;
@@ -298,20 +330,8 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
     async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
-        } catch (err) {
-            if (err instanceof ErrorResponse) {
-                dialog.showErrorBox('Request error',
-                    err.response.status + ' ' + err.response.statusText + ' ' +
-                    err.response.url + '\n' + 
-                    err.body + '\n\n' +
-                    (err.stack ?? err.message));
-            } else if (err instanceof Error) {
-                dialog.showErrorBox(err.name, err.stack ?? err.message);
-            } else {
-                dialog.showErrorBox('Error', err as any);
-            }
-
-            return LoopResult.OK;
+        } catch (err: any) {
+            return await this.onError?.call(null, err) ?? LoopResult.OK;
         }
     }
 
@@ -323,6 +343,8 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
 export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
     notifications = new ElectronNotificationManager();
+    onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
+        Promise<LoopResult | void> | LoopResult | void = undefined;
 
     enable() {
         if (this._running !== 0) return;
@@ -364,20 +386,8 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
     async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
-        } catch (err) {
-            if (err instanceof ErrorResponse) {
-                dialog.showErrorBox('Request error',
-                    err.response.status + ' ' + err.response.statusText + ' ' +
-                    err.response.url + '\n' + 
-                    err.body + '\n\n' +
-                    (err.stack ?? err.message));
-            } else if (err instanceof Error) {
-                dialog.showErrorBox(err.name, err.stack ?? err.message);
-            } else {
-                dialog.showErrorBox('Error', err as any);
-            }
-
-            return LoopResult.OK;
+        } catch (err: any) {
+            return await this.onError?.call(null, err) ?? LoopResult.OK;
         }
     }
 

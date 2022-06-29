@@ -10,7 +10,7 @@ import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createWindow } from './windows.js';
-import { DiscordPresenceConfiguration, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceSourceUrl, WindowType } from '../common/types.js';
 import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
@@ -206,44 +206,78 @@ export class Store extends EventEmitter {
         if (!state) return;
 
         for (const user of state.users) {
-            const discord_presence_active = state.discord_presence && 'na_id' in state.discord_presence.source &&
-                state.discord_presence.source.na_id === user.id;
-
-            if (!discord_presence_active &&
-                !user.user_notifications &&
-                !user.friend_notifications
-            ) continue;
-
-            try {
-                await monitors.start(user.id, monitor => {
-                    monitor.presence_user = state.discord_presence && 'na_id' in state.discord_presence.source &&
-                        state.discord_presence.source.na_id === user.id ?
-                            state.discord_presence.source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId : null;
-                    monitor.user_notifications = user.user_notifications;
-                    monitor.friend_notifications = user.friend_notifications;
-
-                    if (monitor.presence_user) {
-                        monitors.setDiscordPresenceConfigurationForMonitor(monitor, state.discord_presence!);
-                        this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
-                    }
-                });
-            } catch (err) {
-                dialog.showErrorBox('Error restoring monitor for user ' + user.id,
-                    err instanceof Error ? err.stack ?? err.message : err as any);
-            }
+            this.restoreUserMonitorState(monitors, state, user);
         }
 
         if (state.discord_presence && 'url' in state.discord_presence.source) {
-            try {
-                const monitor = await monitors.startUrl(state.discord_presence.source.url);
-                monitors.setDiscordPresenceConfigurationForMonitor(monitor, state.discord_presence);
-                this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
-            } catch (err) {
-                dialog.showErrorBox('Error restoring monitor for presence URL ' + state.discord_presence.source.url,
-                    err instanceof Error ? err.stack ?? err.message : err as any);
+            this.restorePresenceUrlMonitorState(monitors, state);
+        }
+    }
+
+    async restoreUserMonitorState(
+        monitors: PresenceMonitorManager,
+        state: SavedMonitorState, user: SavedMonitorState['users'][0]
+    ): Promise<void> {
+        const discord_presence_active = state.discord_presence && 'na_id' in state.discord_presence.source &&
+            state.discord_presence.source.na_id === user.id;
+
+        if (!discord_presence_active &&
+            !user.user_notifications &&
+            !user.friend_notifications
+        ) return;
+
+        try {
+            await monitors.start(user.id, monitor => {
+                monitor.presence_user = state.discord_presence && 'na_id' in state.discord_presence.source &&
+                    state.discord_presence.source.na_id === user.id ?
+                        state.discord_presence.source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId : null;
+                monitor.user_notifications = user.user_notifications;
+                monitor.friend_notifications = user.friend_notifications;
+
+                if (monitor.presence_user) {
+                    monitors.setDiscordPresenceConfigurationForMonitor(monitor, state.discord_presence!);
+                    this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
+                }
+            });
+
+            await this.app.menu?.updateMenu();
+        } catch (err) {
+            const {response} = await dialog.showMessageBox({
+                message: 'Error restoring monitor for user ' + user.id,
+                detail: err instanceof Error ? err.stack ?? err.message : err as any,
+                type: 'error',
+                buttons: ['OK', 'Retry'],
+            });
+
+            if (response === 1) {
+                return this.restoreUserMonitorState(monitors, state, user);
             }
         }
+    }
 
-        await this.app.menu?.updateMenu();
+    async restorePresenceUrlMonitorState(
+        monitors: PresenceMonitorManager,
+        state: SavedMonitorState
+    ): Promise<void> {
+        if (!state.discord_presence || !('url' in state.discord_presence.source)) return;
+
+        try {
+            const monitor = await monitors.startUrl(state.discord_presence.source.url);
+            monitors.setDiscordPresenceConfigurationForMonitor(monitor, state.discord_presence);
+            this.emit('update-discord-presence-source', monitors.getDiscordPresenceSource());
+
+            await this.app.menu?.updateMenu();
+        } catch (err) {
+            const {response} = await dialog.showMessageBox({
+                message: 'Error restoring monitor for presence URL ' + state.discord_presence.source.url,
+                detail: err instanceof Error ? err.stack ?? err.message : err as any,
+                type: 'error',
+                buttons: ['OK', 'Retry'],
+            });
+
+            if (response === 1) {
+                return this.restorePresenceUrlMonitorState(monitors, state);
+            }
+        }
     }
 }
