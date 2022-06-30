@@ -11,7 +11,7 @@ build:
     stage: build
     script:
         - npx tsc
-        - npx rollup --config
+        - NODE_ENV=production npx rollup --config
 
         - node bin/nxapi.js util validate-discord-titles
 

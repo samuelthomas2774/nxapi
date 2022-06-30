@@ -8,13 +8,34 @@ import createDebug from 'debug';
 const debug = createDebug('nxapi:util:product');
 
 //
+// Embedded package/version info injected during Rollup build
+//
+
+/** @internal */
+declare global {
+    var __NXAPI_BUNDLE_PKG__: any | undefined;
+    var __NXAPI_BUNDLE_GIT__: {
+        revision: string;
+        branch: string | null;
+        changed_files: string[];
+    } | null | undefined;
+    var __NXAPI_BUNDLE_PRODUCT__: any | undefined;
+}
+
+const embedded_pkg = globalThis.__NXAPI_BUNDLE_PKG__;
+const embedded_git = globalThis.__NXAPI_BUNDLE_GIT__;
+const embedded_product = globalThis.__NXAPI_BUNDLE_PRODUCT__;
+
+//
 // Package/version info
 //
 
 export const dir = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..');
-export const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
-export const version = pkg.version;
-export const git = (() => {
+
+export const pkg = embedded_pkg ?? JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
+export const version: string = pkg.version;
+
+export const git = typeof embedded_git !== 'undefined' ? embedded_git : (() => {
     try {
         fs.statSync(path.join(dir, '.git'));
     } catch (err) {
@@ -32,7 +53,9 @@ export const git = (() => {
         changed_files: changed_files.length ? changed_files.split('\n') : [],
     };
 })();
-export const dev = !!git || process.env.NODE_ENV === 'development';
 
-export const product = 'nxapi ' + version +
+export const dev = process.env.NODE_ENV !== 'production' &&
+    (!!git || process.env.NODE_ENV === 'development');
+
+export const product = embedded_product ?? 'nxapi ' + version +
     (git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : dev ? '-dev' : '') : '');
