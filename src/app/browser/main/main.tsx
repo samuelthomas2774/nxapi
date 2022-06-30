@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAccentColour, useAsync, useColourScheme, useEventListener, User } from '../util.js';
 import Friends from './friends.js';
@@ -9,20 +9,22 @@ import Section from './section.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import SetupDiscordPresence from './discord-setup.js';
 import { Button } from '../components/index.js';
+import { hrlist } from '../../../util/misc.js';
 
 export default function Main(props: {
     user: User;
     autoRefresh?: number;
 }) {
+    const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
 
-    const [announcements, , announcements_state] = useAsync(useCallback(() => props.user.nsotoken ?
+    const [announcements, announcements_error, announcements_state] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getNsoAnnouncements(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
-    const [friends, , friends_state, forceRefreshFriends] = useAsync(useCallback(() => props.user.nsotoken ?
+    const [friends, friends_error, friends_state, forceRefreshFriends] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getNsoFriends(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
-    const [webservices, , webservices_state, forceRefreshWebServices] = useAsync(useCallback(() => props.user.nsotoken ?
+    const [webservices, webservices_error, webservices_state, forceRefreshWebServices] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getNsoWebServices(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
-    const [active_event, , active_event_state, forceRefreshActiveEvent] = useAsync(useCallback(() => props.user.nsotoken ?
+    const [active_event, active_event_error, active_event_state, forceRefreshActiveEvent] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getNsoActiveEvent(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
 
     const loading = announcements_state === RequestState.LOADING ||
@@ -41,10 +43,37 @@ export default function Main(props: {
 
     useEventListener(events, 'window:refresh', refresh, []);
 
-    if (loading && (!announcements || !friends || !webservices || !active_event)) {
-        return <View style={styles.loading}>
-            <ActivityIndicator size="large" color={'#' + accent_colour} />
-        </View>;
+    const showErrorDetails = useCallback(() => {
+        if (friends_error) alert(friends_error.stack ?? friends_error.message);
+        if (webservices_error) alert(webservices_error.stack ?? webservices_error.message);
+        if (active_event_error) alert(active_event_error.stack ?? active_event_error.message);
+    }, [friends_error, webservices_error, active_event_error]);
+
+    if (!announcements || !friends || !webservices || !active_event) {
+        if (loading) {
+            return <View style={styles.loading}>
+                <ActivityIndicator size="large" color={'#' + accent_colour} />
+            </View>;
+        }
+
+        if (friends_error || webservices_error || active_event_error) {
+            const errors = [];
+            if (friends_error) errors.push('friends');
+            if (webservices_error) errors.push('game-specific services');
+            if (active_event_error) errors.push('voice chat');
+            const errors_text = hrlist(errors);
+
+            return <View style={styles.error}>
+                <Text style={[styles.errorHeader, theme.text]}>Error loading data</Text>
+                <Text style={[styles.errorMessage, theme.text]}>An error occured while loading {errors_text} data.</Text>
+                <View style={styles.errorActions}>
+                    <Button title="Retry" onPress={refresh} color={'#' + accent_colour} primary />
+                    <TouchableOpacity onPress={showErrorDetails} style={styles.errorViewDetailsTouchable}>
+                        <Text style={theme.text}>View details</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>;
+        }
     }
 
     return <View>
@@ -52,11 +81,11 @@ export default function Main(props: {
 
         {props.user.nso ? <SetupDiscordPresence user={props.user} friends={friends} /> : null}
         {props.user.nso && friends ? <Friends user={props.user} friends={friends}
-            loading={friends_state === RequestState.LOADING} /> : null}
+            loading={friends_state === RequestState.LOADING} error={friends_error ?? undefined} /> : null}
         {props.user.nso && webservices ? <WebServices user={props.user} webservices={webservices}
-            loading={webservices_state === RequestState.LOADING} /> : null}
+            loading={webservices_state === RequestState.LOADING} error={webservices_error ?? undefined} /> : null}
         {props.user.nso && active_event && 'id' in active_event ? <Event user={props.user} event={active_event}
-            loading={active_event_state === RequestState.LOADING} /> : null}
+            loading={active_event_state === RequestState.LOADING} error={active_event_error ?? undefined} /> : null}
     </View>;
 }
 
@@ -102,6 +131,28 @@ const styles = StyleSheet.create({
         marginTop: 10,
         flexDirection: 'row',
         justifyContent: 'center',
+    },
+    
+    error: {
+        flex: 1,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        justifyContent: 'center',
+    },
+    errorHeader: {
+        marginBottom: 16,
+        fontSize: 16,
+        textAlign: 'center',
+    },
+    errorMessage: {
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    errorActions: {
+        alignItems: 'center',
+    },
+    errorViewDetailsTouchable: {
+        marginTop: 10,
     },
 });
 

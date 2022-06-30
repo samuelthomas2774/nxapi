@@ -10,6 +10,7 @@ export default function Friends(props: {
     user: User;
     friends: Friend[];
     loading?: boolean;
+    error?: Error;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
 
@@ -23,7 +24,7 @@ export default function Friends(props: {
         onContextMenu={onFriendCodeContextMenu}
     >SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
 
-    return <Section title="Friends" loading={props.loading}>
+    return <Section title="Friends" loading={props.loading} error={props.error}>
         {props.friends.length ? <ScrollView horizontal>
             <View style={styles.content}>
                 {props.friends.map(f => <Friend key={f.nsaId} friend={f} user={props.user} />)}

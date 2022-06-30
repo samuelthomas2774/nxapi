@@ -11,6 +11,7 @@ export default function Event(props: {
     user: User;
     event: ActiveEvent;
     loading?: boolean;
+    error?: Error;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
@@ -18,7 +19,7 @@ export default function Event(props: {
     const event_members = props.event.members.filter(m => m.isPlaying).length;
     const voip_members = props.event.members.filter(m => m.isJoinedVoip).length;
 
-    return <Section title="Voice chat" loading={props.loading}>
+    return <Section title="Voice chat" loading={props.loading} error={props.error}>
         <View style={styles.content}>
             <Image source={{uri: props.event.imageUri, width: 100, height: 100}} style={styles.image} />
 

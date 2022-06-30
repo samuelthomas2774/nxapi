@@ -6,7 +6,7 @@ import openWebService, { WebServiceIpc } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
-import { addNsoAccount, addPctlAccount, askAddNsoAccount, askAddPctlAccount, AuthoriseError } from './na-auth.js';
+import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import { hrduration } from '../../util/misc.js';

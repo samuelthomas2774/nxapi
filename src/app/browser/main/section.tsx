@@ -1,26 +1,37 @@
-import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAccentColour, useColourScheme } from '../util.js';
 import { BORDER_COLOUR_LIGHT, BORDER_COLOUR_SECONDARY_DARK, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc from '../ipc.js';
+import Warning from '../components/icons/warning.js';
 
 export default function Section(props: React.PropsWithChildren<{
     title: string;
     loading?: boolean;
+    error?: Error;
 }>) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
 
+    const showErrorDetails = useCallback(() => {
+        alert(props.error);
+    }, [props.error]);
+
     return <View style={[styles.container, theme.container]}>
         <View style={styles.header}>
             <Text style={[styles.headerText, theme.text]}>{props.title}</Text>
-            {props.loading ? <ActivityIndicator style={styles.activityIndicator} size={14}
-                color={'#' + accent_colour} /> : null}
+            {props.loading ? <ActivityIndicator style={styles.activityIndicator} size={HEADER_SIZE}
+                color={'#' + accent_colour} /> :
+                props.error ? <TouchableOpacity onPress={showErrorDetails} style={styles.iconTouchable}>
+                    <Text style={[styles.icon, {color: '#' + accent_colour}]}><Warning /></Text>
+                </TouchableOpacity> : null}
         </View>
 
         {props.children}
     </View>;
 }
+
+const HEADER_SIZE = ipc.platform === 'win32' ? 24 : 14;
 
 const styles = StyleSheet.create({
     container: {
@@ -34,10 +45,16 @@ const styles = StyleSheet.create({
     },
     headerText: {
         flex: 1,
-        fontSize: ipc.platform === 'win32' ? 24 : 14,
+        fontSize: HEADER_SIZE,
     },
     activityIndicator: {
         marginLeft: 10,
+    },
+    iconTouchable: {
+        marginLeft: 10,
+    },
+    icon: {
+        fontSize: HEADER_SIZE,
     },
 });
 

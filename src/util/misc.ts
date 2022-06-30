@@ -19,6 +19,14 @@ export function hrduration(duration: number, short = false) {
     }
 }
 
+export function hrlist(items: string[]) {
+    if (!items.length) throw new Error('list must not be empty');
+    if (items.length === 1) return items[0];
+
+    const last = items[items.length - 1];
+    return items.slice(0, -1).join(', ') + ' and ' + last;
+}
+
 export function timeoutSignal(ms = 10 * 1000) {
     const controller = new AbortController();
 

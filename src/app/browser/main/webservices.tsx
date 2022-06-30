@@ -10,10 +10,11 @@ export default function WebServices(props: {
     user: User;
     webservices: WebService[];
     loading?: boolean;
+    error?: Error;
 }) {
     if (!props.webservices.length) return null;
 
-    return <Section title="Game-specific services" loading={props.loading}>
+    return <Section title="Game-specific services" loading={props.loading} error={props.error}>
         <ScrollView horizontal>
             <View style={styles.content}>
                 {props.webservices.map(g => <WebService key={g.id} webservice={g} token={props.user.nsotoken} />)}
