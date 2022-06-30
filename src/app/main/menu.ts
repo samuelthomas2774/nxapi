@@ -12,16 +12,17 @@ import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor
 
 const debug = createDebug('app:main:menu');
 
-const icon = nativeImage
-    .createFromPath(path.join(dir, 'resources', 'app', 'menu-icon.png'))
-    .resize({height: 16});
-
-icon.setTemplateImage(true);
-
 export default class MenuApp {
-    tray = new Tray(icon);
+    tray: Tray;
 
     constructor(readonly app: App) {
+        const icon = nativeImage
+            .createFromPath(path.join(dir, 'resources', 'app', 'menu-icon.png'))
+            .resize({height: 16});
+
+        icon.setTemplateImage(true);
+
+        this.tray = new Tray(icon);
         this.tray.setToolTip('nxapi');
 
         app.store.on('update-nintendo-accounts', () => this.updateMenu());
