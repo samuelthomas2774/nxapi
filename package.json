@@ -13,6 +13,8 @@
         "dist",
         "!dist/app",
         "!dist/bundle",
+        "resources/cli/**/*",
+        "resources/common/**/*",
         "bin"
     ],
     "bin": {
@@ -85,7 +87,9 @@
             "dist/app/bundle",
             "dist/bundle",
             "!dist/app/package",
-            "!**/node_modules/**/*"
+            "!**/node_modules/**/*",
+            "resources/app/**/*",
+            "resources/common/**/*"
         ],
         "asar": false,
         "extraMetadata": {
