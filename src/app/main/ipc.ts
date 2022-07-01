@@ -15,6 +15,7 @@ import { getDiscordRpcClients } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
+import { EmbeddedPresenceMonitor } from './monitor.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -137,15 +138,9 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:misc:share', (e, item: SharingItem) =>
         new ShareMenu(item).popup({window: BrowserWindow.fromWebContents(e.sender)!}));
 
-    ipcMain.handle('nxapi:menu:user', (e, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean) => (Menu.buildFromTemplate([
-        new MenuItem({label: 'Nintendo Account ID: ' + user.id, enabled: false}),
-        ...(nso ? [
-            new MenuItem({label: 'Coral ID: ' + nso.id, enabled: false}),
-            new MenuItem({label: 'NSA ID: ' + nso.nsaId, enabled: false}),
-        ] : []),
-        new MenuItem({type: 'separator'}),
-        new MenuItem({label: 'Use the nxapi command to remove this user', enabled: false}),
-    ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
+    ipcMain.handle('nxapi:menu:user', (e, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean) =>
+        (buildUserMenu(appinstance, user, nso, moon, BrowserWindow.fromWebContents(e.sender) ?? undefined)
+            .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:add-user', e => (Menu.buildFromTemplate([
         new MenuItem({label: 'Add Nintendo Switch Online account', click: () => askAddNsoAccount(storage)}),
         new MenuItem({label: 'Add Nintendo Switch Parental Controls account', click: () => askAddPctlAccount(storage)}),
@@ -180,6 +175,62 @@ function sendToAllWindows(channel: string, ...args: any[]) {
     for (const window of BrowserWindow.getAllWindows()) {
         window.webContents.send(channel, ...args);
     }
+}
+
+function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean, window?: BrowserWindow) {
+    const dm = app.monitors.getActiveDiscordPresenceMonitor();
+    const monitor = app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === user.id);
+
+    return Menu.buildFromTemplate([
+        new MenuItem({label: 'Nintendo Account ID: ' + user.id, enabled: false}),
+        ...(nso ? [
+            new MenuItem({label: 'Coral ID: ' + nso.id, enabled: false}),
+            new MenuItem({label: 'NSA ID: ' + nso.nsaId, enabled: false}),
+            new MenuItem({type: 'separator'}),
+            ...(monitor?.presence_user === nso.nsaId ? [
+                new MenuItem({label: 'Disable Discord presence',
+                    click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
+            ] : monitor?.presence_user ? [
+                new MenuItem({label: 'Discord presence enabled for ' +
+                    monitor.user?.friends.result.friends.find(f => f.nsaId === monitor.presence_user)?.name ??
+                        monitor.presence_user,
+                    enabled: false}),
+                new MenuItem({label: 'Disable Discord presence',
+                    click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
+            ] : dm?.presence_user === nso.nsaId ? [
+                new MenuItem({label: 'Discord presence enabled using ' +
+                    dm.data.user.nickname +
+                    (dm.data.user.nickname!==  dm.data.nsoAccount.user.name ? '/' + dm.data.nsoAccount.user.name : ''),
+                    enabled: false}),
+                new MenuItem({label: 'Disable Discord presence',
+                    click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
+            ] : [
+                new MenuItem({label: 'Enable Discord presence for this user...',
+                    click: () => createWindow(WindowType.DISCORD_PRESENCE, {
+                        friend_nsa_id: nso.nsaId,
+                    }, {
+                        parent: window,
+                        modal: true,
+                        show: false,
+                        maximizable: false,
+                        minimizable: false,
+                        width: 560,
+                        height: 300,
+                        minWidth: 450,
+                        maxWidth: 700,
+                        minHeight: 300,
+                        maxHeight: 300,
+                    })}),
+            ]),
+            new MenuItem({label: 'Enable friend notifications', type: 'checkbox',
+                checked: monitor?.friend_notifications,
+                click: () => app.menu?.setFriendNotificationsActive(user.id, !monitor?.friend_notifications)}),
+            new MenuItem({label: 'Update now', enabled: !!monitor,
+                click: () => monitor?.skipIntervalInCurrentLoop(true)}),
+        ] : []),
+        new MenuItem({type: 'separator'}),
+        new MenuItem({label: 'Use the nxapi command to remove this user', enabled: false}),
+    ]);
 }
 
 function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) {

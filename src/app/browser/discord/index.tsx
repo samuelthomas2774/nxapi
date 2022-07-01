@@ -37,8 +37,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
 
     useEffect(() => {
         if (!discord_presence_source) {
-            setSelectedMode(props.users?.length && props.friend_nsa_id ?
-                DiscordSourceType.CORAL : DiscordSourceType.NONE);
+            setSelectedMode(props.friend_nsa_id ? DiscordSourceType.CORAL : DiscordSourceType.NONE);
         } else if ('na_id' in discord_presence_source) {
             setSelectedMode(DiscordSourceType.CORAL);
             setSelectedUserId(discord_presence_source.na_id);

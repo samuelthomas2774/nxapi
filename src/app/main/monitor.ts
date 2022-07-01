@@ -270,11 +270,13 @@ export class PresenceMonitorManager {
                 (err.stack ?? err.message),
             type: 'error',
             buttons: ['OK', 'Retry'],
+            defaultId: 0,
         } : {
             message: 'Error updating presence monitor',
             detail: err instanceof Error ? err.stack ?? err.message : err as any,
             type: 'error',
             buttons: ['OK', 'Retry'],
+            defaultId: 0,
         });
 
         if (response === 1) {

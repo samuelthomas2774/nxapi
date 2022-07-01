@@ -316,7 +316,7 @@ export class ZncProxyDiscordPresence extends Loop {
     readonly friend_notifications = false;
     update_interval = 30;
 
-    presence_user: string | null = null;
+    presence_user: null = null;
     discord_preconnect = false;
     show_friend_code = false;
     force_friend_code: CurrentUser['links']['friendCode'] | undefined = undefined;

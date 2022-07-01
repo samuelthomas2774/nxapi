@@ -247,6 +247,7 @@ export class Store extends EventEmitter {
                 detail: err instanceof Error ? err.stack ?? err.message : err as any,
                 type: 'error',
                 buttons: ['OK', 'Retry'],
+                defaultId: 1,
             });
 
             if (response === 1) {
@@ -273,6 +274,7 @@ export class Store extends EventEmitter {
                 detail: err instanceof Error ? err.stack ?? err.message : err as any,
                 type: 'error',
                 buttons: ['OK', 'Retry'],
+                defaultId: 1,
             });
 
             if (response === 1) {
