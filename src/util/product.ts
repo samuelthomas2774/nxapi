@@ -19,12 +19,12 @@ declare global {
         branch: string | null;
         changed_files: string[];
     } | null | undefined;
-    var __NXAPI_BUNDLE_PRODUCT__: any | undefined;
+    var __NXAPI_BUNDLE_RELEASE__: string | null | undefined;
 }
 
 const embedded_pkg = globalThis.__NXAPI_BUNDLE_PKG__;
 const embedded_git = globalThis.__NXAPI_BUNDLE_GIT__;
-const embedded_product = globalThis.__NXAPI_BUNDLE_PRODUCT__;
+const embedded_release = globalThis.__NXAPI_BUNDLE_RELEASE__;
 
 //
 // Package/version info
@@ -34,6 +34,7 @@ export const dir = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..'
 
 export const pkg = embedded_pkg ?? JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
 export const version: string = pkg.version;
+export const release: string | null = embedded_release ?? pkg.__nxapi_release ?? null;
 
 export const git = typeof embedded_git !== 'undefined' ? embedded_git : (() => {
     try {
@@ -57,5 +58,5 @@ export const git = typeof embedded_git !== 'undefined' ? embedded_git : (() => {
 export const dev = process.env.NODE_ENV !== 'production' &&
     (!!git || process.env.NODE_ENV === 'development');
 
-export const product = embedded_product ?? 'nxapi ' + version +
-    (git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : dev ? '-dev' : '') : '');
+export const product = 'nxapi ' + version +
+    (!release && git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') : '');

@@ -14,6 +14,7 @@ import { NotificationManager, PresenceEvent, ZncNotifications } from '../../comm
 import { product } from '../../util/product.js';
 import { parseListenAddress } from '../../util/net.js';
 import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
+import { addUserAgent } from '../../util/useragent.js';
 
 declare global {
     namespace Express {
@@ -52,6 +53,8 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    addUserAgent('http-server');
+
     const storage = await initStorage(argv.dataPath);
 
     const app = createApp(storage, argv.zncProxyUrl, argv.requireToken, argv.updateInterval * 1000);

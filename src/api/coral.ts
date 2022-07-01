@@ -6,6 +6,7 @@ import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPerm
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
+import { getAdditionalUserAgents } from '../util/useragent.js';
 
 const debug = createDebug('nxapi:api:coral');
 
@@ -18,15 +19,13 @@ const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 
 export default class CoralApi {
-    static useragent: string | null = null;
-
     onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
     constructor(
         public token: string,
-        public useragent: string | null = CoralApi.useragent
+        public useragent: string | null = getAdditionalUserAgents()
     ) {}
 
     async fetch<T = unknown>(
@@ -148,8 +147,7 @@ export default class CoralApi {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
-        const useragent = this.useragent ?? undefined;
-        const data = await f(this.token, timestamp, uuid, FlapgIid.APP, useragent);
+        const data = await f(this.token, timestamp, uuid, FlapgIid.APP, this.useragent ?? getAdditionalUserAgents());
 
         const req = {
             id,
@@ -170,8 +168,7 @@ export default class CoralApi {
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
         const id_token = nintendoAccountToken.id_token;
-        const useragent = this.useragent ?? undefined;
-        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
+        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, this.useragent ?? getAdditionalUserAgents());
 
         const req = {
             naBirthday: user.birthday,
@@ -194,7 +191,7 @@ export default class CoralApi {
         };
     }
 
-    static async createWithSessionToken(token: string, useragent = CoralApi.useragent) {
+    static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
         const data = await this.loginWithSessionToken(token, useragent);
 
         return {
@@ -211,7 +208,7 @@ export default class CoralApi {
         return data;
     }
 
-    static async loginWithSessionToken(token: string, useragent = CoralApi.useragent) {
+    static async loginWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
         const uuid = uuidgen();
         const timestamp = '' + Math.floor(Date.now() / 1000);
 
@@ -222,7 +219,7 @@ export default class CoralApi {
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
         const id_token = nintendoAccountToken.id_token;
-        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, useragent ?? undefined);
+        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
 
         debug('Getting Nintendo Switch Online app token');
 

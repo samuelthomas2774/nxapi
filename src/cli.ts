@@ -9,6 +9,7 @@ import { checkUpdates } from './common/update.js';
 import { dev } from './util/product.js';
 import { paths } from './util/storage.js';
 import { YargsArguments } from './util/yargs.js';
+import { addUserAgent } from './util/useragent.js';
 
 const debug = createDebug('cli');
 
@@ -48,6 +49,8 @@ export function createYargs(argv: string[]) {
 export type Arguments = YargsArguments<ReturnType<typeof createYargs>>;
 
 export async function main(argv = process.argv.slice(2)) {
+    addUserAgent('nxapi-cli');
+
     const yargs = createYargs(argv);
 
     if (!process.env.NXAPI_SKIP_UPDATE_CHECK) await checkUpdates();

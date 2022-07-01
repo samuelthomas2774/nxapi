@@ -3,16 +3,14 @@ import createDebug from 'debug';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralErrorResponse, CoralStatus, CoralSuccessResponse } from './coral-types.js';
 import { ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
-import { version } from '../util/product.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/nso.js';
 import { timeoutSignal } from '../util/misc.js';
+import { getAdditionalUserAgents, getUserAgent } from '../util/useragent.js';
 
 const debug = createDebug('nxapi:api:znc-proxy');
 
 export default class ZncProxyApi implements CoralApi {
-    static useragent: string | null = null;
-
     // Not used by ZncProxyApi
     onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
     /** @internal */
@@ -23,7 +21,7 @@ export default class ZncProxyApi implements CoralApi {
         // ZncApi uses the NSO token (valid for a few hours)
         // ZncProxyApi uses the Nintendo Account session token (valid for two years)
         public token: string,
-        public useragent = ZncProxyApi.useragent
+        public useragent = getAdditionalUserAgents()
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
@@ -32,7 +30,7 @@ export default class ZncProxyApi implements CoralApi {
             method,
             headers: Object.assign({
                 'Authorization': 'na ' + this.token,
-                'User-Agent': (this.useragent ? this.useragent + ' ' : '') + 'nxapi/' + version,
+                'User-Agent': getUserAgent(this.useragent),
             }, headers),
             body,
             signal,

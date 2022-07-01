@@ -35,3 +35,4 @@ export * as nooklink from './api/nooklink-types.js';
 
 export { getTitleIdFromEcUrl } from './util/misc.js';
 export { ErrorResponse } from './api/util.js';
+export { addUserAgent } from './util/useragent.js';

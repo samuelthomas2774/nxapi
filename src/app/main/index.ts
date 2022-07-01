@@ -10,12 +10,13 @@ import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createWindow } from './windows.js';
-import { DiscordPresenceConfiguration, DiscordPresenceSourceUrl, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, WindowType } from '../common/types.js';
 import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
 import { setupIpc } from './ipc.js';
 import { dev, dir } from '../../util/product.js';
+import { addUserAgent } from '../../util/useragent.js';
 
 const debug = createDebug('app:main');
 
@@ -74,6 +75,8 @@ export async function init() {
     }));
 
     if (process.env.DEBUG) createDebug.enable(process.env.DEBUG);
+
+    addUserAgent('nxapi-app (Chromium ' + process.versions.chrome + '; Electron ' + process.versions.electron + ')');
 
     const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
     const appinstance = new App(storage);

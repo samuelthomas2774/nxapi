@@ -35,9 +35,7 @@ const git = (() => {
 })();;
 
 // If CI_COMMIT_TAG is set this is a tagged version for release
-export const product = 'nxapi ' + pkg.version +
-    (!process.env.CI_COMMIT_TAG && git ?
-        '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') : '');
+const release = process.env.NODE_ENV === 'production' ? process.env.CI_COMMIT_TAG || null : null;
 
 /**
  * @type {import('@rollup/plugin-replace').RollupReplaceOptions}
@@ -47,9 +45,10 @@ const replace_options = {
     values: {
         'globalThis.__NXAPI_BUNDLE_PKG__': JSON.stringify(pkg),
         'globalThis.__NXAPI_BUNDLE_GIT__': JSON.stringify(git),
-        'globalThis.__NXAPI_BUNDLE_PRODUCT__': JSON.stringify(product),
+        'globalThis.__NXAPI_BUNDLE_RELEASE__': JSON.stringify(release),
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
     },
+    preventAssignment: true,
 };
 
 /**

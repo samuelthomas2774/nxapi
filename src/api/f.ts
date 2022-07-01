@@ -2,8 +2,8 @@ import process from 'node:process';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { ErrorResponse } from './util.js';
-import { version } from '../util/product.js';
 import { timeoutSignal } from '../util/misc.js';
+import { getUserAgent } from '../util/useragent.js';
 
 const debugS2s = createDebug('nxapi:api:s2s');
 const debugFlapg = createDebug('nxapi:api:flapg');
@@ -30,7 +30,7 @@ export async function getLoginHash(token: string, timestamp: string | number, us
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
+            'User-Agent': getUserAgent(useragent),
         },
         body: new URLSearchParams({
             naIdToken: token,
@@ -70,7 +70,7 @@ export async function flapg(
     const [signal, cancel] = timeoutSignal();
     const response = await fetch('https://flapg.com/ika2/api/login?public', {
         headers: {
-            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
+            'User-Agent': getUserAgent(useragent),
             'x-token': token,
             'x-time': '' + timestamp,
             'x-guid': guid,
@@ -145,7 +145,7 @@ export async function iminkf(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
+            'User-Agent': getUserAgent(useragent),
         },
         body: JSON.stringify(req),
         signal,
@@ -213,7 +213,7 @@ export async function genf(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'User-Agent': (useragent ? useragent + ' ' : '') + 'nxapi/' + version,
+            'User-Agent': getUserAgent(useragent),
         },
         body: JSON.stringify(req),
         signal,

@@ -11,10 +11,12 @@ build:
     stage: build
     script:
         - npx tsc
+        # Uses CI_COMMIT_TAG
         - NODE_ENV=production npx rollup --config
 
         - node bin/nxapi.js util validate-discord-titles
 
+        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
         - PACKAGE=`npm --color="always" pack`
         - mv "$PACKAGE" nxapi.tgz
 
