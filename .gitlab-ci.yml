@@ -32,6 +32,32 @@ build:
             - app/win-unpacked/**/*
             - app/linux-unpacked/**/*
 
+build-windows:
+    stage: build
+    image: electronuserland/builder:wine
+    script:
+        - npx tsc
+        # Uses CI_COMMIT_TAG
+        - NODE_ENV=production npx rollup --config
+
+        - node bin/nxapi.js util validate-discord-titles
+
+        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+
+        - npx electron-builder build --win nsis --publish never
+        - mv dist/app/package app
+    artifacts:
+        paths:
+            - app
+        exclude:
+            - app/mac/**/*
+            - app/win-unpacked/**/*
+            - app/linux-unpacked/**/*
+    cache:
+        paths:
+            - node_modules/
+        policy: pull
+
 publish-npm:
     stage: deploy
     script:
