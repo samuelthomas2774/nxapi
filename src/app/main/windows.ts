@@ -28,6 +28,7 @@ export function createWindow<T extends WindowType>(
         height: 600,
         vibrancy: 'content',
         autoHideMenuBar: true,
+        title: 'nxapi',
         ...options,
         webPreferences: {
             preload: path.join(bundlepath, 'preload.cjs'),

@@ -61,17 +61,23 @@ const watch = {
 /**
  * @type {import('rollup').RollupOptions}
  */
-const cli = {
-    input: 'src/cli-entry.ts',
+const main = {
+    input: ['src/cli-entry.ts', 'src/app/main/index.ts'],
     output: {
-        file: 'dist/bundle/cli-bundle.js',
+        dir: 'dist/bundle',
         format: 'es',
-        inlineDynamicImports: true,
         sourcemap: true,
+        entryFileNames: chunk => {
+            if (chunk.name === 'cli-entry') return 'cli-bundle.js';
+            if (chunk.name === 'index') return 'app-main-bundle.js';
+            return 'entry-' + chunk.name + '.js';
+        },
+        chunkFileNames: 'chunk-[name].js',
     },
     plugins: [
         replace(replace_options),
         typescript({
+            outDir: 'dist/bundle/ts',
             noEmit: true,
             declaration: false,
         }),
@@ -99,16 +105,23 @@ const cli = {
 /**
  * @type {import('rollup').RollupOptions}
  */
-const app = {
+const app_entry = {
     input: 'src/app/main/app-entry.cts',
     output: {
-        file: 'dist/bundle/app-main-bundle.cjs',
-        format: 'cjs',
+        file: 'dist/bundle/app-entry.cjs',
+        format: 'iife',
         inlineDynamicImports: true,
         sourcemap: true,
     },
     plugins: [
         replace(replace_options),
+        replace({
+            include: ['src/app/main/app-entry.cts'],
+            values: {
+                '__NXAPI_BUNDLE_APP_MAIN__': JSON.stringify('./app-main-bundle.js'),
+            },
+            preventAssignment: true,
+        }),
         typescript({
             noEmit: true,
             declaration: false,
@@ -129,6 +142,7 @@ const app = {
     ],
     external: [
         'electron',
+        path.resolve(__dirname, 'src/app/main/app-main-bundle.js'),
     ],
     watch,
 };
@@ -235,8 +249,8 @@ const app_browser = {
 };
 
 export default [
-    cli,
-    app,
+    main,
+    app_entry,
     app_preload,
     app_preload_webservice,
     app_browser,
