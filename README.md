@@ -719,6 +719,31 @@ Some options can be set using environment variables. These can be stored in a `.
 
 This can be used with the Electron app (including when using the packaged version).
 
+#### User agent strings
+
+As nxapi can be used in scripts or as a library, it exposes a few different methods for setting a user agent string for requests to the splatnet2statink, flapg, imink and other non-Nintendo APIs. You must include the name and version number of your script/program in the user agent. If your program is not open source or not easily discoverable (e.g. by searching GitHub) it must also include contact information.
+
+When using the nxapi command in a script or other program, the `NXAPI_USER_AGENT` environment variable should be used. The `NXAPI_USER_AGENT` environment variable is only used by the nxapi command, and will be ignored by the Electron app or when using nxapi as a library.
+
+```sh
+NXAPI_USER_AGENT="your-script/1.0.0 (+https://github.com/...)" nxapi nso ...
+```
+
+When using nxapi as a TypeScript/JavaScript library, the `addUserAgent` function should be used.
+
+```ts
+import { addUserAgent } from 'nxapi';
+
+addUserAgent('your-script/1.0.0 (+https://github.com/...)');
+
+// This could also be read from a package.json file
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises':
+const pkg = JSON.parse(await readFile(resolve(fileURLToPath(import.meta.url), '..', 'package.json'), 'utf-8'));
+addUserAgent(pkg.name + '/' + pkg.version + ' (+' + pkg.repository.url + ')');
+```
+
 ### Links
 
 - Nintendo Switch Online app API docs

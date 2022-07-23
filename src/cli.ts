@@ -10,6 +10,7 @@ import { dev } from './util/product.js';
 import { paths } from './util/storage.js';
 import { YargsArguments } from './util/yargs.js';
 import { addUserAgent } from './util/useragent.js';
+import { USER_AGENT_INFO_URL } from './common/constants.js';
 
 const debug = createDebug('cli');
 
@@ -50,6 +51,13 @@ export type Arguments = YargsArguments<ReturnType<typeof createYargs>>;
 
 export async function main(argv = process.argv.slice(2)) {
     addUserAgent('nxapi-cli');
+
+    if (process.env.NXAPI_USER_AGENT) {
+        addUserAgent(process.env.NXAPI_USER_AGENT);
+    } else if (!process.stdout.isTTY) {
+        console.warn('[warn] The nxapi command is not running in a terminal. If using the nxapi command in a script or other program, the NXAPI_USER_AGENT environment variable should be set. See ' + USER_AGENT_INFO_URL + '.');
+        addUserAgent('unidentified-script');
+    }
 
     const yargs = createYargs(argv);
 
