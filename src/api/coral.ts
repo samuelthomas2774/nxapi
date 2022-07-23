@@ -277,7 +277,7 @@ export interface CoralJwtPayload extends JwtPayload {
     exp: number;
     iat: number;
     iss: 'api-lp1.znc.srv.nintendo.net';
-    /** Coral user ID (CurrentUser.id, not CurrentUser.nsaID) */
+    /** Coral user ID (CurrentUser.id, not CurrentUser.nsaId) */
     sub: number;
     typ: 'id_token';
 }
@@ -288,11 +288,11 @@ export interface CoralWebServiceJwtPayload extends JwtPayload {
     iat: number;
     iss: 'api-lp1.znc.srv.nintendo.net';
     jti: string;
-    /** Coral user ID (CurrentUser.id, not CurrentUser.nsaID) */
+    /** Coral user ID (CurrentUser.id, not CurrentUser.nsaId) */
     sub: number;
     links: {
         networkServiceAccount: {
-            /** NSA ID (CurrentUser.nsaID) */
+            /** NSA ID (CurrentUser.nsaId) */
             id: string;
         };
     };

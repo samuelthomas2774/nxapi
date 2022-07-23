@@ -71,6 +71,8 @@ export interface Announcement {
     distributionDate: number;
     title: string;
     description: string;
+    link?: string;
+    linkText?: string;
 }
 
 /** /v3/Friend/List */

@@ -24,7 +24,7 @@ export interface User {
     acceptedNotification: {
         all: boolean;
     };
-    notices: unknown[];
+    notices: string[];
     createdAt: number;
     updatedAt: number;
 }
@@ -71,13 +71,7 @@ export interface PairedDevice {
     device: Device;
     nintendoAccountId: string;
     label: string;
-    parentalControlSettingState: {
-        deviceId: string;
-        targetEtag: string;
-        synchronizationStatus: 'SYNCHRONIZED';
-        createdAt: number;
-        updatedAt: number;
-    };
+    parentalControlSettingState: ParentalControlSettingState;
     hasNewMonthlySummary: boolean;
     hasFirstDailySummary: boolean;
     createdAt: number;
@@ -110,11 +104,16 @@ export interface Device {
     };
     lastOnlineCheckedAt: number;
     alarmSetting: {
-        visibility: 'VISIBLE';
+        visibility: AlarmStatus;
         invisibleUntil: number;
     };
     createdAt: number;
     updatedAt: number;
+}
+
+export enum AlarmStatus {
+    VISIBLE = 'VISIBLE',
+    INVISIBLE = 'INVISIBLE',
 }
 
 /** GET /v1/devices/{deviceId}/daily_summaries */
@@ -129,11 +128,11 @@ export interface DailySummary {
     date: string; // "2022-03-14"
     result: DailySummaryResult;
     playingTime: number;
-    exceededTime: null;
+    exceededTime: number | null;
     disabledTime: number;
     miscTime: number;
     importantInfos: ImportantInfo[];
-    notices: unknown[];
+    notices: Notice[];
     observations: Observation[];
     playedApps: PlayedTitle[];
     anonymousPlayer: AnonymousPlayer | null;
@@ -146,9 +145,13 @@ export interface DailySummary {
 export enum DailySummaryResult {
     CALCULATING = 'CALCULATING',
     ACHIEVED = 'ACHIEVED',
+    UNACHIEVED = 'UNACHIEVED',
 }
 export enum ImportantInfo {
     DID_WRONG_UNLOCK_CODE = 'DID_WRONG_UNLOCK_CODE',
+}
+export enum Notice {
+    DID_ALARM_MAKE_INVISIBLE = 'DID_ALARM_MAKE_INVISIBLE',
 }
 
 export interface Title {
@@ -270,7 +273,14 @@ export enum MonthlySummaryTitleRankingPosition {
 export interface ParentalControlSettingState {
     deviceId: string;
     targetEtag: string;
-    synchronizationStatus: 'SYNCHRONIZED';
+    synchronizationStatus: SynchronizationStatus;
     createdAt: number;
     updatedAt: number;
+}
+
+export enum SynchronizationStatus {
+    SYNCHRONIZED = 'SYNCHRONIZED',
+    NOTIFIED = 'NOTIFIED',
+    PENDING = 'PENDING',
+    FAILED = 'FAILED',
 }
