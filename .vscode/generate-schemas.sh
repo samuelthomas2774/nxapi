@@ -15,3 +15,5 @@ npx ts-json-schema-generator --path src/api/splatnet2-types.ts --type CoopResult
 npx ts-json-schema-generator --path src/api/splatnet2-types.ts --type CoopResultWithPlayerNicknameAndIcons --no-type-check > .vscode/schema/splatnet2/coop-result.schema.json
 
 npx ts-json-schema-generator --path src/api/nooklink-types.ts --type Newspaper --no-type-check > .vscode/schema/nooklink/newspaper.schema.json
+
+npx ts-json-schema-generator --path src/common/remote-config.ts --type NxapiRemoteConfig --no-type-check > .vscode/schema/remote-config.schema.json
