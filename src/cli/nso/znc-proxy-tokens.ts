@@ -6,6 +6,7 @@ import { getToken } from '../../common/auth/nso.js';
 import { AuthPolicy, AuthToken } from '../../api/znc-proxy.js';
 import { Argv } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
+import { getUserAgent } from '../../util/useragent.js';
 
 const debug = createDebug('cli:nso:znc-proxy-tokens');
 
@@ -157,6 +158,7 @@ export function builder(yargs: Argv<ParentArguments>) {
             method: 'DELETE',
             headers: {
                 'Authorization': 'Bearer ' + argv.token,
+                'User-Agent': getUserAgent(),
             },
         });
         debug('fetch %s %s, response %d', 'DELETE', '/token', response.status);

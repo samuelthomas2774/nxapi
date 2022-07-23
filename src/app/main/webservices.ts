@@ -273,7 +273,11 @@ export class WebServiceIpc {
 
         debug('Downloading image %s to %s as %s', req.image_url, dir, filename);
 
-        const response = await fetch(req.image_url);
+        const response = await fetch(req.image_url, {
+            headers: {
+                'User-Agent': '',
+            },
+        });
         const image = await response.arrayBuffer();
         await fs.writeFile(path.join(dir, filename), Buffer.from(image));
 

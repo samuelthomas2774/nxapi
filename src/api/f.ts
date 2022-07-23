@@ -10,7 +10,7 @@ const debugFlapg = createDebug('nxapi:api:flapg');
 const debugImink = createDebug('nxapi:api:imink');
 const debugZncaApi = createDebug('nxapi:api:znca-api');
 
-abstract class ZncaApi {
+export abstract class ZncaApi {
     constructor(
         public useragent?: string
     ) {}
@@ -291,7 +291,7 @@ export type FResult = {
     result: AndroidZncaFResponse;
 });
 
-function getZncaApiFromEnvironment(useragent?: string): ZncaApi {
+export function getZncaApiFromEnvironment(useragent?: string): ZncaApi {
     if (process.env.NXAPI_ZNCA_API) {
         if (process.env.NXAPI_ZNCA_API === 'flapg') {
             return new ZncaApiFlapg(useragent);

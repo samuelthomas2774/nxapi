@@ -178,9 +178,14 @@ export type PresenceUrlResponse =
     CurrentUser | {user: CurrentUser} |
     Friend | {friend: Friend};
 
-export async function getPresenceFromUrl(presence_url: string) {
+export async function getPresenceFromUrl(presence_url: string, useragent?: string) {
     const [signal, cancel] = timeoutSignal();
-    const response = await fetch(presence_url, {signal}).finally(cancel);
+    const response = await fetch(presence_url, {
+        headers: {
+            'User-Agent': getUserAgent(useragent),
+        },
+        signal,
+    }).finally(cancel);
 
     debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
 

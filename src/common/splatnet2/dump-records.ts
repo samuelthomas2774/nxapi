@@ -108,7 +108,12 @@ export async function dumpProfileImage(
 
     debug('Fetching profile image', share);
     const [signal, cancel] = timeoutSignal();
-    const image_response = await fetch(share.url, {signal}).finally(cancel);
+    const image_response = await fetch(share.url, {
+        headers: {
+            'User-Agent': splatnet.useragent,
+        },
+        signal,
+    }).finally(cancel);
     const image = await image_response.arrayBuffer();
 
     debug('Writing profile image %s', image_filename);
@@ -142,7 +147,12 @@ export async function dumpChallenges(
 
         debug('Fetching challenge image for %s', challenge.key, share);
         const [signal, cancel] = timeoutSignal();
-        const image_response = await fetch(share.url, {signal}).finally(cancel);
+        const image_response = await fetch(share.url, {
+            headers: {
+                'User-Agent': splatnet.useragent,
+            },
+            signal,
+        }).finally(cancel);
         const image = await image_response.arrayBuffer();
 
         debug('Writing challenge image %s', filename);

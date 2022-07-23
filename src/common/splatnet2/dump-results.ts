@@ -53,7 +53,12 @@ export async function dumpResults(
 
         debug('Fetching battle results summary image', share);
         const [signal, cancel] = timeoutSignal();
-        const image_response = await fetch(share.url, {signal}).finally(cancel);
+        const image_response = await fetch(share.url, {
+            headers: {
+                'User-Agent': splatnet.useragent,
+            },
+            signal,
+        }).finally(cancel);
         const image = await image_response.arrayBuffer();
 
         debug('Writing battle results summary image %s', filename);
@@ -111,7 +116,12 @@ export async function dumpResults(
 
                 debug('Fetching battle results image', share);
                 const [signal, cancel] = timeoutSignal();
-                const image_response = await fetch(share.url, {signal}).finally(cancel);
+                const image_response = await fetch(share.url, {
+                    headers: {
+                        'User-Agent': splatnet.useragent,
+                    },
+                    signal,
+                }).finally(cancel);
                 const image = await image_response.arrayBuffer();
 
                 debug('Writing battle results image %s', filename);

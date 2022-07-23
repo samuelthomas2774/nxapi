@@ -8,6 +8,8 @@ import { DiscordPresenceContext, DiscordPresencePlayTime, getDiscordPresence, ge
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/nso.js';
+import { timeoutSignal } from '../../util/misc.js';
+import { getUserAgent } from '../../util/useragent.js';
 
 const debug = createDebug('cli:util:discord-activity');
 
@@ -234,7 +236,14 @@ export async function getDiscordApplicationRpc(id: string) {
 
     const url = 'https://discord.com/api/v9/applications/' + id + '/rpc';
 
-    const response = await fetch(url);
+    const [signal, cancel] = timeoutSignal();
+    const response = await fetch(url, {
+        headers: {
+            'User-Agent': getUserAgent(),
+        },
+        signal,
+    }).finally(cancel);
+
     debug('fetch %s %s, response %s', 'GET', url, response.status);
 
     if (response.status !== 200) {
