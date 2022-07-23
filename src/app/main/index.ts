@@ -245,8 +245,10 @@ export class Store extends EventEmitter {
 
             await this.app.menu?.updateMenu();
         } catch (err) {
+            debug('Error restoring monitor for user %s', user.id, err);
+
             const {response} = await dialog.showMessageBox({
-                message: 'Error restoring monitor for user ' + user.id,
+                message: (err instanceof Error ? err.name : 'Error') + ' restoring monitor for user ' + user.id,
                 detail: err instanceof Error ? err.stack ?? err.message : err as any,
                 type: 'error',
                 buttons: ['OK', 'Retry'],
@@ -272,8 +274,10 @@ export class Store extends EventEmitter {
 
             await this.app.menu?.updateMenu();
         } catch (err) {
+            debug('Error restoring monitor for presence URL %s', state.discord_presence.source.url, err);
+
             const {response} = await dialog.showMessageBox({
-                message: 'Error restoring monitor for presence URL ' + state.discord_presence.source.url,
+                message: (err instanceof Error ? err.name : 'Error') + ' restoring monitor for presence URL ' + state.discord_presence.source.url,
                 detail: err instanceof Error ? err.stack ?? err.message : err as any,
                 type: 'error',
                 buttons: ['OK', 'Retry'],

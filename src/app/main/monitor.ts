@@ -262,18 +262,9 @@ export class PresenceMonitorManager {
         monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
         err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException
     ): Promise<LoopResult> {
-        const {response} = await dialog.showMessageBox(err instanceof ErrorResponse ? {
-            message: 'Request error updating presence monitor',
-            detail: err.response.status + ' ' + err.response.statusText + ' ' +
-                err.response.url + '\n' + 
-                err.body + '\n\n' +
-                (err.stack ?? err.message),
-            type: 'error',
-            buttons: ['OK', 'Retry'],
-            defaultId: 0,
-        } : {
-            message: 'Error updating presence monitor',
-            detail: err instanceof Error ? err.stack ?? err.message : err as any,
+        const {response} = await dialog.showMessageBox({
+            message: err.name + ' updating presence monitor',
+            detail: err.stack ?? err.message,
             type: 'error',
             buttons: ['OK', 'Retry'],
             defaultId: 0,

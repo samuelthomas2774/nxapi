@@ -1,3 +1,4 @@
+import * as util from 'node:util';
 import { Response as NodeFetchResponse } from 'node-fetch';
 
 export class ErrorResponse<T = unknown> extends Error {
@@ -19,6 +20,19 @@ export class ErrorResponse<T = unknown> extends Error {
         } else if (typeof body !== 'undefined') {
             this.data = body;
         }
+
+        const stack = this.stack ?? (this.name + ': ' + message);
+        const lines = stack.split('\n');
+        const head = lines.shift()!;
+
+        Object.defineProperty(this, 'stack', {
+            value: head + '\n' +
+                '    from ' + response.url + ' (' + response.status + ' ' + response.statusText + ')\n' +
+                '      ' + util.inspect(this.data ? this.data : this.body, {
+                    compact: true,
+                }).replace(/\n/g, '\n      ') +
+                (lines.length ? '\n' + lines.join('\n') : ''),
+        });
     }
 }
 

@@ -29,7 +29,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
     const token = await response.json() as NintendoAccountSessionToken | NintendoAccountError;
 
     if ('errorCode' in token) {
-        throw new ErrorResponse('[na] + ' + token.detail, response, token);
+        throw new ErrorResponse('[na] ' + token.detail, response, token);
     }
 
     debug('Got Nintendo Account session token', token);
@@ -59,7 +59,7 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
     const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountError;
 
     if ('errorCode' in nintendoAccountToken) {
-        throw new ErrorResponse('[na] + ' + nintendoAccountToken.detail, response, nintendoAccountToken);
+        throw new ErrorResponse('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
     }
 
     debug('Got Nintendo Account token', nintendoAccountToken);
@@ -85,7 +85,7 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
     const user = await response.json() as NintendoAccountUser | NintendoAccountError;
 
     if ('errorCode' in user) {
-        throw new ErrorResponse('[na] + ' + user.detail, response, user);
+        throw new ErrorResponse('[na] ' + user.detail, response, user);
     }
 
     debug('Got Nintendo Account user info', user);
