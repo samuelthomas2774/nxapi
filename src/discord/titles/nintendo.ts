@@ -1084,4 +1084,20 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
+
+    {
+        // Xenoblade Chronicles 3
+        id: '010074f013262000',
+        client: '967103709605658735',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Splatoon 3
+        id: '0100c2500fc20000',
+        client: '967103796134158447',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 ];
