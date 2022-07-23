@@ -3,6 +3,8 @@ nxapi
 
 Access the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Includes Discord Rich Presence, friend notifications and data downloads.
 
+[![Discord](https://img.shields.io/discord/998657768594608138?color=5865f2&label=Discord)](https://discord.com/invite/4D82rFkXRv)
+
 ### Features
 
 - Command line and Electron app interfaces
@@ -94,13 +96,15 @@ For Discord Rich Presence, you can create an additional account, add your main a
 
 #### Why is a token sent to one/two different non-Nintendo servers?
 
-It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app. (This isn't required for Parental Controls data.) See the splatnet2statink and flapg section below for more information.
+It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app, as currently it's too hard to do this locally. (This isn't required for Parental Controls data.) See the splatnet2statink and flapg section below for more information.
 
-Currently it's too hard to do this locally. nxapi includes a service to do this using a rooted Android device/emulator. Hopefully at some point this will become easier.
+#### I need help using nxapi or Nintendo's APIs/I want to share something I've made using nxapi or Nintendo's APIs
 
-This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `genAudioH`/`genAudioH2`, always returns a different result, even when given the same inputs.)
+I've created a Discord server for this project. Anyone interested in Nintendo's smart device app APIs is welcome to join, even if you're not interested in this project.
 
-The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
+If you are creating something using Nintendo's smart device APIs: updates to Nintendo's apps are published in [#nintendo-app-versions](https://discord.com/channels/998657768594608138/998659415462916166).
+
+Invitation: https://discord.com/invite/4D82rFkXRv
 
 ### Install
 
@@ -321,6 +325,12 @@ Alternatively the [imink API](https://github.com/JoneWang/imink/wiki/imink-API-D
 nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
 
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
+
+This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `genAudioH`/`genAudioH2`, always returns a different result, even when given the same inputs.)
+
+The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
+
+[**See #10 if you can help with this.**](https://github.com/samuelthomas2774/nxapi/discussions/10)
 
 ### SplatNet 2
 
@@ -654,7 +664,7 @@ NXAPI_DATA_PATH=`pwd`/data nxapi ...
 
 #### Debug logs
 
-Logging uses the `debug` package and can be controlled using the `DEBUG` environment variable. All nxapi logging uses the `nxapi` and `cli` namespaces.
+Logging uses the `debug` package and can be controlled using the `DEBUG` environment variable. All nxapi logging uses the `nxapi`, `cli` and `app` namespaces.
 
 ```sh
 # Show all debug logs from nxapi
