@@ -29,7 +29,7 @@ declare global {
         onPersistentDataRestore?: (data: string) => void;
         // NookLink
         storePersistentData?: (data: string) => void;
-        onPersistentDataStore?: () => void;
+        onPersistentDataStore?: (data: string) => void;
 
         // NookLink
         openQRCodeReader?: (data: string) => void;
@@ -40,6 +40,18 @@ declare global {
         closeQRCodeReader?: () => void;
         // NookLink
         closeQRCodeReaderFromPhotoLibrary?: () => void;
+
+        // Unused
+        sendMessage?(data: string): void;
+        // Unused
+        copyToClipboard?(data: string): void;
+
+        openQRCodeReaderForCheckin?(data: string): void;
+        onQRCodeReadForCheckin?(data: string): void;
+        downloadImages?(imagesJson: string): void;
+        completeLoading?(): void;
+        closeWebView?(): void;
+        reloadExtension?(): void;
     }
 }
 
@@ -109,7 +121,7 @@ function storePersistentData(data: string) {
     debug('storePersistentData called', data);
 
     ipc.storePersistentData(data).then(() => {
-        window.onPersistentDataStore?.call(null);
+        window.onPersistentDataStore?.call(null, '');
     });
 }
 
@@ -146,7 +158,52 @@ function closeQrCodeReaderFromPhotoLibrary() {
     //
 }
 
+function openQRCodeReaderForCheckin(data: string) {
+    //
+
+    Promise.resolve().then(() => {
+        const base64EncodeText = '';
+        window.onQRCodeReadForCheckin?.call(null, base64EncodeText);
+    });
+}
+
 window.openQRCodeReader = openQrCodeReader;
 window.openQRCodeReaderFromPhotoLibrary = openQrCodeReaderFromPhotoLibrary;
 window.closeQRCodeReader = closeQrCodeReader;
 window.closeQRCodeReaderFromPhotoLibrary = closeQrCodeReaderFromPhotoLibrary;
+window.openQRCodeReaderForCheckin = openQRCodeReaderForCheckin;
+
+//
+// Other
+//
+
+function sendMessage(data: string) {
+    //
+}
+
+function copyToClipboard(data: string) {
+    //
+}
+
+function downloadImages(imagesJson: string) {
+    //
+}
+
+function completeLoading() {
+    ipc.completeLoading();
+}
+
+function closeWebView() {
+    window.close();
+}
+
+function reloadExtension() {
+    //
+}
+
+window.sendMessage = sendMessage;
+window.copyToClipboard = copyToClipboard;
+window.downloadImages = downloadImages;
+window.completeLoading = completeLoading;
+window.closeWebView = closeWebView;
+window.reloadExtension = reloadExtension;

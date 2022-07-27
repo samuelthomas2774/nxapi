@@ -34,7 +34,17 @@ export enum CoralStatus {
     MULTIPLE_LOGIN = 9426,
     UPGRADE_REQUIRED = 9427,
     ACCOUNT_DISABLED = 9428,
+    RATE_LIMIT_EXCEEDED = 9437,
     MEMBERSHIP_REQUIRED = 9450,
+    INVALID_FRIEND_REQUEST = 9460,
+    SENDER_FRIEND_LIMIT_EXCEEDED = 9461,
+    RECEIVER_FRIEND_LIMIT_EXCEEDED = 9462,
+    FRIEND_REQUEST_NOT_ACCEPTED = 9463,
+    DUPLICATE_FRIEND_REQUEST = 9464,
+    PRECONDITION_FAILED = 9465,
+    RESOURCE_LIMIT_EXCEEDED = 9466,
+    ALREADY_FRIEND = 9467,
+    SENDER_BLOCKS_RECEIVER_FRIEND_REQUEST = 9468,
     SERVICE_CLOSED = 9499,
     INTERNAL_SERVER_ERROR = 9500,
     SERVICE_UNAVAILABLE = 9501,
@@ -126,6 +136,21 @@ export interface Game {
     /** 0 if never played before */
     firstPlayedAt: number;
     sysDescription: string;
+}
+
+/** /v3/Friend/CreateFriendCodeUrl */
+export interface FriendCodeUrl {
+    url: string;
+    friendCode: string;
+}
+
+/** /v3/Friend/GetUserByFriendCode, /v3/Friend/GetUserByFriendCodeHash */
+export interface FriendCodeUser {
+    id: number;
+    nsaId: string;
+    imageUrl: string;
+    name: string;
+    extras: {};
 }
 
 /** /v1/Game/ListWebServices */

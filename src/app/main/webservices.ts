@@ -338,4 +338,10 @@ export class WebServiceIpc {
         const key = 'WebServicePersistentData.' + nsoAccount.user.nsaId + '.' + webservice.id;
         await store.storage.setItem(key, data);
     }
+
+    async completeLoading(event: IpcMainInvokeEvent): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        debug('Web service %s, user %s, called completeLoading', webservice.name, nsoAccount.user.name);
+    }
 }

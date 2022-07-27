@@ -14,6 +14,7 @@ const ipc = {
     requestGameWebToken: () => ipcRenderer.invoke('nxapi:webserviceapi:requestGameWebToken') as Promise<string>,
     restorePersistentData: () => ipcRenderer.invoke('nxapi:webserviceapi:restorePersistentData') as Promise<string | undefined>,
     storePersistentData: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:storePersistentData', data) as Promise<void>,
+    completeLoading: () => ipcRenderer.invoke('nxapi:webserviceapi:completeLoading') as Promise<void>,
 };
 
 export default ipc;

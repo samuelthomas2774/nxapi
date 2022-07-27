@@ -2,7 +2,7 @@ import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { f, FlapgIid } from './f.js';
-import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse } from './coral-types.js';
+import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
@@ -12,11 +12,14 @@ const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '8.0.0';
-const ZNCA_VERSION = '2.1.1';
+const ZNCA_VERSION = '2.2.0';
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
+
+const FRIEND_CODE = /^\d{4}-\d{4}-\d{4}$/;
+const FRIEND_CODE_HASH = /^[A-Za-z0-9]{10}$/;
 
 export default class CoralApi {
     onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
@@ -123,8 +126,30 @@ export default class CoralApi {
         });
     }
 
+    async getUserByFriendCode(friend_code: string, hash?: string) {
+        if (!FRIEND_CODE.test(friend_code)) throw new Error('Invalid friend code');
+        if (hash && !FRIEND_CODE_HASH.test(hash)) throw new Error('Invalid friend code hash');
+
+        return hash ? this.call<FriendCodeUser>('/v3/Friend/GetUserByFriendCodeHash', {
+            friendCode: friend_code,
+            friendCodeHash: hash,
+        }) : this.call<FriendCodeUser>('/v3/Friend/GetUserByFriendCode', {
+            friendCode: friend_code,
+        });
+    }
+
+    async sendFriendRequest(nsa_id: string) {
+        return this.call<{}>('/v3/FriendRequest/Create', {
+            nsaId: nsa_id,
+        });
+    }
+
     async getCurrentUser() {
         return this.call<CurrentUser>('/v3/User/ShowSelf');
+    }
+
+    async getFriendCodeUrl() {
+        return this.call<FriendCodeUrl>('/v3/Friend/CreateFriendCodeUrl');
     }
 
     async getCurrentUserPermissions() {
