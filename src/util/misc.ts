@@ -27,7 +27,7 @@ export function hrlist(items: string[]) {
     return items.slice(0, -1).join(', ') + ' and ' + last;
 }
 
-export function timeoutSignal(ms = 10 * 1000) {
+export function timeoutSignal(ms = 60 * 1000) {
     const controller = new AbortController();
 
     const timeout = setTimeout(() => {
