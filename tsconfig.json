@@ -12,7 +12,8 @@
         "outDir": "dist",
         "sourceMap": true,
         "lib": [
-            "es2020"
+            "es2020",
+            "dom"
         ],
         "stripInternal": true,
         "skipLibCheck": true,
