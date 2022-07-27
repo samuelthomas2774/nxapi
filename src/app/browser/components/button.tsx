@@ -24,7 +24,7 @@ function ButtonMac(props: {
     const [pressed, setPressIn] = useState(false);
     const onPressIn = useCallback(() => setPressIn(true), []);
     const onPressOut = useCallback(() => setPressIn(false), []);
-    
+
     const pressed_appearance = window_focused && pressed && hovered;
     const active = window_focused && (props.primary || pressed_appearance);
 

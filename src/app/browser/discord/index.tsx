@@ -148,7 +148,7 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                     </Picker>
                 </> : null}
             </> : null}
- 
+
             {selectedMode === DiscordSourceType.URL ? <>
                 <Text style={[styles.header, theme.text]}>2. Enter presence URL</Text>
                 <Text style={[styles.help, theme.text]}>This must be a HTTPS URL that returns a JSON object with either a user, friend or presence key. This is intended to be used with nxapi's znc API proxy.</Text>

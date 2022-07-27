@@ -230,7 +230,7 @@ export class WebServiceIpc {
             na_country: user.country,
             na_lang: user.language,
         }).toString();
-    
+
         return {
             webservice,
             url: url.toString(),

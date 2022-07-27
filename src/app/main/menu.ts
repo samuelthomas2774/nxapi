@@ -45,7 +45,7 @@ export default class MenuApp {
 
             const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
                 m.data.user.id === data.user.id);
-            const discord_presence_active = discord_presence_monitor instanceof EmbeddedPresenceMonitor && 
+            const discord_presence_active = discord_presence_monitor instanceof EmbeddedPresenceMonitor &&
                 discord_presence_monitor?.data?.user.id === data.user.id;
 
             const item = new MenuItem({

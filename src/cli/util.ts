@@ -13,7 +13,7 @@ export function builder(yargs: Argv<ParentArguments>) {
     for (const command of Object.values(commands)) {
         if (command.command === 'validate-discord-titles' && !dev) continue;
         if (command.command === 'export-discord-titles' && !dev) continue;
-    
+
         // @ts-expect-error
         yargs.command(command);
     }

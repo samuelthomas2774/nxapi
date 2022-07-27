@@ -108,7 +108,7 @@ declare class Table extends Array<Row> {
     constructor(options: PartialTableOptions);
     /**
      * Width getter
-     */    
+     */
     get width(): number;
     /**
      * Render to a string.
