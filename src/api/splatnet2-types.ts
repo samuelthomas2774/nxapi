@@ -10,7 +10,7 @@ export interface Records {
     records: {
         recent_disconnect_count: number;
         recent_win_count: number;
-        stage_stats: unknown;
+        stage_stats: Record<string | number, StageStats>;
         update_time: number;
         recent_lose_count: number;
         league_stats: {
@@ -26,6 +26,23 @@ export interface Records {
         player: Player;
         start_time: number;
     };
+}
+
+interface StageStats {
+    stage: Stage;
+    last_play_time: number;
+    // Splat Zones
+    area_win: number;
+    area_lose: number;
+    // Tower Control
+    yagura_lose: number;
+    yagura_win: number;
+    // Rainmaker
+    hoko_win: number;
+    hoko_lose: number;
+    // Clam Blitz
+    asari_win: number;
+    asari_lose: number;
 }
 
 interface Challenges {
@@ -74,18 +91,20 @@ interface WeaponStats {
     total_paint_point: number;
     last_use_time: number;
     lose_count: number;
-    weapon: Weapon;
+    weapon: WeaponSet;
     win_count: number;
     max_win_meter: number;
 }
 
-interface Weapon {
+interface MainWeapon {
     name: string;
     id: string;
     thumbnail: string;
+    image: string;
+}
+interface WeaponSet extends MainWeapon {
     sub: SubWeapon;
     special: SpecialWeapon;
-    image: string;
 }
 interface SubWeapon {
     image_b: string;
@@ -106,7 +125,7 @@ interface Player {
     head_skills: Skills;
     nickname: string;
     shoes_skills: Skills;
-    weapon: Weapon;
+    weapon: WeaponSet;
     player_rank: number;
     max_league_point_team: number;
     shoes: Gear & {kind: GearType.SHOES};
@@ -152,7 +171,7 @@ interface Skill {
 }
 
 interface Rank {
-    name: null;
+    name: string | null;
     s_plus_number: null;
     is_x: boolean;
     number: number;
@@ -196,6 +215,10 @@ export interface Timeline {
     };
     udemae: {
         importance: number;
+    } | {
+        importance: number;
+        change: number;
+        stat: RankedMatchResults;
     };
     coop: {
         importance: number;
@@ -333,7 +356,7 @@ export enum XPowerRankingStatus {
 interface XPowerRankingRecordsRanking {
     name: string;
     principal_id: string;
-    weapon: Weapon;
+    weapon: WeaponSet;
     rank: number;
     unique_id: string;
     x_power: number;
@@ -454,7 +477,7 @@ interface LeagueMatchRanking {
     rank: number;
 }
 interface LeagueTagMember {
-    weapon: Weapon;
+    weapon: WeaponSet;
     unique_id: string;
     principal_id: string;
 }
@@ -511,10 +534,10 @@ interface RankedMatchResults extends BaseMatchResults {
         is_x: boolean;
         is_number_reached: boolean;
         s_plus_number: null;
-        name: null;
+        name: string | null;
         number: number;
     };
-    estimate_gachi_power: null;
+    estimate_gachi_power: number | null;
     x_power: null;
 }
 interface PlayerResult {
@@ -529,7 +552,7 @@ interface PlayerResult {
 interface RankedPlayerResult extends PlayerResult {
     player: PlayerResult['player'] & {
         udemae: {
-            name: null;
+            name: string | null;
             s_plus_number: null;
             is_x: boolean;
         };
@@ -538,7 +561,7 @@ interface RankedPlayerResult extends PlayerResult {
 interface SelfRankedPlayerResult extends PlayerResult {
     player: PlayerResult['player'] & {
         udemae: {
-            name: null;
+            name: string | null;
             s_plus_number: null;
             number: number; // -1;
             is_number_reached: boolean;
@@ -657,7 +680,7 @@ interface CoopWaveWaterLevel {
 }
 type CoopWeapon = CoopStandardWeapon | CoopSpecialWeapon;
 interface CoopStandardWeapon {
-    weapon: Omit<Weapon, 'sub' | 'special'>;
+    weapon: MainWeapon;
     id: string;
 }
 interface CoopSpecialWeapon {
