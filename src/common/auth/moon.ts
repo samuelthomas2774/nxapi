@@ -4,9 +4,12 @@ import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
 import MoonApi from '../../api/moon.js';
-import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import { checkUseLimit, LIMIT_REQUESTS, SHOULD_LIMIT_USE } from './util.js';
 
 const debug = createDebug('nxapi:auth:moon');
+
+// Higher rate limit for parental controls, as the token expires sooner
+const LIMIT_PERIOD = 15 * 60 * 1000; // 15 minutes
 
 export interface SavedMoonToken {
     nintendoAccountToken: NintendoAccountToken;
@@ -41,7 +44,7 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string,
     const existingToken: SavedMoonToken | undefined = await storage.getItem('MoonToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
-        if (ratelimit) await checkUseLimit(storage, 'moon', jwt.payload.sub);
+        await checkUseLimit(storage, 'moon', jwt.payload.sub, ratelimit, [LIMIT_REQUESTS, LIMIT_PERIOD]);
 
         console.warn('Authenticating to Nintendo Switch Parental Controls app');
         debug('Authenticating to pctl with session token');

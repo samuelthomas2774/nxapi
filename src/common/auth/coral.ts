@@ -65,7 +65,7 @@ export async function getToken(
     const existingToken: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
-        if (ratelimit) await checkUseLimit(storage, 'coral', jwt.payload.sub);
+        await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
 
         console.warn('Authenticating to Nintendo Switch Online app');
         debug('Authenticating to znc with session token');
