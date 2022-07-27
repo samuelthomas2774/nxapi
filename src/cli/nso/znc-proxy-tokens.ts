@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import fetch from 'node-fetch';
 import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../nso.js';
-import { getToken } from '../../common/auth/nso.js';
+import { getToken } from '../../common/auth/coral.js';
 import { AuthPolicy, AuthToken } from '../../api/znc-proxy.js';
 import { Argv } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';

@@ -4,6 +4,7 @@ import { ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
 import MoonApi from '../../api/moon.js';
+import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 
 const debug = createDebug('nxapi:auth:moon');
 
@@ -14,7 +15,7 @@ export interface SavedMoonToken {
     expires_at: number;
 }
 
-export async function getPctlToken(storage: persist.LocalStorage, token: string) {
+export async function getPctlToken(storage: persist.LocalStorage, token: string, ratelimit = SHOULD_LIMIT_USE) {
     if (!token) {
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi pctl auth`.');
         throw new Error('Invalid token');
@@ -40,6 +41,8 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string)
     const existingToken: SavedMoonToken | undefined = await storage.getItem('MoonToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
+        if (ratelimit) await checkUseLimit(storage, 'moon', jwt.payload.sub);
+
         console.warn('Authenticating to Nintendo Switch Parental Controls app');
         debug('Authenticating to pctl with session token');
 

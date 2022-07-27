@@ -6,7 +6,7 @@ import { BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell 
 import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
-import { getToken, SavedToken } from '../../common/auth/nso.js';
+import { getToken, SavedToken } from '../../common/auth/coral.js';
 import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
 import { Jwt } from '../../util/jwt.js';
 import { tryGetNativeImageFromUrl } from './util.js';

@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken } from '../../common/auth/nso.js';
+import { getToken } from '../../common/auth/coral.js';
 import { getNintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import prompt from '../util/prompt.js';

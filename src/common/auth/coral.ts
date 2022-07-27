@@ -7,6 +7,7 @@ import { Jwt } from '../../util/jwt.js';
 import { AccountLogin, CoralErrorResponse } from '../../api/coral-types.js';
 import CoralApi, { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
+import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 
 const debug = createDebug('nxapi:auth:nso');
 
@@ -24,15 +25,21 @@ export interface SavedToken {
     proxy_url?: string;
 }
 
-export async function getToken(storage: persist.LocalStorage, token: string, proxy_url: string): Promise<{
+export async function getToken(
+    storage: persist.LocalStorage, token: string, proxy_url: string, ratelimit?: boolean
+): Promise<{
     nso: ZncProxyApi;
     data: SavedToken;
 }>
-export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string): Promise<{
+export async function getToken(
+    storage: persist.LocalStorage, token: string, proxy_url?: string, ratelimit?: boolean
+): Promise<{
     nso: CoralApi;
     data: SavedToken;
 }>
-export async function getToken(storage: persist.LocalStorage, token: string, proxy_url?: string) {
+export async function getToken(
+    storage: persist.LocalStorage, token: string, proxy_url?: string, ratelimit = SHOULD_LIMIT_USE
+) {
     if (!token) {
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi nso token`.');
         throw new Error('Invalid token');
@@ -58,6 +65,8 @@ export async function getToken(storage: persist.LocalStorage, token: string, pro
     const existingToken: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
+        if (ratelimit) await checkUseLimit(storage, 'coral', jwt.payload.sub);
+
         console.warn('Authenticating to Nintendo Switch Online app');
         debug('Authenticating to znc with session token');
 

@@ -3,7 +3,7 @@ import { PresencePermissions } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken } from '../../common/auth/nso.js';
+import { getToken } from '../../common/auth/coral.js';
 
 const debug = createDebug('cli:nso:permissions');
 

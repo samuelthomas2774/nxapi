@@ -5,7 +5,7 @@ import createDebug from 'debug';
 import type { User } from 'discord-rpc';
 import type { SharingItem } from '../main/electron.js';
 import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfiguration } from '../common/types.js';
-import type { SavedToken } from '../../common/auth/nso.js';
+import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
 import type { Announcements, CurrentUser, Friend, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';

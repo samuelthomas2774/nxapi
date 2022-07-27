@@ -2,9 +2,12 @@ import process from 'node:process';
 import * as fs from 'node:fs';
 import createDebug from 'debug';
 import persist from 'node-persist';
-import { getToken } from './nso.js';
+import { getToken } from './coral.js';
 import SplatNet2Api, { updateIksmSessionLastUsed } from '../../api/splatnet2.js';
 import { WebServiceToken } from '../../api/coral-types.js';
+import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import { Jwt } from '../../util/jwt.js';
+import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 
 const debug = createDebug('nxapi:auth:splatnet2');
 
@@ -27,7 +30,10 @@ export interface SavedIksmSessionToken {
     last_used?: number;
 }
 
-export async function getIksmToken(storage: persist.LocalStorage, token: string, proxy_url?: string, allow_fetch_token = false) {
+export async function getIksmToken(
+    storage: persist.LocalStorage, token: string, proxy_url?: string,
+    allow_fetch_token = false, ratelimit = SHOULD_LIMIT_USE
+) {
     if (!token) {
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi nso token`.');
         throw new Error('Invalid token');
@@ -42,6 +48,11 @@ export async function getIksmToken(storage: persist.LocalStorage, token: string,
     if (!existingToken || ((!existingToken.last_used || last_used_days_ago) && expired)) {
         if (!allow_fetch_token) {
             throw new Error('No valid iksm_session cookie');
+        }
+
+        if (ratelimit) {
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);        
+            await checkUseLimit(storage, 'splatnet2', jwt.payload.sub);
         }
 
         console.warn('Authenticating to SplatNet 2');

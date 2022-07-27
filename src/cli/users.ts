@@ -3,7 +3,7 @@ import Table from './util/table.js';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { Argv } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
-import { SavedToken } from '../common/auth/nso.js';
+import { SavedToken } from '../common/auth/coral.js';
 import { SavedMoonToken } from '../common/auth/moon.js';
 
 const debug = createDebug('cli:users');

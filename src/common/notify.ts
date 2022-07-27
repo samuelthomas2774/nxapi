@@ -4,7 +4,7 @@ import CoralApi from '../api/coral.js';
 import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralErrorResponse } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
-import { SavedToken } from './auth/nso.js';
+import { SavedToken } from './auth/coral.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
 import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';

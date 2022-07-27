@@ -758,7 +758,7 @@ nxapi exports it's API library and types. [See src/exports.](src/exports)
 
 Example authenticating to the Nintendo Switch Online app:
 
-> This is a simplified example of authenticating to the Coral API and using cached tokens. More logic is required to ensure you are using these APIs properly - [see src/common/auth/nso.ts for the authentication functions used in nxapi's CLI and Electron app](src/common/auth/nso.ts).
+> This is a simplified example of authenticating to the Coral API and using cached tokens. More logic is required to ensure you are using these APIs properly - [see src/common/auth/coral.ts for the authentication functions used in nxapi's CLI and Electron app](src/common/auth/coral.ts).
 
 ```ts
 import { addUserAgent } from 'nxapi';

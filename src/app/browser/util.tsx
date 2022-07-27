@@ -6,7 +6,7 @@ import { ErrorResponse } from '../../api/util.js';
 import { DiscordPresence } from '../../discord/util.js';
 import ipc, { events } from './ipc.js';
 import { NintendoAccountUser } from '../../api/na.js';
-import { SavedToken } from '../../common/auth/nso.js';
+import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, DEFAULT_ACCENT_COLOUR } from './constants.js';
 

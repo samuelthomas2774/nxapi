@@ -3,9 +3,7 @@ import * as persist from 'node-persist';
 import CoralApi from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { Announcements, Friends, GetActiveEventResult, WebServices, CoralSuccessResponse } from '../api/coral-types.js';
-import { getToken, SavedToken } from './auth/nso.js';
-import { Jwt } from '../util/jwt.js';
-import { NintendoAccountSessionTokenJwtPayload } from '../api/na.js';
+import { getToken, SavedToken } from './auth/coral.js';
 
 const debug = createDebug('nxapi:users');
 
@@ -24,11 +22,6 @@ export default class Users<T extends UserData> {
     }
 
     async get(token: string): Promise<T> {
-        if (debug.enabled) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-            debug('Getting user for token', jwt.payload.sub);
-        }
-
         const existing = this.users.get(token);
 
         if (existing && existing.expires_at >= Date.now()) {
@@ -47,11 +40,11 @@ export default class Users<T extends UserData> {
         return promise;
     }
 
-    static coral(storage: persist.LocalStorage, znc_proxy_url: string): Users<CoralUser<ZncProxyApi>>
-    static coral(storage: persist.LocalStorage, znc_proxy_url?: string): Users<CoralUser>
-    static coral(storage: persist.LocalStorage, znc_proxy_url?: string) {
+    static coral(storage: persist.LocalStorage, znc_proxy_url: string, ratelimit?: boolean): Users<CoralUser<ZncProxyApi>>
+    static coral(storage: persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser>
+    static coral(storage: persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean) {
         return new Users(async token => {
-            const {nso, data} = await getToken(storage, token, znc_proxy_url);
+            const {nso, data} = await getToken(storage, token, znc_proxy_url, ratelimit);
 
             const [announcements, friends, webservices, active_event] = await Promise.all([
                 nso.getAnnouncements(),

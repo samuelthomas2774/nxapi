@@ -1,9 +1,12 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
-import { getToken } from './nso.js';
+import { getToken } from './coral.js';
 import NooklinkApi, { NooklinkUserApi } from '../../api/nooklink.js';
 import { AuthToken, Users } from '../../api/nooklink-types.js';
 import { WebServiceToken } from '../../api/coral-types.js';
+import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import { Jwt } from '../../util/jwt.js';
+import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 
 const debug = createDebug('nxapi:auth:nooklink');
 
@@ -19,7 +22,8 @@ export interface SavedToken {
 }
 
 export async function getWebServiceToken(
-    storage: persist.LocalStorage, token: string, proxy_url?: string, allow_fetch_token = false
+    storage: persist.LocalStorage, token: string, proxy_url?: string,
+    allow_fetch_token = false, ratelimit = SHOULD_LIMIT_USE
 ) {
     if (!token) {
         console.error('No token set. Set a Nintendo Account session token using the `--token` option or by running `nxapi nso token`.');
@@ -30,7 +34,12 @@ export async function getWebServiceToken(
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
         if (!allow_fetch_token) {
-            throw new Error('No valid _gtoken cookie');
+            throw new Error('No valid NookLink web service token');
+        }
+
+        if (ratelimit) {
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);        
+            await checkUseLimit(storage, 'nooklink', jwt.payload.sub);
         }
 
         console.warn('Authenticating to NookLink');
@@ -66,7 +75,7 @@ type PromiseValue<T> = T extends PromiseLike<infer R> ? R : never;
 
 export async function getUserToken(
     storage: persist.LocalStorage, nintendoAccountToken: string, user?: string,
-    proxy_url?: string, allow_fetch_token = false
+    proxy_url?: string, allow_fetch_token = false, ratelimit = SHOULD_LIMIT_USE
 ) {
     let wst: PromiseValue<ReturnType<typeof getWebServiceToken>> | null = null;
 
@@ -105,6 +114,11 @@ export async function getUserToken(
     if (!existingToken || existingToken.token.expireAt <= (Date.now() / 1000)) {
         if (!wst) wst = await getWebServiceToken(storage, nintendoAccountToken, proxy_url, allow_fetch_token);
         const {nooklink, data: webserviceToken} = wst;
+
+        if (ratelimit) {
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(nintendoAccountToken);        
+            await checkUseLimit(storage, 'nooklink-user', jwt.payload.sub);
+        }
 
         console.warn('Authenticating to NookLink as user %s', user);
         debug('Authenticating to NookLink as user %s', user);

@@ -9,7 +9,7 @@ import CoralApi from '../../api/coral.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken, SavedToken } from '../../common/auth/nso.js';
+import { getToken, SavedToken } from '../../common/auth/coral.js';
 import { NotificationManager, PresenceEvent, ZncNotifications } from '../../common/notify.js';
 import { product } from '../../util/product.js';
 import { parseListenAddress } from '../../util/net.js';

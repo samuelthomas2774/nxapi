@@ -4,7 +4,7 @@ import persist from 'node-persist';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken } from '../../common/auth/nso.js';
+import { getToken } from '../../common/auth/coral.js';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { EmbeddedSplatNet2Monitor, NotificationManager, ZncNotifications } from '../../common/notify.js';
 import { CurrentUser, Friend, Game } from '../../api/coral-types.js';

@@ -4,7 +4,7 @@ import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, Prese
 import { ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { NintendoAccountUser } from './na.js';
-import { SavedToken } from '../common/auth/nso.js';
+import { SavedToken } from '../common/auth/coral.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents, getUserAgent } from '../util/useragent.js';
 

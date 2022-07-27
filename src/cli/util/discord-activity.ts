@@ -7,7 +7,7 @@ import type { Arguments as ParentArguments } from '../util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime, getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken } from '../../common/auth/nso.js';
+import { getToken } from '../../common/auth/coral.js';
 import { timeoutSignal } from '../../util/misc.js';
 import { getUserAgent } from '../../util/useragent.js';
 

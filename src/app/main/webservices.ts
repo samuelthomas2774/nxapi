@@ -10,7 +10,7 @@ import { dev } from '../../util/product.js';
 import { WebService } from '../../api/coral-types.js';
 import { Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
-import { SavedToken } from '../../common/auth/nso.js';
+import { SavedToken } from '../../common/auth/coral.js';
 import { createWebServiceWindow } from './windows.js';
 
 const debug = createDebug('app:main:webservices');
