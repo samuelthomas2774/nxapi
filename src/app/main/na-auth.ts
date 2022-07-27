@@ -229,7 +229,7 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
                 icon: await tryGetNativeImageFromUrl(data!.nsoAccount.user.imageUri),
             }).show();
 
-            return getToken(storage, nsotoken, process.env.ZNC_PROXY_URL);
+            return getToken(storage, nsotoken, process.env.ZNC_PROXY_URL, false);
         }
 
         await checkZncaApiUseAllowed(storage, window);
@@ -238,7 +238,7 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
 
         debug('session token', token);
 
-        const {nso, data} = await getToken(storage, token.session_token, process.env.ZNC_PROXY_URL);
+        const {nso, data} = await getToken(storage, token.session_token, process.env.ZNC_PROXY_URL, false);
 
         const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
         users.add(data.user.id);
@@ -365,14 +365,14 @@ export async function addPctlAccount(storage: persist.LocalStorage) {
                 body: 'Already signed in as ' + data?.user.nickname,
             }).show();
 
-            return getPctlToken(storage, moontoken);
+            return getPctlToken(storage, moontoken, false);
         }
 
         const token = await getNintendoAccountSessionToken(code, verifier, ZNMA_CLIENT_ID);
 
         debug('session token', token);
 
-        const {moon, data} = await getPctlToken(storage, token.session_token);
+        const {moon, data} = await getPctlToken(storage, token.session_token, false);
 
         const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
         users.add(data.user.id);
