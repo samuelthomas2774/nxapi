@@ -10,3 +10,6 @@ export * as presence from './presence.js';
 export * as notify from './notify.js';
 export * as httpServer from './http-server.js';
 export * as zncProxyTokens from './znc-proxy-tokens.js';
+export * as friendcode from './friendcode.js';
+export * as lookup from './lookup.js';
+export * as addFriend from './add-friend.js';
