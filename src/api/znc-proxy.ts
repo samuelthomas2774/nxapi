@@ -111,8 +111,9 @@ export default class ZncProxyApi implements CoralApi {
         return {status: CoralStatus.OK as const, result: response.user, correlationId: ''};
     }
 
-    async getFriendCodeUrl(): Promise<CoralSuccessResponse<FriendCodeUrl>> {
-        throw new Error('Not supported in ZncProxyApi');
+    async getFriendCodeUrl() {
+        const response = await this.fetch<{friendcode: FriendCodeUrl}>('/friendcode');
+        return {status: CoralStatus.OK as const, result: response.friendcode, correlationId: ''};
     }
 
     async getCurrentUserPermissions() {

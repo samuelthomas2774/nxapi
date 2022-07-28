@@ -4,7 +4,7 @@ import * as persist from 'node-persist';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
-import { Announcement, CoralErrorResponse, CoralStatus, CurrentUser, Friend, FriendCodeUser, GetActiveEventResult, Presence, WebService } from '../../api/coral-types.js';
+import { Announcement, CoralErrorResponse, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, Presence, WebService } from '../../api/coral-types.js';
 import CoralApi from '../../api/coral.js';
 import type { Arguments as ParentArguments } from '../nso.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -770,6 +770,49 @@ function createApp(
         } : {
             error: 'not_found',
             error_message: 'A user with this friend code was not found',
+        }));
+    });
+
+    const user_friendcodeurl_promise = new Map</** NA ID */ string, Promise<void>>();
+    const cached_friendcodeurl = new Map</** NA ID */ string, [FriendCodeUrl, number]>();
+
+    const getFriendCodeUrl: express.RequestHandler = async (req, res, next) => {
+        const cache = cached_friendcodeurl.get(req.zncAuth!.user.id);
+
+        if (cache && ((cache[1] + update_interval) > Date.now())) {
+            debug('Using cached friend code URL for %s', req.zncAuth!.user.id);
+            next();
+            return;
+        }
+
+        try {
+            const promise = user_friendcodeurl_promise.get(req.zncAuth!.user.id) ?? req.znc!.getFriendCodeUrl().then(user => {
+                cached_friendcodeurl.set(req.zncAuth!.user.id, [user.result, Date.now()]);
+            }).finally(() => {
+                user_friendcodeurl_promise.delete(req.zncAuth!.user.id);
+            });
+            user_friendcodeurl_promise.set(req.zncAuth!.user.id, promise);
+            await promise;
+
+            next();
+        } catch (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+                error: err,
+                error_message: (err as Error).message,
+            }));
+        }
+    };
+
+    app.get('/api/znc/friendcode', localAuth, nsoAuth, getFriendCodeUrl, async (req, res) => {
+        const [friendcodeurl, updated] = cached_friendcodeurl.get(req.zncAuth!.user.id)!;
+
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, update_interval));
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+            friendcode: friendcodeurl,
+            updated,
         }));
     });
 
