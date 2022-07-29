@@ -1,5 +1,7 @@
 export {
     default,
+    SplatNet2AuthData,
+
     LeagueType,
     LeagueRegion,
     ShareColour as ShareProfileColour,

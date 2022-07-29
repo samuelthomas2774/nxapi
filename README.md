@@ -758,29 +758,29 @@ nxapi exports it's API library and types. [See src/exports.](src/exports)
 
 Example authenticating to the Nintendo Switch Online app:
 
-> This is a simplified example of authenticating to the Coral API and using cached tokens. More logic is required to ensure you are using these APIs properly - [see src/common/auth/coral.ts for the authentication functions used in nxapi's CLI and Electron app](src/common/auth/coral.ts).
+> This is a simplified example of authenticating to the Coral API and using cached tokens. More logic is required to ensure you are using these APIs properly, and to renew expired tokens - [see src/common/auth/coral.ts for the authentication functions used in nxapi's CLI and Electron app](src/common/auth/coral.ts).
 
 ```ts
 import { addUserAgent } from 'nxapi';
-import CoralApi from 'nxapi/coral';
+import CoralApi, { CoralAuthData } from 'nxapi/coral';
 
 addUserAgent('your-script/1.0.0 (+https://github.com/...)');
 
-declare function getCachedCoralToken(): [string, Date];
-declare function setCachedCoralToken(token: string, expires_at: Date): void;
+declare function getCachedCoralToken(): [CoralAuthData, Date];
+declare function setCachedCoralToken(auth_data: CoralAuthData, expires_at: Date): void;
 declare function getNintendoAccountSessionToken(): string;
 
 let coral;
 
 try {
-    const [token, expires_at] = getCachedCoralToken();
+    const [auth_data, expires_at] = getCachedCoralToken();
     if (expires_at.getTime() > Date.now()) throw new Error('Token expired');
 
-    coral = new CoralApi(token);
+    coral = CoralApi.createWithSavedToken(auth_data);
 } catch (err) {
     const na_session_token = getNintendoAccountSessionToken();
     const {nso, data} = await CoralApi.createWithSessionToken(na_session_token);
-    setCachedCoralToken(data.credential.accessToken, Date.now() + (data.credential.expiresIn * 1000));
+    setCachedCoralToken(data, Date.now() + (data.credential.expiresIn * 1000));
     coral = nso;
 }
 
@@ -792,7 +792,8 @@ Example getting SplatNet 2 records:
 > This example does not include authenticating to SplatNet 2. To benefit from the caching in the nxapi command, the `nxapi splatnet2 token --json` command can be used in most scripts. For example:
 >
 > ```sh
-> # your-script.js can then read the iksm_session, unique player ID and region from `JSON.parse(process.env.SPLATNET_TOKEN)`
+> # your-script.js can then read the iksm_session, unique player ID and region like this:
+> # SplatNet2Api.createWithCliTokenData(JSON.parse(process.env.SPLATNET_TOKEN))
 > SPLATNET_TOKEN=`nxapi splatnet2 token --json` node your-script.js
 > ```
 
@@ -800,7 +801,8 @@ Example getting SplatNet 2 records:
 import SplatNet2Api from 'nxapi/splatnet2';
 
 const iksm_session = '...';
-const splatnet2 = new SplatNet2Api(iksm_session);
+const unique_id = '...';
+const splatnet2 = SplatNet2Api.createWithIksmSession(iksm_session, unique_id);
 
 const records = await splatnet2.getRecords();
 ```

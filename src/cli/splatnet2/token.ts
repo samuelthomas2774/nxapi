@@ -3,6 +3,7 @@ import type { Arguments as ParentArguments } from '../splatnet2.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
+import { SplatNet2CliTokenData } from '../../api/splatnet2.js';
 
 const debug = createDebug('cli:splatnet2:token');
 
@@ -35,7 +36,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const {splatnet, data} = await getIksmToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
     if (argv.json || argv.jsonPrettyPrint) {
-        const result = {
+        const result: SplatNet2CliTokenData = {
             iksm_session: data.iksm_session,
             language: data.language,
             region: data.region,

@@ -3,30 +3,14 @@ import * as fs from 'node:fs';
 import createDebug from 'debug';
 import persist from 'node-persist';
 import { getToken } from './coral.js';
-import SplatNet2Api, { updateIksmSessionLastUsed } from '../../api/splatnet2.js';
-import { WebServiceToken } from '../../api/coral-types.js';
+import SplatNet2Api, { SplatNet2AuthData, updateIksmSessionLastUsed } from '../../api/splatnet2.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 
 const debug = createDebug('nxapi:auth:splatnet2');
 
-export interface SavedIksmSessionToken {
-    webserviceToken: WebServiceToken;
-    url: string;
-    cookies: string;
-
-    body: string;
-    language: string | null;
-    region: string | null;
-    /** Splatoon 2 player ID aka. unique_id */
-    user_id: string | null;
-    nsa_id: string | null;
-
-    iksm_session: string;
-    expires_at: number;
-    useragent: string;
-
+export interface SavedIksmSessionToken extends SplatNet2AuthData {
     last_used?: number;
 }
 
@@ -69,7 +53,7 @@ export async function getIksmToken(
         }
 
         return {
-            splatnet: new SplatNet2Api(existingToken.iksm_session, existingToken.useragent),
+            splatnet: SplatNet2Api.createWithSavedToken(existingToken),
             data: existingToken,
         };
     }
@@ -81,7 +65,7 @@ export async function getIksmToken(
     }
 
     return {
-        splatnet: new SplatNet2Api(existingToken.iksm_session, existingToken.useragent),
+        splatnet: SplatNet2Api.createWithSavedToken(existingToken),
         data: existingToken,
     };
 }

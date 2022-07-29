@@ -25,9 +25,10 @@ export const updateIksmSessionLastUsed: {
 } = {};
 
 export default class SplatNet2Api {
-    constructor(
+    protected constructor(
         public iksm_session: string,
-        public useragent: string
+        public unique_id: string,
+        public useragent: string,
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
@@ -35,13 +36,15 @@ export default class SplatNet2Api {
         const response = await fetch(SPLATNET2_URL + url, {
             method,
             headers: Object.assign({
-                'Upgrade-Insecure-Requests': '1',
                 'User-Agent': this.useragent,
                 'Cookie': 'iksm_session=' + encodeURIComponent(this.iksm_session),
-                'dnt': '1',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept': '*/*',
                 'Accept-Language': 'en-GB,en-US;q=0.8',
-                'X-Requested-With': 'com.nintendo.znca',
+                'Referrer': 'https://app.splatoon2.nintendo.net/home',
+                'X-Requested-With': 'XMLHttpRequest',
+                // 'X-Timezone-Offset': (new Date()).getTimezoneOffset().toString(),
+                'X-Timezone-Offset': '0',
+                'X-Unique-Id': this.unique_id,
             }, headers),
             body,
             signal,
@@ -229,11 +232,31 @@ ${colour}
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
         const data = await this.loginWithCoral(nso, user);
+        return {splatnet: this.createWithSavedToken(data), data};
+    }
 
-        return {
-            splatnet: new this(data.iksm_session, data.useragent),
-            data,
-        };
+    static createWithSavedToken(data: SplatNet2AuthData) {
+        return new this(
+            data.iksm_session,
+            data.user_id,
+            data.useragent,
+        );
+    }
+
+    static createWithCliTokenData(data: SplatNet2CliTokenData) {
+        return new this(
+            data.iksm_session,
+            data.user_id,
+            SPLATNET2_WEBSERVICE_USERAGENT,
+        );
+    }
+
+    static createWithIksmSession(iksm_session: string, unique_id: string) {
+        return new this(
+            iksm_session,
+            unique_id,
+            SPLATNET2_WEBSERVICE_USERAGENT,
+        );
     }
 
     static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
@@ -242,7 +265,9 @@ ${colour}
         return this.loginWithWebServiceToken(webserviceToken.result, user);
     }
 
-    static async loginWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser) {
+    static async loginWithWebServiceToken(
+        webserviceToken: WebServiceToken, user: NintendoAccountUser
+    ): Promise<SplatNet2AuthData> {
         const url = new URL(SPLATNET2_WEBSERVICE_URL);
         url.search = new URLSearchParams({
             lang: user.language,
@@ -295,6 +320,11 @@ ${colour}
         const mn = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-nsa-id=(?:"([^"]*)"|([^\s>]*))/i);
         const [language, region, user_id, nsa_id] = [ml, mr, mu, mn].map(m => m?.[1] || m?.[2] || null);
 
+        if (!language) throw new Error('[splatnet2] Invalid language in response');
+        if (!region) throw new Error('[splatnet2] Invalid region in response');
+        if (!user_id) throw new Error('[splatnet2] Invalid unique player ID in response');
+        if (!nsa_id) throw new Error('[splatnet2] Invalid NSA ID in response');
+
         debug('SplatNet 2 user', {
             language,
             region,
@@ -317,6 +347,31 @@ ${colour}
             useragent: SPLATNET2_WEBSERVICE_USERAGENT,
         };
     }
+}
+
+export interface SplatNet2AuthData {
+    webserviceToken: WebServiceToken;
+    url: string;
+    cookies: string;
+    body: string;
+
+    language: string;
+    region: string;
+    /** Splatoon 2 player ID aka. unique_id */
+    user_id: string;
+    nsa_id: string;
+
+    iksm_session: string;
+    expires_at: number;
+    useragent: string;
+}
+
+export interface SplatNet2CliTokenData {
+    iksm_session: string;
+    language: string;
+    region: string;
+    user_id: string;
+    nsa_id: string;
 }
 
 export function toLeagueId(date: Date, type: LeagueType) {
