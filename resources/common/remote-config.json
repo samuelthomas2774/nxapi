@@ -1,0 +1,15 @@
+{
+    "require_version": [],
+    "coral": {
+        "znca_version": "2.1.1"
+    },
+    "coral_auth": {
+        "splatnet2statink": {},
+        "flapg": {},
+        "imink": {}
+    },
+    "moon": {
+        "znma_version": "1.17.0",
+        "znma_build": "261"
+    }
+}

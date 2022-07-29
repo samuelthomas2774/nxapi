@@ -49,6 +49,11 @@
             "fileMatch": ["**/nooklink-newspaper-*.json"],
             "url": "./.vscode/schema/nooklink/newspaper.schema.json"
         },
+
+        {
+            "fileMatch": ["**/resources/common/remote-config.json", "**/data/remote-config.json"],
+            "url": "./.vscode/schema/remote-config.schema.json"
+        },
     ],
     "typescript.tsdk": "node_modules/typescript/lib",
     "typescript.preferences.quoteStyle": "single",
