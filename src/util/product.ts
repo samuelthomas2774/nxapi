@@ -23,11 +23,13 @@ declare global {
         changed_files: string[];
     } | null | undefined;
     var __NXAPI_BUNDLE_RELEASE__: string | null | undefined;
+    var __NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__: any | undefined;
 }
 
 const embedded_pkg = globalThis.__NXAPI_BUNDLE_PKG__;
 const embedded_git = globalThis.__NXAPI_BUNDLE_GIT__;
 const embedded_release = globalThis.__NXAPI_BUNDLE_RELEASE__;
+export const embedded_default_remote_config = globalThis.__NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__;
 
 //
 // Package/version info

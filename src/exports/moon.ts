@@ -1,2 +1,6 @@
-export { default } from '../api/moon.js';
+export {
+    default,
+    MoonAuthData,
+} from '../api/moon.js';
+
 export * from '../api/moon-types.js';

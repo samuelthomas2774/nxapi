@@ -1,26 +1,16 @@
 import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { Response } from 'node-fetch';
-import { FlapgApiResponse, FResult } from '../../api/f.js';
-import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
+import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
-import { AccountLogin, CoralErrorResponse } from '../../api/coral-types.js';
-import CoralApi, { ZNCA_CLIENT_ID } from '../../api/coral.js';
+import { CoralErrorResponse } from '../../api/coral-types.js';
+import CoralApi, { CoralAuthData, ZNCA_CLIENT_ID } from '../../api/coral.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 
-const debug = createDebug('nxapi:auth:nso');
+const debug = createDebug('nxapi:auth:coral');
 
-export interface SavedToken {
-    uuid: string;
-    timestamp: string;
-    nintendoAccountToken: NintendoAccountToken;
-    user: NintendoAccountUser;
-    f: FResult;
-    flapg?: FlapgApiResponse['result'];
-    nsoAccount: AccountLogin;
-    credential: AccountLogin['webApiServerCredential'];
-
+export interface SavedToken extends CoralAuthData {
     expires_at: number;
     proxy_url?: string;
 }
@@ -92,7 +82,7 @@ export async function getToken(
 
     const nso = proxy_url ?
         new ZncProxyApi(proxy_url, token) :
-        new CoralApi(existingToken.credential.accessToken);
+        CoralApi.createWithSavedToken(existingToken);
 
     nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, existingToken);
 
@@ -114,7 +104,7 @@ async function renewToken(
     const data = await nso.renewToken(token, previousToken.user);
 
     const existingToken: SavedToken = {
-        user: previousToken.user,
+        ...previousToken,
         ...data,
         expires_at: Date.now() + (data.credential.expiresIn * 1000),
     };

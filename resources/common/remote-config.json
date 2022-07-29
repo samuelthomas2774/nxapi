@@ -1,9 +1,10 @@
 {
     "require_version": [],
     "coral": {
-        "znca_version": "2.1.1"
+        "znca_version": "2.2.0"
     },
     "coral_auth": {
+        "default": "flapg",
         "splatnet2statink": {},
         "flapg": {},
         "imink": {}

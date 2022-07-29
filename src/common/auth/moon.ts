@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { ZNMA_CLIENT_ID } from '../../api/moon.js';
-import { NintendoAccountSessionTokenJwtPayload, NintendoAccountToken, NintendoAccountUser } from '../../api/na.js';
+import { MoonAuthData, ZNMA_CLIENT_ID } from '../../api/moon.js';
+import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
 import MoonApi from '../../api/moon.js';
 import { checkUseLimit, LIMIT_REQUESTS, SHOULD_LIMIT_USE } from './util.js';
@@ -11,10 +11,7 @@ const debug = createDebug('nxapi:auth:moon');
 // Higher rate limit for parental controls, as the token expires sooner
 const LIMIT_PERIOD = 15 * 60 * 1000; // 15 minutes
 
-export interface SavedMoonToken {
-    nintendoAccountToken: NintendoAccountToken;
-    user: NintendoAccountUser;
-
+export interface SavedMoonToken extends MoonAuthData {
     expires_at: number;
 }
 
@@ -66,7 +63,7 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string,
     await storage.setItem('NintendoAccountToken-pctl.' + existingToken.user.id, token);
 
     return {
-        moon: new MoonApi(existingToken.nintendoAccountToken.access_token!, existingToken.user.id),
+        moon: MoonApi.createWithSavedToken(existingToken),
         data: existingToken,
     };
 }

@@ -55,6 +55,16 @@ export enum CoralStatus {
 
 export type CoralResponse<T = unknown> = CoralSuccessResponse<T> | CoralErrorResponse;
 
+export interface AccountLoginParameter {
+    naIdToken: string;
+    naBirthday: string;
+    naCountry: string;
+    language: string;
+    timestamp: string;
+    requestId: string;
+    f: string;
+}
+
 /** /v3/Account/Login */
 export interface AccountLogin {
     user: CurrentUser;
@@ -70,6 +80,14 @@ export interface AccountLogin {
 
 /** /v3/Account/GetToken */
 export type AccountToken = AccountLogin;
+
+export interface AccountTokenParameter {
+    naIdToken: string;
+    naBirthday: string;
+    timestamp: string;
+    requestId: string;
+    f: string;
+}
 
 /** /v1/Announcement/List */
 export type Announcements = Announcement[];
@@ -252,6 +270,16 @@ export interface CurrentUserPermissions {
     permissions: {
         presence: PresencePermissions;
     };
+}
+
+export interface UpdateCurrentUserPermissionsParameter {
+    permissions: {
+        presence: {
+            toValue: PresencePermissions;
+            fromValue: PresencePermissions;
+        };
+    };
+    etag: string;
 }
 
 /** /v2/Game/GetWebServiceToken */

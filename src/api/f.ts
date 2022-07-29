@@ -23,6 +23,9 @@ export abstract class ZncaApi {
 //
 
 export async function getLoginHash(token: string, timestamp: string | number, useragent?: string) {
+    const { default: { coral_auth: { splatnet2statink: config } } } = await import('../common/remote-config.js');
+    if (!config) throw new Error('Remote configuration prevents splatnet2statink API use');
+
     debugS2s('Getting login hash');
 
     const [signal, cancel] = timeoutSignal();
@@ -61,6 +64,9 @@ export async function flapg(
     token: string, timestamp: string | number, guid: string, iid: FlapgIid,
     useragent?: string
 ) {
+    const { default: { coral_auth: { flapg: config } } } = await import('../common/remote-config.js');
+    if (!config) throw new Error('Remote configuration prevents flapg API use');
+
     const hash = await getLoginHash(token, timestamp, useragent);
 
     debugFlapg('Getting f parameter', {
@@ -129,6 +135,9 @@ export async function iminkf(
     token: string, timestamp: string | number, uuid: string, hash_method: '1' | '2',
     useragent?: string
 ) {
+    const { default: { coral_auth: { imink: config } } } = await import('../common/remote-config.js');
+    if (!config) throw new Error('Remote configuration prevents imink API use');
+
     debugImink('Getting f parameter', {
         token, timestamp, uuid, hash_method,
     });
@@ -266,7 +275,7 @@ export async function f(
     token: string, timestamp: string | number, uuid: string, type: FlapgIid,
     useragent?: string
 ): Promise<FResult> {
-    const provider = getZncaApiFromEnvironment(useragent);
+    const provider = getPreferredZncaApiFromEnvironment(useragent) ?? await getDefaultZncaApi(useragent);
 
     return provider.genf(token, '' + timestamp, uuid, type);
 }
@@ -291,7 +300,7 @@ export type FResult = {
     result: AndroidZncaFResponse;
 });
 
-export function getZncaApiFromEnvironment(useragent?: string): ZncaApi {
+export function getPreferredZncaApiFromEnvironment(useragent?: string): ZncaApi | null {
     if (process.env.NXAPI_ZNCA_API) {
         if (process.env.NXAPI_ZNCA_API === 'flapg') {
             return new ZncaApiFlapg(useragent);
@@ -307,5 +316,22 @@ export function getZncaApiFromEnvironment(useragent?: string): ZncaApi {
         return new ZncaApiNxapi(process.env.ZNCA_API_URL, useragent);
     }
 
-    return new ZncaApiFlapg(useragent);
+    return null;
+}
+
+export async function getDefaultZncaApi(useragent?: string) {
+    const { default: { coral_auth: { default: provider } } } = await import('../common/remote-config.js');
+
+    if (provider === 'flapg') {
+        return new ZncaApiFlapg(useragent);
+    }
+    if (provider === 'imink') {
+        return new ZncaApiImink(useragent);
+    }
+
+    if (provider[0] === 'nxapi') {
+        return new ZncaApiNxapi(provider[1], useragent);
+    }
+
+    throw new Error('Invalid znca API provider');
 }

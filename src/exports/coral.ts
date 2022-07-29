@@ -1,11 +1,17 @@
-export { default } from '../api/coral.js';
+export {
+    default,
+    CoralAuthData,
+    PartialCoralAuthData,
+} from '../api/coral.js';
+
 export * from '../api/coral-types.js';
 
 export { default as ZncProxyApi } from '../api/znc-proxy.js';
 
 export {
     ZncaApi,
-    getZncaApiFromEnvironment,
+    getPreferredZncaApiFromEnvironment,
+    getDefaultZncaApi,
     f,
 
     ZncaApiFlapg,

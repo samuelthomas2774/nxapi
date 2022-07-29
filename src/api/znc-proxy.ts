@@ -16,6 +16,9 @@ export default class ZncProxyApi implements CoralApi {
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
+    readonly znca_version = '';
+    readonly znca_useragent = '';
+
     constructor(
         private url: string,
         // ZncApi uses the NSO token (valid for a few hours)

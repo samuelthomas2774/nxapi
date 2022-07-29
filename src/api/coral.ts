@@ -1,9 +1,9 @@
 import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
-import { f, FlapgIid } from './f.js';
-import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
-import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountUser } from './na.js';
+import { f, FlapgIid, FResult } from './f.js';
+import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter } from './coral-types.js';
+import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
@@ -26,9 +26,11 @@ export default class CoralApi {
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
-    constructor(
+    protected constructor(
         public token: string,
-        public useragent: string | null = getAdditionalUserAgents()
+        public useragent: string | null = getAdditionalUserAgents(),
+        readonly znca_version = ZNCA_VERSION,
+        readonly znca_useragent = ZNCA_USER_AGENT,
     ) {}
 
     async fetch<T = unknown>(
@@ -44,10 +46,10 @@ export default class CoralApi {
             method: method,
             headers: Object.assign({
                 'X-Platform': ZNCA_PLATFORM,
-                'X-ProductVersion': ZNCA_VERSION,
+                'X-ProductVersion': this.znca_version,
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json; charset=utf-8',
-                'User-Agent': ZNCA_USER_AGENT,
+                'User-Agent': this.znca_useragent,
             }, headers),
             body: body,
         });
@@ -185,22 +187,24 @@ export default class CoralApi {
         return this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req);
     }
 
-    async getToken(token: string, user: NintendoAccountUser) {
-        const uuid = uuidgen();
-        const timestamp = '' + Math.floor(Date.now() / 1000);
-
+    async getToken(token: string, user: NintendoAccountUser): Promise<PartialCoralAuthData> {
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
-        const id_token = nintendoAccountToken.id_token;
-        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, this.useragent ?? getAdditionalUserAgents());
+        const uuid = uuidgen();
+        const timestamp = '' + Math.floor(Date.now() / 1000);
 
-        const req = {
+        const fdata = await f(
+            nintendoAccountToken.id_token, timestamp, uuid,
+            FlapgIid.NSO, this.useragent ?? getAdditionalUserAgents()
+        );
+
+        const req: AccountTokenParameter = {
             naBirthday: user.birthday,
             timestamp,
             f: fdata.f,
             requestId: uuid,
-            naIdToken: id_token,
+            naIdToken: nintendoAccountToken.id_token,
         };
 
         const data = await this.call<AccountToken>('/v3/Account/GetToken', req, false);
@@ -216,15 +220,6 @@ export default class CoralApi {
         };
     }
 
-    static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
-        const data = await this.loginWithSessionToken(token, useragent);
-
-        return {
-            nso: new this(data.credential.accessToken, useragent),
-            data,
-        };
-    }
-
     async renewToken(token: string, user: NintendoAccountUser) {
         const data = await this.getToken(token, user);
 
@@ -233,9 +228,25 @@ export default class CoralApi {
         return data;
     }
 
-    static async loginWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
-        const uuid = uuidgen();
-        const timestamp = '' + Math.floor(Date.now() / 1000);
+    static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
+        const data = await this.loginWithSessionToken(token, useragent);
+        return {nso: this.createWithSavedToken(data, useragent), data};
+    }
+
+    static createWithSavedToken(data: CoralAuthData, useragent = getAdditionalUserAgents()) {
+        return new this(
+            data.credential.accessToken,
+            useragent,
+            data.znca_version,
+            data.znca_useragent,
+        );
+    }
+
+    static async loginWithSessionToken(token: string, useragent = getAdditionalUserAgents()): Promise<CoralAuthData> {
+        const { default: { coral: config } } = await import('../common/remote-config.js');
+
+        if (!config) throw new Error('Remote configuration prevents Coral authentication');
+        const znca_useragent = `com.nintendo.znca/${config.znca_version}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
@@ -243,29 +254,36 @@ export default class CoralApi {
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
-        const id_token = nintendoAccountToken.id_token;
-        const fdata = await f(id_token, timestamp, uuid, FlapgIid.NSO, useragent);
+        const uuid = uuidgen();
+        const timestamp = '' + Math.floor(Date.now() / 1000);
+
+        const fdata = await f(
+            nintendoAccountToken.id_token, timestamp, uuid,
+            FlapgIid.NSO, useragent
+        );
 
         debug('Getting Nintendo Switch Online app token');
+
+        const parameter: AccountLoginParameter = {
+            naIdToken: nintendoAccountToken.id_token,
+            naBirthday: user.birthday,
+            naCountry: user.country,
+            language: user.language,
+            timestamp,
+            requestId: uuid,
+            f: fdata.f,
+        };
 
         const response = await fetch(ZNC_URL + '/v3/Account/Login', {
             method: 'POST',
             headers: {
                 'X-Platform': ZNCA_PLATFORM,
-                'X-ProductVersion': ZNCA_VERSION,
+                'X-ProductVersion': config.znca_version,
                 'Content-Type': 'application/json; charset=utf-8',
-                'User-Agent': ZNCA_USER_AGENT,
+                'User-Agent': znca_useragent,
             },
             body: JSON.stringify({
-                parameter: {
-                    naIdToken: nintendoAccountToken.id_token,
-                    naBirthday: user.birthday,
-                    naCountry: user.country,
-                    language: user.language,
-                    timestamp,
-                    requestId: uuid,
-                    f: fdata.f,
-                },
+                parameter,
             }),
         });
 
@@ -289,9 +307,26 @@ export default class CoralApi {
             f: fdata,
             nsoAccount: data.result,
             credential: data.result.webApiServerCredential,
+            znca_version: config.znca_version,
+            znca_useragent,
         };
     }
 }
+
+export interface CoralAuthData {
+    uuid: string;
+    timestamp: string;
+    nintendoAccountToken: NintendoAccountToken;
+    user: NintendoAccountUser;
+    f: FResult;
+    nsoAccount: AccountLogin;
+    credential: AccountLogin['webApiServerCredential'];
+    znca_version: string;
+    znca_useragent: string;
+}
+
+export type PartialCoralAuthData =
+    Pick<CoralAuthData, 'uuid' | 'timestamp' | 'nintendoAccountToken' | 'f' | 'nsoAccount' | 'credential'>;
 
 export interface CoralJwtPayload extends JwtPayload {
     isChildRestricted: boolean;

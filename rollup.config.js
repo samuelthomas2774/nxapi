@@ -14,6 +14,8 @@ import json from '@rollup/plugin-json';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
+const default_remote_config =
+    JSON.parse(fs.readFileSync(path.join(dir, 'resources', 'common', 'remote-config.json'), 'utf-8'));
 
 const git = (() => {
     try {
@@ -46,6 +48,7 @@ const replace_options = {
         'globalThis.__NXAPI_BUNDLE_PKG__': JSON.stringify(pkg),
         'globalThis.__NXAPI_BUNDLE_GIT__': JSON.stringify(git),
         'globalThis.__NXAPI_BUNDLE_RELEASE__': JSON.stringify(release),
+        'globalThis.__NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__': JSON.stringify(default_remote_config),
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
     },
     preventAssignment: true,

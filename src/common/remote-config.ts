@@ -7,11 +7,11 @@ import { ErrorResponse } from '../api/util.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 import { paths } from '../util/storage.js';
-import { dev, dir, git, version } from '../util/product.js';
+import { dev, dir, embedded_default_remote_config, git, version } from '../util/product.js';
+import { CONFIG_URL } from './constants.js';
 
 const debug = createDebug('nxapi:remote-config');
 
-const CONFIG_URL = 'https://nxapi.ta.fancy.org.uk/data/config.json';
 /** Maximum time in seconds to consider cached data fresh */
 const MAX_FRESH = 24 * 60 * 60; // 1 day in seconds
 /** Maximum time in seconds to allow using cached data after it's considered stale */
@@ -19,7 +19,8 @@ const MAX_STALE = 24 * 60 * 60; // 1 day in seconds
 
 const default_config: NxapiRemoteConfig = {
     require_version: [version],
-    ...JSON.parse(await fs.readFile(path.join(dir, 'resources', 'common', 'remote-config.json'), 'utf-8')),
+    ...(embedded_default_remote_config ??
+        JSON.parse(await fs.readFile(path.join(dir, 'resources', 'common', 'remote-config.json'), 'utf-8'))),
 };
 
 async function loadRemoteConfig() {
@@ -46,6 +47,8 @@ async function loadRemoteConfig() {
     } catch (err) {}
 
     try {
+        debug('Getting remote config from %s, must revalidate: %s', url, must_revalidate);
+
         const config = await getRemoteConfig(url, undefined, data ? {
             previous: data.data,
             updated_at: new Date(data.updated_at),
@@ -95,8 +98,6 @@ async function getRemoteConfig(url: string, useragent?: string, cache?: {
     updated_at: Date;
     etag: string | null;
 }) {
-    debug('Getting remote config from %s', url);
-
     const [signal, cancel] = timeoutSignal();
     const response = await fetch(url, {
         headers: {
@@ -159,7 +160,7 @@ export enum RemoteConfigMode {
 }
 
 export const mode =
-    process.env.NXAPI_ENABLE_REMOTE_CONFIG !== '1' ? RemoteConfigMode.DISABLE :
+    process.env.NXAPI_ENABLE_REMOTE_CONFIG === '0' ? RemoteConfigMode.DISABLE :
     process.env.NXAPI_REMOTE_CONFIG_FALLBACK === '1' ? RemoteConfigMode.OPPORTUNISTIC :
     RemoteConfigMode.REQUIRE;
 
@@ -175,6 +176,8 @@ if (cache && !config.require_version.includes(version)) {
 }
 
 export default config;
+
+debug('using config', RemoteConfigMode[mode], config);
 
 export interface RemoteConfigCacheData {
     created_at: number;
@@ -200,12 +203,18 @@ export interface NxapiRemoteConfig {
     // If null the API should not be used
     coral: CoralRemoteConfig | null;
     coral_auth: {
+        default: DefaultZncaApiProvider;
         splatnet2statink: {} | null;
         flapg: {} | null;
         imink: {} | null;
     };
     moon: MoonRemoteConfig | null;
 }
+
+export type DefaultZncaApiProvider =
+    'flapg' |
+    'imink' |
+    ['nxapi', string];
 
 export interface CoralRemoteConfig {
     znca_version: string; // '2.1.1'

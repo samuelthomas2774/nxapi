@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
-import { getNintendoAccountToken, getNintendoAccountUser } from './na.js';
+import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -12,11 +12,16 @@ export const ZNMA_CLIENT_ID = '54789befb391a838';
 
 const ZNMA_VERSION = '1.17.0';
 const ZNMA_BUILD = '261';
+const ZNMA_USER_AGENT = 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; build:' + ZNMA_BUILD +
+    '; ANDROID 26)';
 
 export default class MoonApi {
-    constructor(
+    protected constructor(
         public token: string,
-        public naId: string
+        public naId: string,
+        readonly znma_version = ZNMA_VERSION,
+        readonly znma_build = ZNMA_BUILD,
+        readonly znma_useragent = ZNMA_USER_AGENT,
     ) {}
 
     async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
@@ -34,10 +39,9 @@ export default class MoonApi {
                 'X-Moon-TimeZone': 'Europe/London',
                 'X-Moon-Os-Language': 'en-GB',
                 'X-Moon-App-Language': 'en-GB',
-                'X-Moon-App-Display-Version': ZNMA_VERSION,
-                'X-Moon-App-Internal-Version': ZNMA_BUILD,
-                'User-Agent': 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; build:' + ZNMA_BUILD +
-                    '; ANDROID 26)',
+                'X-Moon-App-Display-Version': this.znma_version,
+                'X-Moon-App-Internal-Version': this.znma_build,
+                'User-Agent': this.znma_useragent,
             }, headers),
             body,
             signal,
@@ -82,15 +86,6 @@ export default class MoonApi {
         return this.fetch<ParentalControlSettingState>('/v1/devices/' + id + '/parental_control_setting_state');
     }
 
-    static async createWithSessionToken(token: string) {
-        const data = await this.loginWithSessionToken(token);
-
-        return {
-            moon: new this(data.nintendoAccountToken.access_token!, data.user.id),
-            data,
-        };
-    }
-
     async renewToken(token: string) {
         const data = await MoonApi.loginWithSessionToken(token);
 
@@ -100,7 +95,29 @@ export default class MoonApi {
         return data;
     }
 
-    static async loginWithSessionToken(token: string) {
+    static async createWithSessionToken(token: string) {
+        const data = await this.loginWithSessionToken(token);
+        return {moon: this.createWithSavedToken(data), data};
+    }
+
+    static createWithSavedToken(data: MoonAuthData) {
+        return new this(
+            data.nintendoAccountToken.access_token!,
+            data.user.id,
+            data.znma_version,
+            data.znma_build,
+            data.znma_useragent,
+        );
+    }
+
+    static async loginWithSessionToken(token: string): Promise<MoonAuthData> {
+        const { default: { moon: config } } = await import('../common/remote-config.js');
+
+        if (!config) throw new Error('Remote configuration prevents Moon authentication');
+
+        const znma_useragent = 'moon_ANDROID/' + config.znma_version +
+            ' (com.nintendo.znma; build:' + config.znma_build + '; ANDROID 26)';
+
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNMA_CLIENT_ID);
 
@@ -110,6 +127,17 @@ export default class MoonApi {
         return {
             nintendoAccountToken,
             user,
+            znma_version: config.znma_version,
+            znma_build: config.znma_build,
+            znma_useragent: znma_useragent,
         };
     }
+}
+
+export interface MoonAuthData {
+    nintendoAccountToken: NintendoAccountToken;
+    user: NintendoAccountUser;
+    znma_version: string;
+    znma_build: string;
+    znma_useragent: string;
 }
