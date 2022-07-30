@@ -25,6 +25,7 @@ ADD package.json /app
 ADD package-lock.json /app
 
 RUN npm ci --production
+RUN npm install --no-save frida
 
 COPY bin /app/bin
 COPY resources /app/resources
