@@ -9,14 +9,16 @@ import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl } from '../index.js';
 
 const debug = createDebug('nxapi:nso:presence');
-const debugProxy = createDebug('nxapi:nso:presence:proxy');
 const debugDiscord = createDebug('nxapi:nso:presence:discordrpc');
 const debugSplatnet2 = createDebug('nxapi:nso:presence:splatnet2');
+
+const MAX_CONNECT_ATTEMPTS = Infinity; // 10
+const RECONNECT_INTERVAL = 5000; // 5 seconds
 
 class ZncDiscordPresenceClient {
     rpc: {client: DiscordRpcClient, id: string} | null = null;
     title: {id: string; since: number} | null = null;
-    i = 0;
+    protected i = 0;
 
     last_presence: Presence | null = null;
     last_user: CurrentUser | Friend | undefined = undefined;
@@ -50,44 +52,26 @@ class ZncDiscordPresenceClient {
             (online && 'name' in presence.game) ||
             (this.m.show_console_online && presence?.state === PresenceState.INACTIVE);
 
-        if (this.rpc && this.m.discord_client_filter && !this.m.discord_client_filter.call(null, this.rpc.client)) {
-            const client = this.rpc.client;
-            this.rpc = null;
-            this.last_activity = null;
-            await client.destroy();
-            this.onUpdateActivity?.call(null, null);
-            this.onUpdateClient?.call(null, null);
-        }
-
         if (!presence || !show_presence) {
             if (this.m.presence_enabled && this.m.discord_preconnect && !this.rpc) {
                 debugDiscord('No presence but Discord preconnect enabled - connecting');
                 const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
-                const client = await this.createDiscordClient(discordpresence.id, this.m.discord_client_filter);
-                this.rpc = {client, id: discordpresence.id};
-                this.onUpdateClient?.call(null, client);
+                this.setActivity(discordpresence.id);
                 return;
             }
 
             if (this.rpc && !(this.m.presence_enabled && this.m.discord_preconnect)) {
-                const client = this.rpc.client;
-                this.rpc = null;
-                this.last_activity = null;
-                await client.destroy();
-                this.onUpdateActivity?.call(null, null);
-                this.onUpdateClient?.call(null, null);
+                this.setActivity(null);
             } else if (this.rpc && this.title) {
                 debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
-                this.last_activity = null;
-                await this.rpc.client.clearActivity();
-                this.onUpdateActivity?.call(null, null);
+                this.setActivity(this.rpc.id);
             }
 
             this.title = null;
             return;
         }
 
-        const presencecontext: DiscordPresenceContext = {
+        const presence_context: DiscordPresenceContext = {
             friendcode: this.m.show_friend_code ? this.m.force_friend_code ?? friendcode : undefined,
             activeevent: this.m.show_active_event ? activeevent : undefined,
             show_play_time: this.m.show_play_time,
@@ -96,91 +80,111 @@ class ZncDiscordPresenceClient {
             user,
         };
 
-        const discordpresence = 'name' in presence.game ?
-            getDiscordPresence(presence.state, presence.game, presencecontext) :
-            getInactiveDiscordPresence(presence.state, presence.logoutAt, presencecontext);
+        const discord_presence = 'name' in presence.game ?
+            getDiscordPresence(presence.state, presence.game, presence_context) :
+            getInactiveDiscordPresence(presence.state, presence.logoutAt, presence_context);
 
-        if (this.rpc && this.rpc.id !== discordpresence.id) {
-            const client = this.rpc.client;
-            this.rpc = null;
-            this.last_activity = null;
-            await client.destroy();
-            this.onUpdateActivity?.call(null, null);
-            this.onUpdateClient?.call(null, null);
-        }
-
-        if (!this.rpc) {
-            const client = await this.createDiscordClient(discordpresence.id, this.m.discord_client_filter);
-            this.rpc = {client, id: discordpresence.id};
-            this.onUpdateClient?.call(null, client);
-        }
-
-        if (discordpresence.title) {
-            if (discordpresence.title !== this.title?.id) {
+        if (discord_presence.title) {
+            if (discord_presence.title !== this.title?.id) {
                 // Use the timestamp the user's presence was last updated according to Nintendo
                 // This may be incorrect as this will also change when the state/description changes in the
                 // same title, but this shouldn't matter unless the process is restarted or presence tracking
                 // is reset for some other reason (e.g. using the Electron app)
                 const since = Math.min(presence.updatedAt * 1000, Date.now());
 
-                this.title = {id: discordpresence.title, since};
+                this.title = {id: discord_presence.title, since};
             }
 
-            if (discordpresence.showTimestamp) {
-                discordpresence.activity.startTimestamp = this.title.since;
+            if (discord_presence.showTimestamp) {
+                discord_presence.activity.startTimestamp = this.title.since;
             }
         } else {
             this.title = null;
         }
 
-        this.rpc.client.setActivity(discordpresence.activity);
-
-        this.last_activity = discordpresence;
-        this.onUpdateActivity?.call(null, discordpresence);
-
-        this.update_presence_errors = 0;
+        this.setActivity(discord_presence);
     }
 
-    async createDiscordClient(
-        clientid: string,
+    async setActivity(activity: DiscordPresence | string | null) {
+        this.onUpdateActivity?.call(null, typeof activity === 'string' ? null : activity);
+        this.last_activity = typeof activity === 'string' ? null : activity;
+
+        if (!activity) {
+            // No activity, no IPC connection
+            if (this.rpc) {
+                const client = this.rpc.client;
+                this.rpc = null;
+                await client.destroy();
+            }
+
+            return;
+        }
+
+        const client_id = typeof activity === 'string' ? activity : activity.id;
+
+        if (this.rpc && this.rpc.id !== client_id) {
+            const client = this.rpc.client;
+            this.rpc = null;
+            await client.destroy();
+        }
+
+        if (!this.rpc) {
+            this.connect(client_id, this.m.discord_client_filter);
+        } else {
+            this.rpc.client.setActivity(typeof activity === 'string' ? undefined : activity.activity);
+        }
+    }
+
+    async connect(
+        client_id: string,
         filter = (client: DiscordRpcClient, id: number) => true
     ) {
+        if (this.rpc) return this.rpc.client;
+
         let client: DiscordRpcClient;
         let attempts = 0;
         let connected = false;
         let id;
+        let i = ++this.i;
 
-        while (attempts < 10) {
-            if (attempts === 0) debugDiscord('RPC connecting', clientid);
-            else debugDiscord('RPC connecting, attempt %d', attempts + 1, clientid);
+        while (attempts < MAX_CONNECT_ATTEMPTS) {
+            if (this.i !== i) return;
+
+            if (attempts === 0) debugDiscord('RPC connecting', client_id, i);
+            else debugDiscord('RPC connecting, attempt %d', attempts + 1, client_id, i);
 
             try {
-                [id, client] = await findDiscordRpcClient(clientid, filter);
-                debugDiscord('RPC connected', id, clientid, client.application, client.user);
+                [id, client] = await findDiscordRpcClient(client_id, filter);
+                debugDiscord('RPC connected', i, id, client_id, client.application, client.user);
                 connected = true;
                 break;
             } catch (err) {}
 
             attempts++;
-            await new Promise(rs => setTimeout(rs, 5000));
+            await new Promise(rs => setTimeout(rs, RECONNECT_INTERVAL));
         }
 
         if (!connected) throw new Error('Failed to connect to Discord');
 
         const reconnect = async () => {
-            if (this.rpc?.client !== client) return;
+            this.onUpdateClient?.call(null, null);
+            client.application = undefined;
+            client.user = undefined;
 
-            debugDiscord('RPC client disconnected, attempting to reconnect', clientid);
+            if (this.i !== i || this.rpc?.client !== client) return;
+
+            debugDiscord('RPC client disconnected, attempting to reconnect', client_id, i);
             let attempts = 0;
             let connected = false;
 
-            while (attempts < 10) {
-                if (this.rpc?.client !== client) return;
+            while (attempts < MAX_CONNECT_ATTEMPTS) {
+                await new Promise(rs => setTimeout(rs, RECONNECT_INTERVAL));
+                if (this.i !== i || this.rpc?.client !== client) return;
 
-                debugDiscord('RPC reconnecting, attempt %d', attempts + 1, clientid);
+                debugDiscord('RPC reconnecting, attempt %d', attempts + 1, client_id, i);
                 try {
-                    [id, client] = await findDiscordRpcClient(clientid, filter);
-                    debugDiscord('RPC reconnected', id, clientid, client.application, client.user);
+                    [id, client] = await findDiscordRpcClient(client_id, filter);
+                    debugDiscord('RPC reconnected', i, id, client_id, client.application, client.user);
 
                     // @ts-expect-error
                     client.transport.on('close', reconnect);
@@ -189,18 +193,23 @@ class ZncDiscordPresenceClient {
                     connected = true;
                     break;
                 } catch (err) {
-                    debugDiscord('RPC reconnect failed, attempt %d', attempts + 1, clientid, err);
+                    // debugDiscord('RPC reconnect failed, attempt %d', attempts + 1, i, clientid, err);
                 }
 
                 attempts++;
-                await new Promise(rs => setTimeout(rs, 5000));
             }
 
             if (!connected) throw new Error('Failed to reconnect to Discord');
+
+            this.onUpdateClient?.call(null, this.rpc.client);    
+            this.rpc.client.setActivity(this.last_activity?.activity);
         };
 
         // @ts-expect-error
         client.transport.on('close', reconnect);
+
+        this.rpc = {client: client!, id: client_id};
+        this.onUpdateClient?.call(null, client!);
 
         return client!;
     }
