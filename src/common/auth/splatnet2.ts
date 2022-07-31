@@ -35,7 +35,7 @@ export async function getIksmToken(
         }
 
         if (ratelimit) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);        
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
             await checkUseLimit(storage, 'splatnet2', jwt.payload.sub);
         }
 

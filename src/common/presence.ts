@@ -201,8 +201,8 @@ class ZncDiscordPresenceClient {
 
             if (!connected) throw new Error('Failed to reconnect to Discord');
 
-            this.onUpdateClient?.call(null, this.rpc.client);    
-            this.rpc.client.setActivity(this.last_activity?.activity);
+            this.onUpdateClient?.call(null, this.rpc.client);
+            if (this.last_activity) this.rpc.client.setActivity(this.last_activity.activity);
         };
 
         // @ts-expect-error
@@ -210,6 +210,7 @@ class ZncDiscordPresenceClient {
 
         this.rpc = {client: client!, id: client_id};
         this.onUpdateClient?.call(null, client!);
+        if (this.last_activity) this.rpc.client.setActivity(this.last_activity.activity);
 
         return client!;
     }

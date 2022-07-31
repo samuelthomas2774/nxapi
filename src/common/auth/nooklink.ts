@@ -38,7 +38,7 @@ export async function getWebServiceToken(
         }
 
         if (ratelimit) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);        
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
             await checkUseLimit(storage, 'nooklink', jwt.payload.sub);
         }
 
@@ -116,7 +116,7 @@ export async function getUserToken(
         const {nooklink, data: webserviceToken} = wst;
 
         if (ratelimit) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(nintendoAccountToken);        
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(nintendoAccountToken);
             await checkUseLimit(storage, 'nooklink-user', jwt.payload.sub);
         }
 
