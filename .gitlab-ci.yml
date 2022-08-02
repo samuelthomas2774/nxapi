@@ -53,6 +53,9 @@ build-windows:
             - app/mac/**/*
             - app/win-unpacked/**/*
             - app/linux-unpacked/**/*
+    only:
+        variables:
+            - $BUILD_WINDOWS_APP == "true"
     cache:
         paths:
             - node_modules/
@@ -92,7 +95,7 @@ publish-gitlab:
         refs:
             - /^v.*$/
         variables:
-            - $GITLAB_NPM_PUBLISH
+            - $GITLAB_NPM_PUBLISH == "true"
             - $GITLAB_NPM_PACKAGE_NAME
     except:
         - branches
