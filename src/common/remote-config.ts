@@ -17,10 +17,15 @@ const MAX_FRESH = 24 * 60 * 60; // 1 day in seconds
 /** Maximum time in seconds to allow using cached data after it's considered stale */
 const MAX_STALE = 24 * 60 * 60; // 1 day in seconds
 
+const SourceSymbol = Symbol('Source');
+const ResponseSymbol = Symbol('Response');
+const CachedSymbol = Symbol('Cached');
+
 const default_config: NxapiRemoteConfig = {
     require_version: [version],
     ...(embedded_default_remote_config ??
         JSON.parse(await fs.readFile(path.join(dir, 'resources', 'common', 'remote-config.json'), 'utf-8'))),
+    [SourceSymbol]: new URL(path.join(dir, 'resources', 'common', 'remote-config.json'), 'file:///').toString(),
 };
 
 async function loadRemoteConfig() {
@@ -34,6 +39,18 @@ async function loadRemoteConfig() {
 
     try {
         data = JSON.parse(await fs.readFile(config_cache_path, 'utf-8'));
+
+        if (data) {
+            Object.defineProperty(data.data, SourceSymbol, {
+                enumerable: true,
+                value: data.url,
+            });
+        }
+
+        if (data?.version !== version || data.revision !== (git?.revision ?? null)) {
+            debug('Cached remote config is for a different nxapi revision');
+            throw new Error('Cached remote configuration is for a different nxapi version');
+        }
 
         if (data && (data.stale_at ?? data.expires_at) > Date.now()) {
             // Response is still fresh
@@ -76,6 +93,8 @@ async function loadRemoteConfig() {
             revalidated_at: config[CachedSymbol] ? Date.now() : null,
             stale_at,
             expires_at,
+            version,
+            revision: git?.revision ?? null,
             url: response.url,
             headers: response.headers.raw(),
             data: config,
@@ -89,9 +108,6 @@ async function loadRemoteConfig() {
         return data;
     }
 }
-
-const ResponseSymbol = Symbol('Response');
-const CachedSymbol = Symbol('Cached');
 
 async function getRemoteConfig(url: string, useragent?: string, cache?: {
     previous: NxapiRemoteConfig;
@@ -112,6 +128,7 @@ async function getRemoteConfig(url: string, useragent?: string, cache?: {
 
     if (cache && response.status === 304) {
         return Object.assign({}, cache.previous, {
+            [SourceSymbol]: url,
             [ResponseSymbol]: response,
             [CachedSymbol]: true,
         });
@@ -126,6 +143,7 @@ async function getRemoteConfig(url: string, useragent?: string, cache?: {
     debug('Got remote config', config);
 
     return Object.assign(config, {
+        [SourceSymbol]: url,
         [ResponseSymbol]: response,
         [CachedSymbol]: false,
     });
@@ -142,7 +160,11 @@ async function tryLoadRemoteConfig() {
 
 const debug_fixed_config: NxapiRemoteConfig | null =
     !dev ? null :
-    await fs.readFile(path.join(paths.data, 'remote-config.json'), 'utf-8').then(JSON.parse).catch(err => {
+    await fs.readFile(path.join(paths.data, 'remote-config.json'), 'utf-8').then(JSON.parse).then(data => {
+        return Object.assign(data, {
+            [SourceSymbol]: new URL(path.join(paths.data, 'remote-config.json'), 'file:///').toString(),
+        });
+    }).catch(err => {
         if (err.code === 'ENOENT') return null;
 
         debug('Error reading local debug config');
@@ -188,6 +210,8 @@ export interface RemoteConfigCacheData {
     stale_at: number | null;
     /** Timestamp we must discard the cache require re-downloading the data */
     expires_at: number;
+    version: string;
+    revision: string | null;
     url: string;
     headers: Record<string, string[]>;
     data: NxapiRemoteConfig;
@@ -217,10 +241,10 @@ export type DefaultZncaApiProvider =
     ['nxapi', string];
 
 export interface CoralRemoteConfig {
-    znca_version: string; // '2.1.1'
+    znca_version: string;
 }
 
 export interface MoonRemoteConfig {
-    znma_version: string; // '1.17.0'
-    znma_build: string; // '261'
+    znma_version: string;
+    znma_build: string;
 }
