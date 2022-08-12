@@ -14,7 +14,7 @@ import { NotificationManager, PresenceEvent, ZncNotifications } from '../../comm
 import { product } from '../../util/product.js';
 import { parseListenAddress } from '../../util/net.js';
 import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
-import { addUserAgent } from '../../util/useragent.js';
+import { addCliFeatureUserAgent } from '../../util/useragent.js';
 import { ErrorResponse } from '../../api/util.js';
 
 declare global {
@@ -54,7 +54,7 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    addUserAgent('http-server');
+    addCliFeatureUserAgent('http-server');
 
     const storage = await initStorage(argv.dataPath);
 
