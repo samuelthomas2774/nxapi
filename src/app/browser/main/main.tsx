@@ -19,13 +19,13 @@ export default function Main(props: {
     const accent_colour = useAccentColour();
 
     const [announcements, announcements_error, announcements_state] = useAsync(useCallback(() => props.user.nsotoken ?
-        ipc.getNsoAnnouncements(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
+        ipc.getCoralAnnouncements(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
     const [friends, friends_error, friends_state, forceRefreshFriends] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getNsoFriends(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
     const [webservices, webservices_error, webservices_state, forceRefreshWebServices] = useAsync(useCallback(() => props.user.nsotoken ?
-        ipc.getNsoWebServices(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
+        ipc.getWebServices(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
     const [active_event, active_event_error, active_event_state, forceRefreshActiveEvent] = useAsync(useCallback(() => props.user.nsotoken ?
-        ipc.getNsoActiveEvent(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
+        ipc.getCoralActiveEvent(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
 
     const loading = announcements_state === RequestState.LOADING ||
         friends_state === RequestState.LOADING ||
@@ -49,7 +49,7 @@ export default function Main(props: {
         if (active_event_error) alert(active_event_error.stack ?? active_event_error.message);
     }, [friends_error, webservices_error, active_event_error]);
 
-    if (!announcements || !friends || !webservices || !active_event) {
+    if (!friends || !webservices || !active_event) {
         if (loading) {
             return <View style={styles.loading}>
                 <ActivityIndicator size="large" color={'#' + accent_colour} />
@@ -99,7 +99,7 @@ function MoonOnlyUser() {
             <Text style={[styles.moonOnlyUserText, theme.text]}>Login to the Nintendo Switch Online app to view details here, or use the nxapi command to access Parental Controls data.</Text>
 
             <View style={styles.moonOnlyUserButton}>
-                <Button title="Login" onPress={() => ipc.addNsoAccount()} color={'#' + accent_colour} primary />
+                <Button title="Login" onPress={() => ipc.addCoralAccount()} color={'#' + accent_colour} primary />
             </View>
         </View>
     </Section>;

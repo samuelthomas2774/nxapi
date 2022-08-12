@@ -9,6 +9,8 @@ import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { dev, dir } from '../../util/product.js';
 import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
+import { createWindow } from './windows.js';
+import { WindowType } from '../common/types.js';
 
 const debug = createDebug('app:main:menu');
 
@@ -66,6 +68,8 @@ export default class MenuApp {
                         checked: monitor?.friend_notifications,
                         click: () => this.setFriendNotificationsActive(data.user.id, !monitor?.friend_notifications)},
                     {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop(true)},
+                    {type: 'separator'},
+                    {label: 'Add friend', click: () => this.showAddFriendWindow(data.user.id)},
                     {type: 'separator'},
                     {label: 'Web services', enabled: false},
                     ...await this.getWebServiceItems(token) as any,
@@ -274,5 +278,21 @@ export default class MenuApp {
     saveMonitorStateAndUpdateMenu() {
         this.saveMonitorState();
         this.updateMenu();
+    }
+
+    showAddFriendWindow(user: string) {
+        createWindow(WindowType.ADD_FRIEND, {
+            user,
+        }, {
+            show: false,
+            maximizable: false,
+            minimizable: false,
+            width: 560,
+            height: 300,
+            minWidth: 450,
+            maxWidth: 700,
+            minHeight: 300,
+            maxHeight: 300,
+        });
     }
 }

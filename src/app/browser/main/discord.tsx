@@ -36,7 +36,7 @@ function DiscordPresenceSourceCoral(props: {
     source: DiscordPresenceSourceCoral;
 }) {
     const [token] = useAsync(useCallback(() =>
-        ipc.getNintendoAccountNsoToken(props.source.na_id), [ipc, props.source.na_id]));
+        ipc.getNintendoAccountCoralToken(props.source.na_id), [ipc, props.source.na_id]));
     const [friends, , friends_state, forceRefreshFriends] = useAsync(useCallback(() => token ?
         ipc.getNsoFriends(token) : Promise.resolve(null), [ipc, token]));
     const friend = friends?.find(f => f.nsaId === props.source.friend_nsa_id);

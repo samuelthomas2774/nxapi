@@ -9,6 +9,7 @@ export default function Section(props: React.PropsWithChildren<{
     title: string;
     loading?: boolean;
     error?: Error;
+    headerButtons?: React.ReactNode;
 }>) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
@@ -25,13 +26,14 @@ export default function Section(props: React.PropsWithChildren<{
                 props.error ? <TouchableOpacity onPress={showErrorDetails} style={styles.iconTouchable}>
                     <Text style={[styles.icon, {color: '#' + accent_colour}]}><Warning /></Text>
                 </TouchableOpacity> : null}
+            {props.headerButtons}
         </View>
 
         {props.children}
     </View>;
 }
 
-const HEADER_SIZE = ipc.platform === 'win32' ? 24 : 14;
+export const HEADER_SIZE = ipc.platform === 'win32' ? 24 : 14;
 
 const styles = StyleSheet.create({
     container: {

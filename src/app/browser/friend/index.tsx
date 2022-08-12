@@ -24,9 +24,9 @@ export default function Friend(props: FriendProps) {
 
     const [discord_presence_source, discord_presence_source_state] = useDiscordPresenceSource();
 
-    const [token] = useAsync(useCallback(() => ipc.getNintendoAccountNsoToken(props.user), [ipc, props.user]));
+    const [token] = useAsync(useCallback(() => ipc.getNintendoAccountCoralToken(props.user), [ipc, props.user]));
     const [user] = useAsync(useCallback(() => token ?
-        ipc.getSavedNsoToken(token) : Promise.resolve(null), [ipc, token]));
+        ipc.getSavedCoralToken(token) : Promise.resolve(null), [ipc, token]));
     const [friends, , friends_state, forceRefreshFriends] = useAsync(useCallback(() => token ?
         ipc.getNsoFriends(token) : Promise.resolve(null), [ipc, token]));
     const friend = friends?.find(f => f.nsaId === props.friend);

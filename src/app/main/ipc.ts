@@ -16,6 +16,7 @@ import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
+import { AddFriendProps } from '../browser/add-friend/index.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -49,12 +50,12 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:accounts:add-coral', () => askAddNsoAccount(store.storage).then(u => u?.data.user.id));
     ipcMain.handle('nxapi:accounts:add-moon', () => askAddPctlAccount(store.storage).then(u => u?.data.user.id));
 
-    ipcMain.handle('nxapi:nso:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
-    ipcMain.handle('nxapi:nso:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
-    ipcMain.handle('nxapi:nso:announcements', (e, token: string) => store.users.get(token).then(u => u.announcements.result));
-    ipcMain.handle('nxapi:nso:friends', (e, token: string) => store.users.get(token).then(u => u.getFriends()));
-    ipcMain.handle('nxapi:nso:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
-    ipcMain.handle('nxapi:nso:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
+    ipcMain.handle('nxapi:coral:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
+    ipcMain.handle('nxapi:coral:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
+    ipcMain.handle('nxapi:coral:announcements', (e, token: string) => store.users.get(token).then(u => u.announcements.result));
+    ipcMain.handle('nxapi:coral:friends', (e, token: string) => store.users.get(token).then(u => u.getFriends()));
+    ipcMain.handle('nxapi:coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
+    ipcMain.handle('nxapi:coral:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
         store.users.get(token).then(u => openWebService(store, token, u.nso, u.data, webservice, qs)
             .catch(err => dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender)!, {
                 type: 'error',
@@ -72,7 +73,10 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
                     user_coral_id: u.data.nsoAccount.user.id,
                 }, {compact: true}),
             }))));
-    ipcMain.handle('nxapi:nso:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
+    ipcMain.handle('nxapi:coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
+    ipcMain.handle('nxapi:coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()).then(r => r.result));
+    ipcMain.handle('nxapi:coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)).then(r => r.result));
+    ipcMain.handle('nxapi:coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
 
     ipcMain.handle('nxapi:window:showfriend', (e, props: FriendProps) => createWindow(WindowType.FRIEND, props, {
         parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
@@ -88,6 +92,19 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         maxHeight: 300,
     }).id);
     ipcMain.handle('nxapi:window:discord', (e, props: DiscordSetupProps) => createWindow(WindowType.DISCORD_PRESENCE, props, {
+        parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
+        modal: true,
+        show: false,
+        maximizable: false,
+        minimizable: false,
+        width: 560,
+        height: 300,
+        minWidth: 450,
+        maxWidth: 700,
+        minHeight: 300,
+        maxHeight: 300,
+    }).id);
+    ipcMain.handle('nxapi:window:addfriend', (e, props: AddFriendProps) => createWindow(WindowType.ADD_FRIEND, props, {
         parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
         modal: true,
         show: false,
@@ -228,6 +245,23 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                 click: () => app.menu?.setFriendNotificationsActive(user.id, !monitor?.friend_notifications)}),
             new MenuItem({label: 'Update now', enabled: !!monitor,
                 click: () => monitor?.skipIntervalInCurrentLoop(true)}),
+            new MenuItem({type: 'separator'}),
+            new MenuItem({label: 'Add friend',
+                click: () => createWindow(WindowType.ADD_FRIEND, {
+                    user: user.id,
+                }, {
+                    parent: window,
+                    modal: true,
+                    show: false,
+                    maximizable: false,
+                    minimizable: false,
+                    width: 560,
+                    height: 300,
+                    minWidth: 450,
+                    maxWidth: 700,
+                    minHeight: 300,
+                    maxHeight: 300,
+                })}),
         ] : []),
         new MenuItem({type: 'separator'}),
         new MenuItem({label: 'Use the nxapi command to remove this user', enabled: false}),

@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import * as persist from 'node-persist';
 import CoralApi from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, GetActiveEventResult, WebServices, CoralSuccessResponse } from '../api/coral-types.js';
+import { Announcements, Friends, GetActiveEventResult, WebServices, CoralSuccessResponse, Friend } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
 
 const debug = createDebug('nxapi:users');
@@ -135,5 +135,33 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
         }, 10 * 1000);
 
         return this.active_event.result;
+    }
+
+    async addFriend(nsa_id: string) {
+        if (nsa_id === this.data.nsoAccount.user.nsaId) {
+            throw new Error('Cannot add self as a friend');
+        }
+
+        const result = await this.nso.sendFriendRequest(nsa_id);
+
+        // Check if the user is now friends
+        // The Nintendo Switch Online app doesn't do this, but if the other user already sent a friend request to
+        // this user, they will be added as friends immediately. If the user is now friends we can show a message
+        // saying that, instead of saying that a friend request was sent when the user actually just accepted the
+        // other user's friend request.
+        let friend: Friend | null = null;
+
+        try {
+            // Clear the last updated timestamp to force updating the friend list
+            this.updated.friends = 0;
+
+            const friends = await this.getFriends();
+            friend = friends.find(f => f.nsaId === nsa_id) ?? null;
+        } catch (err) {
+            debug('Error updating friend list for %s to check if a friend request was accepted',
+                this.data.nsoAccount.user.name, err);
+        }
+
+        return {result, friend};
     }
 }

@@ -8,11 +8,12 @@ import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfigu
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
-import type { Announcements, CurrentUser, Friend, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';
+import type { Announcements, CoralSuccessResponse, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';
 import type { DiscordPresence } from '../../discord/util.js';
 import type { NintendoAccountUser } from '../../api/na.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { FriendProps } from '../browser/friend/index.js';
+import { AddFriendProps } from '../browser/add-friend/index.js';
 
 const debug = createDebug('app:preload');
 
@@ -31,16 +32,19 @@ const ipc = {
     checkUpdates: () => inv<UpdateCacheData | null>('update:check'),
 
     listNintendoAccounts: () => inv<string[] | undefined>('accounts:list'),
-    addNsoAccount: () => inv<string>('accounts:add-coral'),
+    addCoralAccount: () => inv<string>('accounts:add-coral'),
     addMoonAccount: () => inv<string>('accounts:add-moon'),
 
-    getNintendoAccountNsoToken: (id: string) => inv<string | undefined>('nso:gettoken', id),
-    getSavedNsoToken: (token: string) => inv<SavedToken | undefined>('nso:getcachedtoken', token),
-    getNsoAnnouncements: (token: string) => inv<Announcements>('nso:announcements', token),
-    getNsoFriends: (token: string) => inv<Friend[]>('nso:friends', token),
-    getNsoWebServices: (token: string) => inv<WebServices | undefined>('nso:webservices', token),
-    openWebService: (webservice: WebService, token: string, qs?: string) => inv<number>('nso:openwebservice', webservice, token, qs),
-    getNsoActiveEvent: (token: string) => inv<GetActiveEventResult>('nso:activeevent', token),
+    getNintendoAccountCoralToken: (id: string) => inv<string | undefined>('coral:gettoken', id),
+    getSavedCoralToken: (token: string) => inv<SavedToken | undefined>('coral:getcachedtoken', token),
+    getCoralAnnouncements: (token: string) => inv<Announcements>('coral:announcements', token),
+    getNsoFriends: (token: string) => inv<Friend[]>('coral:friends', token),
+    getWebServices: (token: string) => inv<WebServices | undefined>('coral:webservices', token),
+    openWebService: (webservice: WebService, token: string, qs?: string) => inv<number>('coral:openwebservice', webservice, token, qs),
+    getCoralActiveEvent: (token: string) => inv<GetActiveEventResult>('coral:activeevent', token),
+    getNsoFriendCodeUrl: (token: string) => inv<FriendCodeUrl>('coral:friendcodeurl', token),
+    getNsoUserByFriendCode: (token: string, friendcode: string, hash?: string) => inv<FriendCodeUser>('coral:friendcode', token, friendcode, hash),
+    addNsoFriend: (token: string, nsa_id: string) => inv<{result: CoralSuccessResponse<{}>; friend: Friend | null}>('coral:addfriend', token, nsa_id),
 
     getDiscordPresenceConfig: () => inv<DiscordPresenceConfiguration | null>('discord:config'),
     setDiscordPresenceConfig: (config: DiscordPresenceConfiguration | null) => inv<void>('discord:setconfig', config),
@@ -55,6 +59,7 @@ const ipc = {
 
     showFriendModal: (props: FriendProps) => inv<number>('window:showfriend', props),
     showDiscordModal: (props: DiscordSetupProps = {}) => inv<number>('window:discord', props),
+    showAddFriendModal: (props: AddFriendProps) => inv<number>('window:addfriend', props),
     setWindowHeight: (height: number) => inv('window:setheight', height),
 
     openExternalUrl: (url: string) => inv('misc:open-url', url),

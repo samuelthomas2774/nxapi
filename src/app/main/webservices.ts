@@ -12,6 +12,7 @@ import { Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { createWebServiceWindow } from './windows.js';
+import { askUserForUri } from './util.js';
 
 const debug = createDebug('app:main:webservices');
 
@@ -155,42 +156,8 @@ export async function handleOpenWebServiceUri(store: Store, uri: string) {
     return openWebService(store, selected_user[0], nso, data, webservice, new URL(uri).search.substr(1));
 }
 
-async function askUserForWebServiceUri(store: Store, uri: string): Promise<[string, SavedToken] | null> {
-    const menu = new Menu();
-
-    const ids = await store.storage.getItem('NintendoAccountIds') as string[] | undefined;
-    menu.append(new MenuItem({label: 'Select a user to open this web service', enabled: false}));
-    menu.append(new MenuItem({label: uri, enabled: false}));
-    menu.append(new MenuItem({type: 'separator'}));
-
-    let selected_user: [string, SavedToken] | null = null;
-
-    const items = await Promise.all(ids?.map(async id => {
-        const token = await store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
-        if (!token) return;
-        const data = await store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
-        if (!data) return;
-
-        return new MenuItem({
-            label: data.nsoAccount.user.name,
-            click: (menuItem, browserWindow, event) => {
-                selected_user = [token, data];
-                menu.closePopup(browserWindow);
-            },
-        });
-    }) ?? []);
-
-    if (!items.length) return null;
-
-    for (const item of items) if (item) menu.append(item);
-    menu.append(new MenuItem({type: 'separator'}));
-    menu.append(new MenuItem({label: 'Cancel', click: (i, w) => menu.closePopup(w)}));
-
-    const window = new BrowserWindow({show: false});
-    await new Promise<void>(rs => menu.popup({callback: rs}));
-    window.destroy();
-
-    return selected_user;
+function askUserForWebServiceUri(store: Store, uri: string) {
+    return askUserForUri(store, uri, 'Select a user to open this web service');
 }
 
 export interface WebServiceData {

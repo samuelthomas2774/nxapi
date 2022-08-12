@@ -4,12 +4,14 @@ export enum WindowType {
     MAIN_WINDOW = 'App',
     FRIEND = 'Friend',
     DISCORD_PRESENCE = 'DiscordPresence',
+    ADD_FRIEND = 'AddFriend',
 }
 
 interface WindowProps {
     [WindowType.MAIN_WINDOW]: import('../browser/main/index.js').AppProps;
     [WindowType.FRIEND]: import('../browser/friend/index.js').FriendProps;
     [WindowType.DISCORD_PRESENCE]: import('../browser/discord/index.js').DiscordSetupProps;
+    [WindowType.ADD_FRIEND]: import('../browser/add-friend/index.js').AddFriendProps;
 }
 
 export interface WindowConfiguration<T extends WindowType = WindowType> {

@@ -1,10 +1,11 @@
 import React, { useCallback } from 'react';
 import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc from '../ipc.js';
-import { useColourScheme, User } from '../util.js';
+import { useAccentColour, useColourScheme, User } from '../util.js';
 import { Friend, Presence, PresenceState } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
-import Section from './section.js';
+import Section, { HEADER_SIZE } from './section.js';
+import AddOutline from '../components/icons/add-outline.js';
 
 export default function Friends(props: {
     user: User;
@@ -13,6 +14,15 @@ export default function Friends(props: {
     error?: Error;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+    const accent_colour = useAccentColour();
+
+    const showAddFriendModal = useCallback(() => {
+        ipc.showAddFriendModal({user: props.user.user.id});
+    }, [props.user.user.id]);
+
+    const header_buttons = <TouchableOpacity onPress={showAddFriendModal} style={styles.iconTouchable}>
+        <Text style={[styles.icon, {color: '#' + accent_colour}]}><AddOutline /></Text>
+    </TouchableOpacity>;
 
     const onFriendCodeContextMenu = useCallback(() => {
         ipc.showFriendCodeMenu(props.user.nso!.nsoAccount.user.links.friendCode);
@@ -24,7 +34,7 @@ export default function Friends(props: {
         onContextMenu={onFriendCodeContextMenu}
     >SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
 
-    return <Section title="Friends" loading={props.loading} error={props.error}>
+    return <Section title="Friends" loading={props.loading} error={props.error} headerButtons={header_buttons}>
         {props.friends.length ? <ScrollView horizontal>
             <View style={styles.content}>
                 {props.friends.map(f => <Friend key={f.nsaId} friend={f} user={props.user} />)}
@@ -93,6 +103,13 @@ function FriendPresence(props: {
 }
 
 const styles = StyleSheet.create({
+    iconTouchable: {
+        marginLeft: 10,
+    },
+    icon: {
+        fontSize: HEADER_SIZE,
+    },
+
     footer: {
         paddingBottom: 16,
         paddingHorizontal: ipc.platform === 'win32' ? 24 : 20,

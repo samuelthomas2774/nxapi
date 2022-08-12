@@ -208,10 +208,10 @@ export async function getAccounts() {
     const accounts: User[] = [];
 
     for (const id of ids ?? []) {
-        const nsotoken = await ipc.getNintendoAccountNsoToken(id);
+        const nsotoken = await ipc.getNintendoAccountCoralToken(id);
         const moontoken = await ipc.getNintendoAccountMoonToken(id);
 
-        const nso = nsotoken ? await ipc.getSavedNsoToken(nsotoken) ?? null : null;
+        const nso = nsotoken ? await ipc.getSavedCoralToken(nsotoken) ?? null : null;
         const moon = moontoken ? await ipc.getSavedMoonToken(moontoken) ?? null : null;
 
         if (!nso && !moon) continue;
