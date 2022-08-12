@@ -166,7 +166,7 @@ export interface FriendCodeUrl {
 export interface FriendCodeUser {
     id: number;
     nsaId: string;
-    imageUrl: string;
+    imageUri: string;
     name: string;
     extras: {};
 }
