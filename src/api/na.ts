@@ -26,10 +26,13 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
         signal,
     }).finally(cancel);
 
-    const token = await response.json() as NintendoAccountSessionToken | NintendoAccountError;
+    const token = await response.json() as NintendoAccountSessionToken | NintendoAccountAuthError | NintendoAccountError;
 
     if ('errorCode' in token) {
         throw new ErrorResponse('[na] ' + token.detail, response, token);
+    }
+    if ('error' in token) {
+        throw new ErrorResponse('[na] ' + token.error_description ?? token.error, response, token);
     }
 
     debug('Got Nintendo Account session token', token);
@@ -56,10 +59,13 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
         signal,
     }).finally(cancel);
 
-    const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountError;
+    const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountAuthError | NintendoAccountError;
 
     if ('errorCode' in nintendoAccountToken) {
         throw new ErrorResponse('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
+    }
+    if ('error' in nintendoAccountToken) {
+        throw new ErrorResponse('[na] ' + nintendoAccountToken.error_description ?? nintendoAccountToken.error, response, nintendoAccountToken);
     }
 
     debug('Got Nintendo Account token', nintendoAccountToken);
@@ -276,6 +282,11 @@ export interface Mii {
     imageOrigin: string;
     etag: string;
     type: 'profile';
+}
+
+export interface NintendoAccountAuthError {
+    error: string;
+    error_description: string;
 }
 
 export interface NintendoAccountError {
