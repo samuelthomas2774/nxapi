@@ -8,7 +8,8 @@ const debug = createDebug('nxapi:auth:util');
 // a script/some other program, which should be limited in case it continues to run the command
 // if it fails. The Electron app overrides this as the parent process (probably) won't be a
 // terminal, but most attempts to call getToken won't be automated.
-export const SHOULD_LIMIT_USE = !process.stdout.isTTY;
+// Node.js docs recommend using process.stdout.isTTY (see https://github.com/samuelthomas2774/nxapi/issues/15).
+export const SHOULD_LIMIT_USE = !process.stdin.isTTY || !process.stderr.isTTY;
 export const LIMIT_REQUESTS = 4;
 export const LIMIT_PERIOD = 60 * 60 * 1000; // 60 minutes
 

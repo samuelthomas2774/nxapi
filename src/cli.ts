@@ -49,12 +49,15 @@ export function createYargs(argv: string[]) {
 
 export type Arguments = YargsArguments<ReturnType<typeof createYargs>>;
 
+// Node.js docs recommend using process.stdout.isTTY (see https://github.com/samuelthomas2774/nxapi/issues/15)
+const is_terminal = process.stdin.isTTY && process.stderr.isTTY;
+
 export async function main(argv = process.argv.slice(2)) {
     addUserAgent('nxapi-cli');
 
     if (process.env.NXAPI_USER_AGENT) {
         addUserAgent(process.env.NXAPI_USER_AGENT);
-    } else if (!process.stdout.isTTY) {
+    } else if (!is_terminal) {
         console.warn('[warn] The nxapi command is not running in a terminal. If using the nxapi command in a script or other program, the NXAPI_USER_AGENT environment variable should be set. See ' + USER_AGENT_INFO_URL + '.');
         addUserAgent('unidentified-script');
     }
