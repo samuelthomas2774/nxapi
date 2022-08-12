@@ -93,8 +93,10 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
         if ((this.updated[key] + ttl) < Date.now()) {
             const promise = this.promise.get(key) ?? callback.call(null).then(() => {
                 this.updated[key] = Date.now();
-            }).finally(() => {
                 this.promise.delete(key);
+            }).catch(err => {
+                this.promise.delete(key);
+                throw err;
             });
 
             this.promise.set(key, promise);
