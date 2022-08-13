@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
         borderRadius: 3,
         fontSize: 13,
     },
-    
+
     lookupErrorNoFriendCodeField: {
     },
     lookupErrorIcon: {
