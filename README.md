@@ -121,6 +121,9 @@ npm install --global --registry https://gitlab.fancy.org.uk/api/v4/packages/npm/
 
 # From npm.pkg.github.com
 npm install --global --registry https://npm.pkg.github.com @samuelthomas2774/nxapi
+
+# From gitlab.com
+npm install --global --registry https://gitlab.com/api/v4/packages/npm/ @samuelthomas2774/nxapi
 ```
 
 #### Install from source
@@ -128,13 +131,22 @@ npm install --global --registry https://npm.pkg.github.com @samuelthomas2774/nxa
 Node.js and npm must already be installed.
 
 ```sh
-git clone https://gitlab.fancy.org.uk/samuel/nxapi.git # or download as an archive
+# Don't download an archive, as nxapi detects the current git revision
+git clone https://gitlab.fancy.org.uk/samuel/nxapi.git
 cd nxapi
 
-# Install locally
+# Install CLI/Electron app locally
 npm install
 npx tsc
+
+# CLI
+# This command installs the nxapi command globally
+# You can also use the CLI with node bin/nxapi.js ...
 npm link
+
+# Electron app
+npx rollup --config
+# nxapi app or node bin/nxapi.js app to run the app
 
 # Build Docker image
 docker build . --tag gitlab.fancy.org.uk:5005/samuel/nxapi
@@ -227,6 +239,28 @@ nxapi nso friends --json
 nxapi nso friends --json-pretty-print
 ```
 
+#### Friend codes and friend requests
+
+```sh
+# Get a URL that can be used to open your profile in the Nintendo Switch Online app and send a friend request
+# This prints an object which includes your friend code and the URL (which contains your friend code)
+nxapi nso friendcode
+
+# JSON
+nxapi nso friendcode --json
+nxapi nso friendcode --json-pretty-print
+
+# Look up a user using a friend code
+nxapi nso lookup 0000-0000-0000
+
+# JSON
+nxapi nso lookup 0000-0000-0000 --json
+nxapi nso lookup 0000-0000-0000 --json-pretty-print
+
+# Send a friend request
+nxapi nso add-friend 0000-0000-0000
+```
+
 #### Nintendo Switch Online app announcements/alerts
 
 ```sh
@@ -290,6 +324,8 @@ curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/
 curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friends/presence"
 curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friend/0123456789abcdef"
 curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friend/0123456789abcdef/presence"
+curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friendcode"
+curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friendcode/0000-0000-0000"
 curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/webservices"
 curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/webservice/5741031244955648/token"
 curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/activeevent"
@@ -306,6 +342,8 @@ curl "http://[::1]:12345/api/znc/friends?user=0123456789abcdef"
 curl "http://[::1]:12345/api/znc/friends/presence?user=0123456789abcdef"
 curl "http://[::1]:12345/api/znc/friend/0123456789abcdef?user=0123456789abcdef"
 curl "http://[::1]:12345/api/znc/friend/0123456789abcdef/presence?user=0123456789abcdef"
+curl "http://[::1]:12345/api/znc/friendcode?user=0123456789abcdef"
+curl "http://[::1]:12345/api/znc/friendcode/0000-0000-0000?user=0123456789abcdef"
 curl "http://[::1]:12345/api/znc/webservices?user=0123456789abcdef"
 curl "http://[::1]:12345/api/znc/webservice/5741031244955648/token?user=0123456789abcdef"
 curl "http://[::1]:12345/api/znc/activeevent?user=0123456789abcdef"
@@ -322,11 +360,13 @@ Specifically, the tokens sent are JSON Web Tokens. The token sent to login to th
 
 Alternatively the [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) can be used by setting the `NXAPI_ZNCA_API` environment variable to `imink`. (`NXAPI_ZNCA_API=imink nxapi nso ...`)
 
+> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the splatnet2statink and flapg APIs, set the `NXAPI_ZNCA_API` environment variable to `flapg`.
+
 nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
 
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
 
-This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `genAudioH`/`genAudioH2`, always returns a different result, even when given the same inputs.)
+This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `gen_audio_h`/`gen_audio_h2`, always returns a different result, even when given the same inputs.)
 
 The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
 
@@ -662,13 +702,33 @@ nxapi --data-path ./data ...
 NXAPI_DATA_PATH=`pwd`/data nxapi ...
 ```
 
+Platform        | Default path
+----------------|----------------
+macOS           | `Library/Application Support/nxapi-nodejs`
+Windows         | `%localappdata%\nxapi-nodejs\Data`
+Linux           | `$XDG_DATA_HOME/nxapi-nodejs` or `.local/share/nxapi-nodejs`
+
+nxapi will also store cached update and configuration data. This location cannot be changed.
+
+Platform        | Cache path
+----------------|----------------
+macOS           | `Library/Caches/nxapi-nodejs`
+Windows         | `%localappdata%\nxapi-nodejs\Cache`
+Linux           | `$XDG_CACHE_HOME/nxapi-nodejs` or `.cache/nxapi-nodejs`
+
+The Electron app will also store other data in various locations.
+
 #### Debug logs
 
-Logging uses the `debug` package and can be controlled using the `DEBUG` environment variable. All nxapi logging uses the `nxapi`, `cli` and `app` namespaces.
+Logging uses the [debug](https://github.com/debug-js/debug) package and can be controlled using the `DEBUG` environment variable. All nxapi logging uses the `nxapi`, `cli` and `app` namespaces.
 
 ```sh
 # Show all debug logs from nxapi
 DEBUG=nxapi:*,cli,cli:* nxapi ...
+
+# Start the Electron app and show all debug logs from nxapi
+DEBUG=nxapi:*,app,app:* nxapi app
+DEBUG=nxapi:*,app,app:* .../Nintendo\ Switch\ Online.app/Contents/MacOS/Nintendo\ Switch\ Online
 
 # Show all API requests
 DEBUG=nxapi:api:* nxapi ...
@@ -713,11 +773,28 @@ curl --header "Content-Type: application/json" --data '{"type": "nso", "token": 
 ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
 ```
 
-#### .env file
+#### Environment variables
 
 Some options can be set using environment variables. These can be stored in a `.env` file in the data location. Environment variables will be read from the `.env` file in the default location, then the `.env` file in `NXAPI_DATA_PATH` location. `.env` files will not be read from the location set in the `--data-path` option.
 
 This can be used with the Electron app (including when using the packaged version).
+
+nxapi doesn't store any data itself when used as a TypeScript/JavaScript library, and doesn't attempt to read any `.env` files, however environment variables will still be used. If you want to read environment variables from a file you can use the [dotenv](https://github.com/motdotla/dotenv) and [dotenv-expand](https://github.com/motdotla/dotenv-expand) packages, or run `source .env` before running your process.
+
+Environment variable            | Description
+--------------------------------|-------------
+`NXAPI_DATA_PATH`               | Sets the location to store user data. See [data location](#data-location).
+`ZNC_PROXY_URL`                 | Sets the URL of the nxapi znc API proxy server. See [API proxy server](#api-proxy-server).
+`NXAPI_ZNCA_API`                | Sets the API to use for Coral client authentication. Either `flapg` or `imink`. See [splatnet2statink and flapg](#splatnet2statink-and-flapg).
+`ZNCA_API_URL`                  | Sets the URL of the nxapi znca API server to use for Coral client authentication, if `NXAPI_ZNCA_API` is not set. See [znca API server](#znca-api-server).
+`NXAPI_USER_AGENT`              | Sets the application/script user agent string used by the nxapi command. See [user agent strings](#user-agent-strings).
+`NXAPI_ENABLE_REMOTE_CONFIG`    | Disables fetching and using remote configuration data if set to `0`. Do not disable remote configuration if nxapi has run with it enabled.
+`NXAPI_REMOTE_CONFIG_FALLBACK`  | Allows using local configuration data if the remote configuration data cannot be fetched if set to `1`. This should not be used, as it can cause nxapi to revert to local configuration data after previously using newer remote configuration data.
+`NXAPI_CONFIG_URL`              | Sets the URL to fetch remote configuration data from.
+`NXAPI_SKIP_UPDATE_CHECK`       | Disables the update check in the nxapi command and the Electron app if set to `1`.
+`DEBUG`                         | Used by the [debug](https://github.com/debug-js/debug) package. Sets which modules should have debug logging enabled. See [debug logs](#debug-logs).
+
+Other environment variables may also be used by Node.js, Electron or other packages nxapi depends on.
 
 #### User agent strings
 

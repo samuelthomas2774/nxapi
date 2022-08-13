@@ -28,6 +28,12 @@ https://ec.nintendo.com/apps/0100f8f0000a2000/GB?lang=en-GB
 
 In this link, the title ID is `0100f8f0000a2000`.
 
+> Since v1.3.0, nxapi adds a different link to the Nintendo eShop button in Discord activities. This link still includes the title ID. Since this link does not redirect to another page immediately, you can easily copy the title ID by opening the page in a browser.
+>
+> ```
+> https://fancy.org.uk/api/nxapi/title/0100f8f0000a2000/redirect
+> ```
+
 The title ID of friends games can also be found using the Electron app, by pressing a friend's name.
 
 ### 2. Nintendo Switch Parental Controls title download notifications
