@@ -56,6 +56,10 @@ export default class CoralApi {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
+        if (response.status !== 200) {
+            throw new ErrorResponse('[znc] Non-200 status code', response, await response.text());
+        }
+
         const data = await response.json() as CoralResponse<T>;
 
         if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {

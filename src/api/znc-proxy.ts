@@ -44,7 +44,7 @@ export default class ZncProxyApi implements CoralApi {
         if (response.status === 204) return null!;
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[zncproxy] Unknown error', response, await response.text());
+            throw new ErrorResponse('[zncproxy] Non-200/204 status code', response, await response.text());
         }
 
         const data = await response.json() as T;

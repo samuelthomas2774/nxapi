@@ -49,6 +49,10 @@ export default class MoonApi {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
+        if (response.status !== 200) {
+            throw new ErrorResponse('[moon] Non-200 status code', response, await response.text());
+        }
+
         const data = await response.json() as T | MoonError;
 
         if ('errorCode' in data) {

@@ -53,7 +53,7 @@ export default class SplatNet2Api {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet2] Unknown error', response, await response.text());
+            throw new ErrorResponse('[splatnet2] Non-200 status code', response, await response.text());
         }
 
         updateIksmSessionLastUsed.handler?.call(null, this.iksm_session);

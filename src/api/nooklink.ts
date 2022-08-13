@@ -45,7 +45,7 @@ export default class NooklinkApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200 && response.status !== 201) {
-            throw new ErrorResponse('[nooklink] Unknown error', response, await response.text());
+            throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
         }
 
         const data = await response.json() as T | WebServiceError;
