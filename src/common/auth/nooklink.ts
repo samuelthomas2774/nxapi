@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
-import { getToken } from './coral.js';
+import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkUserApi } from '../../api/nooklink.js';
 import { AuthToken, Users } from '../../api/nooklink-types.js';
 import { WebServiceToken } from '../../api/coral-types.js';
@@ -46,6 +46,13 @@ export async function getWebServiceToken(
         debug('Authenticating to NookLink');
 
         const {nso, data} = await getToken(storage, token, proxy_url);
+
+        if (data[Login]) {
+            const announcements = await nso.getAnnouncements();
+            const friends = await nso.getFriendList();
+            const webservices = await nso.getWebServices();
+            const activeevent = await nso.getActiveEvent();
+        }
 
         const existingToken: SavedToken = await NooklinkApi.loginWithCoral(nso, data.user);
 

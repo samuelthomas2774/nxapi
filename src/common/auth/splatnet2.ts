@@ -2,7 +2,7 @@ import process from 'node:process';
 import * as fs from 'node:fs';
 import createDebug from 'debug';
 import persist from 'node-persist';
-import { getToken } from './coral.js';
+import { getToken, Login } from './coral.js';
 import SplatNet2Api, { SplatNet2AuthData, updateIksmSessionLastUsed } from '../../api/splatnet2.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import { Jwt } from '../../util/jwt.js';
@@ -43,6 +43,13 @@ export async function getIksmToken(
         debug('Authenticating to SplatNet 2');
 
         const {nso, data} = await getToken(storage, token, proxy_url);
+
+        if (data[Login]) {
+            const announcements = await nso.getAnnouncements();
+            const friends = await nso.getFriendList();
+            const webservices = await nso.getWebServices();
+            const activeevent = await nso.getActiveEvent();
+        }
 
         const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithCoral(nso, data.user);
 

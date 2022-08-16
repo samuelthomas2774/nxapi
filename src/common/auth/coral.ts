@@ -10,9 +10,13 @@ import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 
 const debug = createDebug('nxapi:auth:coral');
 
+export const Login = Symbol('Login');
+
 export interface SavedToken extends CoralAuthData {
     expires_at: number;
     proxy_url?: string;
+    /** Indicates we just logged in and didn't use a cached token */
+    [Login]?: boolean;
 }
 
 export async function getToken(
@@ -73,6 +77,8 @@ export async function getToken(
 
         await storage.setItem('NsoToken.' + token, existingToken);
         await storage.setItem('NintendoAccountToken.' + data.user.id, token);
+
+        existingToken[Login] = true;
 
         return {nso, data: existingToken};
     }
