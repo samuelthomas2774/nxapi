@@ -7,6 +7,7 @@ import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, 
 import { ErrorResponse } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:coral');
 
@@ -42,8 +43,9 @@ export default class CoralApi {
             await this._renewToken;
         }
 
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(ZNC_URL + url, {
-            method: method,
+            method,
             headers: Object.assign({
                 'X-Platform': ZNCA_PLATFORM,
                 'X-ProductVersion': this.znca_version,
@@ -51,8 +53,9 @@ export default class CoralApi {
                 'Content-Type': 'application/json; charset=utf-8',
                 'User-Agent': this.znca_useragent,
             }, headers),
-            body: body,
-        });
+            body,
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
@@ -278,6 +281,7 @@ export default class CoralApi {
             f: fdata.f,
         };
 
+        const [signal, cancel] = timeoutSignal();
         const response = await fetch(ZNC_URL + '/v3/Account/Login', {
             method: 'POST',
             headers: {
@@ -289,9 +293,15 @@ export default class CoralApi {
             body: JSON.stringify({
                 parameter,
             }),
-        });
+            signal,
+        }).finally(cancel);
 
         debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
+
+        if (response.status !== 200) {
+            throw new ErrorResponse('[znc] Non-200 status code', response, await response.text());
+        }
+
         const data = await response.json() as CoralResponse<AccountLogin>;
 
         if ('errorMessage' in data) {
