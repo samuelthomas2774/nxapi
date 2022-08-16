@@ -3,6 +3,7 @@ import type { Arguments as ParentArguments } from '../nooklink.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getUserToken } from '../../common/auth/nooklink.js';
+import { NooklinkUserCliTokenData } from '../../api/nooklink.js';
 
 const debug = createDebug('cli:nooklink:user-token');
 
@@ -39,10 +40,12 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const {nooklinkuser, data} = await getUserToken(storage, token, argv.islander, argv.zncProxyUrl, argv.autoUpdateSession);
 
     if (argv.json || argv.jsonPrettyPrint) {
-        const result = {
+        const result: NooklinkUserCliTokenData = {
+            gtoken: nooklinkuser.gtoken,
             auth_token: data.token.token,
             expires_at: data.token.expireAt,
-            user_id: data.user,
+            user_id: data.user_id,
+            language: nooklinkuser.language,
         };
 
         console.log(JSON.stringify(result, null, argv.jsonPrettyPrint ? 4 : 0));
