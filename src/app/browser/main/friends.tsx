@@ -64,7 +64,7 @@ function Friend(props: {
     }, [ipc, props.user?.user.id, props.friend.nsaId]);
     const onContextMenu = useCallback(() => {
         ipc.showFriendMenu(props.user!.user, props.user!.nso!.nsoAccount.user, props.friend);
-    }, [ipc, props.user?.user, props.user?.nso?.nsoAccount.user]);
+    }, [ipc, props.user?.user, props.user?.nso?.nsoAccount.user, props.friend]);
 
     const game = 'name' in props.friend.presence.game ? props.friend.presence.game : null;
 
