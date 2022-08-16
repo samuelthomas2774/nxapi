@@ -14,7 +14,7 @@ export const NOOKLINK_WEBSERVICE_URL = 'https://web.sd.lp1.acbaa.srv.nintendo.ne
 export const NOOKLINK_WEBSERVICE_USERAGENT = 'Mozilla/5.0 (Linux; Android 8.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/58.0.3029.125 Mobile Safari/537.36';
 
 const NOOKLINK_URL = NOOKLINK_WEBSERVICE_URL + '/api';
-const BLANCO_VERSION = '2.1.0';
+const BLANCO_VERSION = '2.1.1';
 
 export default class NooklinkApi {
     protected constructor(
@@ -34,7 +34,6 @@ export default class NooklinkApi {
                 'dnt': '1',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-GB,en-US;q=0.8',
-                'X-Requested-With': 'com.nintendo.znca',
                 'Origin': 'https://web.sd.lp1.acbaa.srv.nintendo.net',
                 'Content-Type': 'application/json',
                 'X-Blanco-Version': this.client_version,
@@ -90,6 +89,9 @@ export default class NooklinkApi {
     static async loginWithWebServiceToken(
         webserviceToken: WebServiceToken, user: NintendoAccountUser
     ): Promise<NooklinkAuthData> {
+        const { default: { coral_gws_nooklink: config } } = await import('../common/remote-config.js');
+        if (!config) throw new Error('Remote configuration prevents NookLink authentication');
+
         const url = new URL(NOOKLINK_WEBSERVICE_URL);
         url.search = new URLSearchParams({
             lang: user.language,
@@ -144,7 +146,7 @@ export default class NooklinkApi {
             gtoken,
             expires_at,
             useragent: NOOKLINK_WEBSERVICE_USERAGENT,
-            version: BLANCO_VERSION,
+            version: config.blanco_version,
         };
     }
 }
@@ -270,7 +272,7 @@ export class NooklinkUserApi {
     static createWithCliTokenData(data: NooklinkUserCliTokenData) {
         return new NooklinkUserApi(
             data.user_id, data.auth_token,
-            data.gtoken, NOOKLINK_WEBSERVICE_USERAGENT, data.language, BLANCO_VERSION
+            data.gtoken, NOOKLINK_WEBSERVICE_USERAGENT, data.language, data.version
         );
     }
 }
@@ -299,6 +301,7 @@ export interface NooklinkUserAuthData {
 
 export interface NooklinkUserCliTokenData {
     gtoken: string;
+    version: string;
 
     auth_token: string;
     expires_at: number;

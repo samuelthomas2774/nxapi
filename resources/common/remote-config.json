@@ -12,5 +12,8 @@
     "moon": {
         "znma_version": "1.17.0",
         "znma_build": "261"
+    },
+    "coral_gws_nooklink": {
+        "blanco_version": "2.1.1"
     }
 }

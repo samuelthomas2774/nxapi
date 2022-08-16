@@ -42,6 +42,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.json || argv.jsonPrettyPrint) {
         const result: NooklinkUserCliTokenData = {
             gtoken: nooklinkuser.gtoken,
+            version: nooklinkuser.client_version,
+
             auth_token: data.token.token,
             expires_at: data.token.expireAt,
             user_id: data.user_id,

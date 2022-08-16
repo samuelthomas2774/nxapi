@@ -233,6 +233,8 @@ export interface NxapiRemoteConfig {
         imink: {} | null;
     };
     moon: MoonRemoteConfig | null;
+
+    coral_gws_nooklink: NooklinkRemoteConfig | null;
 }
 
 export type DefaultZncaApiProvider =
@@ -247,4 +249,8 @@ export interface CoralRemoteConfig {
 export interface MoonRemoteConfig {
     znma_version: string;
     znma_build: string;
+}
+
+export interface NooklinkRemoteConfig {
+    blanco_version: string;
 }
