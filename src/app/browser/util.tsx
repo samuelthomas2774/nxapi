@@ -249,3 +249,54 @@ export function useActiveDiscordUser() {
 
     return user;
 }
+
+export function useTimeSince(time: Date, short = false) {
+    const [now, setNow] = useState(Date.now());
+
+    const [since, update_in] = getTimeSince(time, now, short ? short_time_since_intervals : time_since_intervals);
+    const update_at = Date.now() + update_in;
+
+    useEffect(() => {
+        const timeout = setTimeout(() => setNow(Date.now()), Math.max(1000, update_at - Date.now()));
+        return () => clearTimeout(timeout);
+    }, [time, short, update_at]);
+
+    return since;
+}
+
+interface TimeSinceInterval {
+    interval: number;
+    max: number;
+    string: (count: number) => string;
+}
+
+const time_since_intervals: TimeSinceInterval[] = [
+    {interval: 1000, max: 10, string: () => 'just now'},
+    {interval: 1000, max: 60, string: c => c + ' second' + (c === 1 ? '' : 's') + ' ago'},
+    {interval: 60 * 1000, max: 60, string: c => c + ' minute' + (c === 1 ? '' : 's') + ' ago'},
+    {interval: 60 * 60 * 1000, max: 24, string: c => c + ' hour' + (c === 1 ? '' : 's') + ' ago'},
+    {interval: 24 * 60 * 60 * 1000, max: Infinity, string: c => c + ' day' + (c === 1 ? '' : 's') + ' ago'},
+];
+const short_time_since_intervals: TimeSinceInterval[] = [
+    {interval: 1000, max: 10, string: () => 'Just now'},
+    {interval: 1000, max: 60, string: c => c + ' sec' + (c === 1 ? '' : 's')},
+    {interval: 60 * 1000, max: 60, string: c => c + ' min' + (c === 1 ? '' : 's')},
+    {interval: 60 * 60 * 1000, max: 24, string: c => c + ' hr' + (c === 1 ? '' : 's')},
+    {interval: 24 * 60 * 60 * 1000, max: Infinity, string: c => c + ' day' + (c === 1 ? '' : 's')},
+];
+
+function getTimeSince(time: Date | number, now = Date.now(), intervals = time_since_intervals): [string, number] {
+    if (time instanceof Date) time = time.getTime();
+
+    const elapsed = Math.max(0, now - time);
+    const last = intervals[time_since_intervals.length - 1];
+
+    for (const i of intervals) {
+        if (elapsed < i.max * i.interval || last === i) {
+            const count = Math.floor(elapsed / i.interval);
+            return [i.string.call(null, count), i.interval - (elapsed - (count * i.interval))];
+        }
+    }
+
+    throw new Error('Invalid intervals');
+}

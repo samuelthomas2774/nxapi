@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ipc from '../ipc.js';
-import { useAccentColour, useColourScheme, User } from '../util.js';
+import { useAccentColour, useColourScheme, User, useTimeSince } from '../util.js';
 import { Friend, Presence, PresenceState } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section, { HEADER_SIZE } from './section.js';
@@ -95,11 +95,14 @@ function FriendPresence(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
 
+    const logout = props.presence.logoutAt ? new Date(props.presence.logoutAt * 1000) : null;
+    const since_logout = useTimeSince(logout ?? new Date(0), true);
+
     if (props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) {
         return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>Playing</Text>;
     }
 
-    return <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>Offline</Text>;
+    return <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>{logout ? since_logout : 'Offline'}</Text>;
 }
 
 const styles = StyleSheet.create({
