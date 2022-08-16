@@ -76,6 +76,7 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService, t
             preload: path.join(bundlepath, 'preload-webservice.cjs'),
             contextIsolation: false,
             scrollBounce: true,
+            disableBlinkFeatures: 'UserAgentClientHint',
         },
     });
 
