@@ -1100,4 +1100,12 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
+    {
+        // Splatoon 3: Splatfest World Premiere
+        id: '0100ba0018500000',
+        client: '967103796134158447',
+        largeImageText: 'Splatfest World Premiere',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 ];
