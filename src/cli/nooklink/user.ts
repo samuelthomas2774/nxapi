@@ -38,7 +38,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nooklinkuser, data} = await getUserToken(storage, token, argv.islander, argv.zncProxyUrl, argv.autoUpdateSession);
 
-    const profile = await nooklinkuser.getUserProfile(data.user);
+    const profile = await nooklinkuser.getUserProfile();
 
     if (argv.jsonPrettyPrint) {
         console.log(JSON.stringify(profile, null, 4));
