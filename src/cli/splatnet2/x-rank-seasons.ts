@@ -40,6 +40,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const table = new Table({
         head: [
+            '#',
             'ID',
             'Key',
             'Start',
@@ -50,6 +51,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     for (const season of getAllSeasons(sort_ascending)) {
         table.push([
+            season.index + 1,
             season.id,
             season.key,
             season.start.toLocaleString('en-GB'),

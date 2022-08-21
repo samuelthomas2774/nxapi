@@ -106,7 +106,7 @@ const season_id = toXRankSeasonId(2022, 1);
 
 ### `getXRankSeasons`
 
-Returns a generator that yields all X Rank seasons up to the current season according to the system date.
+Returns an iterator that yields all X Rank seasons up to the current season according to the system date.
 
 By default this will start from the current season and continue to the first season. Setting the first argument to `true` will cause this function to start from the first season and continue to the current season.
 
@@ -116,11 +116,16 @@ import { getXRankSeasons, XRankSeason } from 'nxapi/splatnet2';
 for (const season of getXRankSeasons()) {
     // season is a plain object of type XRankSeason
 }
+
+// Alternatively this can be converted to a plain array.
+// The iterator should be used instead where possible as it does not require
+// keeping a reference to all Season objects.
+// const seasons = [...getXRankSeasons()];
 ```
 
 ### `getXRankSeason`
 
-Returns an `XRankSeason` object from a `Date`, year and month, or season ID string.
+Returns an `XRankSeason` object from a `Date`, year and month, season ID string or index number.
 
 ```ts
 import { getXRankSeason, XRankSeason } from 'nxapi/splatnet2';
@@ -129,6 +134,7 @@ const season = getXRankSeason(2022, 1);
 // season is a plain object of type XRankSeason
 // season.id === '220101T00_220201T00'
 // season.key === '2022_01'
+// season.index === 44
 // season.start is a Date object with the UTC timestamp 2022-01-01 00:00:00
 // season.end is a Date object with the UTC timestamp 2022-02-01 00:00:00
 // season.complete === true, assuming the system time is after 2022-02-01 00:00:00 (UTC)
@@ -136,11 +142,12 @@ const season = getXRankSeason(2022, 1);
 // This function can also be called like this:
 const season = getXRankSeason(new Date(Date.UTC(2022, 1)));
 const season = getXRankSeason('220101T00_220201T00');
+const season = getXRankSeason(44);
 ```
 
 ### `getNextXRankSeason`
 
-Returns an `XRankSeason` object for the season following an X Rank season from an `XRankSeason`, `Date`, year and month, or season ID string.
+Returns an `XRankSeason` object for the season following an X Rank season from an `XRankSeason`, `Date`, year and month, season ID string or index number.
 
 ```ts
 import { getNextXRankSeason, XRankSeason } from 'nxapi/splatnet2';
@@ -149,6 +156,7 @@ const season = getNextXRankSeason(2022, 1);
 // season is a plain object of type XRankSeason
 // season.id === '220201T00_220301T00'
 // season.key === '2022_02'
+// season.index === 45
 // season.start is a Date object with the UTC timestamp 2022-02-01 00:00:00
 // season.end is a Date object with the UTC timestamp 2022-03-01 00:00:00
 // season.complete === true, assuming the system time is after 2022-03-01 00:00:00 (UTC)
@@ -156,11 +164,12 @@ const season = getNextXRankSeason(2022, 1);
 // This function can also be called like this:
 const season = getNextXRankSeason(new Date(Date.UTC(2022, 1)));
 const season = getNextXRankSeason('220101T00_220201T00');
+const season = getNextXRankSeason(44);
 ```
 
 ### `getPreviousXRankSeason`
 
-Returns an `XRankSeason` object for the season following an X Rank season from an `XRankSeason`, `Date`, year and month, or season ID string.
+Returns an `XRankSeason` object for the season following an X Rank season from an `XRankSeason`, `Date`, year and month, season ID string or index number.
 
 ```ts
 import { getNextXRankSeason, XRankSeason } from 'nxapi/splatnet2';
@@ -169,6 +178,7 @@ const season = getPreviousXRankSeason(2022, 1);
 // season is a plain object of type XRankSeason
 // season.id === '211201T00_220101T00'
 // season.key === '2021_12'
+// season.index === 43
 // season.start is a Date object with the UTC timestamp 2021-12-01 00:00:00
 // season.end is a Date object with the UTC timestamp 2022-01-01 00:00:00
 // season.complete === true, assuming the system time is after 2022-01-01 00:00:00 (UTC)
@@ -176,4 +186,5 @@ const season = getPreviousXRankSeason(2022, 1);
 // This function can also be called like this:
 const season = getPreviousXRankSeason(new Date(Date.UTC(2022, 1)));
 const season = getPreviousXRankSeason('220101T00_220201T00');
+const season = getPreviousXRankSeason(44);
 ```

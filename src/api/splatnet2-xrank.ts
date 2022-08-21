@@ -9,13 +9,14 @@ export interface Season {
     id: string;
     /** Season ID use by the web app, e.g. "2022_05" */
     key: string;
+    index: number;
     start: Date;
     end: Date;
     complete: boolean;
 }
 
 export function* getAllSeasons(sort_ascending = false) {
-    let season = sort_ascending ? FIRST_SEASON : CURRENT_SEASON;
+    let season = sort_ascending ? getFirstSeason() : getCurrentSeason();
 
     while (season) {
         yield season;
@@ -25,7 +26,7 @@ export function* getAllSeasons(sort_ascending = false) {
 
 export function getSeason(year: number, month: number): Season | null
 export function getSeason(start: Date): Season | null
-export function getSeason(id: string): Season | null
+export function getSeason(id: string | number): Season | null
 export function getSeason(year: number | Date | string, month?: number): Season | null {
     if (year instanceof Date) {
         month = year.getUTCMonth() + 1;
@@ -33,7 +34,7 @@ export function getSeason(year: number | Date | string, month?: number): Season 
     }
     if (typeof year === 'string') {
         // 180401T00_180601T00
-        const match = year.match(/^(\d{2,})(0\d,1[012])01T00_(\d{2,})(0\d,1[012])01T00$/);
+        const match = year.match(/^(\d{2,})(0\d|1[012])01T00_(\d{2,})(0\d|1[012])01T00$/);
         if (!match) throw new Error('Invalid season ID');
 
         year = 2000 + parseInt(match[1]);
@@ -42,10 +43,17 @@ export function getSeason(year: number | Date | string, month?: number): Season 
         const nextyear = month === 12 ? year + 1 : year;
         const nextmonth = year === 2018 && month === 4 ? 6 :
             month === 12 ? 1 : month + 1;
-        if (nextyear !== parseInt(match[3]) || nextmonth !== parseInt(match[4])) throw new Error('Invalid season ID');
+        if (nextyear !== (2000 + parseInt(match[3])) || nextmonth !== parseInt(match[4])) throw new Error('Invalid season ID');
+
+        if (year === 2018 && month === 5) throw new Error('Invalid season ID');
     }
 
-    const start = new Date(Date.UTC(year, month! - 1));
+    const start = typeof month === 'number' ? new Date(Date.UTC(year, month - 1)) :
+        getSeasonStartDateByIndex(year);
+
+    if (start.getUTCFullYear() === 2018 && start.getUTCMonth() === 3) {
+        start.setUTCMonth(4);
+    }
 
     if (Date.now() < start.getTime()) return null;
     if (start.getUTCFullYear() < 2018 || (start.getUTCFullYear() === 2018 && start.getUTCMonth() < 3)) return null;
@@ -65,6 +73,7 @@ export function getSeason(year: number | Date | string, month?: number): Season 
     return {
         id,
         key,
+        index: getSeasonIndex(start.getUTCFullYear(), start.getUTCMonth() + 1),
         start,
         end,
         complete: Date.now() > end.getTime(),
@@ -75,13 +84,18 @@ export function getFirstSeason() {
     return getSeason(2018, 5);
 }
 
-const FIRST_SEASON = getFirstSeason();
-const CURRENT_SEASON = getSeason(new Date());
+export function getCurrentSeason() {
+    return getSeason(new Date());
+}
 
-export function getNextSeason(season: Season): Season | null
+export function getNextSeason(season: Season | number): Season | null
 export function getNextSeason(year: number, month: number): Season | null
 export function getNextSeason(season: Season | number, month?: number): Season | null {
-    const current_start = typeof season === 'number' ? new Date(Date.UTC(season, month!)) : season.start;
+    const current_start =
+        typeof season === 'number' && typeof month === 'number' ?
+            new Date(Date.UTC(season, month)) :
+        typeof season === 'number' ? getSeasonStartDateByIndex(season) :
+        new Date(season.start.getTime());
 
     if (current_start.getUTCFullYear() === 2018 && current_start.getUTCMonth() === 3) {
         current_start.setUTCMonth(4);
@@ -96,7 +110,8 @@ export function getNextSeason(season: Season | number, month?: number): Season |
 
     const end = new Date(Date.UTC(
         start.getUTCFullYear() + (start.getUTCMonth() === 11 ? 1 : 0),
-        start.getUTCMonth() === 11 ? 0 : start.getUTCMonth() + 1,
+        start.getUTCFullYear() === 2018 && start.getUTCMonth() === 3 ? 5 :
+            start.getUTCMonth() === 11 ? 0 : start.getUTCMonth() + 1,
     ));
 
     const id = toSeasonId(start.getUTCFullYear(), start.getUTCMonth() + 1);
@@ -105,16 +120,21 @@ export function getNextSeason(season: Season | number, month?: number): Season |
     return {
         id,
         key,
+        index: getSeasonIndex(start.getUTCFullYear(), start.getUTCMonth() + 1),
         start,
         end,
         complete: Date.now() > end.getTime(),
     };
 }
 
-export function getPreviousSeason(season: Season): Season | null
+export function getPreviousSeason(season: Season | number): Season | null
 export function getPreviousSeason(year: number, month: number): Season | null
 export function getPreviousSeason(season: Season | number, month?: number): Season | null {
-    const current_start = typeof season === 'number' ? new Date(Date.UTC(season, month!)) : season.start;
+    const current_start =
+        typeof season === 'number' && typeof month === 'number' ?
+            new Date(Date.UTC(season, month)) :
+        typeof season === 'number' ? getSeasonStartDateByIndex(season) :
+        new Date(season.start.getTime());
 
     const start = new Date(Date.UTC(
         current_start.getUTCFullYear() - (current_start.getUTCMonth() === 0 ? 1 : 0),
@@ -125,7 +145,8 @@ export function getPreviousSeason(season: Season | number, month?: number): Seas
 
     const end = new Date(Date.UTC(
         start.getUTCFullYear() + (start.getUTCMonth() === 11 ? 1 : 0),
-        start.getUTCMonth() === 11 ? 0 : start.getUTCMonth() + 1,
+        start.getUTCFullYear() === 2018 && start.getUTCMonth() === 3 ? 5 :
+            start.getUTCMonth() === 11 ? 0 : start.getUTCMonth() + 1,
     ));
 
     const id = toSeasonId(start.getUTCFullYear(), start.getUTCMonth() + 1);
@@ -138,21 +159,67 @@ export function getPreviousSeason(season: Season | number, month?: number): Seas
     return {
         id,
         key,
+        index: getSeasonIndex(start.getUTCFullYear(), start.getUTCMonth() + 1),
         start,
         end,
         complete: Date.now() > end.getTime(),
     };
 }
 
+export function getSeasonIndex(year: number, month: number) {
+    const nextyear = month === 12 ? year + 1 : year;
+
+    if (year < 2000) throw new Error('Invalid season ID');
+    if (nextyear >= 2100) throw new Error('Invalid season ID');
+    if (month < 1) throw new Error('Invalid season ID');
+    if (month > 12) throw new Error('Invalid season ID');
+
+    if (year < 2018) throw new Error('Invalid season ID');
+    if (year === 2018 && month < 4) throw new Error('Invalid season ID');
+
+    const now = new Date();
+    if (year > now.getUTCFullYear()) throw new Error('Invalid season ID');
+    if (year === now.getUTCFullYear() && month > (now.getUTCMonth() + 1)) throw new Error('Invalid season ID');
+
+    if (year === 2018 && month === 4) month = 5;
+
+    const i = year * 12 + (month - 1);
+    return i - 24220;
+}
+
+export function getSeasonStartDateByIndex(index: number) {
+    if (index < 0) throw new Error('Invalid season index');
+
+    if (index === 0) return new Date(Date.UTC(2018, 3));
+
+    const i = index + 24220;
+
+    const year = Math.floor(i / 12);
+    const month = (i % 12) + 1;
+
+    if (year < 2018) throw new Error('Invalid season index');
+    if (year === 2018 && month < 4) throw new Error('Invalid season index');
+
+    const now = new Date();
+    if (year > now.getUTCFullYear()) throw new Error('Invalid season index');
+    if (year === now.getUTCFullYear() && month > (now.getUTCMonth() + 1)) throw new Error('Invalid season index');
+
+    return new Date(Date.UTC(year, month - 1));
+}
+
 export function toSeasonId(year: number, month: number) {
+    if (year === 2018 && month === 4) month = 5;
+
     const nextyear = month === 12 ? year + 1 : year;
     const nextmonth = month === 12 ? 1 : month + 1;
 
     if (year < 2000) throw new Error('Invalid season ID');
     if (nextyear >= 2100) throw new Error('Invalid season ID');
+    if (month < 1) throw new Error('Invalid season ID');
+    if (month > 12) throw new Error('Invalid season ID');
 
     if (year < 2018) throw new Error('Invalid season ID');
-    if (year === 2018 && month < 5) throw new Error('Invalid season ID');
+    if (year === 2018 && month < 4) throw new Error('Invalid season ID');
 
     const now = new Date();
     if (year > now.getUTCFullYear()) throw new Error('Invalid season ID');
