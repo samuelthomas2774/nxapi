@@ -96,7 +96,7 @@ For Discord Rich Presence, you can create an additional account, add your main a
 
 #### Why is a token sent to one/two different non-Nintendo servers?
 
-It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app, as currently it's too hard to do this locally. (This isn't required for Parental Controls data.) See the splatnet2statink and flapg section below for more information.
+It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app, as currently it's too hard to do this locally. (This isn't required for Parental Controls data.) See the [Coral client authentication](#coral-client-authentication) section below for more information.
 
 #### I need help using nxapi or Nintendo's APIs/I want to share something I've made using nxapi or Nintendo's APIs
 
@@ -154,543 +154,11 @@ docker build . --tag gitlab.fancy.org.uk:5005/samuel/nxapi
 # docker run -it --rm -v ./data:/data gitlab.fancy.org.uk:5005/samuel/nxapi ...
 ```
 
-### Nintendo Switch Online
+### Usage
 
-#### Login to the Nintendo Switch Online app
+Information on the nxapi command line interface can be found at [docs/cli.md](docs/cli.md).
 
-```sh
-# Interactive login
-# Generates a link to login with a Nintendo Account, asks for the link then automatically gets a session token
-nxapi nso auth
-
-# Login with an existing token
-# Use with a token obtained via MITM the app, or with `nxapi nso auth --no-auth`
-# The same session token as for the Nintendo Switch Parental Controls app cannot be used
-nxapi nso token
-
-# Get the authenticated user
-nxapi nso user
-```
-
-#### Discord Presence
-
-```sh
-# Show the authenticated user's presence
-nxapi nso presence
-
-# Show a friend's presence
-# Use `nxapi nso friends` to show all friend's Nintendo Switch account IDs
-nxapi nso presence --friend-nsaid 0123456789abcdef
-
-# Show the authenticated user's friend code in Discord
-nxapi nso presence --friend-code
-nxapi nso presence --friend-code -
-
-# Show a custom friend code in Discord
-# Use this if you are showing presence of a friend of the authenticated user
-nxapi nso presence --friend-code 0000-0000-0000
-nxapi nso presence --friend-code SW-0000-0000-0000
-
-# Show inactive presence
-# This will show a "Not playing" status if any consoles linked to the user's account is online but the user
-# is not selected in a game
-# Don't enable this if you are not the only user of all consoles linked to your account
-nxapi nso presence --show-inactive-presence
-
-# Also show friend notifications (see below)
-nxapi nso presence --friend-notifications
-nxapi nso presence --user-notifications --friend-notifications
-nxapi nso presence --user-notifications
-
-# Set update interval to 60 seconds
-nxapi nso presence --update-interval 60
-
-# Fetch presence from a custom URL (see `nxapi nso http-server`)
-nxapi nso presence --presence-url "http://[::1]:12345/api/znc/user/presence"
-nxapi nso presence --presence-url "http://[::1]:12345/api/znc/friend/0123456789abcdef/presence"
-```
-
-#### Friend presence notifications
-
-This uses node-notifier to display native desktop notifications.
-
-```sh
-# Show notifications for all friends
-nxapi nso notify
-
-# Show notifications for all friends + the current user
-nxapi nso notify --user-notifications
-
-# Show notifications for only the current user
-nxapi nso notify --user-notifications --no-friend-notifications
-
-# Set update interval to 60 seconds
-nxapi nso notify --update-interval 60
-```
-
-#### Friends
-
-```sh
-# Show Nintendo Switch friends in a table
-nxapi nso friends
-
-# JSON
-nxapi nso friends --json
-nxapi nso friends --json-pretty-print
-```
-
-#### Friend codes and friend requests
-
-```sh
-# Get a URL that can be used to open your profile in the Nintendo Switch Online app and send a friend request
-# This prints an object which includes your friend code and the URL (which contains your friend code)
-nxapi nso friendcode
-
-# JSON
-nxapi nso friendcode --json
-nxapi nso friendcode --json-pretty-print
-
-# Look up a user using a friend code
-nxapi nso lookup 0000-0000-0000
-
-# JSON
-nxapi nso lookup 0000-0000-0000 --json
-nxapi nso lookup 0000-0000-0000 --json-pretty-print
-
-# Send a friend request
-nxapi nso add-friend 0000-0000-0000
-```
-
-#### Nintendo Switch Online app announcements/alerts
-
-```sh
-# Show app announcements in a table
-nxapi nso announcements
-
-# JSON
-nxapi nso announcements --json
-nxapi nso announcements --json-pretty-print
-```
-
-#### Web services/game-specific services
-
-```sh
-# Show web services in a table
-nxapi nso webservices
-
-# JSON
-nxapi nso webservices --json
-nxapi nso webservices --json-pretty-print
-
-# Get an access token for a web service
-# This should be sent with the first request to the web service URL in the `x-gamewebtoken` header
-nxapi nso webservicetoken 5741031244955648
-nxapi nso webservicetoken 5741031244955648 --json
-nxapi nso webservicetoken 5741031244955648 --json-pretty-print
-```
-
-#### API proxy server
-
-Use this to access the Nintendo Switch Online app API from a browser/other HTTP client easily.
-
-```sh
-# Start the server listening on all interfaces on a random port
-nxapi nso http-server
-
-# Start the server listening on a specific address/port
-# The `--listen` option can be used multiple times
-nxapi nso http-server --listen "[::1]:12345"
-
-# Use the API proxy server in other commands
-nxapi nso ... --znc-proxy-url "http://[::1]:12345/api/znc"
-ZNC_PROXY_URL=http://[::1]:12345/api/znc nxapi nso ...
-
-# Start the server using another API proxy server
-nxapi nso http-server --znc-proxy-url "http://[::1]:12345/api/znc"
-ZNC_PROXY_URL=http://[::1]:12345/api/znc nxapi nso http-server
-
-# Allow requests without a Nintendo Account session token
-# Anyone connecting to the API proxy server will be able to use any already authenticated user with their Nintendo Account ID
-# Don't set this if anyone can connect to the server!
-nxapi nso http-server --listen "[::1]:12345" --no-require-token
-
-# Limit the frequency of friends/announcements/web services requests to 60 seconds
-nxapi nso http-server --update-interval 60
-
-# Make API requests using curl
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/auth"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/announcements"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friends"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friends/presence"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friend/0123456789abcdef"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friend/0123456789abcdef/presence"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friendcode"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/friendcode/0000-0000-0000"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/webservices"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/webservice/5741031244955648/token"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/activeevent"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/user"
-curl --header "Authorization: na $NA_SESSION_TOKEN" "http://[::1]:12345/api/znc/user/presence"
-
-# Watch for changes to the user and all friends presence
-curl --header "Authorization: na $NA_SESSION_TOKEN" --no-buffer "http://[::1]:12345/api/znc/presence/events"
-
-# Make API requests using curl without a session token
-# The `--no-require-token` must be set when running the server, and the user must have previously authenticated to the server, either with the API proxy server or using commands on the server
-curl "http://[::1]:12345/api/znc/announcements?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/friends?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/friends/presence?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/friend/0123456789abcdef?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/friend/0123456789abcdef/presence?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/friendcode?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/friendcode/0000-0000-0000?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/webservices?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/webservice/5741031244955648/token?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/activeevent?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/user?user=0123456789abcdef"
-curl "http://[::1]:12345/api/znc/user/presence?user=0123456789abcdef"
-curl --no-buffer "http://[::1]:12345/api/znc/presence/events?user=0123456789abcdef"
-```
-
-#### splatnet2statink and flapg
-
-The splatnet2statink and flapg APIs are used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to these APIs to generate some data that is required to authenticate the app. These APIs run the Nintendo Switch Online app in an Android emulator to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
-
-Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
-
-Alternatively the [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) can be used by setting the `NXAPI_ZNCA_API` environment variable to `imink`. (`NXAPI_ZNCA_API=imink nxapi nso ...`)
-
-> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the splatnet2statink and flapg APIs, set the `NXAPI_ZNCA_API` environment variable to `flapg`.
-
-nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
-
-This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
-
-This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `gen_audio_h`/`gen_audio_h2`, always returns a different result, even when given the same inputs.)
-
-The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
-
-[**See #10 if you can help with this.**](https://github.com/samuelthomas2774/nxapi/discussions/10)
-
-### SplatNet 2
-
-All SplatNet 2 commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid SplatNet 2 token.
-
-#### User
-
-```sh
-# Show the authenticated SplatNet 2 user
-nxapi splatnet2 user
-```
-
-#### Download user records
-
-```sh
-# Download user records to the splatnet2 directory in nxapi's data path
-# Data that already exists will not be redownloaded
-nxapi splatnet2 dump-records
-# Download user records to data/splatnet2
-nxapi splatnet2 dump-records data/splatnet2
-# Don't include user records (when downloading other data)
-nxapi splatnet2 dump-records --no-user-records
-
-# Include lifetime inkage challenge images
-nxapi splatnet2 dump-records --challenges
-
-# Include profile image (share button on the home page)
-nxapi splatnet2 dump-records --profile-image
-nxapi splatnet2 dump-records --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
-
-# Download user records even if they already exist and haven't been updated
-nxapi splatnet2 dump-records --no-new-records
-
-# Include hero (Octo Canyon) records
-# If this option is included hero records will always be downloaded even if they haven't been updated
-nxapi splatnet2 dump-records --hero-records
-# Only download hero records
-nxapi splatnet2 dump-records --no-user-records --hero-records
-
-# Include timeline (CPOD FM on the home page)
-# If this option is included the timeline will always be downloaded even if it hasn't been updated
-nxapi splatnet2 dump-records --timeline
-# Only download the timeline
-nxapi splatnet2 dump-records --no-user-records --timeline
-```
-
-#### Download battle/Salmon Run results
-
-```sh
-# Download battle and Salmon Run results to the splatnet2 directory in nxapi's data path
-# Data that already exists will not be redownloaded
-nxapi splatnet2 dump-results
-# Download battle and Salmon Run results to data/splatnet2
-nxapi splatnet2 dump-results data/splatnet2
-
-# Include battle summary image (share button on the battles list)
-nxapi splatnet2 dump-results --battle-summary-image
-
-# Include battle result images (share button on the battle details page)
-nxapi splatnet2 dump-results --battle-images
-
-# Only download battle results
-nxapi splatnet2 dump-results --no-coop
-# Only download Salmon Run results
-nxapi splatnet2 dump-results --no-battles
-
-# Download summary data even if user records haven't been updated
-# Individual battle results/images/Salmon Run results still won't be redownloaded if they exist
-nxapi splatnet2 dump-results --no-check-updated
-```
-
-#### Monitor SplatNet 2 for new user records/battle/Salmon Run results
-
-This will constantly check SplatNet 2 for new data.
-
-```sh
-# Watch for new battle and Salmon Run results and download them to the splatnet2 directory in nxapi's data path
-nxapi splatnet2 monitor
-
-# Watch for new battle and Salmon Run results and download them to data/splatnet2
-nxapi splatnet2 monitor data/splatnet2
-
-# Include profile image (share button on the home page)
-nxapi splatnet2 monitor --profile-image
-nxapi splatnet2 monitor --profile-image --favourite-stage "Starfish Mainstage" --favourite-colour purple
-
-# Include battle summary image (share button on the battles list)
-nxapi splatnet2 monitor --battle-summary-image
-
-# Include battle result images (share button on the battle details page)
-nxapi splatnet2 monitor --battle-images
-
-# Only download battle results
-nxapi splatnet2 monitor --no-coop
-# Only download Salmon Run results
-nxapi splatnet2 monitor --no-battles
-
-# Set update interval to 1800 seconds (30 minutes)
-nxapi splatnet2 monitor --update-interval 1800
-```
-
-SplatNet 2 monitoring can also be used with `nxapi nso notify` and `nxapi nso presence`. Data will only be downloaded from SplatNet 2 if the authenticated user is playing Splatoon 2 online.
-
-This can be used with `nxapi nso presence --presence-url ...` (the presence URL must return the status of the user authenticating to SplatNet 2). When used with `--friend-nsaid` the friend's presence will be shared on Discord but the authenticated user's presence will still be used to check if SplatNet 2 data should be updated.
-
-```sh
-# Watch for new battle and Salmon Run results and download them to the splatnet2 directory in nxapi's data path
-# All options support both the notify and presence commands
-nxapi nso notify --splatnet2-monitor
-nxapi nso presence --splatnet2-monitor
-
-# Watch for new battle and Salmon Run results and download them to data/splatnet2
-nxapi nso presence --splatnet2-monitor --splatnet2-monitor-directory data/splatnet2
-nxapi nso presence --splatnet2-monitor --sn2-path data/splatnet2
-
-# Include profile image (share button on the home page)
-nxapi nso presence --splatnet2-monitor --splatnet2-monitor-profile-image
-nxapi nso presence --splatnet2-monitor --sn2-profile-image
-
-nxapi nso presence --splatnet2-monitor --splatnet2-monitor-profile-image --splatnet2-monitor-favourite-stage "Starfish Mainstage" --splatnet2-monitor-favourite-colour purple
-nxapi nso presence --splatnet2-monitor --sn2-profile-image --sn2-favourite-stage "Starfish Mainstage" --sn2-favourite-colour purple
-
-# Include battle summary image (share button on the battles list)
-nxapi nso presence --splatnet2-monitor --splatnet2-monitor-battle-summary-image
-nxapi nso presence --splatnet2-monitor --sn2-battle-summary-image
-
-# Include battle result images (share button on the battle details page)
-nxapi nso presence --splatnet2-monitor --splatnet2-monitor-battle-images
-nxapi nso presence --splatnet2-monitor --sn2-battle-images
-
-# Only download battle results
-nxapi nso presence --splatnet2-monitor --no-splatnet2-monitor-coop
-nxapi nso presence --splatnet2-monitor --no-sn2-coop
-# Only download Salmon Run results
-nxapi nso presence --splatnet2-monitor --no-splatnet2-monitor-battles
-nxapi nso presence --splatnet2-monitor --no-sn2-battles
-
-# Set update interval to 60 seconds
-nxapi nso presence --splatnet2-monitor --splatnet2-monitor-update-interval 60
-nxapi nso presence --splatnet2-monitor --sn2-update-interval 60
-```
-
-### NookLink
-
-All NookLink commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid NookLink token.
-
-#### User
-
-```sh
-# Show NookLink users in a table
-nxapi nooklink users
-
-# Show the authenticated NookLink user
-nxapi nooklink user
-
-# Show the authenticated NookLink user's island and other players
-nxapi nooklink island
-
-# Use a specific NookLink user linked to the selected Nintendo Account
-# If more than 1 NookLink users exist by default the first user will be used
-nxapi nooklink user --islander 0x0123456789abcdef
-# --user can also be used to select a different Nintendo Account
-nxapi nooklink user --user 0123456789abcdef
-nxapi nooklink user --user 0123456789abcdef --islander 0x0123456789abcdef
-```
-
-#### Newspapers
-
-```sh
-# Show the latest newspaper issue in a table
-nxapi nooklink newspaper
-# JSON
-nxapi nooklink newspaper --json
-nxapi nooklink newspaper --json-pretty-print
-
-# List newspaper issues in a table
-nxapi nooklink newspapers
-# JSON
-nxapi nooklink newspapers --json
-nxapi nooklink newspapers --json-pretty-print
-
-# Show a specific newspaper issue in a table
-nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000
-# JSON
-nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000 --json
-nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000 --json-pretty-print
-```
-
-#### Download newspapers
-
-```sh
-# Download all island newspapers to the nooklink directory in nxapi's data path
-# Data that already exists will not be redownloaded
-nxapi nooklink dump-newspapers
-
-# Download all island newspapers to data/nooklink
-nxapi nooklink dump-newspapers data/nooklink
-```
-
-#### Messages
-
-```sh
-# Send a message in an online Animal Crossing: New Horizons session
-nxapi nooklink keyboard "Hello"
-
-# Ask for a message interactively
-nxapi nooklink keyboard
-
-# List available reactions
-nxapi nooklink reactions
-
-# Send a reaction
-nxapi nooklink post-reaction happyflower
-```
-
-### Nintendo Switch Parental Controls
-
-#### Login to the Nintendo Switch Parental Controls app
-
-```sh
-# Interactive login
-# Generates a link to login with a Nintendo Account, asks for the link then automatically gets a session token
-nxapi pctl auth
-
-# Login with an existing token
-# Use with a token obtained via MITM the app, or with `nxapi pctl auth --no-auth`
-# The same session token as for the Nintendo Switch Online app cannot be used
-nxapi pctl token
-
-# Get the authenticated user
-nxapi pctl user
-```
-
-#### Nintendo Switch consoles
-
-```sh
-# Show Nintendo Switch consoles in a table
-nxapi pctl devices
-
-# JSON
-nxapi pctl devices --json
-nxapi pctl devices --json-pretty-print
-```
-
-#### Daily summaries
-
-```sh
-# Show daily summary data in a table
-# Use `nxapi pctl devices` to get the device ID
-nxapi pctl daily-summaries 0123456789abcdef
-
-# JSON
-nxapi pctl daily-summaries 0123456789abcdef --json
-nxapi pctl daily-summaries 0123456789abcdef --json-pretty-print
-```
-
-#### Monthly summaries
-
-```sh
-# Show monthly summaries in a table
-# Use `nxapi pctl devices` to get the device ID
-nxapi pctl monthly-summaries 0123456789abcdef
-
-# JSON
-nxapi pctl monthly-summaries 0123456789abcdef --json
-nxapi pctl monthly-summaries 0123456789abcdef --json-pretty-print
-
-# Show data for the February 2022 monthly summary in a table
-nxapi pctl monthly-summary 0123456789abcdef 2022-02
-
-# JSON
-nxapi pctl monthly-summary 0123456789abcdef 2022-02 --json
-nxapi pctl monthly-summary 0123456789abcdef 2022-02 --json-pretty-print
-```
-
-#### Download summary data
-
-```sh
-# Download all daily and monthly summary data from all devices to the summaries directory in nxapi's data path
-# Data that already exists will not be redownloaded
-nxapi pctl dump-summaries
-
-# Download all daily and monthly summary data from all devices to data/summaries
-nxapi pctl dump-summaries data/summaries
-
-# Download all daily and monthly summary data from a specific device
-# Use `nxapi pctl devices` to get the device ID
-# The `--device` option can be used multiple times
-nxapi pctl dump-summaries --device 0123456789abcdef
-```
-
-### Misc. commands/options
-
-#### Users
-
-```sh
-# Show all known Nintendo Accounts in a table
-# This will only show cached data and does not make any requests to Nintendo servers
-nxapi users list
-
-# Use a specific user in a command
-nxapi ... --user 0123456789abcdef
-nxapi ... --token $NA_SESSION_TOKEN
-
-# Set the default user for commands
-nxapi users set 0123456789abcdef
-
-# Remove all data for a user
-nxapi users forget 0123456789abcdef
-```
-
-#### Electron app
-
-When installing nxapi from source the app can be run using this command:
-
-```sh
-nxapi app
-```
-
-This command has no options, but environment variables can still be used.
+The information below is relevant to both the Electron app and command line. Some environment variables are also used when using nxapi as a JavaScript library.
 
 #### Data location
 
@@ -737,42 +205,6 @@ DEBUG=nxapi:api:* nxapi ...
 DEBUG=* nxapi ...
 ```
 
-#### znca API server
-
-A server for controlling the Nintendo Switch Online app on an Android device/emulator using Frida can be used instead of the splatnet2statink and flapg APIs.
-
-This requires:
-
-- adb is installed on the computer running nxapi
-- The Android device is running adbd as root or a su-like command can be used to escalate to root
-- The frida-server executable is located at `/data/local/tmp/frida-server` on the Android device
-- The Nintendo Switch Online app is installed on the Android device
-
-The Android device must be constantly reachable using ADB. The server will exit if the device is unreachable.
-
-```sh
-# Start the server using the ADB server "android.local:5555" listening on all interfaces on a random port
-nxapi android-znca-api-server-frida android.local:5555
-
-# Start the server listening on a specific address/port
-# The `--listen` option can be used multiple times
-nxapi android-znca-api-server-frida android.local:5555 --listen "[::1]:12345"
-
-# Use a command to escalate to root to start frida-server and the Nintendo Switch Online app
-# "{cmd}" will be replaced with the path to a temporary script in double quotes
-nxapi android-znca-api-server-frida android.local:5555 --exec-command "/system/bin/su -c {cmd}"
-
-# Specify a different location to the frida-server executable
-nxapi android-znca-api-server-frida android.local:5555 --frida-server-path "/data/local/tmp/frida-server-15.1.17-android-arm"
-
-# Make API requests using curl
-curl --header "Content-Type: application/json" --data '{"type": "nso", "token": "...", "timestamp": "...", "uuid": "..."}' "http://[::1]:12345/api/znca/f"
-
-# Use the znca API server in other commands
-# This should be set when running any nso commands as the access token will be refreshed automatically when it expires
-ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
-```
-
 #### Environment variables
 
 Some options can be set using environment variables. These can be stored in a `.env` file in the data location. Environment variables will be read from the `.env` file in the default location, then the `.env` file in `NXAPI_DATA_PATH` location. `.env` files will not be read from the location set in the `--data-path` option.
@@ -784,9 +216,9 @@ nxapi doesn't store any data itself when used as a TypeScript/JavaScript library
 Environment variable            | Description
 --------------------------------|-------------
 `NXAPI_DATA_PATH`               | Sets the location to store user data. See [data location](#data-location).
-`ZNC_PROXY_URL`                 | Sets the URL of the nxapi znc API proxy server. See [API proxy server](#api-proxy-server).
-`NXAPI_ZNCA_API`                | Sets the API to use for Coral client authentication. Either `flapg` or `imink`. See [splatnet2statink and flapg](#splatnet2statink-and-flapg).
-`ZNCA_API_URL`                  | Sets the URL of the nxapi znca API server to use for Coral client authentication, if `NXAPI_ZNCA_API` is not set. See [znca API server](#znca-api-server).
+`ZNC_PROXY_URL`                 | Sets the URL of the nxapi znc API proxy server. See [API proxy server](docs/cli.md#api-proxy-server).
+`NXAPI_ZNCA_API`                | Sets the API to use for Coral client authentication. Either `flapg` or `imink`. See [Coral client authentication](#coral-client-authentication).
+`ZNCA_API_URL`                  | Sets the URL of the nxapi znca API server to use for Coral client authentication, if `NXAPI_ZNCA_API` is not set. See [znca API server](docs/cli.md#znca-api-server).
 `NXAPI_USER_AGENT`              | Sets the application/script user agent string used by the nxapi command. See [user agent strings](#user-agent-strings).
 `NXAPI_ENABLE_REMOTE_CONFIG`    | Disables fetching and using remote configuration data if set to `0`. Do not disable remote configuration if nxapi has run with it enabled.
 `NXAPI_REMOTE_CONFIG_FALLBACK`  | Allows using local configuration data if the remote configuration data cannot be fetched if set to `1`. This should not be used, as it can cause nxapi to revert to local configuration data after previously using newer remote configuration data.
@@ -821,13 +253,13 @@ const pkg = JSON.parse(await readFile(resolve(fileURLToPath(import.meta.url), '.
 addUserAgent(pkg.name + '/' + pkg.version + ' (+' + pkg.repository.url + ')');
 ```
 
-#### Usage as a TypeScript/JavaScript library
+### Usage as a TypeScript/JavaScript library
 
-nxapi exports it's API library and types. [See src/exports.](src/exports)
+nxapi exports it's API library and types. See [docs/lib](docs/lib/index.md) and [src/exports](src/exports).
 
 > You must set a user agent string using the `addUserAgent` function when using anything that contacts non-Nintendo APIs, such as the splatnet2statink API.
 
-> Please read https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs if you intend to share anything you create.
+> Please read https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs and https://github.com/JoneWang/imink/wiki/imink-API-Documentation if you intend to share anything you create.
 
 > nxapi uses native ECMAScript modules. nxapi also uses features like top-level await, so it cannot be converted to CommonJS using Rollup or similar. If you need to use nxapi from CommonJS modules or other module systems, use a [dynamic import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import).
 
@@ -869,9 +301,16 @@ Example getting SplatNet 2 records:
 > This example does not include authenticating to SplatNet 2. To benefit from the caching in the nxapi command, the `nxapi splatnet2 token --json` command can be used in most scripts. For example:
 >
 > ```sh
-> # your-script.js can then read the iksm_session, unique player ID and region like this:
-> # SplatNet2Api.createWithCliTokenData(JSON.parse(process.env.SPLATNET_TOKEN))
 > SPLATNET_TOKEN=`nxapi splatnet2 token --json` node your-script.js
+> ```
+>
+> your-script.js can then read the iksm_session, unique player ID and region like this:
+>
+> ```ts
+> import SplatNet2Api from 'nxapi/splatnet2';
+>
+> const data = JSON.parse(process.env.SPLATNET_TOKEN);
+> const splatnet2 = SplatNet2Api.createWithCliTokenData(data);
 > ```
 
 ```ts
@@ -884,20 +323,50 @@ const splatnet2 = SplatNet2Api.createWithIksmSession(iksm_session, unique_id);
 const records = await splatnet2.getRecords();
 ```
 
-### Links
+<a name="splatnet2statink-and-flapg"></a>
+
+### Coral client authentication
+
+The splatnet2statink and flapg APIs are used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to these APIs to generate some data that is required to authenticate the app. These APIs run the Nintendo Switch Online app in an Android emulator to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
+
+Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
+
+Alternatively the [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) can be used by setting the `NXAPI_ZNCA_API` environment variable to `imink`. (`NXAPI_ZNCA_API=imink nxapi nso ...`)
+
+> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the splatnet2statink and flapg APIs, set the `NXAPI_ZNCA_API` environment variable to `flapg`.
+
+nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
+
+This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
+
+This is really annoying. Initially the Nintendo Switch Online app didn't perform any sort of client attestation at all, then Nintendo added a HMAC of the id_token, timestamp and request ID to app/web service login requests, using a secret key embedded in the app, which was soon discovered. Nintendo later updated the app to use a native library (`libvoip`, which is also used for the app's VoIP features) to do this, and still no one knows how it works. (To make things even more confusing, the function, `gen_audio_h`/`gen_audio_h2`, always returns a different result, even when given the same inputs.)
+
+The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
+
+[**See #10 if you can help with this.**](https://github.com/samuelthomas2774/nxapi/discussions/10)
+
+### Resources
 
 - Nintendo Switch Online app API docs
     - https://github.com/ZekeSnider/NintendoSwitchRESTAPI
     - https://dev.to/mathewthe2/intro-to-nintendo-switch-rest-api-2cm7
-- splatnet2statink and flapg docs
-    - https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs
+    - nxapi includes TypeScript definitions of all API resources and JSON Web Token payloads at [src/api](src/api)
+- Coral client authentication (`f` parameter)
+    - https://github.com/samuelthomas2774/nxapi/discussions/10
+    - https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs - splatnet2statink and flapg API docs
+    - https://github.com/JoneWang/imink/wiki/imink-API-Documentation - imink API docs
+- HTTP debugging proxies
+    - Proxyman - https://proxyman.io
+    - mitmproxy - https://mitmproxy.org
+- HTTP clients
+    - Paw - https://paw.cloud
 - Disabling TLS certificate validation (entirely) with Frida on Android
     - https://httptoolkit.tech/blog/frida-certificate-pinning/
-- Other Discord Rich Presence implementations (that use znc)
+- Other Discord Rich Presence implementations (that use Coral)
     - https://github.com/MCMi460/NSO-RPC
     - https://github.com/Quark064/NSO-Discord-Integration
-    - https://github.com/AAGaming00/acnhrp - doesn't use znc, instead attempts to send a message in Animal Crossing: New Horizons every 10 seconds to check if the user is playing that game online
-- Other projects using znc/web services
+    - https://github.com/AAGaming00/acnhrp - doesn't use Coral, instead attempts to send a message in Animal Crossing: New Horizons every 10 seconds to check if the user is playing that game online
+- Other projects using Coral/web services
     - https://github.com/frozenpandaman/splatnet2statink
     - https://github.com/subnode/LoungeDesktop
     - https://github.com/dqn/gonso
