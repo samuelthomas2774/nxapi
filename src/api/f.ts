@@ -42,6 +42,10 @@ export async function getLoginHash(token: string, timestamp: string | number, us
         signal,
     }).finally(cancel);
 
+    if (response.status !== 200) {
+        throw new ErrorResponse('[s2s] Non-200 status code', response, await response.text());
+    }
+
     const data = await response.json() as LoginHashApiResponse | LoginHashApiError;
 
     if ('error' in data) {
@@ -86,6 +90,10 @@ export async function flapg(
         },
         signal,
     }).finally(cancel);
+
+    if (response.status !== 200) {
+        throw new ErrorResponse('[flapg] Non-200 status code', response, await response.text());
+    }
 
     const data = await response.json() as FlapgApiResponse;
 
@@ -160,6 +168,10 @@ export async function iminkf(
         signal,
     }).finally(cancel);
 
+    if (response.status !== 200) {
+        throw new ErrorResponse('[imink] Non-200 status code', response, await response.text());
+    }
+
     const data = await response.json() as IminkFResponse | IminkFError;
 
     if ('error' in data) {
@@ -227,6 +239,10 @@ export async function genf(
         body: JSON.stringify(req),
         signal,
     }).finally(cancel);
+
+    if (response.status !== 200) {
+        throw new ErrorResponse('[znca-api] Non-200 status code', response, await response.text());
+    }
 
     const data = await response.json() as AndroidZncaFResponse | AndroidZncaFError;
 
