@@ -4,7 +4,7 @@
         "znca_version": "2.2.0"
     },
     "coral_auth": {
-        "default": "flapg",
+        "default": "imink",
         "splatnet2statink": {},
         "flapg": {},
         "imink": {}
