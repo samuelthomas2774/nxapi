@@ -15,7 +15,7 @@ nxapi exports it's API library and types. nxapi is split into several modules th
 
 ### Install
 
-nxapi should be installed as a project dependency rather than a globally installed package. TypeScript definitions are included as do not need to be installed separately.
+nxapi should be installed as a project dependency rather than a globally installed package. TypeScript definitions are included and do not need to be installed separately.
 
 ```sh
 # From registry.npmjs.com

@@ -299,7 +299,7 @@ async function checkZncaApiUseAllowed(storage: persist.LocalStorage, window?: Br
 
 const ZNCA_API_USE_TEXT = `To access the Nintendo Switch Online app API, nxapi must send some data to third-party APIs. This is required to generate some data to make Nintendo think you\'re using the real Nintendo Switch Online app.
 
-By default, this uses the splatnet2statink and flapg APIs, but another service can be used by setting an environment variable.
+By default, this uses the imink API, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
 
 The data sent includes:
 - A random UUID and the current timestamp

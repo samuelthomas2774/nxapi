@@ -10,8 +10,8 @@ JavaScript library and command line and Electron app for accessing the Nintendo 
 - Command line and Electron app interfaces
 - Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
 - Automated login to the Nintendo Switch Online app API
-    - This uses splatnet2statink and flapg APIs by default.
-    - Alternatively the imink API or a custom server can be used.
+    - This uses the imink API by default.
+    - Alternatively a custom server can be used.
     - A custom server using a rooted Android device/emulator is included.
 - Get Nintendo Switch account information, friends list and game-specific services
 - Show Discord Rich Presence using your own or a friend's Nintendo Switch presence
@@ -327,13 +327,13 @@ const records = await splatnet2.getRecords();
 
 ### Coral client authentication
 
-The splatnet2statink and flapg APIs are used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to these APIs to generate some data that is required to authenticate the app. These APIs run the Nintendo Switch Online app in an Android emulator to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
+The [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) is used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to this API to generate some data that is required to authenticate the app. This API runs the Nintendo Switch Online app on an Android device to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
 
 Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
 
-Alternatively the [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) can be used by setting the `NXAPI_ZNCA_API` environment variable to `imink`. (`NXAPI_ZNCA_API=imink nxapi nso ...`)
+Alternatively the [splatnet2statink and flapg APIs](https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs) can be used by setting the `NXAPI_ZNCA_API` environment variable to `flapg`. Note that the splatnet2statink API, which is required to use the flapg API, is deprecated in favour of using only the imink API and scheduled to be shut down by the end of 2022. (`NXAPI_ZNCA_API=flapg nxapi nso ...`)
 
-> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the splatnet2statink and flapg APIs, set the `NXAPI_ZNCA_API` environment variable to `flapg`.
+> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the imink API, set the `NXAPI_ZNCA_API` environment variable to `imink`.
 
 nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
 
@@ -353,7 +353,7 @@ The reason Nintendo added this is probably to try and stop people automating acc
     - nxapi includes TypeScript definitions of all API resources and JSON Web Token payloads at [src/api](src/api)
 - Coral client authentication (`f` parameter)
     - https://github.com/samuelthomas2774/nxapi/discussions/10
-    - https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs - splatnet2statink and flapg API docs
+    - ~~https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs - splatnet2statink and flapg API docs~~
     - https://github.com/JoneWang/imink/wiki/imink-API-Documentation - imink API docs
 - HTTP debugging proxies
     - Proxyman - https://proxyman.io

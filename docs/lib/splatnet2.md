@@ -91,11 +91,11 @@ const league_id = toLeagueId(new Date(Date.UTC(2022, 0, 1, 0)), LeagueType.TEAM)
 
 ### `toXRankSeasonId`
 
-Converts a year and month to a string used in X Rank leaderboard requests (`/league_match_ranking/{id}/{region}` or `SplatNet2Api.getLeagueMatchRanking`).
+Converts a year and month to a string used in X Rank leaderboard requests (`/x_power_ranking/{season}/{summary/rule}?page={page}` or `SplatNet2Api.getXPowerRankingSummary`/`SplatNet2Api.getXPowerRankingLeaderboard`).
 
 Months in this function start from 1, instead of 0 like `Date`s.
 
-This function does not usually need to be used with `SplatNet2Api.getLeagueMatchRanking`, as a `Date` and `LeagueType` can be passed directly to it.
+This function does not usually need to be used with `SplatNet2Api.getXPowerRankingSummary` or `SplatNet2Api.getXPowerRankingLeaderboard`, as an `XRankSeason`/`Date` and `XPowerRankingRule` can be passed directly to it.
 
 ```ts
 import { toXRankSeasonId } from 'nxapi/splatnet2';
