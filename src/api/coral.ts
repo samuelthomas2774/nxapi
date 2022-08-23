@@ -1,7 +1,7 @@
 import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
-import { f, FlapgIid, FResult } from './f.js';
+import { f, FResult } from './f.js';
 import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
@@ -178,17 +178,14 @@ export default class CoralApi {
     }
 
     async getWebServiceToken(id: string) {
-        const uuid = uuidgen();
-        const timestamp = '' + Math.floor(Date.now() / 1000);
-
-        const data = await f(this.token, timestamp, uuid, FlapgIid.APP, this.useragent ?? getAdditionalUserAgents());
+        const data = await f(this.token, '2', this.useragent ?? getAdditionalUserAgents());
 
         const req = {
             id,
-            registrationToken: this.token,
+            registrationToken: '',
             f: data.f,
-            requestId: uuid,
-            timestamp,
+            requestId: data.request_id,
+            timestamp: data.timestamp,
         };
 
         return this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req);
@@ -198,27 +195,19 @@ export default class CoralApi {
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
-        const uuid = uuidgen();
-        const timestamp = '' + Math.floor(Date.now() / 1000);
-
-        const fdata = await f(
-            nintendoAccountToken.id_token, timestamp, uuid,
-            FlapgIid.NSO, this.useragent ?? getAdditionalUserAgents()
-        );
+        const fdata = await f(nintendoAccountToken.id_token, '1', this.useragent ?? getAdditionalUserAgents());
 
         const req: AccountTokenParameter = {
             naBirthday: user.birthday,
-            timestamp,
+            timestamp: fdata.timestamp,
             f: fdata.f,
-            requestId: uuid,
+            requestId: fdata.request_id,
             naIdToken: nintendoAccountToken.id_token,
         };
 
         const data = await this.call<AccountToken>('/v3/Account/GetToken', req, false);
 
         return {
-            uuid,
-            timestamp,
             nintendoAccountToken,
             // user,
             f: fdata,
@@ -261,13 +250,7 @@ export default class CoralApi {
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
-        const uuid = uuidgen();
-        const timestamp = '' + Math.floor(Date.now() / 1000);
-
-        const fdata = await f(
-            nintendoAccountToken.id_token, timestamp, uuid,
-            FlapgIid.NSO, useragent
-        );
+        const fdata = await f(nintendoAccountToken.id_token, '1', useragent);
 
         debug('Getting Nintendo Switch Online app token');
 
@@ -276,8 +259,8 @@ export default class CoralApi {
             naBirthday: user.birthday,
             naCountry: user.country,
             language: user.language,
-            timestamp,
-            requestId: uuid,
+            timestamp: fdata.timestamp,
+            requestId: fdata.request_id,
             f: fdata.f,
         };
 
@@ -314,8 +297,6 @@ export default class CoralApi {
         debug('Got Nintendo Switch Online app token', data);
 
         return {
-            uuid,
-            timestamp,
             nintendoAccountToken,
             user,
             f: fdata,
@@ -328,8 +309,6 @@ export default class CoralApi {
 }
 
 export interface CoralAuthData {
-    uuid: string;
-    timestamp: string;
     nintendoAccountToken: NintendoAccountToken;
     user: NintendoAccountUser;
     f: FResult;
@@ -340,7 +319,7 @@ export interface CoralAuthData {
 }
 
 export type PartialCoralAuthData =
-    Pick<CoralAuthData, 'uuid' | 'timestamp' | 'nintendoAccountToken' | 'f' | 'nsoAccount' | 'credential'>;
+    Pick<CoralAuthData, 'nintendoAccountToken' | 'f' | 'nsoAccount' | 'credential'>;
 
 export interface CoralJwtPayload extends JwtPayload {
     isChildRestricted: boolean;

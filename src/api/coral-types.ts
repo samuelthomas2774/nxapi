@@ -60,7 +60,7 @@ export interface AccountLoginParameter {
     naBirthday: string;
     naCountry: string;
     language: string;
-    timestamp: string;
+    timestamp: number;
     requestId: string;
     f: string;
 }
@@ -84,7 +84,7 @@ export type AccountToken = AccountLogin;
 export interface AccountTokenParameter {
     naIdToken: string;
     naBirthday: string;
-    timestamp: string;
+    timestamp: number;
     requestId: string;
     f: string;
 }
@@ -188,6 +188,20 @@ export interface WebServiceAttribute {
     attrKey: string;
 }
 
+export interface WebServiceTokenParameter {
+    id: number;
+    registrationToken: string;
+    timestamp: number;
+    requestId: string;
+    f: string;
+}
+
+/** /v2/Game/GetWebServiceToken */
+export interface WebServiceToken {
+    accessToken: string;
+    expiresIn: number;
+}
+
 /** /v1/Event/GetActiveEvent */
 export type GetActiveEventResult = ActiveEvent | {};
 
@@ -280,10 +294,4 @@ export interface UpdateCurrentUserPermissionsParameter {
         };
     };
     etag: string;
-}
-
-/** /v2/Game/GetWebServiceToken */
-export interface WebServiceToken {
-    accessToken: string;
-    expiresIn: number;
 }

@@ -5,6 +5,7 @@ import * as net from 'node:net';
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import createDebug from 'debug';
+import { v4 as uuidgen } from 'uuid';
 import express from 'express';
 import bodyParser from 'body-parser';
 import mkdirp from 'mkdirp';
@@ -50,6 +51,45 @@ export function builder(yargs: Argv<ParentArguments>) {
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
+interface PackageInfo {
+    name: string;
+    version: string;
+    build: number;
+}
+interface SystemInfo {
+    board: string;
+    bootloader: string;
+    brand: string;
+    abis: string[];
+    device: string;
+    display: string;
+    fingerprint: string;
+    hardware: string;
+    host: string;
+    id: string;
+    manufacturer: string;
+    model: string;
+    product: string;
+    tags: string;
+    time: string;
+    type: string;
+    user: string;
+
+    version: {
+        codename: string;
+        release: string;
+        // release_display: string;
+        sdk: string;
+        sdk_int: number;
+        security_patch: string;
+    };
+}
+
+interface FResult {
+    f: string;
+    timestamp: string;
+}
+
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     await mkdirp(script_dir);
 
@@ -61,9 +101,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     let api: {
         ping(): Promise<true>;
-        genAudioH(token: string, timestamp: string, uuid: string): Promise<string>;
-        genAudioH2(token: string, timestamp: string, uuid: string): Promise<string>;
+        getPackageInfo(): Promise<PackageInfo>;
+        getSystemInfo(): Promise<SystemInfo>;
+        genAudioH(token: string, timestamp: string | number | undefined, request_id: string): Promise<FResult>;
+        genAudioH2(token: string, timestamp: string | number | undefined, request_id: string): Promise<FResult>;
     } = script.exports as any;
+
+    let system_info = await api.getSystemInfo();
+    let package_info = await api.getPackageInfo();
 
     const onexit = (code: number | NodeJS.Signals) => {
         // @ts-expect-error
@@ -89,11 +134,24 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         debug('Attempting to reconnect to the device');
 
-        ready = attach(argv).then(a => {
+        ready = attach(argv).then(async a => {
             ready = null;
             session = a.session;
             script = a.script;
             api = script.exports as any;
+
+            const new_system_info = await api.getSystemInfo();
+            const new_package_info = await api.getPackageInfo();
+
+            if (system_info.version.sdk_int !== new_system_info.version.sdk_int) {
+                debug('Android system version updated while disconnected');
+            }
+            if (package_info.build !== new_package_info.build) {
+                debug('znca version updated while disconnected');
+            }
+
+            system_info = new_system_info;
+            package_info = new_package_info;
         }).catch(err => {
             console.error('Reattach failed', err);
             process.exit(1);
@@ -110,6 +168,12 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             req.headers['user-agent']);
 
         res.setHeader('Server', product + ' android-znca-api-frida');
+        res.setHeader('X-Android-Build-Type', system_info.type);
+        res.setHeader('X-Android-Release', system_info.version.release);
+        res.setHeader('X-Android-Platform-Version', system_info.version.sdk_int);
+        res.setHeader('X-znca-Platform', 'Android');
+        res.setHeader('X-znca-Version', package_info.version);
+        res.setHeader('X-znca-Build', package_info.build);
 
         next();
     });
@@ -118,19 +182,34 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         try {
             await ready;
 
-            const data: {
+            let data: {
+                hash_method: '1' | '2';
+                token: string;
+                timestamp?: string | number;
+                request_id?: string;
+            } | {
                 type: 'nso' | 'app';
                 token: string;
-                timestamp: string;
-                uuid: string;
+                timestamp?: string;
+                uuid?: string;
             } = req.body;
 
+            if (data && 'type' in data) data = {
+                hash_method:
+                    data.type === 'nso' ? '1' :
+                    data.type === 'app' ? '2' : null!,
+                token: data.token,
+                timestamp: '' + data.timestamp,
+                request_id: data.uuid,
+            };
+
             if (
+                !data ||
                 typeof data !== 'object' ||
-                (data.type !== 'nso' && data.type !== 'app') ||
+                (data.hash_method !== '1' && data.hash_method !== '2') ||
                 typeof data.token !== 'string' ||
-                typeof data.timestamp !== 'string' ||
-                typeof data.uuid !== 'string'
+                (data.timestamp && typeof data.timestamp !== 'string' && typeof data.timestamp !== 'number') ||
+                (data.request_id && typeof data.request_id !== 'string')
             ) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
@@ -143,13 +222,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
                 const check_signature = jwt.payload.iss === 'https://accounts.nintendo.com';
 
-                if (data.type === 'nso' && jwt.payload.iss !== 'https://accounts.nintendo.com') {
+                if (data.hash_method === '1' && jwt.payload.iss !== 'https://accounts.nintendo.com') {
                     throw new Error('Invalid token issuer');
                 }
-                if (data.type === 'nso' && jwt.payload.aud !== ZNCA_CLIENT_ID) {
+                if (data.hash_method === '1' && jwt.payload.aud !== ZNCA_CLIENT_ID) {
                     throw new Error('Invalid token audience');
                 }
-                if (data.type === 'app' && jwt.payload.iss !== 'api-lp1.znc.srv.nintendo.net') {
+                if (data.hash_method === '2' && jwt.payload.iss !== 'api-lp1.znc.srv.nintendo.net') {
                     throw new Error('Invalid token issuer');
                 }
 
@@ -197,16 +276,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 }
             }
 
-            debugApi('Calling %s', data.type === 'app' ? 'genAudioH2' : 'genAudioH');
+            const timestamp = data.timestamp ? '' + data.timestamp : undefined;
+            const request_id = data.request_id ? data.request_id : uuidgen();
 
-            const result = data.type === 'app' ?
-                await api.genAudioH2(data.token, data.timestamp, data.uuid) :
-                await api.genAudioH(data.token, data.timestamp, data.uuid);
+            debugApi('Calling %s', data.hash_method === '2' ? 'genAudioH2' : 'genAudioH');
+
+            const result = data.hash_method === '2' ?
+                await api.genAudioH2(data.token, timestamp, request_id) :
+                await api.genAudioH(data.token, timestamp, request_id);
 
             debugApi('Returned %s', result);
 
             const response = {
-                f: result,
+                f: result.f,
+                timestamp: data.timestamp ? undefined : result.timestamp,
+                request_id: data.request_id ? undefined : request_id,
             };
 
             res.setHeader('Content-Type', 'application/json');
@@ -245,29 +329,108 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             throw err;
         }
     }, 5000);
+
+    debug('System info', system_info);
+    debug('Package info', package_info);
+
+    try {
+        debug('Test gen_audio_h');
+        const result = await api.genAudioH('id_token', 'timestamp', 'request_id');
+        debug('Test returned', result);
+    } catch (err) {
+        debug('Test failed', err);
+    }
 }
 
 const frida_script = `
+const perform = callback => new Promise((rs, rj) => {
+    Java.scheduleOnMainThread(() => {
+        try {
+            rs(callback());
+        } catch (err) {
+            rj(err);
+        }
+    });
+});
+
 rpc.exports = {
     ping() {
         return true;
     },
-    genAudioH(token, timestamp, uuid) {
-        return new Promise(resolve => {
-            Java.perform(() => {
-                const libvoip = Java.use('com.nintendo.coral.core.services.voip.LibvoipJni');
+    getPackageInfo() {
+        return perform(() => {
+            const context = Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
 
-                resolve(libvoip.genAudioH(token, timestamp, uuid));
-            });
+            const info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+
+            return {
+                name: info.packageName.value,
+                version: info.versionName.value,
+                build: info.versionCode.value,
+                // build: info.getLongVersionCode(),
+            };
         });
     },
-    genAudioH2(token, timestamp, uuid) {
-        return new Promise(resolve => {
-            Java.perform(() => {
-                const libvoip = Java.use('com.nintendo.coral.core.services.voip.LibvoipJni');
+    getSystemInfo() {
+        return perform(() => {
+            const Build = Java.use('android.os.Build');
+            const Version = Java.use('android.os.Build$VERSION');
 
-                resolve(libvoip.genAudioH2(token, timestamp, uuid));
-            });
+            return {
+                board: Build.BOARD.value,
+                bootloader: Build.BOOTLOADER.value,
+                brand: Build.BRAND.value,
+                abis: Build.SUPPORTED_ABIS.value,
+                device: Build.DEVICE.value,
+                display: Build.DISPLAY.value,
+                fingerprint: Build.FINGERPRINT.value,
+                hardware: Build.HARDWARE.value,
+                host: Build.HOST.value,
+                id: Build.ID.value,
+                manufacturer: Build.MANUFACTURER.value,
+                model: Build.MODEL.value,
+                product: Build.PRODUCT.value,
+                tags: Build.TAGS.value,
+                time: Build.TIME.value,
+                type: Build.TYPE.value,
+                user: Build.USER.value,
+
+                version: {
+                    codename: Version.CODENAME.value,
+                    release: Version.RELEASE.value,
+                    sdk: Version.SDK.value,
+                    sdk_int: Version.SDK_INT.value,
+                    security_patch: Version.SECURITY_PATCH.value,
+                },
+            };
+        });
+    },
+    genAudioH(token, timestamp, request_id) {
+        return perform(() => {
+            const libvoip = Java.use('com.nintendo.coral.core.services.voip.LibvoipJni');
+            const context = Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
+            libvoip.init(context);
+
+            if (!timestamp) timestamp = Date.now();
+
+            return {
+                f: libvoip.genAudioH(token, '' + timestamp, request_id),
+                timestamp,
+            };
+        });
+    },
+    genAudioH2(token, timestamp, request_id) {
+        return perform(() => {
+            const libvoip = Java.use('com.nintendo.coral.core.services.voip.LibvoipJni');
+            const context = Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
+            libvoip.init(context);
+
+            if (!timestamp) timestamp = Date.now();
+
+            return {
+                f: libvoip.genAudioH2(token, '' + timestamp, request_id),
+                timestamp,
+            };
         });
     },
 };
