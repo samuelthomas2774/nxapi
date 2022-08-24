@@ -296,10 +296,8 @@ export class ZncaApiNxapi extends ZncaApi {
         return {
             provider: 'nxapi' as const,
             url: this.url + '/f',
-            token,
+            hash_method, token, request_id,
             timestamp: result.timestamp!, // will be included as not sent in request
-            request_id: result.request_id!,
-            hash_method,
             f: result.f,
             result,
         };
