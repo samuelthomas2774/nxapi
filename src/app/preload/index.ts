@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import * as process from 'node:process';
-import { EventEmitter } from 'node:events';
+import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import type { User } from 'discord-rpc';
 import type { SharingItem } from '../main/electron.js';
@@ -14,6 +13,9 @@ import type { NintendoAccountUser } from '../../api/na.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import { AddFriendProps } from '../browser/add-friend/index.js';
+
+// In sandboxed renderers the process object contains a very limited set of APIs
+// https://www.electronjs.org/docs/latest/api/process#sandbox
 
 const debug = createDebug('app:preload');
 
