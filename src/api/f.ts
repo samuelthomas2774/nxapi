@@ -145,21 +145,22 @@ export class ZncaApiFlapg extends ZncaApi {
 //
 
 export async function iminkf(
-    token: string, timestamp: string | number, uuid: string, hash_method: '1' | '2',
+    hash_method: '1' | '2', token: string,
+    timestamp?: number, request_id?: string,
     useragent?: string
 ) {
     const { default: { coral_auth: { imink: config } } } = await import('../common/remote-config.js');
     if (!config) throw new Error('Remote configuration prevents imink API use');
 
     debugImink('Getting f parameter', {
-        token, timestamp, uuid, hash_method,
+        token, request_id, hash_method,
     });
 
     const req: IminkFRequest = {
         hash_method,
         token,
-        timestamp: '' + timestamp,
-        request_id: uuid,
+        timestamp: typeof timestamp === 'number' ? '' + timestamp : undefined,
+        request_id,
     };
 
     const [signal, cancel] = timeoutSignal();
@@ -189,13 +190,15 @@ export async function iminkf(
 }
 
 export interface IminkFRequest {
-    timestamp: string;
-    request_id: string;
     hash_method: '1' | '2';
     token: string;
+    timestamp?: string;
+    request_id?: string;
 }
 export interface IminkFResponse {
     f: string;
+    timestamp: number;
+    request_id: string;
 }
 export interface IminkFError {
     reason: string;
@@ -204,14 +207,14 @@ export interface IminkFError {
 
 export class ZncaApiImink extends ZncaApi {
     async genf(token: string, hash_method: '1' | '2') {
-        const timestamp = Date.now();
         const request_id = uuidgen();
 
-        const result = await iminkf(token, timestamp, request_id, hash_method, this.useragent);
+        const result = await iminkf(hash_method, token, undefined, request_id, this.useragent);
 
         return {
             provider: 'imink' as const,
-            token, timestamp, request_id, hash_method,
+            hash_method, token, request_id,
+            timestamp: result.timestamp,
             f: result.f,
             result,
         };
@@ -286,7 +289,9 @@ export class ZncaApiNxapi extends ZncaApi {
     }
 
     async genf(token: string, hash_method: '1' | '2') {
-        const result = await genf(this.url + '/f', hash_method, token, undefined, undefined, this.useragent);
+        const request_id = uuidgen();
+
+        const result = await genf(this.url + '/f', hash_method, token, undefined, request_id, this.useragent);
 
         return {
             provider: 'nxapi' as const,
@@ -309,10 +314,10 @@ export async function f(token: string, hash_method: '1' | '2', useragent?: strin
 
 export type FResult = {
     provider: string;
+    hash_method: '1' | '2';
     token: string;
     timestamp: number;
     request_id: string;
-    hash_method: '1' | '2';
     f: string;
     result: unknown;
 } & ({
