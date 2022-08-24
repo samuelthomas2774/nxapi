@@ -120,9 +120,18 @@ export async function init() {
         if (BrowserWindow.getAllWindows().length === 0) appinstance.showMainWindow();
     });
 
+    app.on('browser-window-created', () => {
+        // Show the dock icon when any windows are open
+        app.dock?.show();
+    });
+
     app.on('window-all-closed', () => {
         // Listen to the window-all-closed event to prevent Electron quitting the app
         // https://www.electronjs.org/docs/latest/api/app#event-window-all-closed
+
+        // Hide the dock icon when no windows are open
+        // https://github.com/samuelthomas2774/nxapi/issues/18
+        app.dock?.hide();
     });
 
     debug('App started');
