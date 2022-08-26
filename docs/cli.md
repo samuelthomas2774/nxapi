@@ -524,16 +524,44 @@ This command has no options, but environment variables can still be used.
 
 ### znca API server
 
-A server for controlling the Nintendo Switch Online app on an Android device/emulator using Frida can be used instead of the splatnet2statink and flapg APIs.
+A server for controlling the Nintendo Switch Online app on an Android device/emulator using Frida can be used instead of the imink/splatnet2statink+flapg APIs to generate `f` parameters for authentication.
+
+This server has a single endpoint, `/api/znca/f`, which is fully compatible with [the imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation)'s `/f` endpoint. The following data should be sent as JSON:
+
+```ts
+interface AndroidZncaApiRequest {
+    /**
+     * `"1"` for Coral (Nintendo Switch Online app) authentication (`Account/Login` and `Account/GetToken`).
+     * `"2"` for web service authentication (`Game/GetWebServiceToken`).
+     */
+    hash_method: '1' | '2';
+    /**
+     * The token used to authenticate to the Coral API:
+     * The Nintendo Account `id_token` for Coral authentication.
+     * The Coral access token for web service authentication.
+     */
+    token: string;
+    /**
+     * The current timestamp in milliseconds, either as a number or a string.
+     */
+    timestamp?: string | number;
+    /**
+     * A random (v4) UUID.
+     */
+    request_id?: string;
+}
+```
+
+Due to changes to Nintendo's API on [23/08/2022](https://github.com/samuelthomas2774/nxapi/discussions/10#discussioncomment-3464443) the `timestamp` parameter should not be sent. If the `timestamp` or `request_id` parameters are not sent their values will be generated and returned in the response. Note that unlike the imink API and [nsotokengen](https://github.com/clovervidia/nsotokengen), only parameters not included in the request will be included in the response.
 
 This requires:
 
 - adb is installed on the computer running nxapi
 - The Android device is running adbd as root or a su-like command can be used to escalate to root
-- The frida-server executable is located at `/data/local/tmp/frida-server` on the Android device
+- The frida-server executable is located at `/data/local/tmp/frida-server` on the Android device (a different path can be provided using the `--frida-server-path` option)
 - The Nintendo Switch Online app is installed on the Android device
 
-The Android device must be constantly reachable using ADB. The server will exit if the device is unreachable.
+No other software (e.g. frida-tools) needs to be installed on the computer running nxapi. The Android device must be constantly reachable using ADB. The server will exit if the device is unreachable.
 
 ```sh
 # Start the server using the ADB server "android.local:5555" listening on all interfaces on a random port
@@ -550,7 +578,14 @@ nxapi android-znca-api-server-frida android.local:5555 --exec-command "/system/b
 # Specify a different location to the frida-server executable
 nxapi android-znca-api-server-frida android.local:5555 --frida-server-path "/data/local/tmp/frida-server-15.1.17-android-arm"
 
-# Make API requests using curl
+# Make imink-compatible API requests using curl
+curl --header "Content-Type: application/json" --data '{"hash_method": "1", "token": "..."}' "http://[::1]:12345/api/znca/f"
+curl --header "Content-Type: application/json" --data '{"hash_method": "1", "token": "...", "request_id": "..."}' "http://[::1]:12345/api/znca/f"
+curl --header "Content-Type: application/json" --data '{"hash_method": "1", "token": "...", "timestamp": "...", "request_id": "..."}' "http://[::1]:12345/api/znca/f"
+
+# Make legacy nxapi v1.3.0-compatible API requests using curl
+curl --header "Content-Type: application/json" --data '{"type": "nso", "token": "..."}' "http://[::1]:12345/api/znca/f"
+curl --header "Content-Type: application/json" --data '{"type": "nso", "token": "...", "uuid": "..."}' "http://[::1]:12345/api/znca/f"
 curl --header "Content-Type: application/json" --data '{"type": "nso", "token": "...", "timestamp": "...", "uuid": "..."}' "http://[::1]:12345/api/znca/f"
 
 # Use the znca API server in other commands
