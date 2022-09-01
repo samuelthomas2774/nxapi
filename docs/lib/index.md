@@ -3,7 +3,7 @@ Usage as a JavaScript library
 
 nxapi exports it's API library and types. nxapi is split into several modules that can be imported separately.
 
-> You must set a user agent string using the `addUserAgent` function when using anything that contacts non-Nintendo APIs, such as the splatnet2statink API.
+> You must set a user agent string using the `addUserAgent` function when using anything that contacts non-Nintendo APIs, such as the imink API.
 
 > Please read https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs and https://github.com/JoneWang/imink/wiki/imink-API-Documentation if you intend to share anything you create.
 

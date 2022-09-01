@@ -5,7 +5,7 @@
     },
     "coral_auth": {
         "default": "imink",
-        "splatnet2statink": {},
+        "splatnet2statink": null,
         "flapg": {},
         "imink": {}
     },

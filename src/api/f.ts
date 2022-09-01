@@ -20,9 +20,10 @@ export abstract class ZncaApi {
 }
 
 //
-// splatnet2statink + flapg
+// flapg
 //
 
+/** @deprecated The flapg API no longer requires client authentication */
 export async function getLoginHash(token: string, timestamp: string | number, useragent?: string) {
     const { default: { coral_auth: { splatnet2statink: config } } } = await import('../common/remote-config.js');
     if (!config) throw new Error('Remote configuration prevents splatnet2statink API use');
@@ -66,43 +67,47 @@ export interface LoginHashApiError {
 }
 
 export async function flapg(
-    token: string, timestamp: string | number, guid: string, iid: FlapgIid,
+    hash_method: '1' | '2', token: string,
+    timestamp?: string | number, request_id?: string,
     useragent?: string
 ) {
     const { default: { coral_auth: { flapg: config } } } = await import('../common/remote-config.js');
     if (!config) throw new Error('Remote configuration prevents flapg API use');
 
-    const hash = await getLoginHash(token, timestamp, useragent);
-
     debugFlapg('Getting f parameter', {
-        token, timestamp, guid, iid,
+        hash_method, token, timestamp, request_id,
     });
 
+    const req: FlapgApiRequest = {
+        hash_method,
+        token,
+        timestamp: typeof timestamp === 'number' ? '' + timestamp : undefined,
+        request_id,
+    };
+
     const [signal, cancel] = timeoutSignal();
-    const response = await fetch('https://flapg.com/ika2/api/login?public', {
+    const response = await fetch('https://flapg.com/ika/api/login-main', {
+        method: 'POST',
         headers: {
+            'Content-Type': 'application/json',
             'User-Agent': getUserAgent(useragent),
-            'x-token': token,
-            'x-time': '' + timestamp,
-            'x-guid': guid,
-            'x-hash': hash,
-            'x-ver': '3',
-            'x-iid': iid,
         },
+        body: JSON.stringify(req),
         signal,
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[flapg] Non-200 status code', response, await response.text());
+        throw new ErrorResponse<FlapgApiError>('[flapg] Non-200 status code', response, await response.text());
     }
 
     const data = await response.json() as FlapgApiResponse;
 
-    debugFlapg('Got f parameter "%s"', data.result.f);
+    debugFlapg('Got f parameter', data);
 
     return data;
 }
 
+/** @deprecated */
 export enum FlapgIid {
     /** Nintendo Switch Online app token */
     NSO = 'nso',
@@ -110,31 +115,26 @@ export enum FlapgIid {
     APP = 'app',
 }
 
-export interface FlapgApiResponse {
-    result: {
-        f: string;
-        p1: string;
-        p2: string;
-        p3: string;
-    };
-}
+export type FlapgApiRequest = IminkFRequest;
+export type FlapgApiResponse = IminkFResponse;
+export type FlapgApiError = IminkFError;
 
 export class ZncaApiFlapg extends ZncaApi {
+    /** @deprecated */
     async getLoginHash(id_token: string, timestamp: string) {
         return getLoginHash(id_token, timestamp, this.useragent);
     }
 
     async genf(token: string, hash_method: '1' | '2') {
-        const timestamp = Date.now();
         const request_id = uuidgen();
-        const type = hash_method === '2' ? FlapgIid.APP : FlapgIid.NSO;
 
-        const result = await flapg(token, timestamp, request_id, type, this.useragent);
+        const result = await flapg(hash_method, token, undefined, request_id, this.useragent);
 
         return {
             provider: 'flapg' as const,
-            token, timestamp, request_id, hash_method, type,
-            f: result.result.f,
+            hash_method, token, request_id,
+            timestamp: result.timestamp,
+            f: result.f,
             result,
         };
     }
@@ -153,7 +153,7 @@ export async function iminkf(
     if (!config) throw new Error('Remote configuration prevents imink API use');
 
     debugImink('Getting f parameter', {
-        token, request_id, hash_method,
+        hash_method, token, timestamp, request_id,
     });
 
     const req: IminkFRequest = {
@@ -175,13 +175,13 @@ export async function iminkf(
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[imink] Non-200 status code', response, await response.text());
+        throw new ErrorResponse<IminkFError>('[imink] Non-200 status code', response, await response.text());
     }
 
     const data = await response.json() as IminkFResponse | IminkFError;
 
     if ('error' in data) {
-        throw new ErrorResponse('[imink] ' + data.reason, response, data);
+        throw new ErrorResponse<IminkFError>('[imink] ' + data.reason, response, data);
     }
 
     debugImink('Got f parameter "%s"', data.f);
@@ -231,7 +231,7 @@ export async function genf(
     useragent?: string
 ) {
     debugZncaApi('Getting f parameter', {
-        url, token, timestamp, request_id,
+        url, hash_method, token, timestamp, request_id,
     });
 
     const req: AndroidZncaFRequest = {
@@ -253,14 +253,14 @@ export async function genf(
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[znca-api] Non-200 status code', response, await response.text());
+        throw new ErrorResponse<AndroidZncaFError>('[znca-api] Non-200 status code', response, await response.text());
     }
 
     const data = await response.json() as AndroidZncaFResponse | AndroidZncaFError;
 
     if ('error' in data) {
         debugZncaApi('Error getting f parameter "%s"', data.error);
-        throw new ErrorResponse('[znca-api] ' + data.error, response, data);
+        throw new ErrorResponse<AndroidZncaFError>('[znca-api] ' + data.error, response, data);
     }
 
     debugZncaApi('Got f parameter', data, response.headers);
@@ -320,7 +320,6 @@ export type FResult = {
     result: unknown;
 } & ({
     provider: 'flapg';
-    type: FlapgIid;
     result: FlapgApiResponse;
 } | {
     provider: 'imink';

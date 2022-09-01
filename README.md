@@ -230,12 +230,13 @@ Other environment variables may also be used by Node.js, Electron or other packa
 
 #### User agent strings
 
-As nxapi can be used in scripts or as a library, it exposes a few different methods for setting a user agent string for requests to the splatnet2statink, flapg, imink and other non-Nintendo APIs. You must include the name and version number of your script/program in the user agent. If your program is not open source or not easily discoverable (e.g. by searching GitHub) it must also include contact information.
+As nxapi can be used in scripts or as a library, it exposes a few different methods for setting a user agent string for requests to the imink, flapg and other non-Nintendo APIs. You must include the name and version number of your script/program in the user agent. If your program is not open source or not easily discoverable (e.g. by searching GitHub) it must also include contact information.
 
 When using the nxapi command in a script or other program, the `NXAPI_USER_AGENT` environment variable should be used. The `NXAPI_USER_AGENT` environment variable is only used by the nxapi command, and will be ignored by the Electron app or when using nxapi as a library.
 
 ```sh
-NXAPI_USER_AGENT="your-script/1.0.0 (+https://github.com/...)" nxapi nso ...
+export NXAPI_USER_AGENT="your-script/1.0.0 (+https://github.com/...)"
+nxapi nso ...
 ```
 
 When using nxapi as a TypeScript/JavaScript library, the `addUserAgent` function should be used.
@@ -331,7 +332,7 @@ The [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) 
 
 Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
 
-Alternatively the [splatnet2statink and flapg APIs](https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs) can be used by setting the `NXAPI_ZNCA_API` environment variable to `flapg`. Note that the splatnet2statink API, which is required to use the flapg API, is deprecated in favour of using only the imink API and scheduled to be shut down by the end of 2022. (`NXAPI_ZNCA_API=flapg nxapi nso ...`)
+Alternatively the [flapg API](https://twitter.com/NexusMine/status/1563728086322929665) can be used by setting the `NXAPI_ZNCA_API` environment variable to `flapg`. (`NXAPI_ZNCA_API=flapg nxapi nso ...`)
 
 > Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the imink API, set the `NXAPI_ZNCA_API` environment variable to `imink`.
 

@@ -201,7 +201,7 @@ curl --no-buffer "http://[::1]:12345/api/znc/presence/events?user=0123456789abcd
 SplatNet 2
 ---
 
-All SplatNet 2 commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid SplatNet 2 token.
+All SplatNet 2 commands may automatically request a web service token. This will involve the imink/flapg API (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid SplatNet 2 token.
 
 ### User
 
@@ -343,7 +343,7 @@ nxapi nso presence --splatnet2-monitor --sn2-update-interval 60
 NookLink
 ---
 
-All NookLink commands may automatically request a web service token. This will involve the splatnet2statink and flapg APIs (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid NookLink token.
+All NookLink commands may automatically request a web service token. This will involve the imink/flapg API (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid NookLink token.
 
 ### User
 
