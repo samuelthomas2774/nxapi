@@ -15,6 +15,12 @@ const debugSplatnet2 = createDebug('nxapi:nso:presence:splatnet2');
 const MAX_CONNECT_ATTEMPTS = Infinity; // 10
 const RECONNECT_INTERVAL = 5000; // 5 seconds
 
+interface SavedPresence {
+    presence: Presence;
+    title_since: number;
+    created_at: number;
+}
+
 class ZncDiscordPresenceClient {
     rpc: {client: DiscordRpcClient, id: string} | null = null;
     title: {id: string; since: number} | null = null;
@@ -226,7 +232,9 @@ class ZncDiscordPresenceClient {
                 this.rpc = null;
                 await client.destroy();
             }
+        }
 
+        if (this.update_presence_errors > 10) {
             this.title = null;
         }
     }
@@ -266,9 +274,15 @@ export class ZncDiscordPresence extends ZncNotifications {
                     throw new Error('User "' + this.presence_user + '" is not friends with this user');
                 }
 
+                await this.restorePresenceForTitleUpdateAt(friend.nsaId, friend.presence);
+
                 await this.discord.updatePresenceForDiscord(friend.presence, friend);
+                await this.savePresenceForTitleUpdateAt(friend.nsaId, friend.presence, this.discord.title?.since);
             } else {
+                await this.restorePresenceForTitleUpdateAt(user!.nsaId, user!.presence);
+
                 await this.discord.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
+                await this.savePresenceForTitleUpdateAt(user!.nsaId, user!.presence, this.discord.title?.since);
             }
         }
 
@@ -302,14 +316,46 @@ export class ZncDiscordPresence extends ZncNotifications {
                     await this.discord.updatePresenceForDiscord(null);
                 } else {
                     await this.discord.updatePresenceForDiscord(friend.presence, friend);
+                    await this.savePresenceForTitleUpdateAt(friend.nsaId, friend.presence, this.discord.title?.since);
                 }
             } else {
                 await this.discord.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
+                await this.savePresenceForTitleUpdateAt(user!.nsaId, user!.presence, this.discord.title?.since);
             }
         }
 
         await this.updatePresenceForNotifications(user, friends, this.data.user.id, false);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
+    }
+
+    saved_presence = new Map<string, number>();
+
+    async savePresenceForTitleUpdateAt(id: string, presence: Presence, title_since = Date.now()) {
+        if (this.saved_presence.get(id) === presence.updatedAt) return;
+
+        const saved_presence: SavedPresence = {
+            presence,
+            title_since,
+            created_at: Date.now(),
+        };
+
+        await this.storage.setItem('LastPresence.' + id, saved_presence);
+        this.saved_presence.set(id, presence.updatedAt);
+    }
+
+    async restorePresenceForTitleUpdateAt(id: string, presence: Presence) {
+        const saved_presence: SavedPresence | undefined = await this.storage.getItem('LastPresence.' + id);
+        if (!saved_presence) return;
+
+        if (saved_presence.presence.updatedAt !== presence.updatedAt) return;
+        if (!('name' in presence.game)) return;
+
+        const title_id = getTitleIdFromEcUrl(presence.game.shopUri);
+        if (!title_id) return;
+        if (!('name' in saved_presence.presence.game) ||
+            getTitleIdFromEcUrl(saved_presence.presence.game.shopUri) !== title_id) return;
+
+        this.discord.title = {id: title_id, since: saved_presence.title_since};
     }
 
     async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {

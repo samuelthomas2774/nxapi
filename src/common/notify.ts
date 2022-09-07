@@ -301,8 +301,9 @@ export class NotificationManager {
                     type = PresenceEvent.TITLE_STATE_CHANGE;
                     callback = 'onFriendTitleStateChange';
 
-                    debugFriends('%s title %s state changed%s, now %s %s, was %s %s',
-                        friend.name, currenttitle.name, friend.presence.state,
+                    debugFriends('%s title %s state changed, now %s %s, was %s %s',
+                        friend.name, currenttitle.name,
+                        friend.presence.state, JSON.stringify(currenttitle.sysDescription),
                         lastpresence.state, JSON.stringify(lasttitle.sysDescription));
                 }
             } else if (!consolewasonline && friend.presence.state !== PresenceState.OFFLINE) {
