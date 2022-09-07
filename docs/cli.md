@@ -531,10 +531,10 @@ This server has a single endpoint, `/api/znca/f`, which is fully compatible with
 ```ts
 interface AndroidZncaApiRequest {
     /**
-     * `"1"` for Coral (Nintendo Switch Online app) authentication (`Account/Login` and `Account/GetToken`).
-     * `"2"` for web service authentication (`Game/GetWebServiceToken`).
+     * `"1"` or `1` for Coral (Nintendo Switch Online app) authentication (`Account/Login` and `Account/GetToken`).
+     * `"2"` or `2` for web service authentication (`Game/GetWebServiceToken`).
      */
-    hash_method: '1' | '2';
+    hash_method: '1' | '2' | 1 | 2;
     /**
      * The token used to authenticate to the Coral API:
      * The Nintendo Account `id_token` for Coral authentication.
@@ -577,6 +577,12 @@ nxapi android-znca-api-server-frida android.local:5555 --exec-command "/system/b
 
 # Specify a different location to the frida-server executable
 nxapi android-znca-api-server-frida android.local:5555 --frida-server-path "/data/local/tmp/frida-server-15.1.17-android-arm"
+
+# Strictly validate the timestamp and request_id parameters sent by the client are likely to be accepted by Nintendo's API
+nxapi android-znca-api-server-frida android.local:5555 --strict-validate
+
+# Don't validate the token sent by the client
+nxapi android-znca-api-server-frida android.local:5555 --no-validate-tokens
 
 # Make imink-compatible API requests using curl
 curl --header "Content-Type: application/json" --data '{"hash_method": "1", "token": "..."}' "http://[::1]:12345/api/znca/f"
