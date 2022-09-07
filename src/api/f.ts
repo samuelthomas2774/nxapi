@@ -16,7 +16,12 @@ export abstract class ZncaApi {
         public useragent?: string
     ) {}
 
-    abstract genf(token: string, hash_method: '1' | '2'): Promise<FResult>;
+    abstract genf(token: string, hash_method: HashMethod): Promise<FResult>;
+}
+
+export enum HashMethod {
+    CORAL = 1,
+    WEB_SERVICE = 2,
 }
 
 //
@@ -67,7 +72,7 @@ export interface LoginHashApiError {
 }
 
 export async function flapg(
-    hash_method: '1' | '2', token: string,
+    hash_method: HashMethod, token: string,
     timestamp?: string | number, request_id?: string,
     useragent?: string
 ) {
@@ -79,7 +84,7 @@ export async function flapg(
     });
 
     const req: FlapgApiRequest = {
-        hash_method,
+        hash_method: '' + hash_method as `${HashMethod}`,
         token,
         timestamp: typeof timestamp === 'number' ? '' + timestamp : undefined,
         request_id,
@@ -115,7 +120,13 @@ export enum FlapgIid {
     APP = 'app',
 }
 
-export type FlapgApiRequest = IminkFRequest;
+export interface FlapgApiRequest {
+    hash_method: '1' | '2';
+    token: string;
+    timestamp?: string;
+    request_id?: string;
+}
+
 export type FlapgApiResponse = IminkFResponse;
 export type FlapgApiError = IminkFError;
 
@@ -125,7 +136,7 @@ export class ZncaApiFlapg extends ZncaApi {
         return getLoginHash(id_token, timestamp, this.useragent);
     }
 
-    async genf(token: string, hash_method: '1' | '2') {
+    async genf(token: string, hash_method: HashMethod) {
         const request_id = uuidgen();
 
         const result = await flapg(hash_method, token, undefined, request_id, this.useragent);
@@ -145,7 +156,7 @@ export class ZncaApiFlapg extends ZncaApi {
 //
 
 export async function iminkf(
-    hash_method: '1' | '2', token: string,
+    hash_method: HashMethod, token: string,
     timestamp?: number, request_id?: string,
     useragent?: string
 ) {
@@ -190,9 +201,9 @@ export async function iminkf(
 }
 
 export interface IminkFRequest {
-    hash_method: '1' | '2';
+    hash_method: 1 | 2 | '1' | '2';
     token: string;
-    timestamp?: string;
+    timestamp?: string | number;
     request_id?: string;
 }
 export interface IminkFResponse {
@@ -206,7 +217,7 @@ export interface IminkFError {
 }
 
 export class ZncaApiImink extends ZncaApi {
-    async genf(token: string, hash_method: '1' | '2') {
+    async genf(token: string, hash_method: HashMethod) {
         const request_id = uuidgen();
 
         const result = await iminkf(hash_method, token, undefined, request_id, this.useragent);
@@ -226,7 +237,7 @@ export class ZncaApiImink extends ZncaApi {
 //
 
 export async function genf(
-    url: string, hash_method: '1' | '2',
+    url: string, hash_method: HashMethod,
     token: string, timestamp?: number, request_id?: string,
     useragent?: string
 ) {
@@ -235,7 +246,7 @@ export async function genf(
     });
 
     const req: AndroidZncaFRequest = {
-        hash_method,
+        hash_method: '' + hash_method as `${HashMethod}`,
         token,
         timestamp,
         request_id,
@@ -260,7 +271,7 @@ export async function genf(
 
     if ('error' in data) {
         debugZncaApi('Error getting f parameter "%s"', data.error);
-        throw new ErrorResponse<AndroidZncaFError>('[znca-api] ' + data.error, response, data);
+        throw new ErrorResponse<AndroidZncaFError>('[znca-api] ' + data.error_message ?? data.error, response, data);
     }
 
     debugZncaApi('Got f parameter', data, response.headers);
@@ -281,6 +292,7 @@ export interface AndroidZncaFResponse {
 }
 export interface AndroidZncaFError {
     error: string;
+    error_message?: string;
 }
 
 export class ZncaApiNxapi extends ZncaApi {
@@ -288,7 +300,7 @@ export class ZncaApiNxapi extends ZncaApi {
         super(useragent);
     }
 
-    async genf(token: string, hash_method: '1' | '2') {
+    async genf(token: string, hash_method: HashMethod) {
         const request_id = uuidgen();
 
         const result = await genf(this.url + '/f', hash_method, token, undefined, request_id, this.useragent);
@@ -304,7 +316,9 @@ export class ZncaApiNxapi extends ZncaApi {
     }
 }
 
-export async function f(token: string, hash_method: '1' | '2', useragent?: string): Promise<FResult> {
+export async function f(token: string, hash_method: HashMethod | `${HashMethod}`, useragent?: string): Promise<FResult> {
+    if (typeof hash_method === 'string') hash_method = parseInt(hash_method);
+
     const provider = getPreferredZncaApiFromEnvironment(useragent) ?? await getDefaultZncaApi(useragent);
 
     return provider.genf(token, hash_method);
@@ -312,7 +326,7 @@ export async function f(token: string, hash_method: '1' | '2', useragent?: strin
 
 export type FResult = {
     provider: string;
-    hash_method: '1' | '2';
+    hash_method: HashMethod;
     token: string;
     timestamp: number;
     request_id: string;

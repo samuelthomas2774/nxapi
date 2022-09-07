@@ -10,6 +10,7 @@ export { default as ZncProxyApi } from '../api/znc-proxy.js';
 
 export {
     ZncaApi,
+    HashMethod,
     getPreferredZncaApiFromEnvironment,
     getDefaultZncaApi,
     f,

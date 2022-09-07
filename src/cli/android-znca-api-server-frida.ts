@@ -183,7 +183,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             await ready;
 
             let data: {
-                hash_method: '1' | '2';
+                hash_method: '1' | '2' | 1 | 2;
                 token: string;
                 timestamp?: string | number;
                 request_id?: string;
@@ -202,6 +202,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 timestamp: '' + data.timestamp,
                 request_id: data.uuid,
             };
+
+            if (data && data.hash_method === 1) data.hash_method = '1';
+            if (data && data.hash_method === 2) data.hash_method = '2';
 
             if (
                 !data ||

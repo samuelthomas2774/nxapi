@@ -1,7 +1,7 @@
 import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
-import { f, FResult } from './f.js';
+import { f, FResult, HashMethod } from './f.js';
 import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse } from './util.js';
@@ -178,7 +178,7 @@ export default class CoralApi {
     }
 
     async getWebServiceToken(id: string) {
-        const data = await f(this.token, '2', this.useragent ?? getAdditionalUserAgents());
+        const data = await f(this.token, HashMethod.WEB_SERVICE, this.useragent ?? getAdditionalUserAgents());
 
         const req = {
             id,
@@ -195,7 +195,8 @@ export default class CoralApi {
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
-        const fdata = await f(nintendoAccountToken.id_token, '1', this.useragent ?? getAdditionalUserAgents());
+        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL,
+            this.useragent ?? getAdditionalUserAgents());
 
         const req: AccountTokenParameter = {
             naBirthday: user.birthday,
@@ -250,7 +251,7 @@ export default class CoralApi {
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
-        const fdata = await f(nintendoAccountToken.id_token, '1', useragent);
+        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, useragent);
 
         debug('Getting Nintendo Switch Online app token');
 
