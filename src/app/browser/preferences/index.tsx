@@ -159,7 +159,7 @@ export default function Preferences(props: PreferencesProps) {
 
                     <View style={styles.button}>
                         <Button title="Discord Rich Presence setup"
-                            onPress={() => ipc.showDiscordModal()}
+                            onPress={() => ipc.showDiscordModal({show_preferences_button: false})}
                             color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
                     </View>
 

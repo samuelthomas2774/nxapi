@@ -65,6 +65,7 @@ const ipc = {
     getNintendoAccountMoonToken: (id: string) => inv<string | undefined>('moon:gettoken', id),
     getSavedMoonToken: (token: string) => inv<SavedMoonToken | undefined>('moon:getcachedtoken', token),
 
+    showPreferencesWindow: () => inv<number>('window:showpreferences'),
     showFriendModal: (props: FriendProps) => inv<number>('window:showfriend', props),
     showDiscordModal: (props: DiscordSetupProps = {}) => inv<number>('window:discord', props),
     showAddFriendModal: (props: AddFriendProps) => inv<number>('window:addfriend', props),

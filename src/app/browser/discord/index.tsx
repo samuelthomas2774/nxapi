@@ -9,6 +9,8 @@ import { getAccounts, RequestState, Root, useAsync, useDiscordPresenceSource, us
 export interface DiscordSetupProps {
     users?: string[];
     friend_nsa_id?: string;
+    /** @default true */
+    show_preferences_button?: boolean;
 }
 
 enum DiscordSourceType {
@@ -158,6 +160,15 @@ export default function DiscordSetup(props: DiscordSetupProps) {
                     style={[styles.textInput, theme.textInput]} />
             </> : null}
 
+            {discord_presence_source && (props.show_preferences_button ?? true) ? <>
+                <Text style={[styles.help, styles.header, theme.text]}>Configure additional options for Discord Rich Presence</Text>
+                <View style={[styles.button, styles.buttonPreferences]}>
+                    <Button title="Preferences"
+                        onPress={() => ipc.showPreferencesWindow()}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+                </View>
+            </> : null}
+
             <View style={styles.buttons}>
                 <View style={styles.button}>
                     <Button title="Cancel"
@@ -221,6 +232,12 @@ const styles = StyleSheet.create({
     },
     button: {
         marginLeft: 10,
+    },
+    buttonPreferences: {
+        marginTop: 10,
+        marginLeft: 0,
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
     },
 });
 

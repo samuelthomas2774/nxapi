@@ -83,6 +83,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)).then(r => r.result));
     ipcMain.handle('nxapi:coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
 
+    ipcMain.handle('nxapi:window:showpreferences', () => appinstance.showPreferencesWindow().id);
     ipcMain.handle('nxapi:window:showfriend', (e, props: FriendProps) => createWindow(WindowType.FRIEND, props, {
         parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
         modal: true,
