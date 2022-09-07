@@ -1,6 +1,18 @@
 import * as util from 'node:util';
 import { Response as NodeFetchResponse } from 'node-fetch';
 
+export const ResponseSymbol = Symbol('Response');
+
+export interface ResponseData<R> {
+    [ResponseSymbol]: R;
+}
+export type HasResponse<T, R> = T & ResponseData<R>;
+
+export function defineResponse<T, R>(data: T, response: R) {
+    Object.defineProperty(data, ResponseSymbol, {enumerable: false, value: response});
+    return data as HasResponse<T, R>;
+}
+
 export class ErrorResponse<T = unknown> extends Error {
     readonly body: string | undefined;
     readonly data: T | undefined = undefined;

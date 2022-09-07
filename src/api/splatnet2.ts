@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
-import { ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, LeagueMatchRankings, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingRecords, XPowerRankingSummary } from './splatnet2-types.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -61,10 +61,10 @@ export default class SplatNet2Api {
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse('[splatnet2] ' + data.message, response, data);
+            throw new ErrorResponse<WebServiceError>('[splatnet2] ' + data.message, response, data);
         }
 
-        return data;
+        return defineResponse(data, response);
     }
 
     async getRecords() {
@@ -295,7 +295,7 @@ ${colour}
         const body = await response.text();
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet2] Unknown error', response, body);
+            throw new ErrorResponse('[splatnet2] Non-200 status code', response, body);
         }
 
         const cookies = response.headers.get('Set-Cookie');

@@ -2,7 +2,7 @@ import process from 'node:process';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
-import { ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse } from './util.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 
@@ -109,7 +109,7 @@ export async function flapg(
 
     debugFlapg('Got f parameter', data);
 
-    return data;
+    return defineResponse(data, response);
 }
 
 /** @deprecated */
@@ -197,7 +197,7 @@ export async function iminkf(
 
     debugImink('Got f parameter "%s"', data.f);
 
-    return data;
+    return defineResponse(data, response);
 }
 
 export interface IminkFRequest {
@@ -276,7 +276,7 @@ export async function genf(
 
     debugZncaApi('Got f parameter', data, response.headers);
 
-    return data;
+    return defineResponse(data, response);
 }
 
 export interface AndroidZncaFRequest {

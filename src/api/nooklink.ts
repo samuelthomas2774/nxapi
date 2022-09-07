@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
-import { ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -32,7 +32,7 @@ export default class NooklinkApi {
                 'User-Agent': this.useragent,
                 'Cookie': '_gtoken=' + encodeURIComponent(this.gtoken),
                 'dnt': '1',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept': 'application/json, text/plain, */*',
                 'Accept-Language': 'en-GB,en-US;q=0.8',
                 'Origin': 'https://web.sd.lp1.acbaa.srv.nintendo.net',
                 'Content-Type': 'application/json',
@@ -51,10 +51,10 @@ export default class NooklinkApi {
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse('[nooklink] Error ' + data.code, response, data);
+            throw new ErrorResponse<WebServiceError>('[nooklink] Error ' + data.code, response, data);
         }
 
-        return data;
+        return defineResponse(data, response);
     }
 
     async getUsers() {
@@ -119,7 +119,7 @@ export default class NooklinkApi {
         const body = await response.text();
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[nooklink] Unknown error', response, body);
+            throw new ErrorResponse('[nooklink] Non-200 status code', response, body);
         }
 
         const cookies = response.headers.get('Set-Cookie');
@@ -170,9 +170,8 @@ export class NooklinkUserApi {
                 'User-Agent': this.useragent,
                 'Cookie': '_gtoken=' + encodeURIComponent(this.gtoken),
                 'dnt': '1',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept': 'application/json, text/plain,*/*',
                 'Accept-Language': 'en-GB,en-US;q=0.8',
-                'X-Requested-With': 'com.nintendo.znca',
                 'Origin': 'https://web.sd.lp1.acbaa.srv.nintendo.net',
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + this.auth_token,
@@ -191,10 +190,10 @@ export class NooklinkUserApi {
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse('[nooklink] Error ' + data.code, response, data);
+            throw new ErrorResponse<WebServiceError>('[nooklink] Error ' + data.code, response, data);
         }
 
-        return data;
+        return defineResponse(data, response);
     }
 
     async getUserProfile(id?: string) {

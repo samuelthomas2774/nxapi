@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { ErrorResponse } from '../api/util.js';
+import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 import { paths } from '../util/storage.js';
@@ -18,7 +18,6 @@ const MAX_FRESH = 24 * 60 * 60; // 1 day in seconds
 const MAX_STALE = 24 * 60 * 60; // 1 day in seconds
 
 const SourceSymbol = Symbol('Source');
-const ResponseSymbol = Symbol('Response');
 const CachedSymbol = Symbol('Cached');
 
 const default_config: NxapiRemoteConfig = {

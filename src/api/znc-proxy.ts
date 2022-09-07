@@ -1,8 +1,8 @@
 import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralErrorResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
-import { ErrorResponse } from './util.js';
-import CoralApi from './coral.js';
+import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
+import CoralApi, { CorrelationIdSymbol, ResponseDataSymbol, Result } from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -41,106 +41,100 @@ export default class ZncProxyApi implements CoralApi {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
-        if (response.status === 204) return null!;
-
-        if (response.status !== 200) {
+        if (response.status !== 200 && response.status !== 204) {
             throw new ErrorResponse('[zncproxy] Non-200/204 status code', response, await response.text());
         }
 
-        const data = await response.json() as T;
+        const data = (response.status === 204 ? {} : await response.json()) as T;
 
-        return data;
+        return defineResponse(data, response);
     }
 
-    async call<T = unknown>(url: string, parameter = {}): Promise<CoralSuccessResponse<T>> {
+    async call<T = unknown>(url: string, parameter = {}): Promise<Result<T>> {
         throw new Error('Not supported in ZncProxyApi');
     }
 
     async getAnnouncements() {
-        const response = await this.fetch<{announcements: Announcements}>('/announcements');
-        return {status: CoralStatus.OK as const, result: response.announcements, correlationId: ''};
+        const result = await this.fetch<{announcements: Announcements}>('/announcements');
+        return createResult(result, result.announcements);
     }
 
     async getFriendList() {
-        const response = await this.fetch<{friends: Friend[]}>('/friends');
-        return {status: CoralStatus.OK as const, result: response, correlationId: ''};
+        const result = await this.fetch<{friends: Friend[]}>('/friends');
+        return createResult(result, result);
     }
 
     async addFavouriteFriend(nsaid: string) {
-        await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
+        const result = await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
             isFavoriteFriend: true,
         }));
-        return {status: CoralStatus.OK as const, result: {}, correlationId: ''};
+        return createResult(result, {});
     }
 
     async removeFavouriteFriend(nsaid: string) {
-        await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
+        const result = await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
             isFavoriteFriend: false,
         }));
-        return {status: CoralStatus.OK as const, result: {}, correlationId: ''};
+        return createResult(result, {});
     }
 
     async getWebServices() {
-        const response = await this.fetch<{webservices: WebService[]}>('/webservices');
-        return {status: CoralStatus.OK as const, result: response.webservices, correlationId: ''};
+        const result = await this.fetch<{webservices: WebService[]}>('/webservices');
+        return createResult(result, result.webservices);
     }
 
     async getActiveEvent() {
-        const response = await this.fetch<{activeevent: ActiveEvent}>('/activeevent');
-        return {status: CoralStatus.OK as const, result: response.activeevent, correlationId: ''};
+        const result = await this.fetch<{activeevent: ActiveEvent}>('/activeevent');
+        return createResult(result, result.activeevent);
     }
 
     async getEvent(id: number) {
-        const response = await this.fetch<{event: Event}>('/event/' + id);
-        return {status: CoralStatus.OK as const, result: response.event, correlationId: ''};
+        const result = await this.fetch<{event: Event}>('/event/' + id);
+        return createResult(result, result.event);
     }
 
     async getUser(id: number) {
-        const response = await this.fetch<{user: User}>('/user/' + id);
-        return {status: CoralStatus.OK as const, result: response.user, correlationId: ''};
+        const result = await this.fetch<{user: User}>('/user/' + id);
+        return createResult(result, result.user);
     }
 
     async getUserByFriendCode(friend_code: string, hash?: string) {
-        const response = await this.fetch<{user: FriendCodeUser}>('/friendcode/' + friend_code);
-        return {status: CoralStatus.OK as const, result: response.user, correlationId: ''};
+        const result = await this.fetch<{user: FriendCodeUser}>('/friendcode/' + friend_code);
+        return createResult(result, result.user);
     }
 
-    async sendFriendRequest(nsa_id: string): Promise<CoralSuccessResponse<{}>> {
+    async sendFriendRequest(nsa_id: string): Promise<Result<{}>> {
         throw new Error('Not supported in ZncProxyApi');
     }
 
     async getCurrentUser() {
-        const response = await this.fetch<{user: CurrentUser}>('/user');
-        return {status: CoralStatus.OK as const, result: response.user, correlationId: ''};
+        const result = await this.fetch<{user: CurrentUser}>('/user');
+        return createResult(result, result.user);
     }
 
     async getFriendCodeUrl() {
-        const response = await this.fetch<{friendcode: FriendCodeUrl}>('/friendcode');
-        return {status: CoralStatus.OK as const, result: response.friendcode, correlationId: ''};
+        const result = await this.fetch<{friendcode: FriendCodeUrl}>('/friendcode');
+        return createResult(result, result.friendcode);
     }
 
     async getCurrentUserPermissions() {
         const user = await this.getCurrentUser();
 
-        return {
-            status: CoralStatus.OK as const,
-            result: {
-                etag: user.result.etag,
-                permissions: user.result.permissions,
-            },
-            correlationId: '',
-        };
+        return createResult(user, {
+            etag: user.etag,
+            permissions: user.permissions,
+        });
     }
 
     async updateCurrentUserPermissions(
         to: PresencePermissions, from: PresencePermissions, etag: string
-    ): Promise<CoralSuccessResponse<{}>> {
+    ): Promise<Result<{}>> {
         throw new Error('Not supported in ZncProxyApi');
     }
 
     async getWebServiceToken(id: string) {
-        const response = await this.fetch<{token: WebServiceToken}>('/webservice/' + id + '/token');
-        return {status: CoralStatus.OK as const, result: response.token, correlationId: ''};
+        const result = await this.fetch<{token: WebServiceToken}>('/webservice/' + id + '/token');
+        return createResult(result, result.token);
     }
 
     async getToken(token: string, user: NintendoAccountUser): ReturnType<CoralApi['getToken']> {
@@ -160,6 +154,24 @@ export default class ZncProxyApi implements CoralApi {
 
         return {nso, data};
     }
+}
+
+function createResult<T extends {}, R>(data: R & {[ResponseSymbol]: Response}, result: T): Result<T> {
+    const coral_result: CoralSuccessResponse<T> = {
+        status: CoralStatus.OK as const,
+        result,
+        correlationId: '',
+    };
+
+    Object.defineProperty(result, ResponseSymbol, {enumerable: false, value: data[ResponseSymbol]});
+    Object.defineProperty(result, ResponseDataSymbol, {enumerable: false, value: coral_result});
+    Object.defineProperty(result, CorrelationIdSymbol, {enumerable: false, value: ''});
+
+    Object.defineProperty(result, 'status', {enumerable: false, value: CoralStatus.OK});
+    Object.defineProperty(result, 'result', {enumerable: false, value: result});
+    Object.defineProperty(result, 'correlationId', {enumerable: false, value: ''});
+
+    return result as Result<T>;
 }
 
 export interface AuthToken {

@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
-import { ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
 import { timeoutSignal } from '../util/misc.js';
 
@@ -59,7 +59,7 @@ export default class MoonApi {
             throw new ErrorResponse('[moon] ' + data.title, response, data);
         }
 
-        return data;
+        return defineResponse(data, response);
     }
 
     async getUser() {

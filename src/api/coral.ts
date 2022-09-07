@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import { f, FResult, HashMethod } from './f.js';
 import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
-import { ErrorResponse } from './util.js';
+import { ErrorResponse, ResponseSymbol } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -22,6 +22,24 @@ export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 const FRIEND_CODE = /^\d{4}-\d{4}-\d{4}$/;
 const FRIEND_CODE_HASH = /^[A-Za-z0-9]{10}$/;
 
+export const ResponseDataSymbol = Symbol('ResponseData');
+export const CorrelationIdSymbol = Symbol('CorrelationId');
+
+export type Result<T> = T & ResultData<T>;
+
+export interface ResultData<T> {
+    [ResponseSymbol]: Response;
+    [ResponseDataSymbol]: CoralSuccessResponse<T>;
+    [CorrelationIdSymbol]: string;
+
+    /** @deprecated */
+    status: CoralStatus.OK;
+    /** @deprecated */
+    result: T;
+    /** @deprecated */
+    correlationId: string;
+}
+
 export default class CoralApi {
     onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
     /** @internal */
@@ -38,7 +56,7 @@ export default class CoralApi {
         url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _autoRenewToken = true,
         /** @internal */ _attempt = 0
-    ): Promise<CoralSuccessResponse<T>> {
+    ): Promise<Result<T>> {
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -80,7 +98,17 @@ export default class CoralApi {
             throw new ErrorResponse('[znc] Unknown error', response, data);
         }
 
-        return data;
+        const result = data.result;
+
+        Object.defineProperty(result, ResponseSymbol, {enumerable: false, value: response});
+        Object.defineProperty(result, ResponseDataSymbol, {enumerable: false, value: data});
+        Object.defineProperty(result, CorrelationIdSymbol, {enumerable: false, value: data.correlationId});
+
+        Object.defineProperty(result, 'status', {enumerable: false, value: CoralStatus.OK});
+        Object.defineProperty(result, 'result', {enumerable: false, value: data.result});
+        Object.defineProperty(result, 'correlationId', {enumerable: false, value: data.correlationId});
+
+        return result as Result<T>;
     }
 
     async call<T = unknown>(
