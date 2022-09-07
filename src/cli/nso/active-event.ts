@@ -43,17 +43,17 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const friends = await nso.getFriendList();
     const activeevent = await nso.getActiveEvent();
 
-    if ('id' in activeevent.result) {
+    if ('id' in activeevent) {
         if (argv.jsonPrettyPrint) {
-            console.log(JSON.stringify(activeevent.result, null, 4));
+            console.log(JSON.stringify(activeevent, null, 4));
             return;
         }
         if (argv.json) {
-            console.log(JSON.stringify(activeevent.result));
+            console.log(JSON.stringify(activeevent));
             return;
         }
 
-        console.log('Active event', activeevent.result);
+        console.log('Active event', activeevent);
     } else {
         if (argv.json || argv.jsonPrettyPrint) {
             console.log('null');

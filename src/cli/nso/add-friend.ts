@@ -39,9 +39,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         // Friend code
 
         const user = await nso.getUserByFriendCode(argv.id);
-        nsa_id = user.result.nsaId;
+        nsa_id = user.nsaId;
 
-        console.log('User', user.result);
+        console.log('User', user);
     } else if (/^[0-9a-f]{16}$/.test(argv.id)) {
         // NSA ID
         nsa_id = argv.id;

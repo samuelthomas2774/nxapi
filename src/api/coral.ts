@@ -240,8 +240,8 @@ export default class CoralApi {
             nintendoAccountToken,
             // user,
             f: fdata,
-            nsoAccount: data.result,
-            credential: data.result.webApiServerCredential,
+            nsoAccount: data,
+            credential: data.webApiServerCredential,
         };
     }
 

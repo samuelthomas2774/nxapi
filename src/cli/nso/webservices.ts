@@ -47,11 +47,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const activeevent = await nso.getActiveEvent();
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(webservices.result, null, 4));
+        console.log(JSON.stringify(webservices, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify(webservices.result));
+        console.log(JSON.stringify(webservices));
         return;
     }
 
@@ -63,7 +63,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         ],
     });
 
-    for (const webservice of webservices.result) {
+    for (const webservice of webservices) {
         table.push([
             webservice.id,
             webservice.name,

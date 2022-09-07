@@ -47,7 +47,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const webservices = await nso.getWebServices();
     const activeevent = await nso.getActiveEvent();
 
-    const webservice = webservices.result.find(w => '' + w.id === argv.id);
+    const webservice = webservices.find(w => '' + w.id === argv.id);
 
     if (!webservice) {
         throw new Error('Invalid web service');
@@ -74,14 +74,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.jsonPrettyPrint) {
         console.log(JSON.stringify({
             webservice,
-            token: webserviceToken.result,
+            token: webserviceToken,
         }, null, 4));
         return;
     }
     if (argv.json) {
         console.log(JSON.stringify({
             webservice,
-            token: webserviceToken.result,
+            token: webserviceToken,
         }));
         return;
     }
@@ -89,5 +89,5 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log('Web service', {
         name: webservice.name,
         url: url.toString(),
-    }, webserviceToken.result);
+    }, webserviceToken);
 }

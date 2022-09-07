@@ -49,17 +49,17 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const friends = await nso.getFriendList();
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(friends.result.friends, null, 4));
+        console.log(JSON.stringify(friends.friends, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify(friends.result.friends));
+        console.log(JSON.stringify(friends.friends));
         return;
     }
 
     const table = new Table({
         head: [
-            'ID',
+            'Coral ID',
             'NSA ID',
             'Name',
             'Status',
@@ -68,7 +68,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         ],
     });
 
-    for (const friend of friends.result.friends) {
+    for (const friend of friends.friends) {
         const online = friend.presence.state === PresenceState.ONLINE ||
             friend.presence.state === PresenceState.PLAYING;
 

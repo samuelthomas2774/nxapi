@@ -279,12 +279,10 @@ function createApp(
 
         try {
             const announcements = await req.znc!.getAnnouncements();
-            cached_announcements = announcements.result;
+            cached_announcements = announcements;
 
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                announcements: announcements.result,
-            }));
+            res.end(JSON.stringify({announcements}));
         } catch (err) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
@@ -313,7 +311,7 @@ function createApp(
 
         try {
             const promise = user_data_promise.get(req.zncAuth!.user.id) ?? req.znc!.getCurrentUser().then(user => {
-                cached_userdata.set(req.zncAuth!.user.id, [user.result, Date.now()]);
+                cached_userdata.set(req.zncAuth!.user.id, [user, Date.now()]);
             }).finally(() => {
                 user_data_promise.delete(req.zncAuth!.user.id);
             });
@@ -375,7 +373,7 @@ function createApp(
 
         try {
             const promise = friends_data_promise.get(req.zncAuth!.user.id) ?? req.znc!.getFriendList().then(friends => {
-                cached_friendsdata.set(req.zncAuth!.user.id, [friends.result.friends, Date.now()]);
+                cached_friendsdata.set(req.zncAuth!.user.id, [friends.friends, Date.now()]);
             }).finally(() => {
                 friends_data_promise.delete(req.zncAuth!.user.id);
             });
@@ -403,7 +401,7 @@ function createApp(
 
         try {
             const friends_promise = friends_data_promise.get(req.zncAuth!.user.id) ?? req.znc!.getFriendList().then(friends => {
-                cached_friendsdata.set(req.zncAuth!.user.id, [friends.result.friends, Date.now()]);
+                cached_friendsdata.set(req.zncAuth!.user.id, [friends.friends, Date.now()]);
             }).finally(() => {
                 friends_data_promise.delete(req.zncAuth!.user.id);
             });
@@ -415,7 +413,7 @@ function createApp(
                 req.znc!.getActiveEvent(),
             ]).then(([friends, webservices, activeevent]) => {
                 // Friends list was already added to cache
-                cached_appdata.set(req.zncAuth!.user.id, [webservices.result, activeevent.result, Date.now()]);
+                cached_appdata.set(req.zncAuth!.user.id, [webservices, activeevent, Date.now()]);
             }).finally(() => {
                 app_data_promise.delete(req.zncAuth!.user.id);
             });
@@ -629,12 +627,10 @@ function createApp(
 
     app.get('/api/znc/webservice/:id/token', nsoAuth, async (req, res) => {
         try {
-            const response = await req.znc!.getWebServiceToken(req.params.id);
+            const token = await req.znc!.getWebServiceToken(req.params.id);
 
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                token: response.result,
-            }));
+            res.end(JSON.stringify({token}));
         } catch (err) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
@@ -659,12 +655,10 @@ function createApp(
 
     app.get('/api/znc/event/:id', nsoAuth, async (req, res) => {
         try {
-            const response = await req.znc!.getEvent(parseInt(req.params.id));
+            const event = await req.znc!.getEvent(parseInt(req.params.id));
 
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                event: response.result,
-            }));
+            res.end(JSON.stringify({event}));
         } catch (err) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
@@ -681,12 +675,10 @@ function createApp(
                 throw new Error('Invalid user ID');
             }
 
-            const response = await req.znc!.getUser(parseInt(req.params.id));
+            const user = await req.znc!.getUser(parseInt(req.params.id));
 
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                user: response.result,
-            }));
+            res.end(JSON.stringify({user}));
         } catch (err) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
@@ -735,7 +727,7 @@ function createApp(
                 throw err;
             }).then(user => {
                 const cache = cached_friendcode_data.get(req.zncAuth!.user.id) ?? new Map<string, [FriendCodeUser | null, number]>();
-                cache.set(req.params.friendcode, [user?.result ?? null, Date.now()]);
+                cache.set(req.params.friendcode, [user ?? null, Date.now()]);
                 cached_friendcode_data.set(req.zncAuth!.user.id, cache);
             }).finally(() => {
                 const promises = friendcode_data_promise.get(req.zncAuth!.user.id);
@@ -787,7 +779,7 @@ function createApp(
 
         try {
             const promise = user_friendcodeurl_promise.get(req.zncAuth!.user.id) ?? req.znc!.getFriendCodeUrl().then(user => {
-                cached_friendcodeurl.set(req.zncAuth!.user.id, [user.result, Date.now()]);
+                cached_friendcodeurl.set(req.zncAuth!.user.id, [user, Date.now()]);
             }).finally(() => {
                 user_friendcodeurl_promise.delete(req.zncAuth!.user.id);
             });

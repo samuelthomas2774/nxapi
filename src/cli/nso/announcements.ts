@@ -44,11 +44,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const activeevent = await nso.getActiveEvent();
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(announcements.result, null, 4));
+        console.log(JSON.stringify(announcements, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify(announcements.result));
+        console.log(JSON.stringify(announcements));
         return;
     }
 
@@ -62,7 +62,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         ],
     });
 
-    for (const announcement of announcements.result) {
+    for (const announcement of announcements) {
         table.push([
             announcement.announcementId,
             announcement.title.substr(0, 60),

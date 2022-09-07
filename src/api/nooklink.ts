@@ -83,7 +83,7 @@ export default class NooklinkApi {
     static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
         const webserviceToken = await nso.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
 
-        return this.loginWithWebServiceToken(webserviceToken.result, user);
+        return this.loginWithWebServiceToken(webserviceToken, user);
     }
 
     static async loginWithWebServiceToken(

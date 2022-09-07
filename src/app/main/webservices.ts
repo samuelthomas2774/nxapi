@@ -103,7 +103,7 @@ export default async function openWebService(
     window.loadURL(url.toString(), {
         extraHeaders: Object.entries({
             'x-appcolorscheme': nativeTheme.shouldUseDarkColors ? 'DARK' : 'LIGHT',
-            'x-gamewebtoken': webserviceToken.result.accessToken,
+            'x-gamewebtoken': webserviceToken.accessToken,
             'dnt': '1',
             'X-Requested-With': 'com.nintendo.znca',
         }).map(([key, value]) => key + ': ' + value).join('\n'),
@@ -283,7 +283,7 @@ export class WebServiceIpc {
 
         const webserviceToken = await nso.getWebServiceToken('' + webservice.id);
 
-        return webserviceToken.result.accessToken;
+        return webserviceToken.accessToken;
     }
 
     async restorePersistentData(event: IpcMainInvokeEvent): Promise<string | undefined> {

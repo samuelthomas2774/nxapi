@@ -262,7 +262,7 @@ ${colour}
     static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
         const webserviceToken = await nso.getWebServiceToken(SPLATNET2_WEBSERVICE_ID);
 
-        return this.loginWithWebServiceToken(webserviceToken.result, user);
+        return this.loginWithWebServiceToken(webserviceToken, user);
     }
 
     static async loginWithWebServiceToken(

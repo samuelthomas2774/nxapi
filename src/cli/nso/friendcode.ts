@@ -45,14 +45,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const friendcodeurl = await nso.getFriendCodeUrl();
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(friendcodeurl.result, null, 4));
+        console.log(JSON.stringify(friendcodeurl, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify(friendcodeurl.result));
+        console.log(JSON.stringify(friendcodeurl));
         return;
     }
 
-    console.warn('Friend code', friendcodeurl.result);
-    console.log(friendcodeurl.result.url);
+    console.warn('Friend code', friendcodeurl);
+    console.log(friendcodeurl.url);
 }

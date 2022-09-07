@@ -162,7 +162,7 @@ export default class MenuApp {
         const {nso, data} = await this.app.store.users.get(token);
 
         const webservices = await nso.getWebServices();
-        return this.webservices = webservices.result;
+        return this.webservices = webservices;
     }
 
     async getWebServiceItems(token: string) {

@@ -44,7 +44,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         const user = await nso.getCurrentUser();
 
         console.log('Nintendo Account', data.user);
-        console.log('Nintendo Switch user', user.result);
+        console.log('Nintendo Switch user', user);
     } else {
         console.log('Nintendo Account', data.user);
         console.log('Nintendo Switch user', data.nsoAccount.user);

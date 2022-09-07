@@ -49,13 +49,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const user = await nso.getUserByFriendCode(argv.id);
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(user.result, null, 4));
+        console.log(JSON.stringify(user, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify(user.result));
+        console.log(JSON.stringify(user));
         return;
     }
 
-    console.log('User', user.result);
+    console.log('User', user);
 }

@@ -15,8 +15,8 @@ import { getDiscordRpcClients } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
+import type { AddFriendProps } from '../browser/add-friend/index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
-import { AddFriendProps } from '../browser/add-friend/index.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -79,8 +79,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
                 }, {compact: true}),
             }))));
     ipcMain.handle('nxapi:coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
-    ipcMain.handle('nxapi:coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()).then(r => r.result));
-    ipcMain.handle('nxapi:coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)).then(r => r.result));
+    ipcMain.handle('nxapi:coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()));
+    ipcMain.handle('nxapi:coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)));
     ipcMain.handle('nxapi:coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
 
     ipcMain.handle('nxapi:window:showpreferences', () => appinstance.showPreferencesWindow().id);

@@ -152,10 +152,10 @@ async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
     const friends = await nso.getFriendList();
     const webservices = await nso.getWebServices();
     const activeevent = await nso.getActiveEvent();
-    const user = 'expires_at' in data ? (await nso.getCurrentUser()).result : data.nsoAccount.user;
+    const user = 'expires_at' in data ? await nso.getCurrentUser() : data.nsoAccount.user;
 
     if (argv.friendNsaid) {
-        const friend = friends.result.friends.find(f => f.nsaId === argv.friendNsaid);
+        const friend = friends.friends.find(f => f.nsaId === argv.friendNsaid);
 
         if (!friend) {
             throw new Error('User "' + argv.friendNsaid + '" is not friends with this user');
@@ -164,7 +164,7 @@ async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
         return [friend.presence, friend] as const;
     } else {
         return [user.presence, user, user.links.friendCode,
-            'id' in activeevent.result ? activeevent.result : undefined] as const;
+            'id' in activeevent ? activeevent : undefined] as const;
     }
 }
 

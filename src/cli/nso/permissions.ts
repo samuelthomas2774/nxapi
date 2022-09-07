@@ -54,17 +54,17 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     if (argv.presence) {
         await nso.updateCurrentUserPermissions(argv.presence as PresencePermissions,
-            permissions.result.permissions.presence, permissions.result.etag);
+            permissions.permissions.presence, permissions.etag);
     } else {
         if (argv.jsonPrettyPrint) {
-            console.log(JSON.stringify(permissions.result, null, 4));
+            console.log(JSON.stringify(permissions, null, 4));
             return;
         }
         if (argv.json) {
-            console.log(JSON.stringify(permissions.result));
+            console.log(JSON.stringify(permissions));
             return;
         }
 
-        console.log('Presence is visible to %s', permissions.result.permissions.presence);
+        console.log('Presence is visible to %s', permissions.permissions.presence);
     }
 }

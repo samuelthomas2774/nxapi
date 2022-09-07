@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import CoralApi from '../api/coral.js';
-import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralErrorResponse } from '../api/coral-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralErrorResponse, GetActiveEventResult } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
@@ -54,13 +54,13 @@ export class ZncNotifications extends Loop {
 
         if (req.includes('announcements')) {
             result.announcements = this.user ?
-                (await this.user?.getAnnouncements()) :
-                (await this.nso.getAnnouncements()).result;
+                await this.user?.getAnnouncements() :
+                await this.nso.getAnnouncements();
         }
         if (req.includes('friends') || (friends && !(this.nso instanceof ZncProxyApi))) {
             result.friends = this.user ?
-                (await this.user.getFriends()) :
-                (await this.nso.getFriendList()).result.friends;
+                await this.user.getFriends() :
+                (await this.nso.getFriendList()).friends;
         } else if (friends && this.nso instanceof ZncProxyApi) {
             result.friends = await Promise.all(friends.map(async r => {
                 const nso = this.nso as unknown as ZncProxyApi;
@@ -86,17 +86,17 @@ export class ZncNotifications extends Loop {
         }
         if (req.includes('webservices')) {
             result.webservices = this.user ?
-                (await this.user.getWebServices()) :
-                (await this.nso.getWebServices()).result;
+                await this.user.getWebServices() :
+                await this.nso.getWebServices();
         }
         if (req.includes('event')) {
-            const activeevent = this.user ?
-                (await this.user.getActiveEvent()) :
-                (await this.nso.getActiveEvent()).result;
+            const activeevent: GetActiveEventResult = this.user ?
+                await this.user.getActiveEvent() :
+                await this.nso.getActiveEvent();
             result.activeevent = 'id' in activeevent ? activeevent : undefined;
         }
         if (req.includes('user')) {
-            result.user = (await this.nso.getCurrentUser()).result;
+            result.user = await this.nso.getCurrentUser();
         }
 
         return result;
