@@ -117,6 +117,8 @@ export async function init() {
     setAppInstance(appinstance);
     setupIpc(appinstance, ipcMain);
 
+    app.configureHostResolver({enableBuiltInResolver: false});
+
     appinstance.store.restoreMonitorState(appinstance.monitors);
 
     const menu = new MenuApp(appinstance);
