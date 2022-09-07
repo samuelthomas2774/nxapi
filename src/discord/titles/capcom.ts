@@ -1,4 +1,4 @@
-import { Title } from '../util.js';
+import { Title } from '../types.js';
 
 export const titles: Title[] = [
     {

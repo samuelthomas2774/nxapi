@@ -8,7 +8,7 @@ import { LoopResult } from '../../util/loop.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { App } from './index.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource } from '../common/types.js';
-import { DiscordPresence, DiscordPresencePlayTime } from '../../discord/util.js';
+import { DiscordPresence, DiscordPresencePlayTime } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 
 const debug = createDebug('app:main:monitor');
@@ -110,14 +110,11 @@ export class PresenceMonitorManager {
         return this.getActiveDiscordPresenceMonitor()?.discord.last_activity ?? null;
     }
 
-    getDiscordPresenceConfiguration(): DiscordPresenceConfiguration | null {
+    getActiveDiscordPresenceOptions(): Omit<DiscordPresenceConfiguration, 'source'> | null {
         const monitor = this.getActiveDiscordPresenceMonitor();
-        const source = this.getDiscordPresenceSource();
-
-        if (!monitor || !source) return null;
+        if (!monitor) return null;
 
         return {
-            source,
             user: this.getDiscordClientFilterConfiguration(monitor.discord_client_filter),
             friend_code: monitor.show_friend_code && monitor.force_friend_code ?
                 monitor.force_friend_code.id : undefined,
@@ -125,6 +122,30 @@ export class PresenceMonitorManager {
             show_active_event: monitor.show_active_event,
             show_play_time: monitor.show_play_time,
         };
+    }
+
+    async setDiscordPresenceOptions(options: Omit<DiscordPresenceConfiguration, 'source'>) {
+        const source = this.getDiscordPresenceSource();
+
+        if (!source) {
+            // Discord presence is not active
+            // Save the presence options anyway so they can be restored when Discord presence is enabled
+            return this.app.store.storage.setItem('AppDiscordPresenceOptions', options);
+        }
+
+        await this.setDiscordPresenceSource(source, monitor => {
+            this.setDiscordPresenceConfigurationForMonitor(monitor, options);
+            monitor.skipIntervalInCurrentLoop();
+        });
+
+        await this.app.store.saveMonitorState(this);
+    }
+
+    getDiscordPresenceConfiguration(): DiscordPresenceConfiguration | null {
+        const source = this.getDiscordPresenceSource();
+        const options = this.getActiveDiscordPresenceOptions();
+
+        return source && options ? {source, ...options} : null;
     }
 
     async setDiscordPresenceConfiguration(config: DiscordPresenceConfiguration | null) {
@@ -140,7 +161,7 @@ export class PresenceMonitorManager {
 
     setDiscordPresenceConfigurationForMonitor(
         monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
-        config: DiscordPresenceConfiguration
+        config: Omit<DiscordPresenceConfiguration, 'source'>
     ) {
         monitor.discord_client_filter = config.user ? this.createDiscordClientFilter(config.user) : undefined;
         monitor.show_friend_code = !!config.friend_code;

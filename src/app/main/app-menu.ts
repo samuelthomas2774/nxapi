@@ -1,7 +1,36 @@
 import { GITHUB_MIRROR_URL, GITLAB_URL, ISSUES_URL } from '../../common/constants.js';
 import { BrowserWindow, Menu, MenuItem, shell } from './electron.js';
+import { App } from './index.js';
 
-const menu_app = new MenuItem({role: 'appMenu'});
+let appinstance: App | null;
+
+export function setAppInstance(app: App) {
+    appinstance = app;
+}
+
+const menu_app = new MenuItem({
+    role: 'appMenu',
+    submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        {
+            label: 'Preferences',
+            accelerator: 'CommandOrControl+,',
+            click: () => {
+                appinstance?.showPreferencesWindow();
+            },
+        },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+    ],
+});
+
 const menu_file = new MenuItem({role: 'fileMenu'});
 const menu_edit = new MenuItem({role: 'editMenu'});
 

@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, IpcMain, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { app, BrowserWindow, clipboard, dialog, IpcMain, LoginItemSettings, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
 import createDebug from 'debug';
 import { User } from 'discord-rpc';
@@ -7,10 +7,10 @@ import { createWindow, getWindowConfiguration } from './windows.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
-import { App } from './index.js';
+import { App, login_item_options } from './index.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import { hrduration } from '../../util/misc.js';
-import { DiscordPresence } from '../../discord/util.js';
+import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
@@ -19,6 +19,8 @@ import { EmbeddedPresenceMonitor } from './monitor.js';
 import { AddFriendProps } from '../browser/add-friend/index.js';
 
 const debug = createDebug('app:main:ipc');
+
+const shown_modal_windows = new WeakSet<BrowserWindow>();
 
 export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     const store = appinstance.store;
@@ -37,6 +39,9 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         accent_colour = new_colour ?? systemPreferences.getAccentColor?.();
         sendToAllWindows('nxapi:systemPreferences:accent-colour', accent_colour);
     });
+
+    ipcMain.handle('nxapi:systemPreferences:getloginitem', () => app.getLoginItemSettings(login_item_options));
+    ipcMain.handle('nxapi:systemPreferences:setloginitem', (e, settings: Settings) => app.setLoginItemSettings({...login_item_options, ...settings}));
 
     ipcMain.handle('nxapi:update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
     ipcMain.handle('nxapi:update:check', () => appinstance.updater.check());
@@ -128,11 +133,18 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
             window.setMaximumSize(maxWidth, height + (curHeight - curContentHeight));
         }
         window.setContentSize(curContentWidth, height);
-        window.show();
+
+        if (!shown_modal_windows.has(window)) {
+            window.show();
+            shown_modal_windows.add(window);
+        }
     });
 
     ipcMain.handle('nxapi:discord:config', () => appinstance.monitors.getDiscordPresenceConfiguration());
     ipcMain.handle('nxapi:discord:setconfig', (e, config: DiscordPresenceConfiguration | null) => appinstance.monitors.setDiscordPresenceConfiguration(config));
+    ipcMain.handle('nxapi:discord:options', () => appinstance.monitors.getActiveDiscordPresenceOptions() ?? appinstance.store.getSavedDiscordPresenceOptions());
+    ipcMain.handle('nxapi:discord:savedoptions', () => appinstance.store.getSavedDiscordPresenceOptions());
+    ipcMain.handle('nxapi:discord:setoptions', (e, options: Omit<DiscordPresenceConfiguration, 'source'>) => appinstance.monitors.setDiscordPresenceOptions(options));
     ipcMain.handle('nxapi:discord:source', () => appinstance.monitors.getDiscordPresenceSource());
     ipcMain.handle('nxapi:discord:setsource', (e, source: DiscordPresenceSource | null) => appinstance.monitors.setDiscordPresenceSource(source));
     ipcMain.handle('nxapi:discord:presence', () => appinstance.monitors.getDiscordPresence());

@@ -1,6 +1,7 @@
 import createDebug from 'debug';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
-import { DiscordPresencePlayTime, DiscordPresenceContext, getDiscordPresence, getInactiveDiscordPresence, DiscordPresence } from '../discord/util.js';
+import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
+import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence } from '../discord/types.js';
 import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';

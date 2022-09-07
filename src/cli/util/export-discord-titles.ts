@@ -4,7 +4,7 @@ import type { Arguments as ParentArguments } from '../util.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { titles as unsorted_titles } from '../../discord/titles.js';
 import { DiscordApplicationRpc, getDiscordApplicationRpc } from './discord-activity.js';
-import { Title } from '../../discord/util.js';
+import { Title } from '../../discord/types.js';
 
 const debug = createDebug('cli:util:export-discord-titles');
 

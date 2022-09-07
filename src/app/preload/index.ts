@@ -2,17 +2,17 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import type { User } from 'discord-rpc';
-import type { SharingItem } from '../main/electron.js';
+import type { LoginItemSettings, Settings, SharingItem } from '../main/electron.js';
 import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
 import type { Announcements, CoralSuccessResponse, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';
-import type { DiscordPresence } from '../../discord/util.js';
+import type { DiscordPresence } from '../../discord/types.js';
 import type { NintendoAccountUser } from '../../api/na.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { FriendProps } from '../browser/friend/index.js';
-import { AddFriendProps } from '../browser/add-friend/index.js';
+import type { AddFriendProps } from '../browser/add-friend/index.js';
 
 // In sandboxed renderers the process object contains a very limited set of APIs
 // https://www.electronjs.org/docs/latest/api/process#sandbox
@@ -29,6 +29,9 @@ events.setMaxListeners(0);
 
 const ipc = {
     getWindowData: () => invSync<WindowConfiguration>('browser:getwindowdata'),
+
+    getLoginItemSettings: () => inv<LoginItemSettings>('systemPreferences:getloginitem'),
+    setLoginItemSettings: (settings: Settings) => inv('systemPreferences:setloginitem', settings),
 
     getUpdateData: () => inv<UpdateCacheData | null>('update:get'),
     checkUpdates: () => inv<UpdateCacheData | null>('update:check'),
@@ -50,6 +53,9 @@ const ipc = {
 
     getDiscordPresenceConfig: () => inv<DiscordPresenceConfiguration | null>('discord:config'),
     setDiscordPresenceConfig: (config: DiscordPresenceConfiguration | null) => inv<void>('discord:setconfig', config),
+    getDiscordPresenceOptions: () => inv<Omit<DiscordPresenceConfiguration, 'source'> | null>('discord:options'),
+    getSavedDiscordPresenceOptions: () => inv<Omit<DiscordPresenceConfiguration, 'source'> | null>('discord:savedoptions'),
+    setDiscordPresenceOptions: (options: Omit<DiscordPresenceConfiguration, 'source'>) => inv<void>('discord:setoptions', options),
     getDiscordPresenceSource: () => inv<DiscordPresenceSource | null>('discord:source'),
     setDiscordPresenceSource: (source: DiscordPresenceSource | null) => inv<void>('discord:setsource', source),
     getDiscordPresence: () => inv<DiscordPresence | null>('discord:presence'),

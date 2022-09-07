@@ -1,4 +1,4 @@
-import { Title } from './util.js';
+import { Title } from './types.js';
 import * as publishers from './titles/index.js';
 
 export const defaultTitle: Title = {

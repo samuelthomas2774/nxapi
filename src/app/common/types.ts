@@ -1,10 +1,11 @@
-import { DiscordPresencePlayTime } from '../../discord/util.js';
+import { DiscordPresencePlayTime } from '../../discord/types.js';
 
 export enum WindowType {
     MAIN_WINDOW = 'App',
     FRIEND = 'Friend',
     DISCORD_PRESENCE = 'DiscordPresence',
     ADD_FRIEND = 'AddFriend',
+    PREFERENCES = 'Preferences',
 }
 
 interface WindowProps {
@@ -12,6 +13,7 @@ interface WindowProps {
     [WindowType.FRIEND]: import('../browser/friend/index.js').FriendProps;
     [WindowType.DISCORD_PRESENCE]: import('../browser/discord/index.js').DiscordSetupProps;
     [WindowType.ADD_FRIEND]: import('../browser/add-friend/index.js').AddFriendProps;
+    [WindowType.PREFERENCES]: import('../browser/preferences/index.js').PreferencesProps;
 }
 
 export interface WindowConfiguration<T extends WindowType = WindowType> {

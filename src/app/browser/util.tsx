@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { ColorSchemeName, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
 import type { User as DiscordUser } from 'discord-rpc';
 import { ErrorResponse } from '../../api/util.js';
-import { DiscordPresence } from '../../discord/util.js';
+import { DiscordPresence } from '../../discord/types.js';
 import ipc, { events } from './ipc.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import { SavedToken } from '../../common/auth/coral.js';

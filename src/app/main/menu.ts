@@ -103,6 +103,7 @@ export default class MenuApp {
 
         menu.append(new MenuItem({type: 'separator'}));
         menu.append(new MenuItem({label: 'Show main window', click: () => this.app.showMainWindow()}));
+        menu.append(new MenuItem({label: 'Preferences', click: () => this.app.showPreferencesWindow()}));
         if (dev) menu.append(new MenuItem({label: 'Dump notifications state', click: () => {
             debug('Accounts', this.app.monitors.notifications.accounts);
             debug('Friends', this.app.monitors.notifications.onlinefriends);

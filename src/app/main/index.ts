@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from './electron.js';
+import { app, BrowserWindow, dialog, ipcMain, LoginItemSettingsOptions } from './electron.js';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -18,8 +18,11 @@ import { setupIpc } from './ipc.js';
 import { dev, dir } from '../../util/product.js';
 import { addUserAgent } from '../../util/useragent.js';
 import { askUserForUri } from './util.js';
+import { setAppInstance } from './app-menu.js';
 
 const debug = createDebug('app:main');
+
+export const login_item_options: LoginItemSettingsOptions = {};
 
 export class App {
     readonly store: Store;
@@ -58,6 +61,32 @@ export class App {
 
         return this.main_window = window;
     }
+
+    preferences_window: BrowserWindow | null = null;
+
+    showPreferencesWindow() {
+        if (this.preferences_window) {
+            this.preferences_window.show();
+            this.preferences_window.focus();
+            return this.preferences_window;
+        }
+
+        const window = createWindow(WindowType.PREFERENCES, {}, {
+            show: false,
+            maximizable: false,
+            minimizable: false,
+            width: 580,
+            height: 400,
+            minWidth: 580,
+            maxWidth: 580,
+            minHeight: 400,
+            maxHeight: 400,
+        });
+
+        window.on('closed', () => this.preferences_window = null);
+
+        return this.preferences_window = window;
+    }
 }
 
 export async function init() {
@@ -82,10 +111,11 @@ export async function init() {
     const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
     const appinstance = new App(storage);
 
-    setupIpc(appinstance, ipcMain);
-
     // @ts-expect-error
     globalThis.app = appinstance;
+
+    setAppInstance(appinstance);
+    setupIpc(appinstance, ipcMain);
 
     appinstance.store.restoreMonitorState(appinstance.monitors);
 
@@ -136,7 +166,9 @@ export async function init() {
 
     debug('App started');
 
-    appinstance.showMainWindow();
+    if (!app.getLoginItemSettings(login_item_options).wasOpenedAsHidden) {
+        appinstance.showMainWindow();
+    }
 }
 
 function tryHandleUrl(app: App, url: string) {
@@ -243,6 +275,20 @@ export class Store extends EventEmitter {
 
         debug('Saving monitor state', state);
         await this.storage.setItem('AppMonitors', state);
+
+        if (state.discord_presence) {
+            await this.storage.setItem('AppDiscordPresenceOptions', {
+                ...state.discord_presence,
+                source: undefined,
+            });
+        }
+    }
+
+    async getSavedDiscordPresenceOptions() {
+        const options: Omit<DiscordPresenceConfiguration, 'source'> | undefined =
+            await this.storage.getItem('AppDiscordPresenceOptions');
+
+        return options ?? null;
     }
 
     async restoreMonitorState(monitors: PresenceMonitorManager) {

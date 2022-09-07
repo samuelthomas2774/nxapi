@@ -4,7 +4,7 @@ import { User } from 'discord-rpc';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAsync, useEventListener } from '../util.js';
 import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral } from '../../common/types.js';
-import { DiscordPresence } from '../../../discord/util.js';
+import { DiscordPresence } from '../../../discord/types.js';
 import { DISCORD_COLOUR, TEXT_COLOUR_DARK } from '../constants.js';
 
 export default function DiscordPresenceSource(props: {
