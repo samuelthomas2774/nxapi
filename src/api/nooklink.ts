@@ -81,6 +81,9 @@ export default class NooklinkApi {
     }
 
     static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+        const { default: { coral_gws_nooklink: config } } = await import('../common/remote-config.js');
+        if (!config) throw new Error('Remote configuration prevents NookLink authentication');
+
         const webserviceToken = await nso.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken, user);

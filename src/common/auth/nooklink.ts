@@ -2,8 +2,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
-import { AuthToken, Users } from '../../api/nooklink-types.js';
-import { WebServiceToken } from '../../api/coral-types.js';
+import { Users } from '../../api/nooklink-types.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
@@ -27,6 +26,9 @@ export async function getWebServiceToken(
         if (!allow_fetch_token) {
             throw new Error('No valid NookLink web service token');
         }
+
+        const { default: { coral_gws_nooklink: config } } = await import('../remote-config.js');
+        if (!config) throw new Error('Remote configuration prevents NookLink authentication');
 
         if (ratelimit) {
             const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);

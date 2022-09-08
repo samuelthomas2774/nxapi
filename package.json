@@ -22,7 +22,8 @@
         "./coral": "./dist/exports/coral.js",
         "./moon": "./dist/exports/moon.js",
         "./splatnet2": "./dist/exports/splatnet2.js",
-        "./nooklink": "./dist/exports/nooklink.js"
+        "./nooklink": "./dist/exports/nooklink.js",
+        "./splatnet3": "./dist/exports/splatnet3.js"
     },
     "bin": {
         "nxapi": "bin/nxapi.js"

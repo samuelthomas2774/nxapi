@@ -234,6 +234,7 @@ export interface NxapiRemoteConfig {
     moon: MoonRemoteConfig | null;
 
     coral_gws_nooklink: NooklinkRemoteConfig | null;
+    coral_gws_splatnet3: SplatNet3RemoteConfig | null;
 }
 
 export type DefaultZncaApiProvider =
@@ -252,4 +253,10 @@ export interface MoonRemoteConfig {
 
 export interface NooklinkRemoteConfig {
     blanco_version: string;
+}
+
+export interface SplatNet3RemoteConfig {
+    app_ver: string;
+    version: string;
+    revision: string;
 }

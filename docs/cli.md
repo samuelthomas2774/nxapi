@@ -561,7 +561,7 @@ This requires:
 - The frida-server executable is located at `/data/local/tmp/frida-server` on the Android device (a different path can be provided using the `--frida-server-path` option)
 - The Nintendo Switch Online app is installed on the Android device
 
-No other software (e.g. frida-tools) needs to be installed on the computer running nxapi. The Android device must be constantly reachable using ADB. The server will exit if the device is unreachable.
+No other software (e.g. frida-tools) needs to be installed on the computer running nxapi. The Android device must be constantly reachable using ADB. The server will attempt to reconnect to the Android device and will automatically retry any requests that would fail due to the device disconnecting. The server will exit if it fails to reconnect to the device. A service manager should be used to restart the server if it exits.
 
 ```sh
 # Start the server using the ADB server "android.local:5555" listening on all interfaces on a random port
@@ -598,3 +598,24 @@ curl --header "Content-Type: application/json" --data '{"type": "nso", "token": 
 # This should be set when running any nso commands as the access token will be refreshed automatically when it expires
 ZNCA_API_URL=http://[::1]:12345/api/znca nxapi nso ...
 ```
+
+Information about the device and the Nintendo Switch Online app, as well as information on how long the request took to process will be included in the response headers.
+
+Header                          | Description
+--------------------------------|------------------
+`X-Android-Build-Type`          | Android build type, e.g. `user`
+`X-Android-Release`             | Android release/marketing version, e.g. `8.0.0`
+`X-Android-Platform-Version`    | Android SDK version, e.g. `26`
+`X-znca-Platform`               | Device platform - always `Android`
+`X-znca-Version`                | App release/marketing version, e.g. `2.2.0`
+`X-znca-Build`                  | App build/internal version, e.g. `2832`
+
+The following performance metrics are included in the `Server-Timing` header:
+
+Name        | Description
+------------|------------------
+`validate`  | Time validating the request body.
+`attach`    | Time waiting for the device to become available, start frida-server, start the app and attach the Frida script to the app process. This metric will not be included if the server is already connected to the device.
+`queue`     | Time waiting for the processing thread to become available.
+`init`      | Time waiting for `com.nintendo.coral.core.services.voip.Libvoipnji.init`.
+`process`   | Time waiting for `com.nintendo.coral.core.services.voip.Libvoipnji.genAudioH`/`genAudioH2`.

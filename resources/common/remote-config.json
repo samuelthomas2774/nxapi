@@ -15,5 +15,10 @@
     },
     "coral_gws_nooklink": {
         "blanco_version": "2.1.1"
+    },
+    "coral_gws_splatnet3": {
+        "app_ver": "1.0.0-5e2bcdfb",
+        "version": "1.0.0",
+        "revision": "5e2bcdfbc87dab203663b3eec2495633e5f67808"
     }
 }

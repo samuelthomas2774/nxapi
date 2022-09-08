@@ -59,7 +59,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     // This means the other user had already sent this user a friend request,
     // so sending them a friend request just accepted theirs
     const friends = await nso.getFriendList();
-    const friend = friends.result.friends.find(f => f.nsaId === nsa_id);
+    const friend = friends.friends.find(f => f.nsaId === nsa_id);
 
     if (friend) {
         console.log('You are now friends with %s.', friend.name);

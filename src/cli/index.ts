@@ -2,6 +2,7 @@ export * as users from './users.js';
 export * as nso from './nso.js';
 export * as splatnet2 from './splatnet2.js';
 export * as nooklink from './nooklink.js';
+export * as splatnet3 from './splatnet3.js';
 export * as pctl from './pctl.js';
 export * as androidZncaApiServerFrida from './android-znca-api-server-frida.js';
 export * as util from './util.js';
