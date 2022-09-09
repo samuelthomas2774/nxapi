@@ -5,7 +5,7 @@ import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
-import { BulletToken, GraphQLRequest, GraphQLResponse, RequestId } from './splatnet3-types.js';
+import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult  } from './splatnet3-types.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -75,23 +75,49 @@ export default class SplatNet3Api {
     }
 
     async getHome() {
-        return this.persistedQuery(RequestId.HomeQuery, {});
+        return this.persistedQuery<HomeResult>(RequestId.HomeQuery, {});
     }
 
     async getCurrentFest() {
-        return this.persistedQuery(RequestId.CurrentFestQuery, {});
+        return this.persistedQuery<CurrentFestResult>(RequestId.CurrentFestQuery, {});
     }
 
     async getConfigureAnalytics() {
         return this.persistedQuery(RequestId.ConfigureAnalyticsQuery, {});
     }
 
+    async getSettings() {
+        return this.persistedQuery<SettingResult>(RequestId.SettingQuery, {});
+    }
+
     async getHistoryRecords() {
-        return this.persistedQuery(RequestId.HistoryRecordQuery, {});
+        return this.persistedQuery<HistoryRecordResult>(RequestId.HistoryRecordQuery, {});
     }
 
     async getSchedules() {
-        return this.persistedQuery(RequestId.StageScheduleQuery, {});
+        return this.persistedQuery<StageScheduleResult>(RequestId.StageScheduleQuery, {});
+    }
+
+    async getBattleHistoryCurrentPlayer() {
+        return this.persistedQuery<BattleHistoryCurrentPlayerResult>(RequestId.BattleHistoryCurrentPlayerQuery, {});
+    }
+
+    async getLatestBattleHistories() {
+        return this.persistedQuery<LatestBattleHistoriesResult>(RequestId.LatestBattleHistoriesQuery, {});
+    }
+
+    async getRegularBattleHistories() {
+        return this.persistedQuery<RegularBattleHistoriesResult>(RequestId.RegularBattleHistoriesQuery, {});
+    }
+
+    async getPrivateBattleHistories() {
+        return this.persistedQuery<PrivateBattleHistoriesResult>(RequestId.PrivateBattleHistoriesQuery, {});
+    }
+
+    async getVsHistoryDetail(id: string) {
+        return this.persistedQuery<VsHistoryDetailResult>(RequestId.VsHistoryDetailQuery, {
+            vsResultId: id,
+        });
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {

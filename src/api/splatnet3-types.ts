@@ -3,7 +3,6 @@ export interface BulletToken {
     bulletToken: string;
     lang: string;
     is_noe_country: 'true' | unknown;
-    // ...
 }
 
 /** /graphql */
@@ -96,4 +95,713 @@ export enum RequestId {
     HomeQuery = 'dba47124d5ec3090c97ba17db5d2f4b3',
     VsHistoryDetailPagerRefetchQuery = '994cf141e55213e6923426caf37a1934',
     VsHistoryDetailQuery = 'cd82f2ade8aca7687947c5f3210805a6',
+}
+
+interface Colour {
+    a: number;
+    b: number;
+    g: number;
+    r: number;
+}
+
+interface Weapon {
+    name: string;
+    image: {
+        url: string;
+    };
+    id: string;
+}
+interface SubWeapon {
+    name: string;
+    image: {
+        url: string;
+    };
+    id: string;
+}
+interface SpecialWeapon {
+    name: string;
+    image: {
+        url: string;
+    };
+    id: string;
+}
+interface WeaponSet extends Weapon {
+    subWeapon: SubWeapon;
+    specialWeapon: SpecialWeapon;
+}
+
+interface ExtendedSpecialWeapon extends SpecialWeapon {
+    maskingImage: {
+        width: number;
+        height: number;
+        maskImageUrl: string;
+        overlayImageUrl: string;
+    };
+}
+interface ExtendedWeaponSet extends WeaponSet {
+    specialWeapon: ExtendedSpecialWeapon;
+    image3d: {
+        url: string;
+    };
+    image2d: {
+        url: string;
+    };
+    image3dThumbnail: {
+        url: string;
+    };
+    image2dThumbnail: {
+        url: string;
+    };
+}
+
+interface VsMode {
+    mode: string; // "REGULAR"
+    id: string; // "VnNNb2RlLTE="
+}
+
+interface Nameplate {
+    badges: [unknown | null, unknown | null, unknown | null];
+    background: {
+        textColor: Colour;
+        image: {
+            url: string;
+        };
+        id: string;
+    }
+}
+
+export enum Judgement {
+    WIN = 'WIN',
+    LOSE = 'LOSE',
+}
+export enum Species {
+    INKLINK = 'INKLING',
+    OCTOLING = 'OCTOLING',
+}
+
+interface HeadGear {
+    __isGear: 'HeadGear';
+    name: string;
+    image: {
+        url: string;
+    };
+    primaryGearPower: GearPower;
+    additionalGearPowers: GearPower[];
+}
+interface ClothingGear {
+    __isGear: 'ClothingGear';
+    name: string;
+    image: {
+        url: string;
+    };
+    primaryGearPower: GearPower;
+    additionalGearPowers: GearPower[];
+}
+interface ShoesGear {
+    __isGear: 'ShoesGear';
+    name: string;
+    image: {
+        url: string;
+    };
+    primaryGearPower: GearPower;
+    additionalGearPowers: GearPower[];
+}
+interface GearPower {
+    name: string; // "Ink Recovery Up", "Unknown"
+    image: {
+        url: string;
+    };
+}
+
+
+/** f8ae00773cc412a50dd41a6d9a159ddd ConfigureAnalyticsQuery */
+export interface ConfigureAnalyticsResult {
+    playHistory: {
+        udemaeMax: string;
+        paintPointTotal: number;
+        gameStartTime: string;
+        battleNumTotal: number;
+        xMatchMaxAr: {
+            rank: string | null;
+        };
+        xMatchMaxCl: {
+            rank: string | null;
+        };
+        xMatchMaxGl: {
+            rank: string | null;
+        };
+        xMatchMaxLf: {
+            rank: string | null;
+        };
+    }
+}
+
+/** c0429fd738d829445e994d3370999764 useCurrentFestQuery */
+export interface CurrentFestResult {
+    currentFest: unknown | null;
+}
+
+/** c1553ac75de0a3ea497cdbafaa93e95b BankaraBattleHistoriesQuery */
+export type BankaraBattleHistoriesResult = unknown;
+
+/** 7d8b560e31617e981cf7c8aa1ca13a00 LatestBattleHistoriesQuery */
+export interface LatestBattleHistoriesResult {
+    latestBattleHistories: {
+        summary: latestBattleHistoriesSummary;
+        historyGroupsOnlyFirst: {
+            nodes: LatestBattleHistoryGroupOnlyFirst[];
+        };
+        historyGroups: {
+            nodes: LatestBattleHistoryGroup[];
+        };
+    };
+    currentFest: unknown | null;
+}
+interface latestBattleHistoriesSummary {
+    assistAverage: number;
+    deathAverage: number;
+    killAverage: number;
+    lose: number;
+    perUnitTimeMinute: number;
+    specialAverage: number;
+    win: number;
+}
+interface LatestBattleHistoryGroupOnlyFirst<HasOverlayImage extends boolean = false> {
+    historyDetails: {
+        nodes: LatestBattleHistoryGroupOnlyFirstDetails<HasOverlayImage>[];
+    };
+}
+interface LatestBattleHistoryGroupOnlyFirstDetails<HasOverlayImage extends boolean = false> {
+    player: {
+        weapon: {
+            specialWeapon: {
+                maskingImage: {
+                    width: number;
+                    height: number;
+                    maskImageUrl: string;
+                    overlayImageUrl: HasOverlayImage extends true ? string : never;
+                };
+                id: string;
+            };
+            id: string;
+        };
+        id: string;
+    };
+    id: string;
+}
+interface LatestBattleHistoryGroup {
+    historyDetails: {
+        nodes: AnyLatestBattleHistoryDetails[];
+    };
+}
+interface LatestBattleHistoryDetails {
+    id: string;
+    vsMode: VsMode;
+    vsRule: {
+        name: string; // "Turf War"
+        id: string; // "VnNSdWxlLTA="
+    };
+    vsStage: {
+        name: string; // "Mincemeat Metalworks"
+        id: string; // "VnNTdGFnZS02"
+        image: {
+            url: string;
+        };
+    };
+    judgement: Judgement;
+    player: {
+        weapon: Weapon;
+        id: string;
+        festGrade: unknown | null;
+    };
+    knockout: 'NEITHER';
+    myTeam: {
+        result: {
+            paintPoint: number;
+            paintRatio: number;
+            score: unknown | null;
+        };
+    };
+    nextHistoryDetail: unknown | null;
+    previousHistoryDetail: unknown | null;
+}
+interface AnyLatestBattleHistoryDetails extends LatestBattleHistoryDetails {
+    udemae: unknown | null;
+    bankaraMatch: unknown | null;
+    leagueMatch: unknown | null;
+}
+
+/** 51981299595060692440e0ca66c475a1 PrivateBattleHistoriesQuery */
+export type PrivateBattleHistoriesResult = unknown;
+
+/** 819b680b0c7962b6f7dc2a777cd8c5e4 RegularBattleHistoriesQuery */
+export interface RegularBattleHistoriesResult {
+    regularBattleHistories: {
+        summary: latestBattleHistoriesSummary;
+        historyGroupsOnlyFirst: {
+            nodes: LatestBattleHistoryGroupOnlyFirst<true>[];
+        };
+        historyGroups: {
+            nodes: RegularBattleHistoryGroup[];
+        };
+    };
+}
+interface RegularBattleHistoryGroup {
+    lastPlayedTime: string;
+    historyDetails: {
+        nodes: LatestBattleHistoryDetails[];
+    };
+}
+
+/** 49dd00428fb8e9b4dde62f585c8de1e0 BattleHistoryCurrentPlayerQuery */
+export interface BattleHistoryCurrentPlayerResult {
+    currentPlayer: {
+        species: Species;
+        weapon: {
+            specialWeapon: {
+                maskingImage: {
+                    width: number;
+                    height: number;
+                    maskImageUrl: string;
+                    overlayImageUrl: string;
+                };
+                id: string;
+            };
+            id: string;
+        };
+    };
+}
+
+/** 29957cf5d57b893934de857317cd46d8 HistoryRecordQuery */
+export interface HistoryRecordResult {
+    currentPlayer: CurrentPlayer;
+    playHistory: PlayHistory;
+}
+
+interface CurrentPlayer {
+    __isPlayer: 'CurrentPlayer';
+    byname: string; // "Splatlandian Youth"
+    name: string;
+    nameId: string;
+    nameplate: Nameplate;
+    weapon: WeaponSet;
+    headGear: HeadGear;
+    clothingGear: ClothingGear;
+    shoesGear: ShoesGear;
+}
+
+interface PlayHistory {
+    currentTime: string;
+    gameStartTime: string;
+    udemaeMax: string; // "B-"
+    xMatchMaxAr: XMatchMax;
+    xMatchMaxCl: XMatchMax;
+    xMatchMaxGl: XMatchMax;
+    xMatchMaxLf: XMatchMax;
+    winCountTotal: number;
+    frequentlyUsedWeapons: Weapon[];
+    paintPointTotal: number;
+    badges: unknown[];
+    weaponHistory: {
+        nodes: WeaponHistorySeason[];
+    };
+    recentBadges: unknown[];
+    allBadges: unknown[];
+}
+interface XMatchMax {
+    power: null;
+    rank: null;
+    rankUpdateSeasonName: null;
+    powerUpdateTime: null;
+}
+interface WeaponHistorySeason {
+    seasonName: string; // "Drizzle Season 2022"
+    isMonthly: boolean;
+    startTime: string; // "2022-09-01T00:00:00Z"
+    endTime: string; // "2022-09-09T10:13:36Z"
+    weaponCategories: WeaponHistoryCategory[];
+    weapons: WeaponHistoryRecord[];
+}
+interface WeaponHistoryRecord {
+    weapon: WeaponHistoryWeapon;
+    utilRatio: number;
+}
+interface WeaponHistoryWeapon extends Weapon {
+    weaponId: number;
+}
+interface WeaponHistoryCategory {
+    weaponCategory: WeaponCategory;
+    utilRatio: number;
+    weapons: WeaponHistoryCategoryRecord[];
+}
+interface WeaponCategory {
+    name: string; // "Shooters"
+    category: string; // "Shooter"
+    id: string; // "V2VhcG9uQ2F0ZWdvcnktMA=="
+}
+interface WeaponHistoryCategoryRecord {
+    weapon: WeaponHistoryCategoryWeapon;
+    utilRatio: number;
+}
+interface WeaponHistoryCategoryWeapon extends WeaponHistoryWeapon {
+    weaponCategory: {
+        category: string; // "Shooter"
+        id: string; // "V2VhcG9uQ2F0ZWdvcnktMA=="
+    };
+}
+
+/** 61228d553e7463c203e05e7810dd79a7 SettingQuery */
+export interface SettingResult {
+    currentPlayer: {
+        name: string;
+        userIcon: {
+            url: string;
+        };
+    };
+}
+
+/** 10e1d424391e78d21670227550b3509f StageScheduleQuery */
+export interface StageScheduleResult {
+    regularSchedules: {
+        nodes: RegularSchedule[];
+    };
+    bankaraSchedules: {
+        nodes: BankaraSchedule[];
+    };
+    xSchedules: {
+        nodes: XSchedule[];
+    };
+    leagueSchedules: {
+        nodes: LeagueSchedule[];
+    };
+    coopGroupingSchedule: {
+        regularSchedules: {
+            nodes: CoopRegularSchedule[];
+        };
+        bigRunSchedules: {
+            nodes: unknown[];
+        };
+    };
+    festSchedules: {
+        nodes: FestSchedule[];
+    };
+    currentFest: unknown | null;
+    currentPlayer: {
+        userIcon: {
+            url: string;
+        };
+    };
+    vsStages: {
+        nodes: VsStageDetail[];
+    };
+}
+
+interface RegularSchedule {
+    startTime: string; // "2022-09-09T08:00:00Z"
+    endTime: string; // "2022-09-09T10:00:00Z"
+    regularMatchSetting: RegularMatchSetting;
+    festMatchSetting: unknown | null;
+}
+
+interface RegularMatchSetting {
+    __isVsSetting: 'RegularMatchSetting';
+    __typename: 'RegularMatchSetting';
+    vsStages: VsStage[];
+    vsRule: VsRule;
+}
+
+interface BankaraSchedule {
+    startTime: string; // "2022-09-09T08:00:00Z"
+    endTime: string; // "2022-09-09T10:00:00Z"
+    bankaraMatchSettings: BankaraMatchSetting[];
+    festMatchSetting: unknown | null;
+}
+
+interface BankaraMatchSetting {
+    __isVsSetting: 'BankaraMatchSetting';
+    __typename: 'BankaraMatchSetting';
+    vsStages: VsStage[];
+    vsRule: VsRule;
+    mode: BankaraMatchMode;
+}
+
+export enum BankaraMatchMode {
+    CHALLENGE = 'CHALLENGE',
+    OPEN = 'OPEN',
+}
+
+interface XSchedule {
+    startTime: string; // "2022-09-09T08:00:00Z"
+    endTime: string; // "2022-09-09T10:00:00Z"
+    xMatchSetting: XMatchSetting;
+    festMatchSetting: unknown | null;
+}
+
+interface XMatchSetting {
+    __isVsSetting: 'XMatchSetting';
+    __typename: 'XMatchSetting';
+    vsStages: VsStage[];
+    vsRule: VsRule;
+}
+
+interface LeagueSchedule {
+    startTime: string; // "2022-09-09T08:00:00Z"
+    endTime: string; // "2022-09-09T10:00:00Z"
+    leagueMatchSetting: LeagueMatchSetting;
+    festMatchSetting: unknown | null;
+}
+
+interface LeagueMatchSetting {
+    __isVsSetting: 'LeagueMatchSetting';
+    __typename: 'LeagueMatchSetting';
+    vsStages: VsStage[];
+    vsRule: VsRule;
+}
+
+interface VsStage {
+    id: string; // "VnNTdGFnZS0xMQ=="
+    vsStageId: number; // 11
+    name: string; // "Museum d'Alfonsino"
+    image: {
+        url: string;
+    };
+}
+
+interface VsRule {
+    name: string; // "Turf War", "Rainmaker", "Tower Control", "Splat Zones", "Clam Blitz"
+    rule: string; // "TURF_WAR", "GOAL", "LOFT", "AREA", "CLAM"
+    id: string; // "VnNSdWxlLTA=", "VnNSdWxlLTM=", "VnNSdWxlLTI=", "VnNSdWxlLTE=", "VnNSdWxlLTQ="
+}
+
+interface CoopRegularSchedule {
+    startTime: string; // "2022-09-08T08:00:00Z"
+    endTime: string; // "2022-09-10T00:00:00Z"
+    setting: CoopNormalSetting;
+}
+
+interface CoopNormalSetting {
+    __typename: 'CoopNormalSetting';
+    coopStage: CoopStage;
+    weapons: CoopWeapon[];
+}
+
+interface CoopStage {
+    name: string; // "Sockeye Station"
+    coopStageId: number; // 2
+    thumbnailImage: {
+        url: string;
+    };
+    image: {
+        url: string;
+    };
+    id: string; // "Q29vcFN0YWdlLTI="
+}
+
+interface CoopWeapon {
+    name: string; // "Splattershot Jr."
+    image: {
+        url: string;
+    };
+}
+
+interface FestSchedule {
+    startTime: string; // "2022-09-09T08:00:00Z"
+    endTime: string; // "2022-09-09T10:00:00Z"
+    festMatchSetting: unknown | null;
+}
+
+interface VsStageDetail {
+    stageId: number; // 1
+    id: string; // "VnNTdGFnZS0x"
+    originalImage: {
+        url: string;
+    };
+    name: string; // "Scorch Gorge"
+    stats: VsStageStats | null;
+}
+
+interface VsStageStats {
+    winRateAr: null;
+    winRateLf: null;
+    winRateGl: null;
+    winRateCl: null;
+}
+
+/** dba47124d5ec3090c97ba17db5d2f4b3 HomeQuery */
+export interface HomeResult {
+    currentPlayer: {
+        weapon: {
+            image: {
+                url: string;
+            };
+            id: string;
+        };
+    };
+    banners: HomeBanner[];
+    friends: {
+        nodes: unknown[];
+        totalCount: number;
+    };
+    footerMessages: unknown[];
+}
+
+interface HomeBanner {
+    image: {
+        url: string;
+        width: number;
+        height: number;
+    };
+    message: string;
+    jumpTo: string;
+}
+
+/** cd82f2ade8aca7687947c5f3210805a6 VsHistoryDetailQuery */
+export interface VsHistoryDetailResult {
+    vsHistoryDetail: VsHistoryDetail;
+}
+
+interface VsHistoryDetail {
+    __typename: 'VsHistoryDetail';
+    id: string;
+    vsRule: VsRule;
+    vsMode: VsMode;
+    player: VsHistoryDetailPlayer;
+    judgement: Judgement;
+    myTeam: VsHistoryDetailTeam;
+    vsStage: {
+        name: string; // "Mincemeat Metalworks"
+        image: {
+            url: string;
+        };
+        id: string; // "VnNTdGFnZS02"
+    };
+    festMatch: unknown | null;
+    knockout: 'NEITHER';
+    otherTeams: VsHistoryDetailTeam[];
+    bankaraMatch: unknown | null;
+    xMatch: unknown | null;
+    duration: number;
+    playedTime: string;
+    awards: Award[];
+    leagueMatch: unknown | null;
+    nextHistoryDetail: unknown | null;
+    previousHistoryDetail: unknown | null;
+}
+
+interface BaseVsPlayer {
+    __isPlayer: 'VsPlayer';
+    byname: string; // "Splatlandian Youth"
+    name: string;
+    nameId: string;
+    nameplate: Nameplate;
+    id: string;
+    paint: number;
+}
+
+interface VsHistoryDetailPlayer extends BaseVsPlayer {
+    headGear: VsHistoryDetailPlayerHeadGear;
+    clothingGear: VsHistoryDetailPlayerClothingGear;
+    shoesGear: VsHistoryDetailPlayerShoesGear;
+}
+interface VsHistoryDetailPlayerHeadGear extends HeadGear {
+    originalImage: {
+        url: string;
+    };
+    brand: GearBrand;
+}
+interface VsHistoryDetailPlayerClothingGear extends ClothingGear {
+    originalImage: {
+        url: string;
+    };
+    brand: GearBrand;
+}
+interface VsHistoryDetailPlayerShoesGear extends ShoesGear {
+    originalImage: {
+        url: string;
+    };
+    brand: GearBrand;
+}
+
+interface VsHistoryDetailTeam {
+    color: Colour;
+    judgement: Judgement;
+    result: {
+        paintRatio: number;
+        score: unknown | null;
+        noroshi: unknown | null;
+    };
+    tricolorRole: unknown | null;
+    festTeamName: unknown | null;
+    players: VsPlayer[];
+    order: number;
+}
+
+interface VsPlayer extends BaseVsPlayer {
+    __typename: 'VsPlayer';
+    isMyself: boolean;
+    weapon: ExtendedWeaponSet;
+    headGear: VsPlayerHeadGear;
+    clothingGear: VsPlayerClothingGear;
+    shoesGear: VsPlayerShoesGear;
+    species: Species;
+    result: {
+        kill: number;
+        death: number;
+        assist: number;
+        special: number;
+        noroshiTry: unknown | null;
+    };
+    festDragonCert: 'NONE';
+}
+
+interface GearBrand {
+    name: string; // "Forge"
+    image: {
+        url: string;
+    };
+    id: string; // "QnJhbmQtNQ=="
+}
+interface VsPlayerHeadGear {
+    __isGear: 'HeadGear';
+    name: string;
+    primaryGearPower: GearPower;
+    additionalGearPowers: GearPower[];
+    originalImage: {
+        url: string;
+    };
+    thumbnailImage: {
+        url: string;
+    };
+    brand: GearBrand;
+}
+interface VsPlayerClothingGear {
+    __isGear: 'ClothingGear';
+    name: string;
+    primaryGearPower: GearPower;
+    additionalGearPowers: GearPower[];
+    originalImage: {
+        url: string;
+    };
+    thumbnailImage: {
+        url: string;
+    };
+    brand: GearBrand;
+}
+interface VsPlayerShoesGear {
+    __isGear: 'ShoesGear';
+    name: string;
+    primaryGearPower: GearPower;
+    additionalGearPowers: GearPower[];
+    originalImage: {
+        url: string;
+    };
+    thumbnailImage: {
+        url: string;
+    };
+    brand: GearBrand;
+}
+
+interface Award {
+    name: string; // "#1 Turf Inker"
+    rank: string; // "GOLD"
 }

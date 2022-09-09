@@ -39,11 +39,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const schedules = await splatnet.getSchedules();
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(schedules, null, 4));
+        console.log(JSON.stringify(schedules.data, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify(schedules));
+        console.log(JSON.stringify(schedules.data));
         return;
     }
 

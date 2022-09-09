@@ -29,7 +29,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {splatnet, data} = await getBulletToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
-    const history: any = await splatnet.getHistoryRecords();
+    const history = await splatnet.getHistoryRecords();
 
     console.log('Player %s#%s (title %s, first played %s)',
         history.data.currentPlayer.name,
