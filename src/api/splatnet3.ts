@@ -176,8 +176,8 @@ export default class SplatNet3Api {
         if (token_response.status === 204) {
             throw new ErrorResponse('[splatnet3] USER_NOT_REGISTERED', token_response, await token_response.text());
         }
-        if (token_response.status !== 200) {
-            throw new ErrorResponse('[splatnet3] Non-200 status code', token_response, await token_response.text());
+        if (token_response.status !== 201) {
+            throw new ErrorResponse('[splatnet3] Non-201 status code', token_response, await token_response.text());
         }
 
         const bullet_token = await token_response.json() as BulletToken;
