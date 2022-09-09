@@ -110,14 +110,28 @@ export default class SplatNet3Api {
         return this.persistedQuery<RegularBattleHistoriesResult>(RequestId.RegularBattleHistoriesQuery, {});
     }
 
+    async getBankaraBattleHistories() {
+        return this.persistedQuery<BankaraBattleHistoriesResult>(RequestId.BankaraBattleHistoriesQuery, {});
+    }
+
     async getPrivateBattleHistories() {
         return this.persistedQuery<PrivateBattleHistoriesResult>(RequestId.PrivateBattleHistoriesQuery, {});
     }
 
-    async getVsHistoryDetail(id: string) {
+    async getBattleHistoryDetail(id: string) {
         return this.persistedQuery<VsHistoryDetailResult>(RequestId.VsHistoryDetailQuery, {
             vsResultId: id,
         });
+    }
+
+    async getBattleHistoryDetailPagerRefetch(id: string) {
+        return this.persistedQuery<VsHistoryDetailResult>(RequestId.VsHistoryDetailPagerRefetchQuery, {
+            vsResultId: id,
+        });
+    }
+
+    async getCoopHistory() {
+        return this.persistedQuery<unknown>(RequestId.CoopHistoryQuery, {});
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {

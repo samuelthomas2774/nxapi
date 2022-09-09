@@ -655,6 +655,20 @@ interface HomeBanner {
     jumpTo: string;
 }
 
+/** 994cf141e55213e6923426caf37a1934 VsHistoryDetailPagerRefetchQuery */
+export interface VsHistoryDetailPagerRefetchQueryResult {
+    vsHistoryDetail: {
+        __typename: 'VsHistoryDetail';
+        nextHistoryDetail: {
+            id: string;
+        } | null;
+        previousHistoryDetail: {
+            id: string;
+        } | null;
+        id: string;
+    };
+}
+    
 /** cd82f2ade8aca7687947c5f3210805a6 VsHistoryDetailQuery */
 export interface VsHistoryDetailResult {
     vsHistoryDetail: VsHistoryDetail;
