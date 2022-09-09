@@ -1,13 +1,14 @@
 import createDebug from 'debug';
+import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
 
-const debug = createDebug('cli:splatnet3:user');
+const debug = createDebug('cli:splatnet3:schedule');
 
-export const command = 'user';
-export const desc = 'Get the authenticated Nintendo Account\'s player record';
+export const command = 'schedule';
+export const desc = 'Show stage schedules';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.option('user', {
@@ -16,6 +17,12 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('token', {
         describe: 'Nintendo Account session token',
         type: 'string',
+    }).option('json', {
+        describe: 'Output raw JSON',
+        type: 'boolean',
+    }).option('json-pretty-print', {
+        describe: 'Output pretty-printed JSON',
+        type: 'boolean',
     });
 }
 
@@ -27,12 +34,18 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {splatnet, data} = await getBulletToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
+    const {splatnet} = await getBulletToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
 
-    const history: any = await splatnet.getHistoryRecords();
+    const schedules = await splatnet.getSchedules();
 
-    console.log('Player %s#%s (title %s, first played %s)',
-        history.data.currentPlayer.name,
-        history.data.currentPlayer.nameId,
-        history.data.playHistory.gameStartTime);
+    if (argv.jsonPrettyPrint) {
+        console.log(JSON.stringify(schedules, null, 4));
+        return;
+    }
+    if (argv.json) {
+        console.log(JSON.stringify(schedules));
+        return;
+    }
+
+    throw new Error('Not implemented');
 }

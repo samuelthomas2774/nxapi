@@ -5,7 +5,7 @@ import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
-import { BulletToken, GraphQLRequest, GraphQLResponse, RequestParameters } from './splatnet3-types.js';
+import { BulletToken, GraphQLRequest, GraphQLResponse, RequestId } from './splatnet3-types.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -58,13 +58,13 @@ export default class SplatNet3Api {
         return defineResponse(data, response);
     }
 
-    async graphql<T = unknown, V = unknown>(request_parameters: RequestParameters, variables: V) {
+    async persistedQuery<T = unknown, V = unknown>(id: string, variables: V) {
         const req: GraphQLRequest<V> = {
             variables,
             extensions: {
                 persistedQuery: {
                     version: 1,
-                    sha256Hash: request_parameters.id,
+                    sha256Hash: id,
                 },
             },
         };
@@ -72,6 +72,26 @@ export default class SplatNet3Api {
         const data = await this.fetch<GraphQLResponse<T>>('/graphql', 'POST', JSON.stringify(req));
 
         return data;
+    }
+
+    async getHome() {
+        return this.persistedQuery(RequestId.HomeQuery, {});
+    }
+
+    async getCurrentFest() {
+        return this.persistedQuery(RequestId.CurrentFestQuery, {});
+    }
+
+    async getConfigureAnalytics() {
+        return this.persistedQuery(RequestId.ConfigureAnalyticsQuery, {});
+    }
+
+    async getHistoryRecords() {
+        return this.persistedQuery(RequestId.HistoryRecordQuery, {});
+    }
+
+    async getSchedules() {
+        return this.persistedQuery(RequestId.StageScheduleQuery, {});
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
