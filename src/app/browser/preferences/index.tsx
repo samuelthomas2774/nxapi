@@ -122,11 +122,13 @@ export default function Preferences(props: PreferencesProps) {
                             style={styles.checkbox}
                         />
                         <TouchableOpacity style={styles.checkboxLabel} onPress={() => setOpenAtLogin(!login_item.openAtLogin)}>
-                            <Text style={theme.text}>Open at login</Text>
+                            <Text style={[styles.checkboxLabelText, theme.text]}>Open at login</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {ipc.platform === 'darwin' ? <View style={styles.checkboxContainer}>
+                    {ipc.platform === 'darwin' ? <View
+                        style={[styles.checkboxContainer, !login_item.openAtLogin ? styles.disabled : null]}
+                    >
                         <CheckBox
                             value={login_item.openAsHidden}
                             onValueChange={setOpenAsHidden}
@@ -134,21 +136,23 @@ export default function Preferences(props: PreferencesProps) {
                             color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
                             style={styles.checkbox}
                         />
-                        <TouchableOpacity style={styles.checkboxLabel} onPress={() => setOpenAsHidden(!login_item.openAsHidden)}>
-                            <Text style={theme.text}>Open in background</Text>
+                        <TouchableOpacity disabled={!login_item.openAtLogin} style={styles.checkboxLabel}
+                            onPress={() => setOpenAsHidden(!login_item.openAsHidden)}
+                        >
+                            <Text style={[styles.checkboxLabelText, theme.text]}>Open in background</Text>
                         </TouchableOpacity>
                     </View> : null}
                 </View>
             </View> : null}
 
-            <View style={styles.section}>
+            {/* <View style={styles.section}>
                 <View style={styles.sectionLeft}>
                     <Text style={[styles.label, theme.text]}>Sleep</Text>
                 </View>
                 <View style={styles.sectionRight}>
                     <Text style={theme.text}>Prevent sleep menu here</Text>
                 </View>
-            </View>
+            </View> */}
 
             <View style={styles.section}>
                 <View style={styles.sectionLeft}>
@@ -174,7 +178,7 @@ export default function Preferences(props: PreferencesProps) {
                     <Text style={[styles.header, theme.text]}>Friend code</Text>
                     <Text style={[styles.help, theme.text]}>Adding your friend code will also show your Nintendo Switch user icon in Discord.</Text>
 
-                    {is_discord_friend_code_self ? <>
+                    {is_discord_friend_code_self ? <View style={styles.friendCodeCheckbox}>
                         <View style={styles.checkboxContainer}>
                             <CheckBox
                                 value={!!discord_options.friend_code}
@@ -192,13 +196,15 @@ export default function Preferences(props: PreferencesProps) {
                                 Set custom friend code
                             </Text>
                         </TouchableOpacity>
-                    </> : <TextInput value={discord_friend_code} onChangeText={setDiscordFriendCode}
-                        placeholder="0000-0000-0000"
-                        style={[styles.textInput, theme.textInput]} />}
+                    </View> : <View style={styles.friendCodeInput}>
+                        <TextInput value={discord_friend_code} onChangeText={setDiscordFriendCode}
+                            placeholder="0000-0000-0000"
+                            style={[styles.textInput, theme.textInput]} />
+                    </View>}
 
                     {/* <View style={styles.header} /> */}
 
-                    <View style={styles.checkboxContainer}>
+                    <View style={[styles.checkboxContainer, styles.checkboxContainerMargin]}>
                         <CheckBox
                             value={discord_options?.show_console_online ?? false}
                             onValueChange={setDiscordShowConsoleOnline}
@@ -206,9 +212,10 @@ export default function Preferences(props: PreferencesProps) {
                             style={styles.checkbox}
                         />
                         <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordShowConsoleOnline(!discord_options?.show_console_online)}>
-                            <Text style={theme.text}>Show "Not playing" when a console linked to your account is online, but you are not selected in a game</Text>
+                            <Text style={[styles.checkboxLabelText, theme.text]}>Show inactive presence</Text>
                         </TouchableOpacity>
                     </View>
+                    <Text style={[styles.help, theme.text]}>Shows "Not playing" when a console linked to your account is online, but you are not selected in a game.</Text>
 
                     <Text style={[styles.header, theme.text]}>Play time</Text>
 
@@ -257,7 +264,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     sectionLeft: {
-        // flex: 0,
         width: '30%',
         marginRight: 30,
     },
@@ -301,20 +307,33 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     checkboxContainer: {
+        marginBottom: 8,
         flex: 1,
         flexBasis: 'auto',
-        // marginRight: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        // maxWidth: 1,
+    },
+    checkboxContainerMargin: {
+        marginTop: 8,
+        marginBottom: 0,
     },
     checkbox: {
         marginRight: 10,
-        marginVertical: 8,
     },
     checkboxLabel: {
         flex: 1,
-        marginVertical: 8,
+    },
+    checkboxLabelText: {
+    },
+    disabled: {
+        opacity: 0.8,
+    },
+
+    friendCodeCheckbox: {
+        marginTop: 8,
+    },
+    friendCodeInput: {
+        marginBottom: 4,
     },
 
     button: {
