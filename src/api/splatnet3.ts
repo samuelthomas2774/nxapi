@@ -5,7 +5,7 @@ import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
-import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult  } from './splatnet3-types.js';
+import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult  } from './splatnet3-types.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -88,6 +88,14 @@ export default class SplatNet3Api {
 
     async getSettings() {
         return this.persistedQuery<SettingResult>(RequestId.SettingQuery, {});
+    }
+
+    async getFriends() {
+        return this.persistedQuery<FriendListResult>(RequestId.FriendListQuery, {});
+    }
+
+    async getFriendsRefetch() {
+        return this.persistedQuery<FriendListResult>(RequestId.FriendListRefetchQuery, {});
     }
 
     async getHistoryRecords() {

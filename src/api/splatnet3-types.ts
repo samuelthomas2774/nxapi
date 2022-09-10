@@ -372,6 +372,46 @@ export interface BattleHistoryCurrentPlayerResult {
     };
 }
 
+/** 7a0e05c28c7d3f7e5a06def87ab8cd2d FriendListQuery */
+export interface FriendListResult {
+    friends: {
+        nodes: Friend[];
+    };
+    currentFest: unknown | null;
+}
+
+/** c1afed6111887347e244c639e7d35c69 FriendListRefetchQuery */
+export type FriendListRefetchResult = FriendListResult;
+
+interface Friend {
+    id: string;
+    onlineState: FriendOnlineState;
+    nickname: string;
+    playerName: string | null;
+    userIcon: {
+        url: string;
+        width: number;
+        height: number;
+    };
+    vsMode: {
+        id: string;
+        mode: string; // "BANKARA"
+        name: string; // "Anarchy Battle"
+    } | null;
+    isFavorite: boolean;
+    isLocked: boolean | null;
+    isVcEnabled: boolean | null;
+}
+
+export enum FriendOnlineState {
+    OFFLINE = 'OFFLINE',
+    ONLINE = 'ONLINE',
+    VS_MODE_MATCHING = 'VS_MODE_MATCHING',
+    COOP_MODE_MATCHING = 'COOP_MODE_MATCHING',
+    VS_MODE_FIGHTING = 'VS_MODE_FIGHTING',
+    COOP_MODE_FIGHTING = 'COOP_MODE_FIGHTING',
+}
+
 /** 29957cf5d57b893934de857317cd46d8 HistoryRecordQuery */
 export interface HistoryRecordResult {
     currentPlayer: CurrentPlayer;
@@ -638,8 +678,9 @@ export interface HomeResult {
         };
     };
     banners: HomeBanner[];
+    /** Only includes online friends */
     friends: {
-        nodes: unknown[];
+        nodes: HomeFriend[];
         totalCount: number;
     };
     footerMessages: unknown[];
@@ -653,6 +694,16 @@ interface HomeBanner {
     };
     message: string;
     jumpTo: string;
+}
+
+interface HomeFriend {
+    id: string;
+    nickname: string;
+    userIcon: {
+        height: number;
+        url: string;
+        width: number;
+    };
 }
 
 /** 994cf141e55213e6923426caf37a1934 VsHistoryDetailPagerRefetchQuery */

@@ -1,0 +1,98 @@
+import createDebug from 'debug';
+import Table from '../util/table.js';
+import type { Arguments as ParentArguments } from '../splatnet3.js';
+import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
+import { initStorage } from '../../util/storage.js';
+import { getBulletToken } from '../../common/auth/splatnet3.js';
+import { FriendOnlineState } from '../../api/splatnet3-types.js';
+
+const debug = createDebug('cli:splatnet3:friends');
+
+export const command = 'friends';
+export const desc = 'List Nintendo Switch Online friends who have played Splatoon 3';
+
+export function builder(yargs: Argv<ParentArguments>) {
+    return yargs.option('user', {
+        describe: 'Nintendo Account ID',
+        type: 'string',
+    }).option('token', {
+        describe: 'Nintendo Account session token',
+        type: 'string',
+    }).option('json', {
+        describe: 'Output raw JSON',
+        type: 'boolean',
+    }).option('json-pretty-print', {
+        describe: 'Output pretty-printed JSON',
+        type: 'boolean',
+    });
+}
+
+type Arguments = YargsArguments<ReturnType<typeof builder>>;
+
+export async function handler(argv: ArgumentsCamelCase<Arguments>) {
+    const storage = await initStorage(argv.dataPath);
+
+    const usernsid = argv.user ?? await storage.getItem('SelectedUser');
+    const token: string = argv.token ||
+        await storage.getItem('NintendoAccountToken.' + usernsid);
+    const {splatnet} = await getBulletToken(storage, token, argv.zncProxyUrl, argv.autoUpdateSession);
+
+    const friends = await splatnet.getFriends();
+
+    if (argv.jsonPrettyPrint) {
+        console.log(JSON.stringify({friends: friends.data.friends.nodes}, null, 4));
+        return;
+    }
+    if (argv.json) {
+        console.log(JSON.stringify({friends: friends.data.friends.nodes}));
+        return;
+    }
+
+    const table = new Table({
+        head: [
+            'NSA ID',
+            'Name',
+            'Status',
+            'Favourite?',
+            'Locked?',
+            'Voice chat?',
+        ],
+    });
+
+    for (const friend of friends.data.friends.nodes) {
+        const match = Buffer.from(friend.id, 'base64').toString().match(/^Friend-([0-9a-f]{16})$/);
+        if (!match) table.options.head[0] = 'ID';
+        const id_str = match ? match[1] : friend.id;
+
+        table.push([
+            id_str,
+            friend.playerName === friend.nickname ? friend.playerName :
+                friend.playerName ? friend.playerName + ' (' + friend.nickname + ')' :
+                friend.nickname,
+            getStateDescription(friend.onlineState, friend.vsMode?.name),
+            friend.isFavorite ? 'Yes' : 'No',
+            typeof friend.isLocked === 'boolean' ? friend.isLocked ? 'Yes' : 'No' : '-',
+            typeof friend.isVcEnabled === 'boolean' ? friend.isVcEnabled ? 'Yes' : 'No' : '-',
+        ]);
+    }
+
+    console.log(table.toString());
+}
+
+function getStateDescription(state: FriendOnlineState, vs_mode_desc?: string) {
+    switch (state) {
+        case FriendOnlineState.OFFLINE:
+            return 'Offline';
+        case FriendOnlineState.ONLINE:
+            return 'Online';
+        case FriendOnlineState.VS_MODE_MATCHING:
+            return 'In lobby (' + (vs_mode_desc ?? 'VS') + ')';
+        case FriendOnlineState.COOP_MODE_MATCHING:
+            return 'In lobby (Salmon Run)';
+        case FriendOnlineState.VS_MODE_FIGHTING:
+            return 'In game (' + (vs_mode_desc ?? 'VS') + ')';
+        case FriendOnlineState.COOP_MODE_FIGHTING:
+            return 'In game (Salmon Run)';
+        default: return state;
+    }
+}
