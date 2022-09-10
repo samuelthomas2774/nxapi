@@ -1030,7 +1030,7 @@ export const titles: Title[] = [
     },
     {
         // Kirby and the Forgotten Land Demo
-        id: '010091201605a000', 
+        id: '010091201605a000',
         client: '966534055116021821',
         largeImageText: 'Demo',
         showPlayingOnline: true,
@@ -1094,7 +1094,7 @@ export const titles: Title[] = [
     },
     {
         // Live A Live Demo
-        id: '0100a5f017e9e000', 
+        id: '0100a5f017e9e000',
         client: '966534559929860167',
         largeImageText: 'Demo',
         showPlayingOnline: true,
