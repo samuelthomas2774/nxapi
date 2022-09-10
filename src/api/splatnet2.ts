@@ -11,7 +11,7 @@ import { toSeasonId, Rule as XPowerRankingRule, Season } from './splatnet2-xrank
 
 const debug = createDebug('nxapi:api:splatnet2');
 
-export const SPLATNET2_WEBSERVICE_ID = '5741031244955648';
+export const SPLATNET2_WEBSERVICE_ID = 5741031244955648;
 export const SPLATNET2_WEBSERVICE_URL = 'https://app.splatoon2.nintendo.net/';
 export const SPLATNET2_WEBSERVICE_USERAGENT = 'Mozilla/5.0 (Linux; Android 8.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/58.0.3029.125 Mobile Safari/537.36';
 

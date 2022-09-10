@@ -43,22 +43,24 @@ declare global {
 
         // Unused
         sendMessage?(data: string): void;
-        // Unused
+        // SplatNet 3
         copyToClipboard?(data: string): void;
-
+        // SplatNet 3
         openQRCodeReaderForCheckin?(data: string): void;
         onQRCodeReadForCheckin?(data: string): void;
+        // SplatNet 3
         downloadImages?(imagesJson: string): void;
+        // SplatNet 3
         completeLoading?(): void;
+        // SplatNet 3
         closeWebView?(): void;
+        // SplatNet 3
         reloadExtension?(): void;
     }
 }
 
 //
 // Share
-//
-// Used by SplatNet 2 and Smash World (but both have a different implementation because Nintendo)
 //
 
 export interface NativeShareRequest {
@@ -90,14 +92,14 @@ window.invokeNativeShareUrl = invokeNativeShareUrl;
 //
 // Web service token
 //
-// Used by NookLink
-//
 
 function requestGameWebToken() {
     debug('requestGameWebToken called');
 
     ipc.requestGameWebToken().then(token => {
         window.onGameWebTokenReceive?.call(null, token);
+    }).catch(async err => {
+        debug('Error requesting web service token', err);
     });
 }
 
@@ -105,8 +107,6 @@ window.requestGameWebToken = requestGameWebToken;
 
 //
 // Persistent data
-//
-// Used by NookLink
 //
 
 function restorePersistentData() {
@@ -130,8 +130,6 @@ window.storePersistentData = storePersistentData;
 
 //
 // QR code scanner
-//
-// Used by NookLink
 //
 
 function openQrCodeReader(data: string) {
@@ -179,14 +177,16 @@ window.openQRCodeReaderForCheckin = openQRCodeReaderForCheckin;
 
 function sendMessage(data: string) {
     //
+    debug('sendMessage called', data);
 }
 
 function copyToClipboard(data: string) {
     //
+    debug('copyToClipboard called', data);
 }
 
 function downloadImages(imagesJson: string) {
-    //
+    debug('downloadImages called', imagesJson);
 }
 
 function completeLoading() {
@@ -198,7 +198,7 @@ function closeWebView() {
 }
 
 function reloadExtension() {
-    //
+    debug('reloadExtension called');
 }
 
 window.sendMessage = sendMessage;

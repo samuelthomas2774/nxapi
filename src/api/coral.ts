@@ -205,7 +205,7 @@ export default class CoralApi {
         });
     }
 
-    async getWebServiceToken(id: string) {
+    async getWebServiceToken(id: number) {
         const data = await f(this.token, HashMethod.WEB_SERVICE, this.useragent ?? getAdditionalUserAgents());
 
         const req = {

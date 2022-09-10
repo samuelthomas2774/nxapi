@@ -2,8 +2,9 @@ import * as path from 'node:path';
 import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
+import * as util from 'node:util';
 import createDebug from 'debug';
-import { app, BrowserWindow, dialog, IpcMainInvokeEvent, Menu, MenuItem, nativeTheme, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, dialog, IpcMainInvokeEvent, nativeTheme, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
 import CoralApi from '../../api/coral.js';
 import { dev } from '../../util/product.js';
@@ -76,7 +77,7 @@ export default async function openWebService(
         return {action: 'deny'};
     });
 
-    const webserviceToken = await nso.getWebServiceToken('' + webservice.id);
+    const webserviceToken = await nso.getWebServiceToken(webservice.id);
 
     const url = new URL(webservice.uri);
     url.search = new URLSearchParams({
@@ -277,13 +278,43 @@ export class WebServiceIpc {
     }
 
     async requestGameWebToken(event: IpcMainInvokeEvent): Promise<string> {
-        const {nso, nsoAccount, webservice} = this.getWindowData(event.sender);
+        const {nso, user, nsoAccount, webservice} = this.getWindowData(event.sender);
 
         debug('Web service %s, user %s, called requestGameWebToken', webservice.name, nsoAccount.user.name);
 
-        const webserviceToken = await nso.getWebServiceToken('' + webservice.id);
+        try {
+            const webserviceToken = await nso.getWebServiceToken(webservice.id);
 
-        return webserviceToken.accessToken;
+            return webserviceToken.accessToken;
+        } catch (err) {
+            const window = BrowserWindow.fromWebContents(event.sender)!;
+
+            const result = await dialog.showMessageBox(window, {
+                type: 'error',
+                message: (err instanceof Error ? err.name : 'Error') + ' requesting web service token',
+                detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
+                    webservice: {
+                        id: webservice.id,
+                        name: webservice.name,
+                        uri: webservice.uri,
+                    },
+                    user_na_id: user.id,
+                    user_nsa_id: nsoAccount.user.nsaId,
+                    user_coral_id: nsoAccount.user.id,
+                }, {compact: true}),
+                buttons: ['Retry', 'Close ' + webservice.name, 'Ignore'],
+            });
+
+            if (result.response === 0) {
+                return this.requestGameWebToken(event);
+            }
+            if (result.response === 1) {
+                window.close();
+                throw new Error('Error requesting web service token, closing web service');
+            }
+
+            throw err;
+        }
     }
 
     async restorePersistentData(event: IpcMainInvokeEvent): Promise<string | undefined> {

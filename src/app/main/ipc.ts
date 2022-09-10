@@ -64,9 +64,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         store.users.get(token).then(u => openWebService(store, token, u.nso, u.data, webservice, qs)
             .catch(err => dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender)!, {
                 type: 'error',
-                title: (err instanceof Error ? err.name : 'Error') + ' opening web service',
-                message: err.message,
-                detail: (err instanceof Error ? err.stack ?? '' : err) + '\n\n' + util.inspect({
+                message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
+                detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
                     webservice: {
                         id: webservice.id,
                         name: webservice.name,

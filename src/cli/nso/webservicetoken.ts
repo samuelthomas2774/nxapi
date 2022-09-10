@@ -61,7 +61,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (!active) throw new Error('Nintendo Switch Online membership required');
     }
 
-    const webserviceToken = await nso.getWebServiceToken(argv.id);
+    const webserviceToken = await nso.getWebServiceToken(webservice.id);
 
     // https://app.splatoon2.nintendo.net/?lang=en-GB&na_country=GB&na_lang=en-GB
     const url = new URL(webservice.uri);

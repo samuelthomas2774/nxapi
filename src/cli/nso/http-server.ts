@@ -627,7 +627,7 @@ function createApp(
 
     app.get('/api/znc/webservice/:id/token', nsoAuth, async (req, res) => {
         try {
-            const token = await req.znc!.getWebServiceToken(req.params.id);
+            const token = await req.znc!.getWebServiceToken(parseInt(req.params.id));
 
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({token}));

@@ -9,7 +9,7 @@ import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletT
 
 const debug = createDebug('nxapi:api:splatnet3');
 
-export const SPLATNET3_WEBSERVICE_ID = '4834290508791808';
+export const SPLATNET3_WEBSERVICE_ID = 4834290508791808;
 export const SPLATNET3_WEBSERVICE_URL = 'https://api.lp1.av5ja.srv.nintendo.net';
 export const SPLATNET3_WEBSERVICE_USERAGENT = 'Mozilla/5.0 (Linux; Android 8.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/58.0.3029.125 Mobile Safari/537.36';
 

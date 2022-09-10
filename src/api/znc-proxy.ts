@@ -132,7 +132,7 @@ export default class ZncProxyApi implements CoralApi {
         throw new Error('Not supported in ZncProxyApi');
     }
 
-    async getWebServiceToken(id: string) {
+    async getWebServiceToken(id: number) {
         const result = await this.fetch<{token: WebServiceToken}>('/webservice/' + id + '/token');
         return createResult(result, result.token);
     }
