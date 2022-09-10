@@ -6,6 +6,7 @@ const debug = createDebug('app:preload-webservice');
 import './znca-js-api.js';
 import './quirks/splatnet2.js';
 import './quirks/nooklink.js';
+import './quirks/splatnet3.js';
 
 const style = window.document.createElement('style');
 
