@@ -6,6 +6,18 @@ const debug = createDebug('app:preload-webservice:quirks:splatnet3');
 const SPLATNET3_WEBSERVICE_ID = 4834290508791808;
 
 if (webservice.id === SPLATNET3_WEBSERVICE_ID) {
+    const style = window.document.createElement('style');
+
+    style.textContent = `
+    [class*=NavigationBar_exitButton] {
+        display: none;
+    }
+    `;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        window.document.head.appendChild(style);
+    });
+    
     events.on('window:refresh', () => {
         const pulltorefresh_container = document.querySelector<HTMLElement>('[class*=PullToRefresh_container]');
         debug('PullToRefresh container HTMLElement', pulltorefresh_container);
