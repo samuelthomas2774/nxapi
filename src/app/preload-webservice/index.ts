@@ -3,6 +3,7 @@ import createDebug from 'debug';
 // Logs are written to the browser window developer tools, and are hidden by default (enable verbose logs)
 const debug = createDebug('app:preload-webservice');
 
+import './loading.js';
 import './znca-js-api.js';
 import './quirks/splatnet2.js';
 import './quirks/nooklink.js';

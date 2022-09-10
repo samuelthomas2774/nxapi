@@ -1,16 +1,18 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
 import path from 'node:path';
+import * as util from 'node:util';
 import createDebug from 'debug';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { WebService } from '../../api/coral-types.js';
-import openWebService from './webservices.js';
+import openWebService, { WebServiceValidationError } from './webservices.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { dev, dir } from '../../util/product.js';
 import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
 import { createWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
+import CoralApi from '../../api/coral.js';
 
 const debug = createDebug('app:main:menu');
 
@@ -176,15 +178,42 @@ export default class MenuApp {
                     try {
                         const {nso, data} = await this.app.store.users.get(token);
 
-                        await openWebService(this.app.store, token, nso, data, webservice);
+                        await this.openWebService(token, nso, data, webservice);
                     } catch (err) {
-                        dialog.showErrorBox('Error loading web service', (err as any).stack ?? (err as any).message);
+                        dialog.showMessageBox({
+                            type: 'error',
+                            message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
+                            detail: '' + (err instanceof Error ? err.stack ?? err.message : err),
+                        });
                     }
                 },
             }));
         }
 
         return items;
+    }
+
+    async openWebService(token: string, nso: CoralApi, data: SavedToken, webservice: WebService) {
+        try {
+            await openWebService(this.app.store, token, nso, data, webservice);
+        } catch (err) {
+            if (!(err instanceof WebServiceValidationError)) return;
+
+            dialog.showMessageBox({
+                type: 'error',
+                message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
+                detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
+                    webservice: {
+                        id: webservice.id,
+                        name: webservice.name,
+                        uri: webservice.uri,
+                    },
+                    user_na_id: data.user.id,
+                    user_nsa_id: data.nsoAccount.user.nsaId,
+                    user_coral_id: data.nsoAccount.user.id,
+                }, {compact: true}),
+            });
+        }
     }
 
     getActiveDiscordPresenceMonitor() {

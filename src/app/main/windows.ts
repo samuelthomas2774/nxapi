@@ -1,4 +1,4 @@
-import { app, BrowserWindow, BrowserWindowConstructorOptions, Menu, session, WebContents } from './electron.js';
+import { app, BrowserWindow, BrowserWindowConstructorOptions, Menu, nativeTheme, session, WebContents } from './electron.js';
 import * as path from 'node:path';
 import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';
@@ -61,6 +61,9 @@ export function getWindowConfiguration(webcontents: WebContents): WindowConfigur
     return data;
 }
 
+const BACKGROUND_COLOUR_MAIN_LIGHT = process.platform === 'win32' ? '#ffffff' : '#ececec';
+const BACKGROUND_COLOUR_MAIN_DARK = process.platform === 'win32' ? '#000000' : '#252424';
+
 export function createWebServiceWindow(nsa_id: string, webservice: WebService, title_prefix?: string) {
     const browser_session = session.fromPartition('persist:webservices-' + nsa_id, {
         cache: false,
@@ -71,6 +74,7 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService, t
         height: 667,
         resizable: false,
         title: (title_prefix ?? '') + webservice.name,
+        backgroundColor: nativeTheme.shouldUseDarkColors ? BACKGROUND_COLOUR_MAIN_DARK : BACKGROUND_COLOUR_MAIN_LIGHT,
         webPreferences: {
             session: browser_session,
             preload: path.join(bundlepath, 'preload-webservice.cjs'),
@@ -81,6 +85,9 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService, t
     });
 
     menus.set(window, createWindowMenu(window));
+
+    window.loadURL('about:blank');
+    if (dev) window.webContents.openDevTools();
 
     return window;
 }

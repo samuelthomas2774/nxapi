@@ -8,12 +8,13 @@ import { app, BrowserWindow, dialog, IpcMainInvokeEvent, nativeTheme, ShareMenu,
 import fetch from 'node-fetch';
 import CoralApi from '../../api/coral.js';
 import { dev } from '../../util/product.js';
-import { WebService } from '../../api/coral-types.js';
+import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
 import { Store } from './index.js';
 import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { createWebServiceWindow } from './windows.js';
 import { askUserForUri } from './util.js';
+import { NintendoAccountUser } from '../../api/na.js';
 
 const debug = createDebug('app:main:webservices');
 
@@ -39,7 +40,7 @@ export default async function openWebService(
     if (verifymembership?.attrValue === 'true') {
         const membership = data.nsoAccount.user.links.nintendoAccount.membership;
         const active = typeof membership.active === 'object' ? membership.active.active : membership.active;
-        if (!active) throw new Error('Nintendo Switch Online membership required');
+        if (!active) throw new WebServiceValidationError('Nintendo Switch Online membership required');
     }
 
     const user_title_prefix = '[' + data.user.nickname +
@@ -77,7 +78,7 @@ export default async function openWebService(
         return {action: 'deny'};
     });
 
-    const webserviceToken = await nso.getWebServiceToken(webservice.id);
+    const webserviceToken = await getWebServiceToken(nso, webservice, data.user, data.nsoAccount.user, window);
 
     const url = new URL(webservice.uri);
     url.search = new URLSearchParams({
@@ -99,8 +100,6 @@ export default async function openWebService(
         qs,
     });
 
-    if (dev) window.webContents.openDevTools();
-
     window.loadURL(url.toString(), {
         extraHeaders: Object.entries({
             'x-appcolorscheme': nativeTheme.shouldUseDarkColors ? 'DARK' : 'LIGHT',
@@ -109,6 +108,44 @@ export default async function openWebService(
             'X-Requested-With': 'com.nintendo.znca',
         }).map(([key, value]) => key + ': ' + value).join('\n'),
     });
+}
+
+export class WebServiceValidationError extends Error {}
+
+async function getWebServiceToken(
+    nso: CoralApi, webservice: WebService,
+    user: NintendoAccountUser, nsoAccount: CurrentUser,
+    window: BrowserWindow
+): Promise<WebServiceToken> {
+    try {
+        return await nso.getWebServiceToken(webservice.id);
+    } catch (err) {
+        const result = await dialog.showMessageBox(window, {
+            type: 'error',
+            message: (err instanceof Error ? err.name : 'Error') + ' requesting web service token',
+            detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
+                webservice: {
+                    id: webservice.id,
+                    name: webservice.name,
+                    uri: webservice.uri,
+                },
+                user_na_id: user.id,
+                user_nsa_id: nsoAccount.nsaId,
+                user_coral_id: nsoAccount.id,
+            }, {compact: true}),
+            buttons: ['Retry', 'Close ' + webservice.name, 'Ignore'],
+        });
+
+        if (result.response === 0) {
+            return getWebServiceToken(nso, webservice, user, nsoAccount, window);
+        }
+        if (result.response === 1) {
+            window.close();
+            throw new Error('Error requesting web service token, closing web service');
+        }
+
+        throw err;
+    }
 }
 
 function isWebServiceUrlAllowed(webservice: WebService, url: string | URL) {
@@ -279,42 +316,13 @@ export class WebServiceIpc {
 
     async requestGameWebToken(event: IpcMainInvokeEvent): Promise<string> {
         const {nso, user, nsoAccount, webservice} = this.getWindowData(event.sender);
+        const window = BrowserWindow.fromWebContents(event.sender)!;
 
         debug('Web service %s, user %s, called requestGameWebToken', webservice.name, nsoAccount.user.name);
 
-        try {
-            const webserviceToken = await nso.getWebServiceToken(webservice.id);
+        const webserviceToken = await getWebServiceToken(nso, webservice, user, nsoAccount.user, window);
 
-            return webserviceToken.accessToken;
-        } catch (err) {
-            const window = BrowserWindow.fromWebContents(event.sender)!;
-
-            const result = await dialog.showMessageBox(window, {
-                type: 'error',
-                message: (err instanceof Error ? err.name : 'Error') + ' requesting web service token',
-                detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
-                    webservice: {
-                        id: webservice.id,
-                        name: webservice.name,
-                        uri: webservice.uri,
-                    },
-                    user_na_id: user.id,
-                    user_nsa_id: nsoAccount.user.nsaId,
-                    user_coral_id: nsoAccount.user.id,
-                }, {compact: true}),
-                buttons: ['Retry', 'Close ' + webservice.name, 'Ignore'],
-            });
-
-            if (result.response === 0) {
-                return this.requestGameWebToken(event);
-            }
-            if (result.response === 1) {
-                window.close();
-                throw new Error('Error requesting web service token, closing web service');
-            }
-
-            throw err;
-        }
+        return webserviceToken.accessToken;
     }
 
     async restorePersistentData(event: IpcMainInvokeEvent): Promise<string | undefined> {
