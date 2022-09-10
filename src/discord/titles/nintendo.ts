@@ -192,6 +192,14 @@ export const titles: Title[] = [
         showActiveEvent: true,
     },
     {
+        // ARMS Global Testpunch
+        id: '0100c5e003b40000',
+        client: '966102773642960917',
+        largeImageText: 'Global Testpunch',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
         // ARMS Sparring Demo
         id: '0100a5400ac86000',
         client: '966102773642960917',
@@ -1020,14 +1028,14 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
-    // {
-    //     // Kirby and the Forgotten Land Demo
-    //     id: '', // TODO
-    //     client: '966534055116021821',
-    //     largeImageText: 'Demo',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Kirby and the Forgotten Land Demo
+        id: '010091201605a000', 
+        client: '966534055116021821',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Nintendo Switch Sports
@@ -1081,6 +1089,14 @@ export const titles: Title[] = [
         // Live A Live
         id: '0100cf801776c000',
         client: '966534559929860167',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Live A Live Demo
+        id: '0100a5f017e9e000', 
+        client: '966534559929860167',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
