@@ -23,6 +23,7 @@ export type BrowserWindow = import('electron').BrowserWindow;
 export type BrowserWindowConstructorOptions = import('electron').BrowserWindowConstructorOptions;
 export type IpcMain = import('electron').IpcMain;
 export type IpcMainInvokeEvent = import('electron').IpcMainInvokeEvent;
+export type KeyboardEvent = import('electron').KeyboardEvent;
 export type LoginItemSettings = import('electron').LoginItemSettings;
 export type LoginItemSettingsOptions = import('electron').LoginItemSettingsOptions;
 export type Menu = import('electron').Menu;

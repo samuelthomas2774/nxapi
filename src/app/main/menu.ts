@@ -1,4 +1,4 @@
-import { app, dialog, Menu, Tray, nativeImage, MenuItem } from './electron.js';
+import { app, dialog, Menu, Tray, nativeImage, MenuItem, BrowserWindow, KeyboardEvent } from './electron.js';
 import path from 'node:path';
 import * as util from 'node:util';
 import createDebug from 'debug';
@@ -115,8 +115,10 @@ export default class MenuApp {
         this.tray.setContextMenu(menu);
     }
 
-    addNsoAccount = () => askAddNsoAccount(this.app.store.storage);
-    addPctlAccount = () => askAddPctlAccount(this.app.store.storage);
+    addNsoAccount = (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
+        askAddNsoAccount(this.app.store.storage, !event.shiftKey);
+    addPctlAccount = (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
+        askAddPctlAccount(this.app.store.storage, !event.shiftKey);
 
     // Hardcode these temporarily until they are cached
     webservices: WebService[] | null = [

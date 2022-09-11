@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, IpcMain, LoginItemSettings, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { app, BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, LoginItemSettings, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
 import createDebug from 'debug';
 import { User } from 'discord-rpc';
@@ -171,8 +171,12 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         (buildUserMenu(appinstance, user, nso, moon, BrowserWindow.fromWebContents(e.sender) ?? undefined)
             .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:add-user', e => (Menu.buildFromTemplate([
-        new MenuItem({label: 'Add Nintendo Switch Online account', click: () => askAddNsoAccount(storage)}),
-        new MenuItem({label: 'Add Nintendo Switch Parental Controls account', click: () => askAddPctlAccount(storage)}),
+        new MenuItem({label: 'Add Nintendo Switch Online account', click:
+            (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
+                askAddNsoAccount(storage, !event.shiftKey)}),
+        new MenuItem({label: 'Add Nintendo Switch Parental Controls account', click:
+            (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
+                askAddPctlAccount(storage, !event.shiftKey)}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
         new MenuItem({label: 'SW-' + fc.id, enabled: false}),

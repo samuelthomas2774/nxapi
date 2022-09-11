@@ -19,6 +19,7 @@ import { dev, dir } from '../../util/product.js';
 import { addUserAgent } from '../../util/useragent.js';
 import { askUserForUri } from './util.js';
 import { setAppInstance } from './app-menu.js';
+import { handleAuthUri } from './na-auth.js';
 
 const debug = createDebug('app:main');
 
@@ -174,6 +175,11 @@ export async function init() {
 }
 
 function tryHandleUrl(app: App, url: string) {
+    if (url.match(/^npf[0-9a-f]{16}:\/\/auth($|\?|\#)/i)) {
+        handleAuthUri(url);
+        return true;
+    }
+
     if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)?game\/(\d+)\/?($|\?|\#)/i)) {
         handleOpenWebServiceUri(app.store, url);
         return true;

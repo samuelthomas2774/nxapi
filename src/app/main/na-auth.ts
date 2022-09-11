@@ -2,7 +2,7 @@ import process from 'node:process';
 import * as crypto from 'node:crypto';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
+import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
 import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
@@ -97,13 +97,13 @@ export class AuthoriseCancelError extends AuthoriseError {
     }
 }
 
-export function getSessionTokenCode(client_id: string, scope: string | string[], close_window: false):
+export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window: false):
     Promise<NintendoAccountSessionTokenCode & {window: BrowserWindow}>
-export function getSessionTokenCode(client_id: string, scope: string | string[], close_window: true):
+export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window: true):
     Promise<NintendoAccountSessionTokenCode & {window?: never}>
-export function getSessionTokenCode(client_id: string, scope: string | string[], close_window?: boolean):
+export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window?: boolean):
     Promise<NintendoAccountSessionTokenCode & {window?: BrowserWindow}>
-export function getSessionTokenCode(client_id: string, scope: string | string[], close_window = true) {
+export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window = true) {
     return new Promise<NintendoAccountSessionTokenCode>((rs, rj) => {
         const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
         const window = createAuthWindow();
@@ -199,6 +199,96 @@ export function getSessionTokenCode(client_id: string, scope: string | string[],
     });
 }
 
+export function getSessionTokenCodeByDefaultBrowser(client_id: string, scope: string | string[], close_window = true) {
+    return new Promise<NintendoAccountSessionTokenCode>((rs, rj) => {
+        const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
+
+        const handleAuthUrl = (url: URL) => {
+            const authorisedparams = new URLSearchParams(url.hash.substr(1));
+            debug('Redirect URL parameters', [...authorisedparams.entries()]);
+
+            if (authorisedparams.get('state') !== state) {
+                rj(new Error('Invalid state'));
+                return;
+            }
+
+            if (authorisedparams.has('error')) {
+                rj(AuthoriseError.fromSearchParams(authorisedparams));
+                return;
+            }
+
+            if (!authorisedparams.has('session_token_code')) {
+                rj(new Error('Response didn\'t include a session token code'));
+                return;
+            }
+
+            const code = authorisedparams.get('session_token_code')!;
+            const [jwt, sig] = Jwt.decode(code);
+
+            debug('code', code, jwt, sig);
+
+            rs({code, verifier});
+        };
+
+        debug('Prompting user for Nintendo Account authorisation', {
+            authoriseurl,
+            state,
+            verifier,
+            challenge,
+        });
+
+        const protocol = 'npf' + client_id;
+
+        if (app.isDefaultProtocolClient(protocol)) {
+            debug('App is already default protocol handler, opening browser');
+            auth_state.set(state, [handleAuthUrl, rj, protocol]);
+            shell.openExternal(authoriseurl);
+        } else {
+            const registered_app = app.getApplicationNameForProtocol(protocol);
+
+            if (registered_app || !app.setAsDefaultProtocolClient(protocol)) {
+                debug('App is now default protocol handler, opening browser');
+                auth_state.set(state, [handleAuthUrl, rj, protocol]);
+                shell.openExternal(authoriseurl);
+            } else {
+                debug('Another app is using the auth protocol or registration failed, prompting for redirect URI');
+                askUserForRedirectUri(authoriseurl, handleAuthUrl, rj);
+            }
+        }
+    });
+}
+
+const auth_state = new Map<string, [rs: (url: URL) => void, rj: (reason: any) => void, protocol: string]>();
+
+export function handleAuthUri(url_string: string) {
+    const url = new URL(url_string);
+    const qs = new URLSearchParams(url.hash.substr(1));
+
+    debug('Received auth URL', url, qs.entries());
+
+    const state_str = qs.get('state');
+    if (!state_str) return;
+    const state = auth_state.get(state_str);
+    if (!state) return;
+
+    debug('Received valid auth URL with state', state_str);
+
+    auth_state.delete(state_str);
+    const [rs, rj, protocol] = state;
+
+    rs(url);
+}
+
+app.on('quit', () => {
+    for (const [,, protocol] of auth_state.values()) {
+        app.removeAsDefaultProtocolClient(protocol);
+    }
+});
+
+function askUserForRedirectUri(authoriseurl: string, rs: (url: URL) => void, rj: (reason: any) => void) {
+    rj(new Error('Not implemented'));
+}
+
 const NSO_SCOPE = [
     'openid',
     'user',
@@ -207,11 +297,13 @@ const NSO_SCOPE = [
     'user.screenName',
 ];
 
-export async function addNsoAccount(storage: persist.LocalStorage) {
-    const {code, verifier, window} = await getSessionTokenCode(ZNCA_CLIENT_ID, NSO_SCOPE, false);
+export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_browser = true) {
+    const {code, verifier, window} = use_in_app_browser ?
+        await getSessionTokenCodeByInAppBrowser(ZNCA_CLIENT_ID, NSO_SCOPE, false) :
+        await getSessionTokenCodeByDefaultBrowser(ZNCA_CLIENT_ID, NSO_SCOPE);
 
-    window.setFocusable(false);
-    window.blurWebView();
+    window?.setFocusable(false);
+    window?.blurWebView();
 
     try {
         const [jwt, sig] = Jwt.decode(code);
@@ -252,13 +344,13 @@ export async function addNsoAccount(storage: persist.LocalStorage) {
 
         return {nso, data};
     } finally {
-        window.close();
+        window?.close();
     }
 }
 
-export async function askAddNsoAccount(storage: persist.LocalStorage) {
+export async function askAddNsoAccount(storage: persist.LocalStorage, iab = true) {
     try {
-        return await addNsoAccount(storage);
+        return await addNsoAccount(storage, iab);
     } catch (err: any) {
         if (err instanceof AuthoriseError && err.code === 'access_denied') return;
 
@@ -344,8 +436,10 @@ const MOON_SCOPE = [
     'moonMonthlySummary',
 ];
 
-export async function addPctlAccount(storage: persist.LocalStorage) {
-    const {code, verifier, window} = await getSessionTokenCode(ZNMA_CLIENT_ID, MOON_SCOPE, false);
+export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_browser = true) {
+    const {code, verifier, window} = use_in_app_browser ?
+        await getSessionTokenCodeByInAppBrowser(ZNMA_CLIENT_ID, MOON_SCOPE, false) :
+        await getSessionTokenCodeByDefaultBrowser(ZNMA_CLIENT_ID, MOON_SCOPE);
 
     window?.setFocusable(false);
     window?.blurWebView();
@@ -389,9 +483,9 @@ export async function addPctlAccount(storage: persist.LocalStorage) {
     }
 }
 
-export async function askAddPctlAccount(storage: persist.LocalStorage) {
+export async function askAddPctlAccount(storage: persist.LocalStorage, iab = true) {
     try {
-        return await addPctlAccount(storage);
+        return await addPctlAccount(storage, iab);
     } catch (err: any) {
         if (err instanceof AuthoriseError && err.code === 'access_denied') return;
 
