@@ -116,6 +116,18 @@
                 "schemes": [
                     "com.nintendo.znca"
                 ]
+            },
+            {
+                "name": "Nintendo Account authentication for Nintendo Switch Online",
+                "schemes": [
+                    "npf71b963c1b7b6d119"
+                ]
+            },
+            {
+                "name": "Nintendo Account authentication for Nintendo Switch Parental Controls",
+                "schemes": [
+                    "npf54789befb391a838"
+                ]
             }
         ],
         "mac": {
