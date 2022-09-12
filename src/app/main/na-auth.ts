@@ -11,6 +11,8 @@ import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
 import { Jwt } from '../../util/jwt.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { ZNCA_API_USE_URL } from '../../common/constants.js';
+import { createWindow } from './windows.js';
+import { WindowType } from '../common/types.js';
 
 const debug = createDebug('app:main:na-auth');
 
@@ -199,9 +201,16 @@ export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: stri
     });
 }
 
-export function getSessionTokenCodeByDefaultBrowser(client_id: string, scope: string | string[], close_window = true) {
+const FORCE_MANUAL_AUTH_URI_ENTRY = process.env.NXAPI_FORCE_MANUAL_AUTH === '1';
+
+export function getSessionTokenCodeByDefaultBrowser(
+    client_id: string, scope: string | string[],
+    close_window = true,
+    force_manual = FORCE_MANUAL_AUTH_URI_ENTRY
+) {
     return new Promise<NintendoAccountSessionTokenCode>((rs, rj) => {
         const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
+        let window: BrowserWindow | undefined = undefined;
 
         const handleAuthUrl = (url: URL) => {
             const authorisedparams = new URLSearchParams(url.hash.substr(1));
@@ -209,16 +218,19 @@ export function getSessionTokenCodeByDefaultBrowser(client_id: string, scope: st
 
             if (authorisedparams.get('state') !== state) {
                 rj(new Error('Invalid state'));
+                window?.close();
                 return;
             }
 
             if (authorisedparams.has('error')) {
                 rj(AuthoriseError.fromSearchParams(authorisedparams));
+                window?.close();
                 return;
             }
 
             if (!authorisedparams.has('session_token_code')) {
                 rj(new Error('Response didn\'t include a session token code'));
+                window?.close();
                 return;
             }
 
@@ -227,7 +239,9 @@ export function getSessionTokenCodeByDefaultBrowser(client_id: string, scope: st
 
             debug('code', code, jwt, sig);
 
-            rs({code, verifier});
+            if (window && close_window) window.close();
+            else if (window) rs({code, verifier, window});
+            else rs({code, verifier});
         };
 
         debug('Prompting user for Nintendo Account authorisation', {
@@ -239,7 +253,10 @@ export function getSessionTokenCodeByDefaultBrowser(client_id: string, scope: st
 
         const protocol = 'npf' + client_id;
 
-        if (app.isDefaultProtocolClient(protocol)) {
+        if (force_manual) {
+            debug('Manual entry forced, prompting for redirect URI');
+            window = askUserForRedirectUri(authoriseurl, client_id, handleAuthUrl, rj);
+        } else if (app.isDefaultProtocolClient(protocol)) {
             debug('App is already default protocol handler, opening browser');
             auth_state.set(state, [handleAuthUrl, rj, protocol]);
             shell.openExternal(authoriseurl);
@@ -247,12 +264,12 @@ export function getSessionTokenCodeByDefaultBrowser(client_id: string, scope: st
             const registered_app = app.getApplicationNameForProtocol(protocol);
 
             if (registered_app || !app.setAsDefaultProtocolClient(protocol)) {
+                debug('Another app is using the auth protocol or registration failed, prompting for redirect URI');
+                window = askUserForRedirectUri(authoriseurl, client_id, handleAuthUrl, rj);
+            } else {
                 debug('App is now default protocol handler, opening browser');
                 auth_state.set(state, [handleAuthUrl, rj, protocol]);
                 shell.openExternal(authoriseurl);
-            } else {
-                debug('Another app is using the auth protocol or registration failed, prompting for redirect URI');
-                askUserForRedirectUri(authoriseurl, handleAuthUrl, rj);
             }
         }
     });
@@ -285,8 +302,42 @@ app.on('quit', () => {
     }
 });
 
-function askUserForRedirectUri(authoriseurl: string, rs: (url: URL) => void, rj: (reason: any) => void) {
-    rj(new Error('Not implemented'));
+function askUserForRedirectUri(
+    authoriseurl: string, client_id: string,
+    handleAuthUrl: (url: URL) => void, rj: (reason: any) => void
+) {
+    const window = createWindow(WindowType.ADD_ACCOUNT_MANUAL_PROMPT, {
+        authoriseurl,
+        client_id,
+    }, {
+        show: false,
+        maximizable: false,
+        minimizable: false,
+        width: 560,
+        height: 300,
+        minWidth: 450,
+        maxWidth: 700,
+        minHeight: 300,
+        maxHeight: 300,
+    });
+
+    window.webContents.on('will-navigate', (event, url_string) => {
+        event.preventDefault();
+
+        const url = new URL(url_string);
+
+        debug('will navigate', url);
+
+        if (url.protocol === 'npf' + client_id + ':' && url.host === 'auth') {
+            handleAuthUrl(url);
+        }
+    });
+
+    window.on('closed', () => {
+        rj(new AuthoriseCancelError('Canceled'));
+    });
+
+    return window;
 }
 
 const NSO_SCOPE = [
@@ -300,7 +351,7 @@ const NSO_SCOPE = [
 export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_browser = true) {
     const {code, verifier, window} = use_in_app_browser ?
         await getSessionTokenCodeByInAppBrowser(ZNCA_CLIENT_ID, NSO_SCOPE, false) :
-        await getSessionTokenCodeByDefaultBrowser(ZNCA_CLIENT_ID, NSO_SCOPE);
+        await getSessionTokenCodeByDefaultBrowser(ZNCA_CLIENT_ID, NSO_SCOPE, false);
 
     window?.setFocusable(false);
     window?.blurWebView();
@@ -439,7 +490,7 @@ const MOON_SCOPE = [
 export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_browser = true) {
     const {code, verifier, window} = use_in_app_browser ?
         await getSessionTokenCodeByInAppBrowser(ZNMA_CLIENT_ID, MOON_SCOPE, false) :
-        await getSessionTokenCodeByDefaultBrowser(ZNMA_CLIENT_ID, MOON_SCOPE);
+        await getSessionTokenCodeByDefaultBrowser(ZNMA_CLIENT_ID, MOON_SCOPE, false);
 
     window?.setFocusable(false);
     window?.blurWebView();

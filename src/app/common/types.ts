@@ -6,6 +6,7 @@ export enum WindowType {
     DISCORD_PRESENCE = 'DiscordPresence',
     ADD_FRIEND = 'AddFriend',
     PREFERENCES = 'Preferences',
+    ADD_ACCOUNT_MANUAL_PROMPT = 'AddAccountManualPrompt',
 }
 
 interface WindowProps {
@@ -14,6 +15,7 @@ interface WindowProps {
     [WindowType.DISCORD_PRESENCE]: import('../browser/discord/index.js').DiscordSetupProps;
     [WindowType.ADD_FRIEND]: import('../browser/add-friend/index.js').AddFriendProps;
     [WindowType.PREFERENCES]: import('../browser/preferences/index.js').PreferencesProps;
+    [WindowType.ADD_ACCOUNT_MANUAL_PROMPT]: import('../browser/add-account-manual/index.js').AddAccountManualPromptProps;
 }
 
 export interface WindowConfiguration<T extends WindowType = WindowType> {

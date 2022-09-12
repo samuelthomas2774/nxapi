@@ -5,12 +5,14 @@ import Friend from './friend/index.js';
 import DiscordSetup from './discord/index.js';
 import AddFriend from './add-friend/index.js';
 import Preferences from './preferences/index.js';
+import AddAccountManualPrompt from './add-account-manual/index.js';
 
 AppRegistry.registerComponent('App', () => App);
 AppRegistry.registerComponent('Friend', () => Friend);
 AppRegistry.registerComponent('DiscordPresence', () => DiscordSetup);
 AppRegistry.registerComponent('AddFriend', () => AddFriend);
 AppRegistry.registerComponent('Preferences', () => Preferences);
+AppRegistry.registerComponent('AddAccountManualPrompt', () => AddAccountManualPrompt);
 
 const style = window.document.createElement('style');
 
