@@ -1,9 +1,12 @@
+import * as crypto from 'node:crypto';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import CoralApi from '../api/coral.js';
+import CoralApi, { Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, GetActiveEventResult, WebServices, CoralSuccessResponse, Friend } from '../api/coral-types.js';
+import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
+import type { Store } from '../app/main/index.js';
+import { NintendoAccountUser } from '../api/na.js';
 
 const debug = createDebug('nxapi:users');
 
@@ -40,9 +43,14 @@ export default class Users<T extends UserData> {
         return promise;
     }
 
-    static coral(storage: persist.LocalStorage, znc_proxy_url: string, ratelimit?: boolean): Users<CoralUser<ZncProxyApi>>
-    static coral(storage: persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser>
-    static coral(storage: persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean) {
+    static coral(store: Store | persist.LocalStorage, znc_proxy_url: string, ratelimit?: boolean): Users<CoralUser<ZncProxyApi>>
+    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser>
+    static coral(_store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean) {
+        const store = 'storage' in _store ? _store : null;
+        const storage = 'storage' in _store ? _store.storage : _store;
+
+        const cached_webservices = new Map</** language */ string, string>();
+
         return new Users(async token => {
             const {nso, data} = await getToken(storage, token, znc_proxy_url, ratelimit);
 
@@ -53,7 +61,16 @@ export default class Users<T extends UserData> {
                 nso.getActiveEvent(),
             ]);
 
-            return new CoralUser(nso, data, announcements, friends, webservices, active_event);
+            const user = new CoralUser(nso, data, announcements, friends, webservices, active_event);
+            
+            if (store) {
+                await maybeUpdateWebServicesListCache(cached_webservices, store, data.user, webservices);
+                user.onUpdatedWebServices = webservices => {
+                    maybeUpdateWebServicesListCache(cached_webservices, store, data.user, webservices);
+                };
+            }
+
+            return user;
         });
     }
 }
@@ -79,6 +96,8 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
         webservices: Date.now(),
         active_event: Date.now(),
     };
+
+    onUpdatedWebServices: ((webservices: Result<WebServices>) => void) | null = null;
 
     constructor(
         public nso: T,
@@ -125,7 +144,9 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
 
     async getWebServices() {
         await this.update('webservices', async () => {
-            this.webservices = await this.nso.getWebServices();
+            const webservices = this.webservices = await this.nso.getWebServices();
+
+            this.onUpdatedWebServices?.call(null, webservices);
         }, 10 * 1000);
 
         return this.webservices.result;
@@ -166,4 +187,32 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
 
         return {result, friend};
     }
+}
+
+export interface CachedWebServicesList {
+    webservices: WebService[];
+    updated_at: number;
+    language: string;
+    user: string;
+}
+
+async function maybeUpdateWebServicesListCache(
+    cached_webservices: Map<string, string>, store: Store, // storage: persist.LocalStorage,
+    user: NintendoAccountUser, webservices: WebService[]
+) {
+    const webservices_hash = crypto.createHash('sha256').update(JSON.stringify(webservices)).digest('hex');
+    if (cached_webservices.get(user.language) === webservices_hash) return;
+
+    debug('Updating web services list', user.language);
+
+    const cache: CachedWebServicesList = {
+        webservices,
+        updated_at: Date.now(),
+        language: user.language,
+        user: user.id,
+    };
+
+    await store.storage.setItem('CachedWebServicesList.' + user.language, cache);
+    cached_webservices.set(user.language, webservices_hash);
+    store?.emit('update-cached-web-services', user.language, cache);
 }

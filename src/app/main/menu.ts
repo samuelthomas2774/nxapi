@@ -13,6 +13,7 @@ import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor
 import { createWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
 import CoralApi from '../../api/coral.js';
+import { CachedWebServicesList } from '../../common/users.js';
 
 const debug = createDebug('app:main:menu');
 
@@ -30,6 +31,10 @@ export default class MenuApp {
         this.tray.setToolTip('nxapi');
 
         app.store.on('update-nintendo-accounts', () => this.updateMenu());
+        app.store.on('update-cached-web-services', (language: string, cache: CachedWebServicesList) => {
+            this.webservices.set(language, cache.webservices);
+            this.updateMenu();
+        });
         this.updateMenu();
     }
 
@@ -52,6 +57,8 @@ export default class MenuApp {
             const discord_presence_active = discord_presence_monitor instanceof EmbeddedPresenceMonitor &&
                 discord_presence_monitor?.data?.user.id === data.user.id;
 
+            const webservices = await this.getWebServiceItems(data.user.language, token);
+
             const item = new MenuItem({
                 label: data.nsoAccount.user.name,
                 submenu: [
@@ -72,9 +79,11 @@ export default class MenuApp {
                     {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop(true)},
                     {type: 'separator'},
                     {label: 'Add friend', click: () => this.showAddFriendWindow(data.user.id)},
-                    {type: 'separator'},
-                    {label: 'Web services', enabled: false},
-                    ...await this.getWebServiceItems(token) as any,
+                    ...(webservices.length ? [
+                        {type: 'separator'},
+                        {label: 'Web services', enabled: false},
+                        ...webservices as any,
+                    ] : []),
                 ],
             });
 
@@ -120,57 +129,21 @@ export default class MenuApp {
     addPctlAccount = (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
         askAddPctlAccount(this.app.store.storage, !event.shiftKey);
 
-    // Hardcode these temporarily until they are cached
-    webservices: WebService[] | null = [
-        {
-            id: 4953919198265344,
-            uri: 'https://web.sd.lp1.acbaa.srv.nintendo.net',
-            customAttributes: [
-                {attrKey: 'verifyMembership', attrValue: 'true'},
-                {attrKey: 'deepLinkingEnabled', attrValue: 'true'},
-                {attrKey: 'appNavigationBarBgColor', attrValue: '82D7AA'},
-                {attrKey: 'appStatusBarBgColor', attrValue: '82D7AA'},
-            ],
-            whiteList: ['*.acbaa.srv.nintendo.net'],
-            name: 'Animal Crossing: New Horizons',
-            imageUri: 'https://cdn.znc.srv.nintendo.net/gameWebServices/n5b4648f/n5b4648f/images/euEn/banner.png',
-        },
-        {
-            id: 5598642853249024,
-            uri: 'https://app.smashbros.nintendo.net',
-            customAttributes: [
-                {attrKey: 'verifyMembership', attrValue: 'true'},
-                {attrKey: 'appNavigationBarBgColor', attrValue: 'A50514'},
-                {attrKey: 'appStatusBarBgColor', attrValue: 'A50514'},
-            ],
-            whiteList: ['app.smashbros.nintendo.net'],
-            name: 'Super Smash Bros. Ultimate',
-            imageUri: 'https://cdn.znc.srv.nintendo.net/gameWebServices/n3f32691/n3f32691/images/euEn/banner.png',
-        },
-        {
-            id: 5741031244955648,
-            uri: 'https://app.splatoon2.nintendo.net/',
-            customAttributes: [
-                {attrKey: 'appNavigationBarBgColor', attrValue: 'E60012'},
-                {attrKey: 'appStatusBarBgColor', attrValue: 'E60012'},
-            ],
-            whiteList: ['app.splatoon2.nintendo.net'],
-            name: 'Splatoon 2',
-            imageUri: 'https://cdn.znc.srv.nintendo.net/gameWebServices/splatoon2/images/euEn/banner.png',
-        },
-    ];
+    protected webservices = new Map</** language */ string, WebService[]>();
 
-    async getWebServices(token: string) {
-        if (this.webservices) return this.webservices;
+    async getWebServices(language: string) {
+        const cache = this.webservices.get(language);
+        if (cache) return cache;
 
-        const {nso, data} = await this.app.store.users.get(token);
+        const webservices: CachedWebServicesList | undefined =
+            await this.app.store.storage.getItem('CachedWebServicesList.' + language);
 
-        const webservices = await nso.getWebServices();
-        return this.webservices = webservices;
+        if (webservices) this.webservices.set(language, webservices.webservices);
+        return webservices?.webservices ?? [];
     }
 
-    async getWebServiceItems(token: string) {
-        const webservices = await this.getWebServices(token);
+    async getWebServiceItems(language: string, token: string) {
+        const webservices = await this.getWebServices(language);
         const items = [];
 
         for (const webservice of webservices) {
