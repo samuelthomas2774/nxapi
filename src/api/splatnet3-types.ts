@@ -2,7 +2,7 @@
 export interface BulletToken {
     bulletToken: string;
     lang: string;
-    is_noe_country: 'true' | unknown;
+    is_noe_country: 'true' | 'false';
 }
 
 /** /graphql */

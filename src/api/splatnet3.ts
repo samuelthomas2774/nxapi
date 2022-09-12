@@ -29,7 +29,10 @@ export default class SplatNet3Api {
         public useragent: string,
     ) {}
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+    async fetch<T = unknown>(
+        url: string, method = 'GET', body?: string | FormData, headers?: object,
+        /** @internal */ _log?: string
+    ) {
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(SPLATNET3_URL + url, {
             method,
@@ -47,7 +50,7 @@ export default class SplatNet3Api {
             signal,
         }).finally(cancel);
 
-        debug('fetch %s %s, response %s', method, url, response.status);
+        debug('fetch %s %s%s, response %s', method, url, _log ? ', ' + _log : '', response.status);
 
         if (response.status !== 200) {
             throw new ErrorResponse('[splatnet3] Non-200 status code', response, await response.text());
@@ -69,7 +72,8 @@ export default class SplatNet3Api {
             },
         };
 
-        const data = await this.fetch<GraphQLResponse<T>>('/graphql', 'POST', JSON.stringify(req));
+        const data = await this.fetch<GraphQLResponse<T>>('/graphql', 'POST', JSON.stringify(req), undefined,
+            'graphql query ' + id);
 
         return data;
     }
