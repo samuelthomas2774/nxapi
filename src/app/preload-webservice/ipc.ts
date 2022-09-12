@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, IpcRendererEvent } from 'electron';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { WebServiceData } from '../main/webservices.js';
@@ -25,3 +25,11 @@ debug('Web service', webservice);
 debug('Web service URL', webserviceurl);
 
 ipcRenderer.on('nxapi:window:refresh', () => events.emit('window:refresh') || location.reload());
+
+ipcRenderer.on('nxapi:webserviceapi:deeplink', (event: IpcRendererEvent, qs: string) => {
+    if (events.emit('deeplink', qs)) return;
+
+    const url = new URL(webserviceurl);
+    url.search += (url.search ? '&' : '') + qs;
+    location.href = url.toString();
+});

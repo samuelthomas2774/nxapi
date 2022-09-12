@@ -58,6 +58,8 @@ export async function askUserForUri(store: Store, uri: string, prompt: string): 
     menu.append(new MenuItem({label: 'Cancel', click: (i, w) => menu.closePopup(w)}));
 
     const window = new BrowserWindow({show: false});
+    // Add a delay to prevent the menu being closed immediately
+    await new Promise(rs => setTimeout(rs, 100));
     await new Promise<void>(rs => menu.popup({callback: rs}));
     window.destroy();
 

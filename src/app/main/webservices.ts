@@ -32,6 +32,12 @@ export default async function openWebService(
 
         window.focus();
 
+        const deepLinkingEnabled = webservice.customAttributes.find(a => a.attrKey === 'deepLinkingEnabled');
+
+        if (deepLinkingEnabled?.attrValue === 'true' && qs) {
+            window.webContents.send('nxapi:webserviceapi:deeplink', qs);
+        }
+
         return;
     }
 
@@ -180,14 +186,6 @@ export async function handleOpenWebServiceUri(store: Store, uri: string) {
     if (!webservice) {
         dialog.showErrorBox('Invalid web service', 'The URL did not reference an existing web service.\n\n' +
             uri);
-        return;
-    }
-
-    const windowid = data.nsoAccount.user.nsaId + ':' + webservice.id;
-
-    if (windows.has(windowid)) {
-        const window = windows.get(windowid)!;
-        window.focus();
         return;
     }
 
