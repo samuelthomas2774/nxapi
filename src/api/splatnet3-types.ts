@@ -244,6 +244,51 @@ export interface CurrentFestResult {
 /** c1553ac75de0a3ea497cdbafaa93e95b BankaraBattleHistoriesQuery */
 export type BankaraBattleHistoriesResult = unknown;
 
+/** 817618ce39bcf5570f52a97d73301b30 CoopHistoryQuery */
+export interface CoopHistoryResult {
+    coopResult: {
+        historyGroups: {
+            nodes: CoopHistoryGroup[];
+        };
+        historyGroupsOnlyFirst: unknown;
+        monthlyGear: unknown;
+        pointCard: unknown;
+        regularAverageClearWave: unknown;
+        regularGrade: unknown;
+        regularGradePoint: unknown;
+        scale: unknown;
+    }
+}
+interface CoopHistoryGroup {
+    historyDetails: {
+        nodes: CoopHistoryDetail[];
+    };
+}
+interface CoopHistoryDetail {
+    afterGrade: unknown;
+    afterGradePoint: unknown;
+    bossResult: unknown;
+    coopStage: unknown;
+    gradePointDiff: unknown;
+    id: string;
+    memberResults: unknown;
+    myResult: unknown;
+    nextHistoryDetail: {
+        id: string;
+    } | null;
+    previousHistoryDetail: {
+        id: string;
+    } | null;
+    resultWave: unknown;
+    waveResults: unknown;
+    weapons: unknown;
+}
+
+/** f3799a033f0a7ad4b1b396f9a3bafb1e CoopHistoryDetailQuery */
+export interface CoopHistoryDetailResult {
+    coopHistoryDetail: unknown;
+}
+
 /** 7d8b560e31617e981cf7c8aa1ca13a00 LatestBattleHistoriesQuery */
 export interface LatestBattleHistoriesResult {
     latestBattleHistories: {

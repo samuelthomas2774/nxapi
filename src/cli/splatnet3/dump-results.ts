@@ -28,7 +28,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'boolean',
         default: true,
     }).option('coop', {
-        describe: 'Include coop (Salmon Run) results',
+        describe: 'Include coop (salmon run) results',
         type: 'boolean',
         default: true,
     });
@@ -51,9 +51,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.battles) {
         await dumpResults(splatnet, directory);
     }
-    // if (argv.coop) {
-    //     await dumpCoopResults(splatnet, directory);
-    // }
+    if (argv.coop) {
+        await dumpCoopResults(splatnet, directory);
+    }
 }
 
 export async function dumpResults(
@@ -95,5 +95,39 @@ export async function dumpResults(
     if (skipped.length) {
         if (skipped.length === 1) debug('Skipped battle result %s, file already exists', skipped[0]);
         else debug('Skipped %d battle results, files already exist', skipped.length);
+    }
+}
+
+export async function dumpCoopResults(splatnet: SplatNet3Api, directory: string) {
+    debug('Fetching coop results');
+    const results = await splatnet.getCoopHistory();
+
+    const skipped = [];
+
+    // Reverse coop history order so oldest records are downloaded first
+    for (const group of results.data.coopResult.historyGroups.nodes.reverse()) {
+        for (const item of group.historyDetails.nodes.reverse()) {
+            const id_str = Buffer.from(item.id, 'base64').toString() || item.id;
+
+            const filename = 'splatnet3-coopHistory-' + id_str + '.json';
+            const file = path.join(directory, filename);
+
+            try {
+                await fs.stat(file);
+                skipped.push(item.id);
+            } catch (err) {
+                debug('Fetching co-op history %s', id_str);
+                const result = await splatnet.getCoopHistoryDetail(item.id);
+
+                debug('Writing %s', filename);
+                await fs.writeFile(file, JSON.stringify({
+                    result: result.data.coopHistoryDetail,
+                }, null, 4) + '\n', 'utf-8');
+            }
+        }
+    }
+
+    if (skipped.length) {
+        debug('Skipped %d co-op history, files already exist', skipped.length);
     }
 }

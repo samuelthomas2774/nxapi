@@ -5,7 +5,7 @@ import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
-import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult  } from './splatnet3-types.js';
+import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult, CoopHistoryResult, CoopHistoryDetailResult } from './splatnet3-types.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -143,7 +143,13 @@ export default class SplatNet3Api {
     }
 
     async getCoopHistory() {
-        return this.persistedQuery<unknown>(RequestId.CoopHistoryQuery, {});
+        return this.persistedQuery<CoopHistoryResult>(RequestId.CoopHistoryQuery, {});
+    }
+
+    async getCoopHistoryDetail(id: string) {
+        return this.persistedQuery<CoopHistoryDetailResult>(RequestId.CoopHistoryDetailQuery, {
+            coopHistoryDetailId: id
+        });
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
