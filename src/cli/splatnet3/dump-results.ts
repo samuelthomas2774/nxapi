@@ -28,7 +28,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'boolean',
         default: true,
     }).option('coop', {
-        describe: 'Include coop (salmon run) results',
+        describe: 'Include coop (Salmon Run) results',
         type: 'boolean',
         default: true,
     });
@@ -109,7 +109,7 @@ export async function dumpCoopResults(splatnet: SplatNet3Api, directory: string)
         for (const item of group.historyDetails.nodes.reverse()) {
             const id_str = Buffer.from(item.id, 'base64').toString() || item.id;
 
-            const filename = 'splatnet3-coopHistory-' + id_str + '.json';
+            const filename = 'splatnet3-coop-result-' + id_str + '.json';
             const file = path.join(directory, filename);
 
             try {
@@ -128,6 +128,7 @@ export async function dumpCoopResults(splatnet: SplatNet3Api, directory: string)
     }
 
     if (skipped.length) {
-        debug('Skipped %d co-op history, files already exist', skipped.length);
+        if (skipped.length === 1) debug('Skipped co-op result %s, file already exist', skipped[0]);
+        else debug('Skipped %d co-op results, files already exist', skipped.length);
     }
 }
