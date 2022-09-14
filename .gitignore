@@ -3,4 +3,4 @@ dist
 data
 docker-compose.override.yml
 .env
-.vscode/schema
+.vscode/schema/generated

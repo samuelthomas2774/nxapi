@@ -51,8 +51,17 @@
         },
 
         {
+            "fileMatch": ["**/splatnet3-result-*.json"],
+            "url": "./.vscode/schema/splatnet3/result.schema.json"
+        },
+        {
+            "fileMatch": ["**/splatnet3-coop-result-*.json"],
+            "url": "./.vscode/schema/splatnet3/coop-result.schema.json"
+        },
+
+        {
             "fileMatch": ["**/resources/common/remote-config.json", "**/data/remote-config.json"],
-            "url": "./.vscode/schema/remote-config.schema.json"
+            "url": "./.vscode/schema/generated/remote-config.schema.json"
         },
     ],
     "typescript.tsdk": "node_modules/typescript/lib",
