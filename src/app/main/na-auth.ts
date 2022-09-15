@@ -13,6 +13,7 @@ import { tryGetNativeImageFromUrl } from './util.js';
 import { ZNCA_API_USE_URL } from '../../common/constants.js';
 import { createWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
+import { protocol_registration_options } from './index.js';
 
 const debug = createDebug('app:main:na-auth');
 
@@ -256,14 +257,18 @@ export function getSessionTokenCodeByDefaultBrowser(
         if (force_manual) {
             debug('Manual entry forced, prompting for redirect URI');
             window = askUserForRedirectUri(authoriseurl, client_id, handleAuthUrl, rj);
-        } else if (app.isDefaultProtocolClient(protocol)) {
+        } else if (app.isDefaultProtocolClient(protocol,
+            protocol_registration_options?.path, protocol_registration_options?.argv
+        )) {
             debug('App is already default protocol handler, opening browser');
             auth_state.set(state, [handleAuthUrl, rj, protocol]);
             shell.openExternal(authoriseurl);
         } else {
             const registered_app = app.getApplicationNameForProtocol(protocol);
 
-            if (registered_app || !app.setAsDefaultProtocolClient(protocol)) {
+            if (registered_app || !app.setAsDefaultProtocolClient(protocol,
+                protocol_registration_options?.path, protocol_registration_options?.argv
+            )) {
                 debug('Another app is using the auth protocol or registration failed, prompting for redirect URI');
                 window = askUserForRedirectUri(authoriseurl, client_id, handleAuthUrl, rj);
             } else {
@@ -298,7 +303,8 @@ export function handleAuthUri(url_string: string) {
 
 app.on('quit', () => {
     for (const [,, protocol] of auth_state.values()) {
-        app.removeAsDefaultProtocolClient(protocol);
+        app.removeAsDefaultProtocolClient(protocol,
+            protocol_registration_options?.path, protocol_registration_options?.argv);
     }
 });
 

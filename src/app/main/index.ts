@@ -23,7 +23,16 @@ import { handleAuthUri } from './na-auth.js';
 
 const debug = createDebug('app:main');
 
+export const protocol_registration_options = dev && process.platform === 'win32' ? {
+    path: process.execPath,
+    argv: [
+        path.join(dir, 'dist', 'app', 'main', 'app-entry.cjs'),
+    ],
+} : null;
 export const login_item_options: LoginItemSettingsOptions = {};
+
+debug('Protocol registration options', protocol_registration_options);
+debug('Login item registration options', login_item_options);
 
 export class App {
     readonly store: Store;
@@ -141,13 +150,8 @@ export async function init() {
         }
     });
 
-    if (dev && process.platform === 'win32') {
-        app.setAsDefaultProtocolClient('com.nintendo.znca', process.execPath, [
-            path.join(dir, 'dist', 'app', 'main', 'app-entry.cjs'),
-        ]);
-    } else {
-        app.setAsDefaultProtocolClient('com.nintendo.znca');
-    }
+    app.setAsDefaultProtocolClient('com.nintendo.znca',
+        protocol_registration_options?.path, protocol_registration_options?.argv);
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) appinstance.showMainWindow();
@@ -175,6 +179,8 @@ export async function init() {
 }
 
 function tryHandleUrl(app: App, url: string) {
+    debug('Attempting to handle URL', url);
+
     if (url.match(/^npf[0-9a-f]{16}:\/\/auth($|\?|\#)/i)) {
         handleAuthUri(url);
         return true;
