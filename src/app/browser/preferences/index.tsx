@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableHighlight, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { CheckBox, Picker } from 'react-native-web';
 import { DiscordPresencePlayTime } from '../../../discord/types.js';
@@ -35,6 +35,8 @@ export default function Preferences(props: PreferencesProps) {
 
     const [discord_options, , discord_options_state, forceRefreshDiscordOptions] =
         useAsync(useCallback(() => ipc.getSavedDiscordPresenceOptions(), [ipc]));
+    const [has_ever_loaded_discord_options, setHasLoadedDiscordOptions] = useReducer(() => true, false);
+    useEffect(() => (discord_options_state === RequestState.LOADED && setHasLoadedDiscordOptions(), undefined));
 
     const [discord_friend_code, setDiscordFriendCodeValue] = useState(discord_options?.friend_code ?? '');
     const discord_friend_code_valid = !discord_friend_code || discord_friend_code.match(/^\d{4}-\d{4}-\d{4}$/);
@@ -85,7 +87,7 @@ export default function Preferences(props: PreferencesProps) {
 
     if (!users ||
         !login_item ||
-        !discord_options ||
+        !has_ever_loaded_discord_options ||
         discord_presence_source_state !== RequestState.LOADED
     ) {
         return null;
@@ -181,12 +183,12 @@ export default function Preferences(props: PreferencesProps) {
                     {is_discord_friend_code_self ? <View style={styles.friendCodeCheckbox}>
                         <View style={styles.checkboxContainer}>
                             <CheckBox
-                                value={!!discord_options.friend_code}
+                                value={!!discord_options?.friend_code}
                                 onValueChange={v => setDiscordFriendCode(v ? discord_friend_code_self : undefined)}
                                 color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
                                 style={styles.checkbox}
                             />
-                            <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordFriendCode(discord_options.friend_code ? undefined : discord_friend_code_self)}>
+                            <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordFriendCode(discord_options?.friend_code ? undefined : discord_friend_code_self)}>
                                 <Text style={theme.text}>Share my friend code</Text>
                             </TouchableOpacity>
                         </View>
