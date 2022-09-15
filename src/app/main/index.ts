@@ -181,7 +181,7 @@ export async function init() {
 function tryHandleUrl(app: App, url: string) {
     debug('Attempting to handle URL', url);
 
-    if (url.match(/^npf[0-9a-f]{16}:\/\/auth($|\?|\#)/i)) {
+    if (url.match(/^npf[0-9a-f]{16}:\/\/auth\/?($|\?|\#)/i)) {
         handleAuthUri(url);
         return true;
     }
