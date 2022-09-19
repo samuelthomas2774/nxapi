@@ -104,7 +104,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncNotifications(storage, token, nso, data);
 
-    i.notifications = new TerminalNotificationManager(await import('node-notifier'));
+    const notifier = (await import('node-notifier')).default;
+    i.notifications = new TerminalNotificationManager(notifier);
     i.user_notifications = argv.userNotifications;
     i.friend_notifications = argv.friendNotifications;
     i.update_interval = argv.updateInterval;
