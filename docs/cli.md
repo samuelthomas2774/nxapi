@@ -524,7 +524,7 @@ This command has no options, but environment variables can still be used.
 
 ### znca API server
 
-A server for controlling the Nintendo Switch Online app on an Android device/emulator using Frida can be used instead of the imink/splatnet2statink+flapg APIs to generate `f` parameters for authentication.
+A server for controlling the Nintendo Switch Online app on an Android device/emulator using Frida can be used instead of the imink/flapg APIs to generate `f` parameters for authentication.
 
 This server has a single endpoint, `/api/znca/f`, which is fully compatible with [the imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation)'s `/f` endpoint. The following data should be sent as JSON:
 
@@ -575,8 +575,23 @@ nxapi android-znca-api-server-frida android.local:5555 --listen "[::1]:12345"
 # "{cmd}" will be replaced with the path to a temporary script in double quotes
 nxapi android-znca-api-server-frida android.local:5555 --exec-command "/system/bin/su -c {cmd}"
 
-# Specify a different location to the frida-server executable
+# Specify a different location for the adb executable if it is not in the search path
+nxapi android-znca-api-server-frida android.local:5555 --adb-path "/usr/local/bin/adb"
+
+# Run `adb root` when connecting to the device to restart adbd as root
+nxapi android-znca-api-server-frida android.local:5555 --adb-root
+
+# Specify a different location for the frida-server executable on the device
 nxapi android-znca-api-server-frida android.local:5555 --frida-server-path "/data/local/tmp/frida-server-15.1.17-android-arm"
+
+# Use Frida to start the app on the device (even if it is already running) (recommended)
+nxapi android-znca-api-server-frida android.local:5555 --start-method spawn
+# Use `am start-activity` to ensure the app process is running
+nxapi android-znca-api-server-frida android.local:5555 --start-method activity
+# Use `am start-service` to ensure the app process is running, without causing Android to show the app (default)
+nxapi android-znca-api-server-frida android.local:5555 --start-method service
+# Do not attempt to start the app on the device automatically - this will cause the server to fail if the app is not already running
+nxapi android-znca-api-server-frida android.local:5555 --start-method none
 
 # Strictly validate the timestamp and request_id parameters sent by the client are likely to be accepted by Nintendo's API
 nxapi android-znca-api-server-frida android.local:5555 --strict-validate
@@ -617,5 +632,5 @@ Name        | Description
 `validate`  | Time validating the request body.
 `attach`    | Time waiting for the device to become available, start frida-server, start the app and attach the Frida script to the app process. This metric will not be included if the server is already connected to the device.
 `queue`     | Time waiting for the processing thread to become available.
-`init`      | Time waiting for `com.nintendo.coral.core.services.voip.Libvoipnji.init`.
-`process`   | Time waiting for `com.nintendo.coral.core.services.voip.Libvoipnji.genAudioH`/`genAudioH2`.
+`init`      | Time waiting for `com.nintendo.coral.core.services.voip.Libvoipjni.init`.
+`process`   | Time waiting for `com.nintendo.coral.core.services.voip.Libvoipjni.genAudioH`/`genAudioH2`.
