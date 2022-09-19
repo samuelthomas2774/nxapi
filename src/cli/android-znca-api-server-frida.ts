@@ -34,6 +34,9 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('exec-command', {
         describe: 'Command to use to run a file on the device',
         type: 'string',
+    }).option('adb-path', {
+        describe: 'Path to the adb executable',
+        type: 'string',
     }).option('frida-server-path', {
         describe: 'Path to the frida-server executable on the device',
         type: 'string',
@@ -155,7 +158,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         debug('Exiting', code);
         debug('Releasing wake lock', argv.device);
-        execScript(argv.device, '/data/local/tmp/android-znca-api-server-shutdown.sh', argv.execCommand);
+        execScript(argv.device, '/data/local/tmp/android-znca-api-server-shutdown.sh', argv.execCommand, argv.adbPath);
         process.exit(typeof code === 'number' ? code : 0);
     };
 
@@ -590,10 +593,12 @@ echo androidzncaapiserver > /sys/power/wake_unlock
 
 async function setup(argv: ArgumentsCamelCase<Arguments>, start_method: StartMethod) {
     debug('Connecting to device %s', argv.device);
-    let co = execFileSync('adb', [
+    let co = execFileSync(argv.adbPath ?? 'adb', [
         'connect',
         argv.device,
-    ]);
+    ], {
+        windowsHide: true,
+    });
 
     while (co.toString().includes('failed to authenticate')) {
         console.log('');
@@ -604,13 +609,15 @@ async function setup(argv: ArgumentsCamelCase<Arguments>, start_method: StartMet
         execAdb([
             'disconnect',
             argv.device,
-        ]);
+        ], argv.adbPath);
 
         debug('Connecting to device %s', argv.device);
-        co = execFileSync('adb', [
+        co = execFileSync(argv.adbPath ?? 'adb', [
             'connect',
             argv.device,
-        ]);
+        ], {
+            windowsHide: true,
+        });
     }
 
     debug('Pushing scripts');
@@ -618,8 +625,8 @@ async function setup(argv: ArgumentsCamelCase<Arguments>, start_method: StartMet
     await pushScript(argv.device, setup_script({
         frida_server_path: argv.fridaServerPath,
         start_method,
-    }), '/data/local/tmp/android-znca-api-server-setup.sh');
-    await pushScript(argv.device, shutdown_script, '/data/local/tmp/android-znca-api-server-shutdown.sh');
+    }), '/data/local/tmp/android-znca-api-server-setup.sh', argv.adbPath);
+    await pushScript(argv.device, shutdown_script, '/data/local/tmp/android-znca-api-server-shutdown.sh', argv.adbPath);
 }
 
 async function attach(argv: ArgumentsCamelCase<Arguments>, start_method: StartMethod) {
@@ -627,7 +634,7 @@ async function attach(argv: ArgumentsCamelCase<Arguments>, start_method: StartMe
     type Session = import('frida').Session;
 
     debug('Running scripts');
-    execScript(argv.device, '/data/local/tmp/android-znca-api-server-setup.sh', argv.execCommand);
+    execScript(argv.device, '/data/local/tmp/android-znca-api-server-setup.sh', argv.execCommand, argv.adbPath);
 
     debug('Done');
 
@@ -661,9 +668,10 @@ async function attach(argv: ArgumentsCamelCase<Arguments>, start_method: StartMe
     return {session, script};
 }
 
-function execAdb(args: string[], device?: string) {
-    execFileSync('adb', device ? ['-s', device, ...args] : args, {
+function execAdb(args: string[], adb_path?: string, device?: string) {
+    execFileSync(adb_path ?? 'adb', device ? ['-s', device, ...args] : args, {
         stdio: 'inherit',
+        windowsHide: true,
     });
 }
 
@@ -676,7 +684,7 @@ async function getScriptPath(content: string) {
     return filename;
 }
 
-async function pushScript(device: string, content: string, path: string) {
+async function pushScript(device: string, content: string, path: string, adb_path?: string) {
     const filename = await getScriptPath(content);
 
     debug('Pushing script', path, filename);
@@ -685,15 +693,15 @@ async function pushScript(device: string, content: string, path: string) {
         'push',
         filename,
         path,
-    ], device);
+    ], adb_path, device);
 
     execAdb([
         'shell',
         'chmod 755 ' + JSON.stringify(path),
-    ], device);
+    ], adb_path, device);
 }
 
-function execScript(device: string, path: string, exec_command?: string) {
+function execScript(device: string, path: string, exec_command?: string, adb_path?: string) {
     const command = exec_command ?
         exec_command.replace('{cmd}', JSON.stringify(path)) :
         path;
@@ -703,5 +711,5 @@ function execScript(device: string, path: string, exec_command?: string) {
     execAdb([
         'shell',
         command,
-    ], device);
+    ], adb_path, device);
 }
