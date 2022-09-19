@@ -37,6 +37,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('adb-path', {
         describe: 'Path to the adb executable',
         type: 'string',
+    }).option('adb-root', {
+        describe: 'Run `adb root` to restart adbd as root',
+        type: 'boolean',
+        default: false,
     }).option('frida-server-path', {
         describe: 'Path to the frida-server executable on the device',
         type: 'string',
@@ -553,6 +557,13 @@ const setup_script = (options: {
     start_method: StartMethod;
 }) => `#!/system/bin/sh
 
+if [ "\`id -u\`" != "0" ]; then
+    echo ""
+    echo "-- Not running as root, this will not work --"
+    echo "Use --adb-root to restart adbd as root (or run adb root manually) or use --exec-command to specify a su-like command to escalate to root."
+    echo ""
+fi
+
 # Ensure frida-server is running
 echo "Running frida-server"
 killall ${JSON.stringify(path.basename(options.frida_server_path))}
@@ -583,12 +594,16 @@ fi
 
 echo "Acquiring wake lock"
 echo androidzncaapiserver > /sys/power/wake_lock
+
+exit 0
 `;
 
 const shutdown_script = `#!/system/bin/sh
 
 echo "Releasing wake lock"
 echo androidzncaapiserver > /sys/power/wake_unlock
+
+exit 0
 `;
 
 async function setup(argv: ArgumentsCamelCase<Arguments>, start_method: StartMethod) {
@@ -632,6 +647,14 @@ async function setup(argv: ArgumentsCamelCase<Arguments>, start_method: StartMet
 async function attach(argv: ArgumentsCamelCase<Arguments>, start_method: StartMethod) {
     const frida = await import('frida');
     type Session = import('frida').Session;
+
+    if (argv.adbRoot) {
+        debug('Restarting adbd as root');
+
+        execAdb([
+            'root',
+        ], argv.adbPath, argv.device);
+    }
 
     debug('Running scripts');
     execScript(argv.device, '/data/local/tmp/android-znca-api-server-setup.sh', argv.execCommand, argv.adbPath);
