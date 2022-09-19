@@ -213,6 +213,39 @@ interface GearPower {
     };
 }
 
+export enum FestState {
+    SCHEDULED = 'SCHEDULED',
+    FIRST_HALF = 'FIRST_HALF',
+    SECOND_HALF = 'SECOND_HALF',
+    CLOSED = 'CLOSED',
+}
+export enum FestVoteState {
+    VOTED = 'VOTED',
+    PRE_VOTED = 'PRE_VOTED',
+}
+export enum FestTeamRole {
+    ATTACK = 'ATTACK',
+    DEFENSE = 'DEFENSE',
+}
+
+/** a2c742c840718f37488e0394cd6e1e08 VotesUpdateFestVoteMutation */
+export interface VotesUpdateFestVoteResult {
+    updateFestVote: {
+        fest: {
+            id: string;
+            teams: DetailVotingStatusTeam<{
+                totalCount: number;
+                nodes: FestVotePlayer[];
+            }>[];
+            isVotable: boolean;
+            undecidedVotes: {
+                totalCount: number;
+                nodes: FestVotePlayer[];
+            };
+        }
+        userErrors: null;
+    }
+}
 
 /** f8ae00773cc412a50dd41a6d9a159ddd ConfigureAnalyticsQuery */
 export interface ConfigureAnalyticsResult {
@@ -419,6 +452,7 @@ export interface BattleHistoryCurrentPlayerResult {
 
 /** 7a0e05c28c7d3f7e5a06def87ab8cd2d FriendListQuery */
 export interface FriendListResult {
+    /** Only includes friends that have played Splatoon 3 */
     friends: {
         nodes: Friend[];
     };
@@ -431,7 +465,9 @@ export type FriendListRefetchResult = FriendListResult;
 interface Friend {
     id: string;
     onlineState: FriendOnlineState;
+    /** Switch user name */
     nickname: string;
+    /** Splatoon 3 name, if the user has one set and is currently playing Splatoon 3 */
     playerName: string | null;
     userIcon: {
         url: string;
@@ -450,6 +486,10 @@ interface Friend {
 
 export enum FriendOnlineState {
     OFFLINE = 'OFFLINE',
+    /**
+     * The user is online and selected in *any* game, not just Splatoon 3.
+     * Coral may be used to check which game the user is playing.
+     */
     ONLINE = 'ONLINE',
     VS_MODE_MATCHING = 'VS_MODE_MATCHING',
     COOP_MODE_MATCHING = 'COOP_MODE_MATCHING',
@@ -534,6 +574,129 @@ interface WeaponHistoryCategoryWeapon extends WeaponHistoryWeapon {
         id: string; // "V2VhcG9uQ2F0ZWdvcnktMA=="
     };
 }
+
+/** 2d661988c055d843b3be290f04fb0db9 DetailFestRecordDetailQuery */
+export interface DetailFestRecordDetailResult {
+    fest: {
+        __typename: 'Fest';
+        id: string;
+        title: string;
+        lang: string;
+        startTime: string;
+        endTime: string;
+        state: FestState;
+        image: {
+            url: string;
+        };
+        teams: DetailFestTeam[];
+        playerResult: unknown | null;
+        myTeam: unknown | null;
+        isVotable: boolean;
+        undecidedVotes: {
+            totalCount: number;
+        };
+    };
+    currentPlayer: {
+        name: string;
+        userIcon: {
+            url: string;
+        };
+    };
+}
+
+interface DetailFestTeam<Votes = {
+    totalCount: number;
+}> {
+    result: unknown | null;
+    id: string;
+    teamName: string;
+    color: Colour;
+    image: {
+        url: string;
+    };
+    myVoteState: FestVoteState | null;
+    preVotes: Votes;
+    votes: Votes;
+    role: FestTeamRole | null;
+}
+
+/** 0eb7bac3d8aabcad0e9d663ee5b90846 DetailFestRefethQuery */
+export type DetailFestRefetchResult = DetailFestRecordDetailResult;
+
+/** 92f51ed1ab462bbf1ab64cad49d36f79 DetailFestVotingStatusRefethQuery */
+export type DetailFestVotingStatusRefetchResult = DetailVotingStatusResult;
+
+/** 53ee6b6e2acc3859bf42454266d671fc DetailVotingStatusQuery */
+export interface DetailVotingStatusResult {
+    fest: {
+        __typename: 'Fest';
+        id: string;
+        lang: string;
+        teams: DetailVotingStatusTeam[];
+        undecidedVotes: {
+            nodes: FestVotePlayer[];
+        };
+    };
+}
+
+interface DetailVotingStatusTeam<Votes = {
+    nodes: FestVotePlayer[];
+}> {
+    id: string;
+    teamName: string;
+    image: {
+        url: string;
+    };
+    color: Colour;
+    /** undefined = not voted, null = not voted for this team */
+    myVoteState?: FestVoteState | null;
+    preVotes: Votes;
+    votes: Votes;
+}
+
+interface FestVotePlayer {
+    playerName: string;
+    userIcon: {
+        url: string;
+    };
+}
+
+/** 44c76790b68ca0f3da87f2a3452de986 FestRecordQuery */
+export interface FestRecordResult {
+    festRecords: {
+        nodes: FestRecord[];
+    };
+    currentPlayer: {
+        name: string;
+        userIcon: {
+            url: string;
+        };
+    };
+}
+
+interface FestRecord {
+    id: string;
+    state: FestState;
+    startTime: string;
+    endTime: string;
+    title: string;
+    lang: string;
+    image: {
+        url: string;
+    };
+    playerResult: unknown | null;
+    teams: FestRecordTeam[];
+    myTeam: unknown | null;
+}
+
+interface FestRecordTeam {
+    id: string;
+    teamName: string;
+    result: unknown | null;
+}
+
+/** 73b9837d0e4dd29bfa2f1a7d7ee0814a FestRecordRefetchQuery */
+export type FestRecordRefetchResult = FestRecordResult;
 
 /** 61228d553e7463c203e05e7810dd79a7 SettingQuery */
 export interface SettingResult {
@@ -723,12 +886,12 @@ export interface HomeResult {
         };
     };
     banners: HomeBanner[];
-    /** Only includes online friends */
+    /** Only includes online friends that have played Splatoon 3, even if they are currently playing a different game */
     friends: {
         nodes: HomeFriend[];
         totalCount: number;
     };
-    footerMessages: unknown[];
+    footerMessages: HomeFooterMessage[];
 }
 
 interface HomeBanner {
@@ -749,6 +912,22 @@ interface HomeFriend {
         url: string;
         width: number;
     };
+}
+
+type HomeFooterMessage = FooterBigRunMessage | FooterFestMessage | FooterSeasonMessage;
+
+interface FooterBigRunMessage {
+    __typename: 'FooterBigRunMessage';
+    bigRunState: 'SCHEDULED' | unknown;
+}
+interface FooterFestMessage {
+    __typename: 'FooterFestMessage';
+    festState: FestState;
+    festTitle: string;
+}
+interface FooterSeasonMessage {
+    __typename: 'FooterSeasonMessage';
+    seasonName: string;
 }
 
 /** 994cf141e55213e6923426caf37a1934 VsHistoryDetailPagerRefetchQuery */

@@ -319,7 +319,7 @@ export default class CoralApi {
         if ('errorMessage' in data) {
             throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
-        if (data.status !== 0) {
+        if (data.status !== CoralStatus.OK) {
             throw new ErrorResponse('[znc] Unknown error', response, data);
         }
 

@@ -34,5 +34,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log('Player %s#%s (title %s, first played %s)',
         history.data.currentPlayer.name,
         history.data.currentPlayer.nameId,
-        history.data.playHistory.gameStartTime);
+        history.data.currentPlayer.byname,
+        new Date(history.data.playHistory.gameStartTime).toLocaleString());
 }
