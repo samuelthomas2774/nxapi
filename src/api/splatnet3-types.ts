@@ -988,7 +988,7 @@ export interface VsHistoryDetailPagerRefetchQueryResult {
         id: string;
     };
 }
-    
+
 /** cd82f2ade8aca7687947c5f3210805a6 VsHistoryDetailQuery */
 export interface VsHistoryDetailResult {
     vsHistoryDetail: VsHistoryDetail;

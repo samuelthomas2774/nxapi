@@ -62,7 +62,7 @@ export default class Users<T extends UserData> {
             ]);
 
             const user = new CoralUser(nso, data, announcements, friends, webservices, active_event);
-            
+
             if (store) {
                 await maybeUpdateWebServicesListCache(cached_webservices, store, data.user, webservices);
                 user.onUpdatedWebServices = webservices => {
