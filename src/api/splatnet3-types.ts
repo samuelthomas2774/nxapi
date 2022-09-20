@@ -160,17 +160,32 @@ interface VsMode {
 }
 
 interface Nameplate {
-    badges: [unknown | null, unknown | null, unknown | null];
-    background: {
-        textColor: Colour;
-        image: {
-            url: string;
-        };
-        id: string;
-    }
+    badges: [NameplateBadge | null, NameplateBadge | null, NameplateBadge | null];
+    background: NameplateBackground;
+}
+interface NameplateBadge {
+    id: string;
+    image: {
+        url: string;
+    };
+}
+interface NameplateBackground {
+    textColor: Colour;
+    image: {
+        url: string;
+    };
+    id: string;
 }
 
 export enum Judgement {
+    WIN = 'WIN',
+    LOSE = 'LOSE',
+    EXEMPTED_LOSE = 'EXEMPTED_LOSE', // exemption
+    DEEMED_LOSE = 'DEEMED_LOSE', // penalty
+    DRAW = 'DRAW', // no contest
+}
+export enum JudgementKnockout {
+    NEITHER = 'NEITHER',
     WIN = 'WIN',
     LOSE = 'LOSE',
 }
@@ -226,6 +241,22 @@ export enum FestVoteState {
 export enum FestTeamRole {
     ATTACK = 'ATTACK',
     DEFENSE = 'DEFENSE',
+}
+export enum TricolourRole {
+    ATTACK_1 = 'ATTACK1',
+    ATTACK_2 = 'ATTACK2',
+    DEFENSE = 'DEFENSE',
+}
+export enum DragonMatchType {
+    NORMAL = 'NORMAL',
+    DECUPLE = 'DECUPLE', // 10x
+    DRAGON = 'DRAGON', // 100x
+    DOUBLE_DRAGON = 'DOUBLE_DRAGON', // 333x
+}
+export enum FestDragonCert {
+    NONE = 'NONE',
+    DRAGON = 'DRAGON', // 100x
+    DOUBLE_DRAGON = 'DOUBLE_DRAGON', // 333x
 }
 
 /** a2c742c840718f37488e0394cd6e1e08 VotesUpdateFestVoteMutation */
@@ -392,16 +423,20 @@ interface LatestBattleHistoryDetails {
         id: string;
         festGrade: unknown | null;
     };
-    knockout: 'NEITHER';
+    knockout: JudgementKnockout;
     myTeam: {
         result: {
             paintPoint: number;
             paintRatio: number;
-            score: unknown | null;
+            score: number | null;
         };
     };
-    nextHistoryDetail: unknown | null;
-    previousHistoryDetail: unknown | null;
+    nextHistoryDetail: {
+        id: string;
+    } | null;
+    previousHistoryDetail: {
+        id: string;
+    } | null;
 }
 interface AnyLatestBattleHistoryDetails extends LatestBattleHistoryDetails {
     udemae: unknown | null;
@@ -526,12 +561,22 @@ interface PlayHistory {
     winCountTotal: number;
     frequentlyUsedWeapons: Weapon[];
     paintPointTotal: number;
-    badges: unknown[];
+    badges: HistoryBadgeId[];
     weaponHistory: {
         nodes: WeaponHistorySeason[];
     };
-    recentBadges: unknown[];
-    allBadges: unknown[];
+    recentBadges: HistoryBadge[];
+    allBadges: HistoryBadge[];
+}
+interface HistoryBadgeId {
+    id: string;
+}
+interface HistoryBadge {
+    description: string;
+    id: string;
+    image: {
+        url: string;
+    };
 }
 interface XMatchMax {
     power: null;
@@ -964,17 +1009,35 @@ interface VsHistoryDetail {
         };
         id: string; // "VnNTdGFnZS02"
     };
-    festMatch: unknown | null;
-    knockout: 'NEITHER';
+    festMatch: FestMatchDetail | null;
+    knockout: JudgementKnockout;
     otherTeams: VsHistoryDetailTeam[];
-    bankaraMatch: unknown | null;
-    xMatch: unknown | null;
+    bankaraMatch: BankaraMatchDetail | null;
+    xMatch: XMatchDetail | null;
     duration: number;
     playedTime: string;
     awards: Award[];
     leagueMatch: unknown | null;
     nextHistoryDetail: unknown | null;
     previousHistoryDetail: unknown | null;
+}
+
+interface FestMatchDetail {
+    myFestPower: number;
+    contribution: number;
+    jewel: number;
+    dragonMatchType: DragonMatchType;
+    // ...
+}
+interface BankaraMatchDetail {
+    earnedUdemaePoint: number;
+    mode: BankaraMatchMode;
+    // ...
+}
+interface XMatchDetail {
+    lastXPower: number;
+    entireXPower: number;
+    // ...
 }
 
 interface BaseVsPlayer {
@@ -1016,11 +1079,11 @@ interface VsHistoryDetailTeam {
     judgement: Judgement;
     result: {
         paintRatio: number;
-        score: unknown | null;
-        noroshi: unknown | null;
+        score: number | null;
+        noroshi: number | null;
     };
-    tricolorRole: unknown | null;
-    festTeamName: unknown | null;
+    tricolorRole: TricolourRole | null;
+    festTeamName: string | null;
     players: VsPlayer[];
     order: number;
 }
@@ -1038,9 +1101,9 @@ interface VsPlayer extends BaseVsPlayer {
         death: number;
         assist: number;
         special: number;
-        noroshiTry: unknown | null;
+        noroshiTry: number | null;
     };
-    festDragonCert: 'NONE';
+    festDragonCert: FestDragonCert;
 }
 
 interface GearBrand {
