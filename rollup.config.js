@@ -111,7 +111,7 @@ const main = {
  * @type {import('rollup').RollupOptions}
  */
 const app_entry = {
-    input: 'src/app/main/app-entry.cts',
+    input: 'src/app/app-entry.cts',
     output: {
         file: 'dist/bundle/app-entry.cjs',
         format: 'iife',
@@ -121,7 +121,7 @@ const app_entry = {
     plugins: [
         replace(replace_options),
         replace({
-            include: ['src/app/main/app-entry.cts'],
+            include: ['src/app/app-entry.cts'],
             values: {
                 '__NXAPI_BUNDLE_APP_MAIN__': JSON.stringify('./app-main-bundle.js'),
             },
@@ -147,7 +147,7 @@ const app_entry = {
     ],
     external: [
         'electron',
-        path.resolve(__dirname, 'src/app/main/app-main-bundle.js'),
+        path.resolve(__dirname, 'src/app/app-main-bundle.js'),
     ],
     watch,
 };

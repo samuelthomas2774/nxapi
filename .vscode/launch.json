@@ -17,7 +17,7 @@
                 "runtimeExecutable": "${workspaceFolder}/node_modules/electron/dist/electron.exe"
             },
             "args": [
-                "dist/app/main/app-entry.cjs"
+                "dist/app/app-entry.cjs"
             ],
             "outputCapture": "std",
             "env": {

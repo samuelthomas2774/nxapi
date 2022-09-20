@@ -4,8 +4,7 @@ import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import dotenv from 'dotenv';
-import dotenvExpand from 'dotenv-expand';
+import { init as initGlobals } from '../../common/globals.js';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
@@ -26,7 +25,7 @@ const debug = createDebug('app:main');
 export const protocol_registration_options = dev && process.platform === 'win32' ? {
     path: process.execPath,
     argv: [
-        path.join(dir, 'dist', 'app', 'main', 'app-entry.cjs'),
+        path.join(dir, 'dist', 'app', 'app-entry.cjs'),
     ],
 } : null;
 export const login_item_options: LoginItemSettingsOptions = {};
@@ -107,15 +106,7 @@ export async function init() {
         return;
     }
 
-    dotenvExpand.expand(dotenv.config({
-        path: path.join(paths.data, '.env'),
-    }));
-    if (process.env.NXAPI_DATA_PATH) dotenvExpand.expand(dotenv.config({
-        path: path.join(process.env.NXAPI_DATA_PATH, '.env'),
-    }));
-
-    if (process.env.DEBUG) createDebug.enable(process.env.DEBUG);
-
+    initGlobals();
     addUserAgent('nxapi-app (Chromium ' + process.versions.chrome + '; Electron ' + process.versions.electron + ')');
 
     const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
@@ -145,6 +136,8 @@ export async function init() {
     app.on('open-url', (event, url) => {
         debug('Open URL', url);
 
+        event.preventDefault();
+
         if (!tryHandleUrl(appinstance, url)) {
             appinstance.showMainWindow();
         }
@@ -153,7 +146,9 @@ export async function init() {
     app.setAsDefaultProtocolClient('com.nintendo.znca',
         protocol_registration_options?.path, protocol_registration_options?.argv);
 
-    app.on('activate', () => {
+    app.on('activate', (event, has_visible_windows) => {
+        debug('activate', has_visible_windows);
+
         if (BrowserWindow.getAllWindows().length === 0) appinstance.showMainWindow();
     });
 

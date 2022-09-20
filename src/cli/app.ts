@@ -25,7 +25,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 
     execFileSync(electron, [
-        'dist/app/main/app-entry.cjs',
+        'dist/app/app-entry.cjs',
     ], {
         stdio: 'inherit',
         env: {
