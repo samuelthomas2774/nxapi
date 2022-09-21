@@ -1,9 +1,12 @@
+import createDebug from 'debug';
 import DiscordRPC from 'discord-rpc';
 import { Game, PresenceState } from '../api/coral-types.js';
 import { defaultTitle, titles } from './titles.js';
 import { product, version } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
 import { DiscordPresence, DiscordPresenceContext, DiscordPresencePlayTime } from './types.js';
+
+const debug = createDebug('nxapi:discord');
 
 export function getDiscordPresence(
     state: PresenceState, game: Game, context?: DiscordPresenceContext
@@ -62,7 +65,11 @@ export function getDiscordPresence(
         });
     }
 
-    title.callback?.call(null, activity, game, context);
+    try {
+        title.callback?.call(null, activity, game, context);
+    } catch (err) {
+        debug('Error in callback for title %s', titleid, err);
+    }
 
     return {
         id: title.client || defaultTitle.client,
