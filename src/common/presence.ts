@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
-import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence } from '../discord/types.js';
+import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
 import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
@@ -25,6 +25,7 @@ interface SavedPresence {
 class ZncDiscordPresenceClient {
     rpc: {client: DiscordRpcClient, id: string} | null = null;
     title: {id: string; since: number} | null = null;
+    monitors = new Map<ExternalMonitorConstructor<any>, ExternalMonitor>();
     protected i = 0;
 
     last_presence: Presence | null = null;
@@ -35,6 +36,9 @@ class ZncDiscordPresenceClient {
     last_activity: DiscordPresence | null = null;
     onUpdateActivity: ((activity: DiscordPresence | null) => void) | null = null;
     onUpdateClient: ((client: DiscordRpcClient | null) => void) | null = null;
+    onWillStartMonitor: (<T>(monitor: ExternalMonitorConstructor<T>) => any | T | null | Promise<T | null>) | null = null;
+    onMonitorError: ((monitor: ExternalMonitorConstructor, instance: ExternalMonitor, error: Error) =>
+        ErrorResult | Promise<ErrorResult>) | null = null;
 
     update_presence_errors = 0;
 
@@ -60,6 +64,12 @@ class ZncDiscordPresenceClient {
             (this.m.show_console_online && presence?.state === PresenceState.INACTIVE);
 
         if (!presence || !show_presence) {
+            for (const [monitor, instance] of this.monitors.entries()) {
+                debug('Stopping monitor %s', monitor.name);
+                instance.disable();
+                this.monitors.delete(monitor);
+            }
+
             if (this.m.presence_enabled && this.m.discord_preconnect && !this.rpc) {
                 debugDiscord('No presence but Discord preconnect enabled - connecting');
                 const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
@@ -83,6 +93,7 @@ class ZncDiscordPresenceClient {
             activeevent: this.m.show_active_event ? activeevent : undefined,
             show_play_time: this.m.show_play_time,
             znc_discord_presence: this.m,
+            monitors: [...this.monitors.values()],
             nsaid: this.m.presence_user!,
             user,
         };
@@ -90,6 +101,8 @@ class ZncDiscordPresenceClient {
         const discord_presence = 'name' in presence.game ?
             getDiscordPresence(presence.state, presence.game, presence_context) :
             getInactiveDiscordPresence(presence.state, presence.logoutAt, presence_context);
+
+        const prev_title = this.title;
 
         if (discord_presence.title) {
             if (discord_presence.title !== this.title?.id) {
@@ -109,7 +122,83 @@ class ZncDiscordPresenceClient {
             this.title = null;
         }
 
+        const monitors = discord_presence.config?.monitor ? [discord_presence.config.monitor] : [];
+        this.updateExternalMonitors(monitors, 'name' in presence.game ? presence.game : undefined,
+            prev_title?.id, this.title?.id);
+
         this.setActivity(discord_presence);
+    }
+
+    async updateExternalMonitors(monitors: ExternalMonitorConstructor[], game?: Game, prev_title?: string, new_title?: string) {
+        for (const monitor of monitors) {
+            const instance = this.monitors.get(monitor);
+
+            if (instance) {
+                if (prev_title !== new_title) {
+                    instance.onChangeTitle?.(game);
+                }
+            } else {
+                const config = await this.getExternalMonitorConfig(monitor);
+                debug('Starting monitor %s', monitor.name, config);
+
+                const i = new ExternalMonitorPresenceInterface(monitor, this.m);
+                const instance = new monitor(i, config, game);
+                Object.assign(i, {instance});
+                this.monitors.set(monitor, instance);
+                instance.enable();
+            }
+        }
+
+        for (const [monitor, instance] of this.monitors.entries()) {
+            if (monitors.includes(monitor)) continue;
+
+            debug('Stopping monitor %s', monitor.name);
+            instance.disable();
+            this.monitors.delete(monitor);
+        }
+    }
+
+    async getExternalMonitorConfig(monitor: ExternalMonitorConstructor) {
+        return this.onWillStartMonitor?.call(null, monitor) ?? null;
+    }
+
+    async refreshExternalMonitorsConfig() {
+        for (const [monitor, instance] of this.monitors.entries()) {
+            const config = await this.getExternalMonitorConfig(monitor);
+            await this.updateExternalMonitorConfig(monitor, config);
+        }
+    }
+
+    async updateExternalMonitorConfig<T>(monitor: ExternalMonitorConstructor<T>, config: T) {
+        const instance = this.monitors.get(monitor);
+        if (!instance) return;
+
+        debug('Updating monitor %s config', monitor.name, config);
+
+        try {
+            if (await instance.onUpdateConfig?.(config)) {
+                debug('Updated monitor %s config', monitor.name);
+            } else {
+                await this.forceRestartMonitor(monitor, config /* , game */);
+            }
+        } catch (err) {
+            await this.forceRestartMonitor(monitor, config /* , game */);
+        }
+    }
+
+    async forceRestartMonitor<T>(monitor: ExternalMonitorConstructor<T>, config: T, game?: Game) {
+        const existing = this.monitors.get(monitor);
+        if (!existing) return;
+
+        debug('Restarting monitor %s', monitor.name);
+
+        existing.disable();
+
+        const i = new ExternalMonitorPresenceInterface(monitor, this.m);
+        const instance = new monitor(i, config, game);
+        Object.assign(i, {instance});
+        this.monitors.set(monitor, instance);
+        instance.enable();
     }
 
     async setActivity(activity: DiscordPresence | string | null) {
@@ -237,6 +326,38 @@ class ZncDiscordPresenceClient {
 
         if (this.update_presence_errors > 10) {
             this.title = null;
+        }
+    }
+
+    refreshPresence() {
+        this.updatePresenceForDiscord(
+            this.last_presence,
+            this.last_user,
+            this.last_friendcode,
+            this.last_event,
+        );
+    }
+}
+
+export class ExternalMonitorPresenceInterface {
+    readonly instance!: ExternalMonitor;
+
+    constructor(
+        readonly monitor: ExternalMonitorConstructor<any>,
+        readonly znc_discord_presence: ZncDiscordPresence | ZncProxyDiscordPresence,
+    ) {}
+
+    refreshPresence() {
+        this.znc_discord_presence.discord.refreshPresence();
+    }
+
+    async handleError(err: Error) {
+        debug('Error in external monitor %s', this.monitor.name, err);
+
+        if (this.znc_discord_presence.discord.onMonitorError) {
+            return await this.znc_discord_presence.discord.onMonitorError.call(null, this.monitor, this.instance, err);
+        } else {
+            return ErrorResult.STOP;
         }
     }
 }

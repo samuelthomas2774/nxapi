@@ -1,4 +1,5 @@
 import { Title } from '../types.js';
+import SplatNet3Monitor, { callback as SplatNet3ActivityCallback } from './nintendo/splatoon3.js';
 
 export const titles: Title[] = [
     {
@@ -1113,8 +1114,8 @@ export const titles: Title[] = [
         // Splatoon 3
         id: '0100c2500fc20000',
         client: '967103796134158447',
-        showPlayingOnline: true,
-        showActiveEvent: true,
+        monitor: SplatNet3Monitor,
+        callback: SplatNet3ActivityCallback,
     },
     {
         // Splatoon 3: Splatfest World Premiere

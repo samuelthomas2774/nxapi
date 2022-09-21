@@ -67,6 +67,7 @@ export function getDiscordPresence(
     return {
         id: title.client || defaultTitle.client,
         title: titleid,
+        config: title,
         activity,
         showTimestamp: title.showTimestamp ?? true,
     };

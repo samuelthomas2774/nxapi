@@ -65,6 +65,11 @@ export default function Preferences(props: PreferencesProps) {
         await ipc.setDiscordPresenceOptions({...discord_options, show_play_time});
         forceRefreshDiscordOptions();
     }, [ipc, discord_options]);
+    const setDiscordEnableSplatNet3Monitor = useCallback(async (enable_splatnet3_monitoring: boolean | 'mixed') => {
+        await ipc.setDiscordPresenceOptions({...discord_options, monitors: {...discord_options?.monitors,
+            enable_splatnet3_monitoring: !!enable_splatnet3_monitoring}});
+        forceRefreshDiscordOptions();
+    }, [ipc, discord_options]);
 
     const [discord_presence_source, discord_presence_source_state] = useDiscordPresenceSource();
 
@@ -241,6 +246,26 @@ export default function Preferences(props: PreferencesProps) {
                         <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE}
                             label="Show exact play time with first played date" />
                     </Picker>
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <View style={styles.sectionLeft}>
+                    <Text style={[styles.label, theme.text]}>SplatNet 3</Text>
+                </View>
+                <View style={styles.sectionRight}>
+                    <View style={[styles.checkboxContainer]}>
+                        <CheckBox
+                            value={discord_options?.monitors?.enable_splatnet3_monitoring ?? false}
+                            onValueChange={setDiscordEnableSplatNet3Monitor}
+                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                            style={styles.checkbox}
+                        />
+                        <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordEnableSplatNet3Monitor(!discord_options?.monitors?.enable_splatnet3_monitoring)}>
+                            <Text style={[styles.checkboxLabelText, theme.text]}>Enable enhanced Discord Rich Presence for Splatoon 3</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={[styles.help, theme.text]}>Uses SplatNet 3 to retrieve additional presence information while playing Splatoon 3. You must be using a secondary Nintendo Account that is friends with your main account to fetch your presence, and the secondary account must be able to access SplatNet 3.</Text>
                 </View>
             </View>
         </View>

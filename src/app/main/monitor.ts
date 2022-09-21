@@ -7,9 +7,10 @@ import { NotificationManager } from '../../common/notify.js';
 import { LoopResult } from '../../util/loop.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { App } from './index.js';
-import { DiscordPresenceConfiguration, DiscordPresenceSource } from '../common/types.js';
-import { DiscordPresence, DiscordPresencePlayTime } from '../../discord/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
+import { DiscordPresence, DiscordPresencePlayTime, ErrorResult, ExternalMonitor, ExternalMonitorConstructor } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
+import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/titles/nintendo/splatoon3.js';
 
 const debug = createDebug('app:main:monitor');
 
@@ -43,10 +44,28 @@ export class PresenceMonitorManager {
         i.friend_notifications = false;
 
         i.discord.onUpdateActivity = (presence: DiscordPresence | null) => {
-            this.app.store.emit('update-discord-presence', presence);
+            this.app.store.emit('update-discord-presence', presence ? {...presence, config: undefined} : null);
         };
         i.discord.onUpdateClient = (client: DiscordRpcClient | null) => {
             this.app.store.emit('update-discord-user', client?.user ?? null);
+        };
+        i.discord.onMonitorError = async (monitor, instance, err) => {
+            const {response} = await dialog.showMessageBox({
+                message: err.name + ' in external monitor ' + monitor.name,
+                detail: err.stack ?? err.message,
+                type: 'error',
+                buttons: ['OK', 'Retry', 'Stop'],
+                defaultId: 0,
+            });
+
+            if (response === 1) {
+                return ErrorResult.RETRY;
+            }
+            if (response === 2) {
+                return ErrorResult.STOP;
+            }
+
+            return ErrorResult.IGNORE;
         };
 
         i.onError = err => this.handleError(i, err);
@@ -106,8 +125,9 @@ export class PresenceMonitorManager {
         return this.monitors.find(m => m.presence_enabled || m instanceof EmbeddedProxyPresenceMonitor);
     }
 
-    getDiscordPresence() {
-        return this.getActiveDiscordPresenceMonitor()?.discord.last_activity ?? null;
+    getDiscordPresence(): DiscordPresence | null {
+        const presence = this.getActiveDiscordPresenceMonitor()?.discord.last_activity;
+        return presence ? {...presence, config: undefined} : null;
     }
 
     getActiveDiscordPresenceOptions(): Omit<DiscordPresenceConfiguration, 'source'> | null {
@@ -121,6 +141,7 @@ export class PresenceMonitorManager {
             show_console_online: monitor.show_console_online,
             show_active_event: monitor.show_active_event,
             show_play_time: monitor.show_play_time,
+            monitors: this.getDiscordExternalMonitorConfiguration(monitor.discord.onWillStartMonitor),
         };
     }
 
@@ -135,6 +156,7 @@ export class PresenceMonitorManager {
 
         await this.setDiscordPresenceSource(source, monitor => {
             this.setDiscordPresenceConfigurationForMonitor(monitor, options);
+            monitor.discord.refreshExternalMonitorsConfig();
             monitor.skipIntervalInCurrentLoop();
         });
 
@@ -153,6 +175,7 @@ export class PresenceMonitorManager {
 
         await this.setDiscordPresenceSource(config.source, monitor => {
             this.setDiscordPresenceConfigurationForMonitor(monitor, config);
+            monitor.discord.refreshExternalMonitorsConfig();
             monitor.skipIntervalInCurrentLoop();
         });
 
@@ -170,6 +193,8 @@ export class PresenceMonitorManager {
         monitor.show_console_online = config.show_console_online ?? false;
         if (monitor instanceof ZncDiscordPresence) monitor.show_active_event = config.show_active_event ?? false;
         monitor.show_play_time = config.show_play_time ?? DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;
+        monitor.discord.onWillStartMonitor = config.monitors ?
+            this.createDiscordExternalMonitorHandler(monitor, config.monitors) : null;
     }
 
     private discord_client_filter_config = new WeakMap<
@@ -186,6 +211,29 @@ export class PresenceMonitorManager {
 
     getDiscordClientFilterConfiguration(filter: ZncDiscordPresence['discord_client_filter']) {
         return filter ? this.discord_client_filter_config.get(filter) : undefined;
+    }
+
+    private discord_external_monitor_config = new WeakMap<
+        Exclude<ZncDiscordPresence['discord']['onWillStartMonitor'], null>,
+        DiscordPresenceExternalMonitorsConfiguration
+    >();
+
+    createDiscordExternalMonitorHandler(
+        presence_monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
+        config: DiscordPresenceExternalMonitorsConfiguration
+    ) {
+        const handler: ZncDiscordPresence['discord']['onWillStartMonitor'] = monitor => {
+            if (!(presence_monitor instanceof EmbeddedPresenceMonitor)) return null;
+            const {storage, token} = presence_monitor;
+            if (monitor === SplatNet3Monitor) return getSplatNet3MonitorConfigFromAppConfig(config, storage, token);
+            return null;
+        };
+        this.discord_external_monitor_config.set(handler, config);
+        return handler;
+    }
+
+    getDiscordExternalMonitorConfiguration(handler: ZncDiscordPresence['discord']['onWillStartMonitor']) {
+        return handler ? this.discord_external_monitor_config.get(handler) : undefined;
     }
 
     getDiscordPresenceSource(): DiscordPresenceSource | null {
@@ -216,6 +264,7 @@ export class PresenceMonitorManager {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
                 this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
                 callback?.call(null, monitor);
+                monitor.discord.refreshExternalMonitorsConfig();
                 monitor.skipIntervalInCurrentLoop();
             });
             this.app.store.saveMonitorState(this);
@@ -252,6 +301,7 @@ export class PresenceMonitorManager {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
                 if (existing) this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
                 callback?.call(null, monitor);
+                monitor.discord.refreshExternalMonitorsConfig();
                 monitor.skipIntervalInCurrentLoop();
             });
         } else if (source && 'url' in source) {
@@ -277,6 +327,7 @@ export class PresenceMonitorManager {
         monitor.show_console_online = existing.show_console_online;
         if (monitor instanceof ZncDiscordPresence) monitor.show_active_event = existing.show_active_event;
         monitor.show_play_time = existing.show_play_time;
+        monitor.discord.onWillStartMonitor = existing.discord.onWillStartMonitor;
     }
 
     async handleError(

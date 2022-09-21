@@ -1,12 +1,14 @@
 import DiscordRPC from 'discord-rpc';
 import { ActiveEvent, CurrentUser, Friend, Game } from '../api/coral-types.js';
-import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../common/presence.js';
+import { ExternalMonitorPresenceInterface, ZncDiscordPresence, ZncProxyDiscordPresence } from '../common/presence.js';
+import { EmbeddedLoop } from '../util/loop.js';
 
 export interface DiscordPresenceContext {
     friendcode?: CurrentUser['links']['friendCode'];
     activeevent?: ActiveEvent;
     show_play_time?: DiscordPresencePlayTime;
     znc_discord_presence?: ZncDiscordPresence | ZncProxyDiscordPresence;
+    monitors?: ExternalMonitor[];
     nsaid?: string;
     user?: CurrentUser | Friend;
 }
@@ -14,6 +16,7 @@ export interface DiscordPresenceContext {
 export interface DiscordPresence {
     id: string;
     title: string | null;
+    config?: Title;
     activity: DiscordRPC.Presence;
     showTimestamp?: boolean;
 }
@@ -23,7 +26,7 @@ type SystemDataTitleId = `01000000000008${string}`;
 type SystemAppletTitleId = `0100000000001${string}`;
 type ApplicationTitleId = `0100${string}${'0' | '2' | '4' | '6' | '8' | 'a' | 'c' | 'e'}000`;
 
-export interface Title {
+export interface Title<M extends ExternalMonitor = ExternalMonitor> {
     /**
      * Lowercase hexadecimal title ID.
      *
@@ -91,9 +94,16 @@ export interface Title {
     showPlayTime?: boolean;
 
     /**
+     * An constructor that will be called to create an ExternalMonitor object that can monitor external data while this title is active.
+     *
+     * This does not affect Discord activities itself, but can be accessed by the Discord activity callback, which should then modify the activity to add data retrived using the monitor.
+     */
+    monitor?: ExternalMonitorConstructor<any, M>;
+
+    /**
      * A function to call to customise the Discord activity.
      */
-    callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) => void;
+    callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext, monitor?: M) => void;
 }
 
 export enum DiscordPresencePlayTime {
@@ -109,4 +119,25 @@ export enum DiscordPresencePlayTime {
     DETAILED_PLAY_TIME,
     /** "Played for x hours and x minutes since dd/mm/yyyy" */
     DETAILED_PLAY_TIME_SINCE,
+}
+
+export interface ExternalMonitorConstructor<T = unknown, I extends ExternalMonitor<T> = ExternalMonitor<T>> {
+    new (discord_presence: ExternalMonitorPresenceInterface, config: T | null, game?: Game): I;
+}
+
+export interface ExternalMonitor<T = unknown> extends EmbeddedLoop {
+    /**
+     * Called when configuration data is updated.
+     * This will only happen in the Electron app.
+     * If returns `true` the configuration was updated, if not defined or returns `false` the monitor will be restarted.
+     */
+    onUpdateConfig?(config: T | null): boolean;
+
+    onChangeTitle?(game?: Game): void;
+}
+
+export enum ErrorResult {
+    STOP,
+    RETRY,
+    IGNORE,
 }

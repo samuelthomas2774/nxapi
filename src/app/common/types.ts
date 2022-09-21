@@ -32,6 +32,7 @@ export interface DiscordPresenceConfiguration {
     show_console_online?: boolean;
     show_active_event?: boolean;
     show_play_time?: DiscordPresencePlayTime;
+    monitors?: DiscordPresenceExternalMonitorsConfiguration;
 }
 
 export type DiscordPresenceSource = DiscordPresenceSourceCoral | DiscordPresenceSourceUrl;
@@ -41,4 +42,8 @@ export interface DiscordPresenceSourceCoral {
 }
 export interface DiscordPresenceSourceUrl {
     url: string;
+}
+
+export interface DiscordPresenceExternalMonitorsConfiguration {
+    enable_splatnet3_monitoring?: boolean;
 }

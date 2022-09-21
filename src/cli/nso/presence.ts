@@ -6,6 +6,7 @@ import { getToken } from '../../common/auth/coral.js';
 import { DiscordPresencePlayTime } from '../../discord/types.js';
 import { handleEnableSplatNet2Monitoring, TerminalNotificationManager } from './notify.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
+import SplatNet3Monitor, { getConfigFromArgv as getSplatNet3MonitorConfigFromArgv } from '../../discord/titles/nintendo/splatoon3.js';
 
 const debug = createDebug('cli:nso:presence');
 const debugProxy = createDebug('cli:nso:presence:proxy');
@@ -111,13 +112,22 @@ export function builder(yargs: Argv<ParentArguments>) {
         default: 3 * 60,
     }).option('splatnet2-auto-update-session', {
         alias: ['sn2-auto-update-session'],
-        describe: 'Automatically obtain and refresh the iksm_session cookie',
+        describe: 'Automatically obtain and refresh the SplatNet 2 iksm_session cookie',
+        type: 'boolean',
+        default: true,
+    }).option('splatnet3-monitor', {
+        describe: 'Show additional presence data from SplatNet 3 while playing Splatoon 3',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet3-auto-update-session', {
+        alias: ['sn3-auto-update-session'],
+        describe: 'Automatically obtain and refresh the SplatNet 3 access token',
         type: 'boolean',
         default: true,
     });
 }
 
-type Arguments = YargsArguments<ReturnType<typeof builder>>;
+export type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.presenceUrl) {
@@ -217,15 +227,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     i.discord_preconnect = argv.discordPreconnect;
     if (argv.discordUser) i.discord_client_filter = (client, id) => client.user?.id === argv.discordUser;
 
+    i.discord.onWillStartMonitor = monitor => {
+        if (monitor === SplatNet3Monitor) return getSplatNet3MonitorConfigFromArgv(argv, storage, token);
+        return null;
+    };
+
     console.warn('Authenticated as Nintendo Account %s (NA %s, NSO %s)',
         data.user.screenName, data.user.nickname, data.nsoAccount.user.name);
 
     if (argv.splatnet2Monitor) {
-        if (argv.friendNsaid) {
-            console.warn('SplatNet 2 monitoring is enabled, but --friend-nsaid is set. SplatNet 2 records will only be downloaded when the authenticated user is playing Splatoon 2 online, regardless of the --friend-nsaid user.');
-        }
+        // if (argv.friendNsaid) {
+        //     console.warn('SplatNet 2 monitoring is enabled, but --friend-nsaid is set. SplatNet 2 records will only be downloaded when the authenticated user is playing Splatoon 2 online, regardless of the --friend-nsaid user.');
+        // }
 
-        i.splatnet2_monitors.set(data.nsoAccount.user.nsaId, handleEnableSplatNet2Monitoring(argv, storage, token));
+        // i.splatnet2_monitors.set(data.nsoAccount.user.nsaId, handleEnableSplatNet2Monitoring(argv, storage, token));
+        console.warn('SplatNet 2 monitoring is not supported when not using --presence-url.');
     }
 
     await i.loop(true);

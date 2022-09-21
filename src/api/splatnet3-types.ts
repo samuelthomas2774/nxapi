@@ -510,7 +510,7 @@ interface Friend {
         height: number;
     };
     vsMode: {
-        id: string;
+        id: string; // "VnNNb2RlLTI=" (2 == Anarchy Series), "VnNNb2RlLTUx" (51 == Anarchy Open)
         mode: string; // "BANKARA"
         name: string; // "Anarchy Battle"
     } | null;

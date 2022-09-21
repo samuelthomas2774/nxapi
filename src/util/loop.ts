@@ -64,3 +64,44 @@ export enum LoopResult {
     OK = LoopRunOk as any,
     OK_SKIP_INTERVAL = LoopRunOkSkipInterval as any,
 }
+
+export abstract class EmbeddedLoop extends Loop {
+    onStop?(): Promise<void> | void;
+
+    enable() {
+        if (this._running !== 0) return;
+        this._run();
+    }
+
+    disable() {
+        this._running = 0;
+    }
+
+    get enabled() {
+        return this._running !== 0;
+    }
+
+    private _running = 0;
+
+    private async _run() {
+        this._running++;
+        const i = this._running;
+
+        try {
+            await this.loop(true);
+
+            while (i === this._running) {
+                await this.loop();
+            }
+
+            if (this._running === 0 && !this.onStop) {
+                // Run one more time after the loop ends
+                const result = await this.loopRun();
+            }
+
+            await this.onStop?.();
+        } finally {
+            this._running = 0;
+        }
+    }
+}
