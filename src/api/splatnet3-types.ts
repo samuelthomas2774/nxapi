@@ -900,7 +900,15 @@ interface CoopWeapon {
 interface FestSchedule {
     startTime: string; // "2022-09-09T08:00:00Z"
     endTime: string; // "2022-09-09T10:00:00Z"
-    festMatchSetting: unknown | null;
+    festMatchSetting: FestMatchSetting | null;
+}
+
+interface FestMatchSetting {
+    __isVsSetting: 'FestMatchSetting';
+    __typename: 'FestMatchSetting';
+    vsStages: VsStage[];
+    vsRule: VsRule;
+    // ...
 }
 
 interface VsStageDetail {

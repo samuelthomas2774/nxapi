@@ -218,7 +218,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             monitor.friend.vsMode.id === 'VnNNb2RlLTUx' ?
                 monitor.anarchy_schedule?.bankaraMatchSettings.find(s => s.mode === BankaraMatchMode.OPEN) :
             null :
-        monitor.friend.vsMode?.mode === 'FEST' ? monitor.regular_schedule?.regularMatchSetting :
+        monitor.friend.vsMode?.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
         monitor.friend.vsMode?.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :
         monitor.friend.vsMode?.mode === 'X_MATCH' ? monitor.x_schedule?.xMatchSetting :
         null;
@@ -235,7 +235,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
                 a: schedule_setting.vsStages[0].id,
                 b: schedule_setting.vsStages[1].id,
-                v: '2022092104',
+                v: '2022092105',
             }).toString();
             activity.largeImageText = schedule_setting.vsStages.map(s => s.name).join('/') +
                 ' | ' + product;
