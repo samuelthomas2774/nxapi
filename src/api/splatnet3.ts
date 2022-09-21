@@ -1,8 +1,8 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
-import { defineResponse, ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
 import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult, CoopHistoryResult, CoopHistoryDetailResult, FestRecordResult, FestRecordRefetchResult, DetailFestRecordDetailResult, DetailVotingStatusResult, DetailFestVotingStatusRefetchResult, VotesUpdateFestVoteResult } from './splatnet3-types.js';
@@ -20,8 +20,14 @@ const languages = [
 ];
 
 const SPLATNET3_URL = SPLATNET3_WEBSERVICE_URL + '/api';
+const SHOULD_RENEW_TOKEN_AT = 300; // 5 minutes in seconds
 
 export default class SplatNet3Api {
+    onTokenShouldRenew: ((remaining: number, res: Response) => Promise<void>) | null = null;
+    onTokenExpired: ((res: Response) => Promise<void>) | null = null;
+    /** @internal */
+    _renewToken: Promise<void> | null = null;
+
     protected constructor(
         public bullet_token: string,
         public version: string,
@@ -31,8 +37,13 @@ export default class SplatNet3Api {
 
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string | FormData, headers?: object,
-        /** @internal */ _log?: string
-    ) {
+        /** @internal */ _log?: string,
+        /** @internal */ _attempt = 0
+    ): Promise<HasResponse<T, Response>> {
+        if (this._renewToken) {
+            await this._renewToken;
+        }
+
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(SPLATNET3_URL + url, {
             method,
@@ -50,10 +61,29 @@ export default class SplatNet3Api {
             signal,
         }).finally(cancel);
 
-        debug('fetch %s %s%s, response %s', method, url, _log ? ', ' + _log : '', response.status);
+        const version = response.headers.get('x-be-version');
+        debug('fetch %s %s%s, response %s, server revision %s', method, url, _log ? ', ' + _log : '',
+            response.status, version);
+
+        if (response.status === 401 && !_attempt && this.onTokenExpired) {
+            // _renewToken will be awaited when calling fetch
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, response).finally(() => {
+                this._renewToken = null;
+            });
+            return this.fetch(url, method, body, headers, _log, _attempt + 1);    
+        }
 
         if (response.status !== 200) {
             throw new ErrorResponse('[splatnet3] Non-200 status code', response, await response.text());
+        }
+
+        const remaining = parseInt(response.headers.get('x-bullettoken-remaining') ?? '0');
+
+        if (remaining <= SHOULD_RENEW_TOKEN_AT && !_attempt && this.onTokenShouldRenew) {
+            // _renewToken will be awaited when calling fetch
+            this._renewToken = this._renewToken ?? this.onTokenShouldRenew.call(null, remaining, response).finally(() => {
+                this._renewToken = null;
+            });
         }
 
         const data = await response.json() as T;

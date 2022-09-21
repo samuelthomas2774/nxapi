@@ -16,7 +16,7 @@ import { product } from '../../../util/product.js';
 const debug = createDebug('nxapi:discord:splatnet3');
 
 export default class SplatNet3Monitor extends EmbeddedLoop {
-    update_interval: number = 3 * 60; // 3 minutes in seconds
+    update_interval: number = 1 * 60; // 1 minute in seconds
 
     splatnet: SplatNet3Api | null = null;
     data: SavedBulletToken | null = null;
@@ -35,7 +35,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
     constructor(
         readonly discord_presence: ExternalMonitorPresenceInterface,
-        readonly config: SplatNet3MonitorConfig | null,
+        protected config: SplatNet3MonitorConfig | null,
     ) {
         super();
     }
@@ -48,6 +48,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         if (config?.znc_proxy_url !== this.config?.znc_proxy_url) return false;
         if (config?.allow_fetch_token !== this.config?.allow_fetch_token) return false;
 
+        this.config = config;
         this.skipIntervalInCurrentLoop();
 
         return true;
