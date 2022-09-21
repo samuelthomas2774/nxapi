@@ -38,6 +38,9 @@ export default abstract class Loop {
                     await new Promise(rs => setTimeout(this.timeout_resolve = rs, this.update_interval * 1000));
                 }
             }
+            if (result === LoopResult.STOP) {
+                return LoopResult.STOP;
+            }
         } finally {
             this.is_loop_active--;
             this.skip_interval_once = false;
@@ -59,10 +62,12 @@ export default abstract class Loop {
 
 const LoopRunOk = Symbol('LoopRunOk');
 const LoopRunOkSkipInterval = Symbol('LoopRunOkSkipInterval');
+const LoopRunStop = Symbol('LoopRunStopNow');
 
 export enum LoopResult {
     OK = LoopRunOk as any,
     OK_SKIP_INTERVAL = LoopRunOkSkipInterval as any,
+    STOP = LoopRunStop as any,
 }
 
 export abstract class EmbeddedLoop extends Loop {
@@ -88,18 +93,23 @@ export abstract class EmbeddedLoop extends Loop {
         const i = this._running;
 
         try {
-            await this.loop(true);
-
+            const result = await this.loop(true);
+            if (result === LoopResult.STOP) return;
+            
             while (i === this._running) {
-                await this.loop();
-            }
+                const result = await this.loop();
 
+                if (result === LoopResult.STOP) {
+                    await this.onStop?.();
+                    return;
+                }
+            }
+            
             if (this._running === 0 && !this.onStop) {
                 // Run one more time after the loop ends
                 const result = await this.loopRun();
             }
 
-            await this.onStop?.();
         } finally {
             this._running = 0;
         }

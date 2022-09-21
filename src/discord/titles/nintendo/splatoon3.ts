@@ -144,7 +144,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         this.friend = null;
         this.discord_presence.refreshPresence();
 
-        if (result === ErrorResult.STOP) this.disable();
+        if (result === ErrorResult.STOP) return LoopResult.STOP;
         return LoopResult.OK;
     }
 }
