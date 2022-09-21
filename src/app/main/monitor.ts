@@ -22,7 +22,7 @@ export class PresenceMonitorManager {
         public app: App
     ) {}
 
-    async start(id: string, callback?: (monitor: EmbeddedPresenceMonitor, firstRun: boolean) => void) {
+    async start(id: string, callback?: (monitor: EmbeddedPresenceMonitor, firstRun: boolean) => Promise<void> | void) {
         debug('Starting monitor', id);
 
         const token = id.length === 16 ? await this.app.store.storage.getItem('NintendoAccountToken.' + id) : id;
@@ -32,7 +32,7 @@ export class PresenceMonitorManager {
 
         const existing = this.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === user.data.user.id);
         if (existing) {
-            callback?.call(null, existing as EmbeddedPresenceMonitor, false);
+            await callback?.call(null, existing as EmbeddedPresenceMonitor, false);
             return existing;
         }
 
@@ -72,7 +72,7 @@ export class PresenceMonitorManager {
 
         this.monitors.push(i);
 
-        callback?.call(null, i, true);
+        await callback?.call(null, i, true);
 
         i.enable();
 
@@ -297,9 +297,10 @@ export class PresenceMonitorManager {
         }
 
         if (source && 'na_id' in source) {
-            await this.start(source.na_id, monitor => {
+            await this.start(source.na_id, async monitor => {
                 monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
                 if (existing) this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
+                else await this.setDiscordPresenceSourceRestoreSavedConfiguration(monitor);
                 callback?.call(null, monitor);
                 monitor.discord.refreshExternalMonitorsConfig();
                 monitor.skipIntervalInCurrentLoop();
@@ -307,6 +308,7 @@ export class PresenceMonitorManager {
         } else if (source && 'url' in source) {
             const monitor = await this.startUrl(source.url);
             if (existing) this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
+            else await this.setDiscordPresenceSourceRestoreSavedConfiguration(monitor);
             callback?.call(null, monitor);
         }
 
@@ -315,6 +317,16 @@ export class PresenceMonitorManager {
             this.app.menu?.updateMenu();
             this.app.store.emit('update-discord-presence-source', source);
         }
+    }
+
+    private async setDiscordPresenceSourceRestoreSavedConfiguration(
+        monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor
+    ) {
+        const config: Omit<DiscordPresenceConfiguration, 'source'> | undefined =
+            await this.app.store.storage.getItem('AppDiscordPresenceOptions');
+
+        if (!config) return;
+        this.setDiscordPresenceConfigurationForMonitor(monitor, config);
     }
 
     private setDiscordPresenceSourceCopyConfiguration(
