@@ -97,7 +97,7 @@ export interface TableOptions {
     rows: Row[];
 }
 
-type RecursivePartial<T extends {}> = {
+type RecursivePartial<T> = {
     [P in keyof T]?: (T[P] extends Array<unknown> ? T[P] : RecursivePartial<T[P]>) | undefined;
 };
 

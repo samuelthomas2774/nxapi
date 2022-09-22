@@ -233,6 +233,7 @@ const app_browser = {
         typescript({
             noEmit: true,
             declaration: false,
+            module: 'es2022',
         }),
         commonjs({
             // the ".ts" extension is required
