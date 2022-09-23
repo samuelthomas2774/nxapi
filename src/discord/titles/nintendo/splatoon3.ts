@@ -214,9 +214,9 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
         monitor.friend.vsMode?.mode === 'REGULAR' ? monitor.regular_schedule?.regularMatchSetting :
         monitor.friend.vsMode?.mode === 'BANKARA' ?
             monitor.friend.vsMode.id === 'VnNNb2RlLTI=' ?
-                monitor.anarchy_schedule?.bankaraMatchSettings.find(s => s.mode === BankaraMatchMode.CHALLENGE) :
+                monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.CHALLENGE) :
             monitor.friend.vsMode.id === 'VnNNb2RlLTUx' ?
-                monitor.anarchy_schedule?.bankaraMatchSettings.find(s => s.mode === BankaraMatchMode.OPEN) :
+                monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.OPEN) :
             null :
         monitor.friend.vsMode?.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
         monitor.friend.vsMode?.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :

@@ -97,6 +97,14 @@ export enum RequestId {
     VsHistoryDetailQuery = 'cd82f2ade8aca7687947c5f3210805a6',
 }
 
+interface NodeList<T, C extends boolean = false> {
+    nodes: T[];
+    totalCount: C extends true ? number : never;
+}
+interface NodeListTotal {
+    totalCount: number;
+}
+
 interface Colour {
     a: number;
     b: number;
@@ -264,18 +272,12 @@ export interface VotesUpdateFestVoteResult {
     updateFestVote: {
         fest: {
             id: string;
-            teams: DetailVotingStatusTeam<{
-                totalCount: number;
-                nodes: FestVotePlayer[];
-            }>[];
+            teams: DetailVotingStatusTeam<NodeList<FestVotePlayer, true>>[];
             isVotable: boolean;
-            undecidedVotes: {
-                totalCount: number;
-                nodes: FestVotePlayer[];
-            };
-        }
+            undecidedVotes: NodeList<FestVotePlayer, true>;
+        };
         userErrors: null;
-    }
+    };
 }
 
 /** f8ae00773cc412a50dd41a6d9a159ddd ConfigureAnalyticsQuery */
@@ -302,7 +304,17 @@ export interface ConfigureAnalyticsResult {
 
 /** c0429fd738d829445e994d3370999764 useCurrentFestQuery */
 export interface CurrentFestResult {
-    currentFest: unknown | null;
+    currentFest: CurrentFest | null;
+}
+
+interface CurrentFest {
+    id: string;
+    state: FestState;
+    teams: CurrentFestTeam[];
+}
+interface CurrentFestTeam {
+    color: Colour;
+    id: string;
 }
 
 /** c1553ac75de0a3ea497cdbafaa93e95b BankaraBattleHistoriesQuery */
@@ -311,9 +323,7 @@ export type BankaraBattleHistoriesResult = unknown;
 /** 817618ce39bcf5570f52a97d73301b30 CoopHistoryQuery */
 export interface CoopHistoryResult {
     coopResult: {
-        historyGroups: {
-            nodes: CoopHistoryGroup[];
-        };
+        historyGroups: NodeList<CoopHistoryGroup>;
         historyGroupsOnlyFirst: unknown;
         monthlyGear: unknown;
         pointCard: unknown;
@@ -324,9 +334,7 @@ export interface CoopHistoryResult {
     }
 }
 interface CoopHistoryGroup {
-    historyDetails: {
-        nodes: CoopHistoryDetail[];
-    };
+    historyDetails: NodeList<CoopHistoryDetail>;
 }
 interface CoopHistoryDetail {
     afterGrade: unknown;
@@ -357,14 +365,10 @@ export interface CoopHistoryDetailResult {
 export interface LatestBattleHistoriesResult {
     latestBattleHistories: {
         summary: latestBattleHistoriesSummary;
-        historyGroupsOnlyFirst: {
-            nodes: LatestBattleHistoryGroupOnlyFirst[];
-        };
-        historyGroups: {
-            nodes: LatestBattleHistoryGroup[];
-        };
+        historyGroupsOnlyFirst: NodeList<LatestBattleHistoryGroupOnlyFirst>;
+        historyGroups: NodeList<LatestBattleHistoryGroup>;
     };
-    currentFest: unknown | null;
+    currentFest: CurrentFest | null;
 }
 interface latestBattleHistoriesSummary {
     assistAverage: number;
@@ -376,9 +380,7 @@ interface latestBattleHistoriesSummary {
     win: number;
 }
 interface LatestBattleHistoryGroupOnlyFirst<HasOverlayImage extends boolean = false> {
-    historyDetails: {
-        nodes: LatestBattleHistoryGroupOnlyFirstDetails<HasOverlayImage>[];
-    };
+    historyDetails: NodeList<LatestBattleHistoryGroupOnlyFirstDetails<HasOverlayImage>>;
 }
 interface LatestBattleHistoryGroupOnlyFirstDetails<HasOverlayImage extends boolean = false> {
     player: {
@@ -399,9 +401,7 @@ interface LatestBattleHistoryGroupOnlyFirstDetails<HasOverlayImage extends boole
     id: string;
 }
 interface LatestBattleHistoryGroup {
-    historyDetails: {
-        nodes: AnyLatestBattleHistoryDetails[];
-    };
+    historyDetails: NodeList<AnyLatestBattleHistoryDetails>;
 }
 interface LatestBattleHistoryDetails {
     id: string;
@@ -451,19 +451,13 @@ export type PrivateBattleHistoriesResult = unknown;
 export interface RegularBattleHistoriesResult {
     regularBattleHistories: {
         summary: latestBattleHistoriesSummary;
-        historyGroupsOnlyFirst: {
-            nodes: LatestBattleHistoryGroupOnlyFirst<true>[];
-        };
-        historyGroups: {
-            nodes: RegularBattleHistoryGroup[];
-        };
+        historyGroupsOnlyFirst: NodeList<LatestBattleHistoryGroupOnlyFirst<true>>;
+        historyGroups: NodeList<RegularBattleHistoryGroup>;
     };
 }
 interface RegularBattleHistoryGroup {
     lastPlayedTime: string;
-    historyDetails: {
-        nodes: LatestBattleHistoryDetails[];
-    };
+    historyDetails: NodeList<LatestBattleHistoryDetails>;
 }
 
 /** 49dd00428fb8e9b4dde62f585c8de1e0 BattleHistoryCurrentPlayerQuery */
@@ -488,10 +482,8 @@ export interface BattleHistoryCurrentPlayerResult {
 /** 7a0e05c28c7d3f7e5a06def87ab8cd2d FriendListQuery */
 export interface FriendListResult {
     /** Only includes friends that have played Splatoon 3 */
-    friends: {
-        nodes: Friend[];
-    };
-    currentFest: unknown | null;
+    friends: NodeList<Friend>;
+    currentFest: CurrentFest | null;
 }
 
 /** c1afed6111887347e244c639e7d35c69 FriendListRefetchQuery */
@@ -562,9 +554,7 @@ interface PlayHistory {
     frequentlyUsedWeapons: Weapon[];
     paintPointTotal: number;
     badges: HistoryBadgeId[];
-    weaponHistory: {
-        nodes: WeaponHistorySeason[];
-    };
+    weaponHistory: NodeList<WeaponHistorySeason>;
     recentBadges: HistoryBadge[];
     allBadges: HistoryBadge[];
 }
@@ -637,9 +627,7 @@ export interface DetailFestRecordDetailResult {
         playerResult: unknown | null;
         myTeam: unknown | null;
         isVotable: boolean;
-        undecidedVotes: {
-            totalCount: number;
-        };
+        undecidedVotes: NodeListTotal;
     };
     currentPlayer: {
         name: string;
@@ -649,9 +637,7 @@ export interface DetailFestRecordDetailResult {
     };
 }
 
-interface DetailFestTeam<Votes = {
-    totalCount: number;
-}> {
+interface DetailFestTeam<Votes = NodeListTotal> {
     result: unknown | null;
     id: string;
     teamName: string;
@@ -678,15 +664,11 @@ export interface DetailVotingStatusResult {
         id: string;
         lang: string;
         teams: DetailVotingStatusTeam[];
-        undecidedVotes: {
-            nodes: FestVotePlayer[];
-        };
+        undecidedVotes: NodeList<FestVotePlayer>;
     };
 }
 
-interface DetailVotingStatusTeam<Votes = {
-    nodes: FestVotePlayer[];
-}> {
+interface DetailVotingStatusTeam<Votes = NodeList<FestVotePlayer>> {
     id: string;
     teamName: string;
     image: {
@@ -708,9 +690,7 @@ interface FestVotePlayer {
 
 /** 44c76790b68ca0f3da87f2a3452de986 FestRecordQuery */
 export interface FestRecordResult {
-    festRecords: {
-        nodes: FestRecord[];
-    };
+    festRecords: NodeList<FestRecord>;
     currentPlayer: {
         name: string;
         userIcon: {
@@ -755,47 +735,44 @@ export interface SettingResult {
 
 /** 10e1d424391e78d21670227550b3509f StageScheduleQuery */
 export interface StageScheduleResult {
-    regularSchedules: {
-        nodes: RegularSchedule[];
-    };
-    bankaraSchedules: {
-        nodes: BankaraSchedule[];
-    };
-    xSchedules: {
-        nodes: XSchedule[];
-    };
-    leagueSchedules: {
-        nodes: LeagueSchedule[];
-    };
+    regularSchedules: NodeList<ScheduleResult<RegularSchedule>>;
+    bankaraSchedules: NodeList<ScheduleResult<BankaraSchedule>>;
+    xSchedules: NodeList<ScheduleResult<XSchedule>>;
+    leagueSchedules: NodeList<ScheduleResult<LeagueSchedule>>;
     coopGroupingSchedule: {
-        regularSchedules: {
-            nodes: CoopRegularSchedule[];
-        };
-        bigRunSchedules: {
-            nodes: unknown[];
-        };
+        regularSchedules: NodeList<CoopRegularSchedule>;
+        bigRunSchedules: NodeList<unknown>;
     };
-    festSchedules: {
-        nodes: FestSchedule[];
-    };
-    currentFest: unknown | null;
+    festSchedules: NodeList<FestSchedule>;
+    currentFest: SchedulesCurrentFest | null;
     currentPlayer: {
         userIcon: {
             url: string;
         };
     };
-    vsStages: {
-        nodes: VsStageDetail[];
-    };
+    vsStages: NodeList<VsStageDetail>;
 }
 
-interface RegularSchedule {
+interface Schedule {
     startTime: string; // "2022-09-09T08:00:00Z"
     endTime: string; // "2022-09-09T10:00:00Z"
-    regularMatchSetting: RegularMatchSetting;
-    festMatchSetting: unknown | null;
 }
 
+type ScheduleResult<T extends Schedule> = NormalSchedule<T> | FestActiveSchedule<T>;
+type NormalSchedule<T extends Schedule> = T & {
+    festMatchSetting: null;
+};
+type FestActiveSchedule<T extends Schedule> = {
+    [K in keyof T]:
+        K extends `festMatchSetting` ? FestActiveSetting :
+        K extends `${string}MatchSetting${'' | 's'}` ? null : T[K];
+} & {
+    festMatchSetting: FestActiveSetting;
+};
+
+interface RegularSchedule extends Schedule {
+    regularMatchSetting: RegularMatchSetting;
+}
 interface RegularMatchSetting {
     __isVsSetting: 'RegularMatchSetting';
     __typename: 'RegularMatchSetting';
@@ -803,13 +780,9 @@ interface RegularMatchSetting {
     vsRule: VsRule;
 }
 
-interface BankaraSchedule {
-    startTime: string; // "2022-09-09T08:00:00Z"
-    endTime: string; // "2022-09-09T10:00:00Z"
+interface BankaraSchedule extends Schedule {
     bankaraMatchSettings: BankaraMatchSetting[];
-    festMatchSetting: unknown | null;
 }
-
 interface BankaraMatchSetting {
     __isVsSetting: 'BankaraMatchSetting';
     __typename: 'BankaraMatchSetting';
@@ -823,13 +796,9 @@ export enum BankaraMatchMode {
     OPEN = 'OPEN',
 }
 
-interface XSchedule {
-    startTime: string; // "2022-09-09T08:00:00Z"
-    endTime: string; // "2022-09-09T10:00:00Z"
+interface XSchedule extends Schedule {
     xMatchSetting: XMatchSetting;
-    festMatchSetting: unknown | null;
 }
-
 interface XMatchSetting {
     __isVsSetting: 'XMatchSetting';
     __typename: 'XMatchSetting';
@@ -837,13 +806,9 @@ interface XMatchSetting {
     vsRule: VsRule;
 }
 
-interface LeagueSchedule {
-    startTime: string; // "2022-09-09T08:00:00Z"
-    endTime: string; // "2022-09-09T10:00:00Z"
+interface LeagueSchedule extends Schedule {
     leagueMatchSetting: LeagueMatchSetting;
-    festMatchSetting: unknown | null;
 }
-
 interface LeagueMatchSetting {
     __isVsSetting: 'LeagueMatchSetting';
     __typename: 'LeagueMatchSetting';
@@ -897,18 +862,37 @@ interface CoopWeapon {
     };
 }
 
-interface FestSchedule {
-    startTime: string; // "2022-09-09T08:00:00Z"
-    endTime: string; // "2022-09-09T10:00:00Z"
-    festMatchSetting: FestMatchSetting | null;
+interface SchedulesCurrentFest {
+    id: string;
+    title: string;
+    startTime: string;
+    endTime: string;
+    midtermTime: string;
+    state: FestState;
+    teams: SchedulesCurrentFestTeam[];
+    tricolorStage: Omit<VsStage, 'vsStageId'>;
+}
+interface SchedulesCurrentFestTeam {
+    id: string;
+    color: Colour;
+    /** null = not voted or not voted for this team */
+    myVoteState: FestVoteState | null;
+    role: FestTeamRole | null;
 }
 
+interface FestSchedule extends Schedule {
+    festMatchSetting: FestMatchSetting | null;
+}
 interface FestMatchSetting {
     __isVsSetting: 'FestMatchSetting';
     __typename: 'FestMatchSetting';
     vsStages: VsStage[];
     vsRule: VsRule;
     // ...
+}
+
+interface FestActiveSetting {
+    __typename: 'FestMatchSetting';
 }
 
 interface VsStageDetail {
@@ -940,10 +924,7 @@ export interface HomeResult {
     };
     banners: HomeBanner[];
     /** Only includes online friends that have played Splatoon 3, even if they are currently playing a different game */
-    friends: {
-        nodes: HomeFriend[];
-        totalCount: number;
-    };
+    friends: NodeList<HomeFriend, true>;
     footerMessages: HomeFooterMessage[];
 }
 
@@ -1026,8 +1007,12 @@ interface VsHistoryDetail {
     playedTime: string;
     awards: Award[];
     leagueMatch: unknown | null;
-    nextHistoryDetail: unknown | null;
-    previousHistoryDetail: unknown | null;
+    nextHistoryDetail: {
+        id: string;
+    } | null;
+    previousHistoryDetail: {
+        id: string;
+    } | null;
 }
 
 interface FestMatchDetail {
