@@ -414,6 +414,46 @@ nxapi nooklink reactions
 nxapi nooklink post-reaction happyflower
 ```
 
+SplatNet 3
+---
+
+All SplatNet 3 commands may automatically request a web service token. This will involve the imink/flapg API (or a custom server). This can be disabled by setting `--no-auto-update-session`, however this will cause commands to fail if there isn't a valid SplatNet 3 token.
+
+### User
+
+```sh
+# Show the authenticated SplatNet 3 user
+nxapi splatnet3 user
+```
+
+### Download battle/Salmon Run results
+
+```sh
+# Download battle and Salmon Run results to the splatnet3 directory in nxapi's data path
+# Data that already exists will not be redownloaded
+nxapi splatnet3 dump-results
+# Download battle and Salmon Run results to data/splatnet3
+nxapi splatnet3 dump-results data/splatnet3
+
+# Only download battle results
+nxapi splatnet3 dump-results --no-coop
+# Only download Salmon Run results
+nxapi splatnet3 dump-results --no-battles
+```
+
+### Friends
+
+```sh
+# Show Nintendo Switch friends who have played Splatoon 3 in a table
+# This shows more information about in-game activities than `nxapi nso friends`
+# Friends that are online and selected in a game will appear as online, even if they are not playing Splatoon 3
+nxapi splatnet3 friends
+
+# JSON
+nxapi splatnet3 friends --json
+nxapi splatnet3 friends --json-pretty-print
+```
+
 Nintendo Switch Parental Controls
 ---
 

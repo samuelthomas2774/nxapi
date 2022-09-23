@@ -923,7 +923,10 @@ export interface HomeResult {
         };
     };
     banners: HomeBanner[];
-    /** Only includes online friends that have played Splatoon 3, even if they are currently playing a different game */
+    /**
+     * Only includes up to 3 online friends that have played Splatoon 3, even if they are currently
+     * playing a different game. `totalCount` also only counts online friends.
+     */
     friends: NodeList<HomeFriend, true>;
     footerMessages: HomeFooterMessage[];
 }

@@ -451,9 +451,9 @@ const ZNCA_API_USE_TEXT = `To access the Nintendo Switch Online app API, nxapi m
 By default, this uses the imink API, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
 
 The data sent includes:
-- A random UUID and the current timestamp
-- (When authenticating to the Nintendo Switch Online app) An ID token, containing your Nintendo Account ID and country, which is valid for 15 minutes
-- (When authenticating to game-specific services) An ID token, containing your Coral (Nintendo Switch Online app) user ID, Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours`;
+
+- When authenticating to the Nintendo Switch Online app: a Nintendo Account ID token, containing your Nintendo Account ID and country, which is valid for 15 minutes
+- When authenticating to game-specific services: a Coral (Nintendo Switch Online app) ID token, containing your Coral user ID, Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours`;
 
 async function askZncaApiUseAllowed(window?: BrowserWindow): Promise<boolean> {
     const options: MessageBoxOptions = {
