@@ -97,6 +97,11 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     }
 
     async update() {
+        if (!this.config) {
+            debug('Not updating SplatNet 3 monitor - not configured');
+            return this.disable();
+        }
+
         const friends = this.cached_friends ?? await this.splatnet?.getFriendsRefetch();
         this.cached_friends = null;
 
@@ -108,7 +113,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
 
         if (!this.regular_schedule) {
-            this.cached_schedules = await this.splatnet!.getSchedules();
+            this.cached_schedules = await this.splatnet?.getSchedules() ?? null;
             this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
         }
 
