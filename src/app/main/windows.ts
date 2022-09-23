@@ -72,7 +72,6 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService, t
     const window = new BrowserWindow({
         width: 375,
         height: 667,
-        resizable: false,
         autoHideMenuBar: true,
         title: (title_prefix ?? '') + webservice.name,
         backgroundColor: nativeTheme.shouldUseDarkColors ? BACKGROUND_COLOUR_MAIN_DARK : BACKGROUND_COLOUR_MAIN_LIGHT,
