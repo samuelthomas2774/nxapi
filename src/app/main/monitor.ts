@@ -90,7 +90,7 @@ export class PresenceMonitorManager {
         i.notifications = this.notifications;
 
         i.discord.onUpdateActivity = (presence: DiscordPresence | null) => {
-            this.app.store.emit('update-discord-presence', presence);
+            this.app.store.emit('update-discord-presence', presence ? {...presence, config: undefined} : null);
         };
         i.discord.onUpdateClient = (client: DiscordRpcClient | null) => {
             this.app.store.emit('update-discord-user', client?.user ?? null);

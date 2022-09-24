@@ -506,6 +506,8 @@ export class ZncProxyDiscordPresence extends Loop {
 
     readonly discord = new ZncDiscordPresenceClient(this);
 
+    last_data: unknown | null = null;
+
     constructor(
         public presence_url: string
     ) {
@@ -523,7 +525,8 @@ export class ZncProxyDiscordPresence extends Loop {
     }
 
     async update() {
-        const [presence, user] = await getPresenceFromUrl(this.presence_url);
+        const [presence, user, data] = await getPresenceFromUrl(this.presence_url);
+        this.last_data = data;
 
         await this.discord.updatePresenceForDiscord(presence, user);
         await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);

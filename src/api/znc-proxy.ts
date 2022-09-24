@@ -239,5 +239,5 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
         throw new Error('Invalid presence data');
     }
 
-    return [presence, user] as const;
+    return defineResponse([presence, user, data as unknown] as const, response);
 }

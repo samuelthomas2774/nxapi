@@ -266,6 +266,7 @@ export default function Preferences(props: PreferencesProps) {
                         </TouchableOpacity>
                     </View>
                     <Text style={[styles.help, theme.text]}>Uses SplatNet 3 to retrieve additional presence information while playing Splatoon 3. You must be using a secondary Nintendo Account that is friends with your main account to fetch your presence, and the secondary account must be able to access SplatNet 3.</Text>
+                    <Text style={[styles.help, theme.text]}>When using a presence URL that returns Splatoon 3 data additional presence information will be shown regardless of this setting.</Text>
                 </View>
             </View>
         </View>

@@ -97,13 +97,13 @@ export enum RequestId {
     VsHistoryDetailQuery = 'cd82f2ade8aca7687947c5f3210805a6',
 }
 
-interface NodeList<T, C extends boolean = false> {
+interface _NodeList<T, C extends boolean = false> {
     nodes: T[];
-    totalCount: C extends true ? number : never;
-}
-interface NodeListTotal {
     totalCount: number;
 }
+type NodeList<T, C extends boolean = false> =
+    C extends true ? _NodeList<T> : Pick<_NodeList<T>, 'nodes'>;
+type NodeListTotal = Pick<_NodeList<unknown>, 'totalCount'>;
 
 interface Colour {
     a: number;

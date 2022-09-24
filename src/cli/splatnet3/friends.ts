@@ -69,7 +69,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             friend.playerName === friend.nickname ? friend.playerName :
                 friend.playerName ? friend.playerName + ' (' + friend.nickname + ')' :
                 friend.nickname,
-            getStateDescription(friend.onlineState, friend.vsMode?.name),
+            getStateDescription(friend.onlineState, getVsModeDescription(friend.vsMode) ?? friend.vsMode?.name),
             friend.isFavorite ? 'Yes' : 'No',
             typeof friend.isLocked === 'boolean' ? friend.isLocked ? 'Yes' : 'No' : '-',
             typeof friend.isVcEnabled === 'boolean' ? friend.isVcEnabled ? 'Yes' : 'No' : '-',
@@ -95,4 +95,20 @@ function getStateDescription(state: FriendOnlineState, vs_mode_desc?: string) {
             return 'In game (Salmon Run)';
         default: return state;
     }
+}
+
+function getVsModeDescription(vs_mode: {id: string; mode: string;} | null) {
+    if (!vs_mode) return null;
+
+    if (vs_mode.mode === 'REGULAR') return 'Regular Battle';
+    if (vs_mode.id === 'VnNNb2RlLTI=') return 'Anarchy Battle (Series)'; // VsMode-2
+    if (vs_mode.id === 'VnNNb2RlLTUx') return 'Anarchy Battle (Open)'; // VsMode-51
+    if (vs_mode.mode === 'BANKARA') return 'Anarchy Battle';
+    if (vs_mode.id === 'VnNNb2RlLTY=') return 'Splatfest Battle (Open)'; // VsMode-6
+    if (vs_mode.id === 'VnNNb2RlLTc=') return 'Splatfest Battle (Pro)'; // VsMode-7
+    if (vs_mode.mode === 'FEST') return 'Splatfest Battle';
+    if (vs_mode.mode === 'LEAGUE') return 'League Battle';
+    if (vs_mode.mode === 'X_MATCH') return 'X Battle';
+
+    return null;
 }

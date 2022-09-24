@@ -7,7 +7,7 @@ import SplatNet3Api from '../../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../../app/common/types.js';
 import { Arguments } from '../../../cli/nso/presence.js';
 import { getBulletToken, SavedBulletToken } from '../../../common/auth/splatnet3.js';
-import { ExternalMonitorPresenceInterface } from '../../../common/presence.js';
+import { ExternalMonitorPresenceInterface, ZncProxyDiscordPresence } from '../../../common/presence.js';
 import { EmbeddedLoop, LoopResult } from '../../../util/loop.js';
 import { ArgumentsCamelCase } from '../../../util/yargs.js';
 import { DiscordPresenceContext, ErrorResult } from '../../types.js';
@@ -117,8 +117,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         // Refresh Splatfest data at the start of the second half
         // At the point one team becomes the defending team and others attacking teams, this needs to be known
         // to check if the player may join a Tricolour battle
-        const tricolour_open = this.fest &&
-            new Date(this.fest.midtermTime).getTime() >= Date.now();
+        const tricolour_open = this.fest && new Date(this.fest.midtermTime).getTime() < Date.now();
         const should_refresh_fest = this.fest && tricolour_open &&
             ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.fest.state);
 
@@ -219,95 +218,128 @@ export function getConfigFromAppConfig(
     };
 }
 
+interface PresenceUrlResponse {
+    splatoon3?: FriendListResult['friends']['nodes'][0] | null;
+    splatoon3_fest_team?:
+        (DetailVotingStatusResult['fest']['teams'][0] &
+            Exclude<StageScheduleResult['currentFest'], null>['teams'][0]) | null;
+    splatoon3_vs_setting?:
+        StageScheduleResult['regularSchedules']['nodes'][0]['regularMatchSetting'] |
+        Exclude<StageScheduleResult['bankaraSchedules']['nodes'][0]['bankaraMatchSettings'], null>[0] |
+        StageScheduleResult['festSchedules']['nodes'][0]['festMatchSetting'] |
+        StageScheduleResult['leagueSchedules']['nodes'][0]['leagueMatchSetting'] |
+        StageScheduleResult['xSchedules']['nodes'][0]['xMatchSetting'] |
+        null;
+    splatoon3_coop_setting?:
+        StageScheduleResult['coopGroupingSchedule']['regularSchedules']['nodes'][0]['setting'] | null;
+    splatoon3_fest?: StageScheduleResult['currentFest'] | null;
+}
+
 export function callback(activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) {
     const monitor = context?.monitors?.find(m => m instanceof SplatNet3Monitor) as SplatNet3Monitor | undefined;
-    if (!monitor?.friend) return;
+    const presence_proxy_data =
+        context?.znc_discord_presence instanceof ZncProxyDiscordPresence ?
+        context.znc_discord_presence.last_data as PresenceUrlResponse : null;
 
-    if ((monitor.friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
-        monitor.friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && monitor.friend.vsMode
+    const friend = presence_proxy_data?.splatoon3 ?? monitor?.friend;
+    const fest = presence_proxy_data?.splatoon3_fest ?? monitor?.fest;
+    const fest_team = presence_proxy_data?.splatoon3_fest_team ?? monitor?.fest_team;
+    const fest_team_voting_status = presence_proxy_data?.splatoon3_fest_team ?? monitor?.fest_team_voting_status;
+
+    if (!friend) return;
+
+    if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
+        friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
     ) {
-        const mode = monitor.friend.vsMode;
-
         const mode_name =
-            mode.mode === 'REGULAR' ? 'Regular Battle' :
-            mode.id === 'VnNNb2RlLTI=' ? 'Anarchy Battle (Series)' : // VsMode-2
-            mode.id === 'VnNNb2RlLTUx' ? 'Anarchy Battle (Open)' : // VsMode-51
-            mode.mode === 'BANKARA' ? 'Anarchy Battle' :
-            mode.id === 'VnNNb2RlLTY=' ? 'Splatfest Battle (Open)' : // VsMode-6
-            mode.id === 'VnNNb2RlLTc=' ? 'Splatfest Battle (Pro)' : // VsMode-7
-            mode.mode === 'FEST' ? 'Splatfest Battle' :
-            mode.mode === 'LEAGUE' ? 'League Battle' :
-            mode.mode === 'X_MATCH' ? 'X Battle' :
+            friend.vsMode.mode === 'REGULAR' ? 'Regular Battle' :
+            friend.vsMode.id === 'VnNNb2RlLTI=' ? 'Anarchy Battle (Series)' : // VsMode-2
+            friend.vsMode.id === 'VnNNb2RlLTUx' ? 'Anarchy Battle (Open)' : // VsMode-51
+            friend.vsMode.mode === 'BANKARA' ? 'Anarchy Battle' :
+            friend.vsMode.id === 'VnNNb2RlLTY=' ? 'Splatfest Battle (Open)' : // VsMode-6
+            friend.vsMode.id === 'VnNNb2RlLTc=' ? 'Splatfest Battle (Pro)' : // VsMode-7
+            friend.vsMode.mode === 'FEST' ? 'Splatfest Battle' :
+            friend.vsMode.mode === 'LEAGUE' ? 'League Battle' :
+            friend.vsMode.mode === 'X_MATCH' ? 'X Battle' :
             undefined;
 
         const setting =
-            mode.mode === 'REGULAR' ? monitor.regular_schedule?.regularMatchSetting :
-            mode.mode === 'BANKARA' ?
-                mode.id === 'VnNNb2RlLTI=' ?
+            presence_proxy_data && 'splatoon3_vs_setting' in presence_proxy_data ?
+                presence_proxy_data.splatoon3_vs_setting :
+            !monitor ? null :
+            friend.vsMode.mode === 'REGULAR' ? monitor.regular_schedule?.regularMatchSetting :
+            friend.vsMode.mode === 'BANKARA' ?
+                friend.vsMode.id === 'VnNNb2RlLTI=' ?
                     monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.CHALLENGE) :
-                mode.id === 'VnNNb2RlLTUx' ?
+                friend.vsMode.id === 'VnNNb2RlLTUx' ?
                     monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.OPEN) :
                 null :
-            mode.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
-            mode.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :
-            mode.mode === 'X_MATCH' ? monitor.x_schedule?.xMatchSetting :
+            friend.vsMode.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
+            friend.vsMode.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :
+            friend.vsMode.mode === 'X_MATCH' ? monitor.x_schedule?.xMatchSetting :
             null;
 
         activity.details =
-            (mode_name ?? mode.name) +
-            (mode.mode === 'FEST' && monitor.fest_team_voting_status ?
-                ' - Team ' + monitor.fest_team_voting_status.teamName : '') +
-            (mode.mode !== 'FEST' && setting ? ' - ' + setting.vsRule.name : '') +
-            (monitor.friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
+            (mode_name ?? friend.vsMode.name) +
+            (friend.vsMode.mode === 'FEST' && fest_team_voting_status ?
+                ' - Team ' + fest_team_voting_status.teamName : '') +
+            (friend.vsMode.mode !== 'FEST' && setting ? ' - ' + setting.vsRule.name : '') +
+            (friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
 
         if (setting) {
             // In the second half the player may be in a Tricolour battle if either:
             // the player is on the defending team and joins Splatfest Battle (Open) or
             // the player is on the attacking team and joins Tricolour Battle
-            const possibly_tricolour = monitor.fest && new Date(monitor.fest.midtermTime).getTime() >= Date.now() && (
+            const possibly_tricolour = fest && new Date(fest.midtermTime).getTime() <= Date.now() && (
                 false
-                // (monitor.friend.vsMode?.id === 'VnNNb2RlLTY=' && monitor.fest_team?.role === FestTeamRole.DEFENSE) ||
-                // (monitor.friend.vsMode?.id === '... tricolour mode ID ...')
+                // (friend.vsMode?.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
+                // (friend.vsMode?.id === '... tricolour mode ID ...')
             );
 
             activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
                 a: setting.vsStages[0].id,
                 b: setting.vsStages[1].id,
-                ...(possibly_tricolour ? {t: monitor.fest?.tricolorStage.id} : {}),
+                ...(possibly_tricolour ? {t: fest?.tricolorStage.id} : {}),
                 v: '2022092400',
             }).toString();
             activity.largeImageText = setting.vsStages.map(s => s.name).join('/') +
-                (possibly_tricolour ? '/' + monitor.fest?.tricolorStage.name : '') +
+                (possibly_tricolour ? '/' + fest?.tricolorStage.name : '') +
                 ' | ' + product;
         }
 
         // REGULAR, BANKARA, X_MATCH, LEAGUE, PRIVATE, FEST
         const mode_image =
-            mode.mode === 'REGULAR' ? 'mode-regular-1' :
-            mode.mode === 'BANKARA' ? 'mode-anarchy-1' :
-            mode.mode === 'FEST' ? 'mode-fest-1' :
-            mode.mode === 'LEAGUE' ? 'mode-league-1' :
-            mode.mode === 'X_MATCH' ? 'mode-x-1' :
+            friend.vsMode.mode === 'REGULAR' ? 'mode-regular-1' :
+            friend.vsMode.mode === 'BANKARA' ? 'mode-anarchy-1' :
+            friend.vsMode.mode === 'FEST' ? 'mode-fest-1' :
+            friend.vsMode.mode === 'LEAGUE' ? 'mode-league-1' :
+            friend.vsMode.mode === 'X_MATCH' ? 'mode-x-1' :
             undefined;
 
         activity.smallImageKey = mode_image;
-        activity.smallImageText = mode_name ?? mode.name;
+        activity.smallImageText = mode_name ?? friend.vsMode.name;
     }
 
-    if (monitor.friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
-        monitor.friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
+    if (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
+        friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
     ) {
         activity.details = 'Salmon Run' +
-            (monitor.friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ? ' (matching)' : '');
+            (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ? ' (matching)' : '');
 
-        if (monitor.coop_schedule) {
-            const coop_stage_image = new URL(monitor.coop_schedule.setting.coopStage.image.url);
+        const coop_setting =
+            presence_proxy_data && 'splatoon3_coop_setting' in presence_proxy_data ?
+                presence_proxy_data.splatoon3_coop_setting :
+            monitor ? monitor.coop_schedule?.setting :
+            null;
+
+        if (coop_setting) {
+            const coop_stage_image = new URL(coop_setting.coopStage.image.url);
             const match = coop_stage_image.pathname.match(/^\/resources\/prod\/(.+)$/);
             const proxy_stage_image = match ? 'https://splatoon3.ink/assets/splatnet/' + match[1] : null;
 
             if (proxy_stage_image) {
                 activity.largeImageKey = proxy_stage_image;
-                activity.largeImageText = monitor.coop_schedule.setting.coopStage.name +
+                activity.largeImageText = coop_setting.coopStage.name +
                     ' | ' + product;
             }
         }
