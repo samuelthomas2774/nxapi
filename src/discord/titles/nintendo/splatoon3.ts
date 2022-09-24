@@ -62,10 +62,10 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         return this.config?.friend_nsaid ?? this.discord_presence.znc_discord_presence.presence_user;
     }
 
-    async init(): Promise<void> {
+    async init(): Promise<LoopResult | void> {
         if (!this.config) {
             debug('Not enabling SplatNet 3 monitor - not configured');
-            return this.disable();
+            return LoopResult.STOP;
         }
 
         debug('Started monitor');
@@ -83,7 +83,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         } catch (err) {
             const result = await this.discord_presence.handleError(err as Error);
             if (result === ErrorResult.RETRY) return this.init();
-            if (result === ErrorResult.STOP) return this.disable();
+            if (result === ErrorResult.STOP) return LoopResult.STOP;
         }
 
         const history = await this.splatnet!.getHistoryRecords();
@@ -103,7 +103,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     async update() {
         if (!this.config) {
             debug('Not updating SplatNet 3 monitor - not configured');
-            return this.disable();
+            return LoopResult.STOP;
         }
 
         const friends = this.cached_friends ?? await this.splatnet?.getFriendsRefetch();
