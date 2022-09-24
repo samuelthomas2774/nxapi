@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import { Game } from '../../../api/coral-types.js';
-import { BankaraMatchMode, FriendListResult, FriendOnlineState, GraphQLResponse, StageScheduleResult } from '../../../api/splatnet3-types.js';
+import { BankaraMatchMode, DetailVotingStatusResult, FestState, FestTeamRole, FriendListResult, FriendOnlineState, GraphQLResponse, StageScheduleResult } from '../../../api/splatnet3-types.js';
 import SplatNet3Api from '../../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../../app/common/types.js';
 import { Arguments } from '../../../cli/nso/presence.js';
@@ -23,6 +23,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
     cached_friends: GraphQLResponse<FriendListResult> | null = null;
     cached_schedules: GraphQLResponse<StageScheduleResult> | null = null;
+    cached_voting_status: GraphQLResponse<DetailVotingStatusResult> | null = null;
 
     friend: FriendListResult['friends']['nodes'][0] | null = null;
 
@@ -32,6 +33,9 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     league_schedule: StageScheduleResult['leagueSchedules']['nodes'][0] | null = null;
     x_schedule: StageScheduleResult['xSchedules']['nodes'][0] | null = null;
     coop_schedule: StageScheduleResult['coopGroupingSchedule']['regularSchedules']['nodes'][0] | null = null;
+    fest: StageScheduleResult['currentFest'] | null = null;
+    fest_team_voting_status: DetailVotingStatusResult['fest']['teams'][0] | null = null;
+    fest_team: Exclude<StageScheduleResult['currentFest'], null>['teams'][0] | null = null;
 
     constructor(
         readonly discord_presence: ExternalMonitorPresenceInterface,
@@ -110,9 +114,17 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
         this.friend = friend;
 
+        // Refresh Splatfest data at the start of the second half
+        // At the point one team becomes the defending team and others attacking teams, this needs to be known
+        // to check if the player may join a Tricolour battle
+        const tricolour_open = this.fest &&
+            new Date(this.fest.midtermTime).getTime() >= Date.now();
+        const should_refresh_fest = this.fest && tricolour_open &&
+            ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.fest.state);
+
         this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
 
-        if (!this.regular_schedule) {
+        if (!this.regular_schedule || should_refresh_fest) {
             this.cached_schedules = await this.splatnet?.getSchedules() ?? null;
             this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
         }
@@ -122,6 +134,21 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         this.league_schedule = this.getSchedule(this.cached_schedules?.data.leagueSchedules.nodes ?? []);
         this.x_schedule = this.getSchedule(this.cached_schedules?.data.xSchedules.nodes ?? []);
         this.coop_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.regularSchedules.nodes ?? []);
+        this.fest = this.cached_schedules?.data.currentFest ?? null;
+
+        // Identify the user by their icon as the vote list doesn't have friend IDs
+        let fest_team = this.cached_voting_status?.data.fest.teams
+            .find(t => t.votes.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
+
+        if (this.fest && friend && (!this.cached_voting_status || (friend?.vsMode?.mode === 'FEST' && !fest_team))) {
+            this.cached_voting_status = await this.splatnet?.getFestVotingStatus(this.fest.id) ?? null;
+
+            fest_team = this.cached_voting_status?.data.fest.teams
+                .find(t => t.votes.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
+        }
+
+        this.fest_team_voting_status = fest_team ?? null;
+        this.fest_team = this.fest?.teams.find(t => t.id === fest_team?.id) ?? null;
 
         this.discord_presence.refreshPresence();
     }
@@ -196,58 +223,75 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
     const monitor = context?.monitors?.find(m => m instanceof SplatNet3Monitor) as SplatNet3Monitor | undefined;
     if (!monitor?.friend) return;
 
-    // REGULAR, BANKARA, X_MATCH, LEAGUE, PRIVATE, FEST
-    const mode_image =
-        monitor.friend.vsMode?.mode === 'REGULAR' ? 'mode-regular-1' :
-        monitor.friend.vsMode?.mode === 'BANKARA' ? 'mode-anarchy-1' :
-        monitor.friend.vsMode?.mode === 'FEST' ? 'mode-fest-1' :
-        monitor.friend.vsMode?.mode === 'LEAGUE' ? 'mode-league-1' :
-        monitor.friend.vsMode?.mode === 'X_MATCH' ? 'mode-x-1' :
-        undefined;
-
-    const mode_name =
-        monitor.friend.vsMode?.mode === 'REGULAR' ? 'Regular Battle' :
-        monitor.friend.vsMode?.id === 'VnNNb2RlLTI=' ? 'Anarchy Battle (Series)' : // VsMode-2
-        monitor.friend.vsMode?.id === 'VnNNb2RlLTUx' ? 'Anarchy Battle (Open)' : // VsMode-51
-        monitor.friend.vsMode?.mode === 'BANKARA' ? 'Anarchy Battle' :
-        monitor.friend.vsMode?.mode === 'FEST' ? 'Splatfest Battle' :
-        monitor.friend.vsMode?.mode === 'LEAGUE' ? 'League Battle' :
-        monitor.friend.vsMode?.mode === 'X_MATCH' ? 'X Battle' :
-        undefined;
-
-    const schedule_setting =
-        monitor.friend.vsMode?.mode === 'REGULAR' ? monitor.regular_schedule?.regularMatchSetting :
-        monitor.friend.vsMode?.mode === 'BANKARA' ?
-            monitor.friend.vsMode.id === 'VnNNb2RlLTI=' ?
-                monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.CHALLENGE) :
-            monitor.friend.vsMode.id === 'VnNNb2RlLTUx' ?
-                monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.OPEN) :
-            null :
-        monitor.friend.vsMode?.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
-        monitor.friend.vsMode?.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :
-        monitor.friend.vsMode?.mode === 'X_MATCH' ? monitor.x_schedule?.xMatchSetting :
-        null;
-
     if ((monitor.friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
         monitor.friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && monitor.friend.vsMode
     ) {
+        const mode = monitor.friend.vsMode;
+
+        const mode_name =
+            mode.mode === 'REGULAR' ? 'Regular Battle' :
+            mode.id === 'VnNNb2RlLTI=' ? 'Anarchy Battle (Series)' : // VsMode-2
+            mode.id === 'VnNNb2RlLTUx' ? 'Anarchy Battle (Open)' : // VsMode-51
+            mode.mode === 'BANKARA' ? 'Anarchy Battle' :
+            mode.id === 'VnNNb2RlLTY=' ? 'Splatfest Battle (Open)' : // VsMode-6
+            mode.id === 'VnNNb2RlLTc=' ? 'Splatfest Battle (Pro)' : // VsMode-7
+            mode.mode === 'FEST' ? 'Splatfest Battle' :
+            mode.mode === 'LEAGUE' ? 'League Battle' :
+            mode.mode === 'X_MATCH' ? 'X Battle' :
+            undefined;
+
+        const setting =
+            mode.mode === 'REGULAR' ? monitor.regular_schedule?.regularMatchSetting :
+            mode.mode === 'BANKARA' ?
+                mode.id === 'VnNNb2RlLTI=' ?
+                    monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.CHALLENGE) :
+                mode.id === 'VnNNb2RlLTUx' ?
+                    monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.OPEN) :
+                null :
+            mode.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
+            mode.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :
+            mode.mode === 'X_MATCH' ? monitor.x_schedule?.xMatchSetting :
+            null;
+
         activity.details =
-            (mode_name ?? monitor.friend.vsMode.name) +
-            (schedule_setting ? ' - ' + schedule_setting.vsRule.name : '') +
+            (mode_name ?? mode.name) +
+            (mode.mode === 'FEST' && monitor.fest_team_voting_status ?
+                ' - Team ' + monitor.fest_team_voting_status.teamName : '') +
+            (mode.mode !== 'FEST' && setting ? ' - ' + setting.vsRule.name : '') +
             (monitor.friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
 
-        if (schedule_setting) {
+        if (setting) {
+            // In the second half the player may be in a Tricolour battle if either:
+            // the player is on the defending team and joins Splatfest Battle (Open) or
+            // the player is on the attacking team and joins Tricolour Battle
+            const possibly_tricolour = monitor.fest && new Date(monitor.fest.midtermTime).getTime() >= Date.now() && (
+                false
+                // (monitor.friend.vsMode?.id === 'VnNNb2RlLTY=' && monitor.fest_team?.role === FestTeamRole.DEFENSE) ||
+                // (monitor.friend.vsMode?.id === '... tricolour mode ID ...')
+            );
+
             activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
-                a: schedule_setting.vsStages[0].id,
-                b: schedule_setting.vsStages[1].id,
-                v: '2022092105',
+                a: setting.vsStages[0].id,
+                b: setting.vsStages[1].id,
+                ...(possibly_tricolour ? {t: monitor.fest?.tricolorStage.id} : {}),
+                v: '2022092400',
             }).toString();
-            activity.largeImageText = schedule_setting.vsStages.map(s => s.name).join('/') +
+            activity.largeImageText = setting.vsStages.map(s => s.name).join('/') +
+                (possibly_tricolour ? '/' + monitor.fest?.tricolorStage.name : '') +
                 ' | ' + product;
         }
 
+        // REGULAR, BANKARA, X_MATCH, LEAGUE, PRIVATE, FEST
+        const mode_image =
+            mode.mode === 'REGULAR' ? 'mode-regular-1' :
+            mode.mode === 'BANKARA' ? 'mode-anarchy-1' :
+            mode.mode === 'FEST' ? 'mode-fest-1' :
+            mode.mode === 'LEAGUE' ? 'mode-league-1' :
+            mode.mode === 'X_MATCH' ? 'mode-x-1' :
+            undefined;
+
         activity.smallImageKey = mode_image;
-        activity.smallImageText = mode_name ?? monitor.friend.vsMode.name;
+        activity.smallImageText = mode_name ?? mode.name;
     }
 
     if (monitor.friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
