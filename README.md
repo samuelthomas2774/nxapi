@@ -23,6 +23,10 @@ JavaScript library and command line and Electron app for accessing the Nintendo 
         [create an issue if you'd like another title added](https://github.com/samuelthomas2774/nxapi/issues/new/choose).
 
     ![Screenshot showing Splatoon 2 as a Discord activity](resources/discord-activity.png)
+
+    - Additional presence information for Splatoon 3
+
+        <img src="resources/discord-activity-splatoon3.png" alt="Screenshot showing Splatoon 3 as a Discord activity with SplatNet 3 presence information" width="308">
 - Show notifications for friend Nintendo Switch presences
 
     ![Screenshot showing a presence notification](resources/notification.png)
