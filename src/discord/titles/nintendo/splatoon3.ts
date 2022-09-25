@@ -258,6 +258,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             friend.vsMode.mode === 'BANKARA' ? 'Anarchy Battle' :
             friend.vsMode.id === 'VnNNb2RlLTY=' ? 'Splatfest Battle (Open)' : // VsMode-6
             friend.vsMode.id === 'VnNNb2RlLTc=' ? 'Splatfest Battle (Pro)' : // VsMode-7
+            friend.vsMode.id === 'VnNNb2RlLTg=' ? 'Tricolour Battle' : // VsMode-8
             friend.vsMode.mode === 'FEST' ? 'Splatfest Battle' :
             friend.vsMode.mode === 'LEAGUE' ? 'League Battle' :
             friend.vsMode.mode === 'X_MATCH' ? 'X Battle' :
@@ -290,10 +291,9 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             // In the second half the player may be in a Tricolour battle if either:
             // the player is on the defending team and joins Splatfest Battle (Open) or
             // the player is on the attacking team and joins Tricolour Battle
-            const possibly_tricolour = fest && new Date(fest.midtermTime).getTime() <= Date.now() && (
-                false
-                // (friend.vsMode?.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
-                // (friend.vsMode?.id === '... tricolour mode ID ...')
+            const possibly_tricolour = fest?.state === FestState.SECOND_HALF && (
+                (friend.vsMode?.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
+                (friend.vsMode?.id === 'VnNNb2RlLTg=')
             );
 
             activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({

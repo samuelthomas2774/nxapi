@@ -106,6 +106,7 @@ function getVsModeDescription(vs_mode: {id: string; mode: string;} | null) {
     if (vs_mode.mode === 'BANKARA') return 'Anarchy Battle';
     if (vs_mode.id === 'VnNNb2RlLTY=') return 'Splatfest Battle (Open)'; // VsMode-6
     if (vs_mode.id === 'VnNNb2RlLTc=') return 'Splatfest Battle (Pro)'; // VsMode-7
+    if (vs_mode.id === 'VnNNb2RlLTg=') return 'Tricolour Battle'; // VsMode-8
     if (vs_mode.mode === 'FEST') return 'Splatfest Battle';
     if (vs_mode.mode === 'LEAGUE') return 'League Battle';
     if (vs_mode.mode === 'X_MATCH') return 'X Battle';
