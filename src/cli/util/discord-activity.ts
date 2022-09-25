@@ -84,9 +84,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         if (argv.friendNsaid) throw new Error('--presence-url not compatible with --friend-nsaid');
     }
 
-    const [presence, user, friendcode, activeevent] =
+    const [presence, user, response, friendcode, activeevent] =
         argv.presenceJson ? await getPresenceFromJson(argv.presenceJson) :
-        argv.presenceUrl ? await getPresenceFromUrl(argv.presenceUrl) :
+        argv.presenceUrl ? await getPresenceFromUrl(argv.presenceUrl) as
+            readonly [Presence, CurrentUser | Friend | undefined, unknown] :
         await getPresenceFromCoral(argv);
 
     const discordpresence = getActivityFromPresence(argv, presence, user, friendcode, activeevent);
@@ -163,7 +164,7 @@ async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
 
         return [friend.presence, friend] as const;
     } else {
-        return [user.presence, user, user.links.friendCode,
+        return [user.presence, user, user, user.links.friendCode,
             'id' in activeevent ? activeevent : undefined] as const;
     }
 }
