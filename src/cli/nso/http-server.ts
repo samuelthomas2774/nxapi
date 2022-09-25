@@ -166,9 +166,12 @@ function createApp(
             });
             znc_auth_promise.set(nintendoAccountSessionToken, promise);
 
+            let user_naid: string | null = null;
+
             // Remove the authenticated ZncApi 30 minutes after last use
             clearTimeout(znc_auth_timeout.get(nintendoAccountSessionToken));
             znc_auth_timeout.set(nintendoAccountSessionToken, setTimeout(() => {
+                debug('Removing old CoralApi instance', user_naid);
                 znc_auth_promise.delete(nintendoAccountSessionToken);
                 znc_auth_timeout.delete(nintendoAccountSessionToken);
             }, 30 * 60 * 1000).unref());
@@ -176,6 +179,7 @@ function createApp(
             const {nso, data} = await promise;
             req.znc = nso;
             req.zncAuth = data;
+            user_naid = data.user.id;
 
             next();
         } catch (err) {

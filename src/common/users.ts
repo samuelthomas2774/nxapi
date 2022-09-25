@@ -96,6 +96,8 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
         webservices: Date.now(),
         active_event: Date.now(),
     };
+    update_interval = 10 * 1000; // 10 seconds
+    update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
     onUpdatedWebServices: ((webservices: Result<WebServices>) => void) | null = null;
 
@@ -129,7 +131,7 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
     async getAnnouncements() {
         await this.update('announcements', async () => {
             this.announcements = await this.nso.getAnnouncements();
-        }, 30 * 60 * 1000);
+        }, this.update_interval_announcements);
 
         return this.announcements.result;
     }
@@ -137,7 +139,7 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
     async getFriends() {
         await this.update('friends', async () => {
             this.friends = await this.nso.getFriendList();
-        }, 10 * 1000);
+        }, this.update_interval);
 
         return this.friends.result.friends;
     }
@@ -147,7 +149,7 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
             const webservices = this.webservices = await this.nso.getWebServices();
 
             this.onUpdatedWebServices?.call(null, webservices);
-        }, 10 * 1000);
+        }, this.update_interval);
 
         return this.webservices.result;
     }
@@ -155,7 +157,7 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
     async getActiveEvent() {
         await this.update('active_event', async () => {
             this.active_event = await this.nso.getActiveEvent();
-        }, 10 * 1000);
+        }, this.update_interval);
 
         return this.active_event.result;
     }

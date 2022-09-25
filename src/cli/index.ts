@@ -5,5 +5,6 @@ export * as nooklink from './nooklink.js';
 export * as splatnet3 from './splatnet3.js';
 export * as pctl from './pctl.js';
 export * as androidZncaApiServerFrida from './android-znca-api-server-frida.js';
+export * as presenceServer from './presence-server.js';
 export * as util from './util.js';
 export * as app from './app.js';
