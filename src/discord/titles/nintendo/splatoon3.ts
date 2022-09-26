@@ -137,13 +137,13 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
         // Identify the user by their icon as the vote list doesn't have friend IDs
         let fest_team = this.cached_voting_status?.data.fest?.teams
-            .find(t => t.votes.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
+            .find(t => t.votes?.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
 
-        if (this.fest && friend && (!this.cached_voting_status || (friend?.vsMode?.mode === 'FEST' && !fest_team))) {
+        if (this.fest && friend && (!this.cached_voting_status || (friend.vsMode?.mode === 'FEST' && !fest_team))) {
             this.cached_voting_status = await this.splatnet?.getFestVotingStatus(this.fest.id) ?? null;
 
             fest_team = this.cached_voting_status?.data.fest?.teams
-                .find(t => t.votes.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
+                .find(t => t.votes?.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
         }
 
         this.fest_team_voting_status = fest_team ?? null;

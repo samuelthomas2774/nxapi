@@ -258,6 +258,8 @@ function createApp(
 
                         if (fest_vote_status) {
                             for (const team of fest_vote_status.teams) {
+                                if (!team.votes || !team.preVotes) continue;
+
                                 for (const player of team.votes.nodes) {
                                     if (player.userIcon.url !== friend.userIcon.url) continue;
         
@@ -273,7 +275,7 @@ function createApp(
                                 }
                             }
         
-                            if (!match.splatoon3_fest_team) {
+                            if (!match.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
                                 match.splatoon3_fest_team = null;
                             }
                         }
@@ -366,7 +368,7 @@ function createApp(
 
                         for (const team of fest_vote_status.teams) {
                             const schedule_team = schedules.currentFest?.teams.find(t => t.id === team.id);
-                            if (!schedule_team) continue; // Shouldn't ever happen
+                            if (!schedule_team || !team.votes || !team.preVotes) continue; // Shouldn't ever happen
 
                             for (const player of team.votes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
@@ -385,7 +387,7 @@ function createApp(
                             }
                         }
 
-                        if (!match_splatnet3_fest_team) {
+                        if (!match_splatnet3_fest_team && fest_vote_status.undecidedVotes) {
                             match_splatnet3_fest_team = null;
                         }
                     }
