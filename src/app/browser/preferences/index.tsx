@@ -82,7 +82,8 @@ export default function Preferences(props: PreferencesProps) {
     const discord_friend_code_self = discord_presence_source_user?.nsoAccount.user.links.friendCode.id;
     const [is_discord_friend_code_self, setIsDiscordFriendCodeSelf] = useState(false);
     useEffect(() => {
-        setIsDiscordFriendCodeSelf(!!discord_presence_source && (!discord_friend_code || discord_friend_code === discord_friend_code_self));
+        setIsDiscordFriendCodeSelf(!!discord_friend_code_self &&
+            (!discord_friend_code || discord_friend_code === discord_friend_code_self));
     }, [discord_presence_source, discord_friend_code_self]);
 
     useEventListener(events, 'window:refresh', () => (
