@@ -4,6 +4,7 @@ import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
+import { FestState } from '../../api/splatnet3-types.js';
 
 const debug = createDebug('cli:splatnet3:festival');
 
@@ -53,40 +54,42 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 
     const detail = await splatnet.getFestDetail(fest.id);
-    const votes = await splatnet.getFestVotingStatus(fest.id);
+    const votes = detail.data.fest.state !== FestState.CLOSED ? await splatnet.getFestVotingStatus(fest.id) : null;
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify({fest: detail.data.fest, votes: votes.data.fest}, null, 4));
+        console.log(JSON.stringify({fest: detail.data.fest, votes: votes?.data.fest ?? undefined}, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify({fest: detail.data.fest, votes: votes.data.fest}));
+        console.log(JSON.stringify({fest: detail.data.fest, votes: votes?.data.fest ?? undefined}));
         return;
     }
 
     console.log('Details', detail.data.fest);
 
-    const table = new Table({
-        head: [
-            'Name',
-            'State',
-            'Team',
-        ],
-    });
+    if (votes) {
+        const table = new Table({
+            head: [
+                'Name',
+                'State',
+                'Team',
+            ],
+        });
 
-    for (const team of votes.data.fest.teams) {
-        for (const vote of team.votes.nodes) {
-            table.push([vote.playerName, 'Voted', team.teamName]);
+        for (const team of votes.data.fest.teams) {
+            for (const vote of team.votes?.nodes ?? []) {
+                table.push([vote.playerName, 'Voted', team.teamName]);
+            }
+            for (const vote of team.preVotes?.nodes ?? []) {
+                table.push([vote.playerName, 'Planning to vote', team.teamName]);
+            }
         }
-        for (const vote of team.preVotes.nodes) {
-            table.push([vote.playerName, 'Planning to vote', team.teamName]);
+
+        for (const vote of votes.data.fest.undecidedVotes?.nodes ?? []) {
+            table.push([vote.playerName, 'Undecided', '-']);
         }
-    }
 
-    for (const vote of votes.data.fest.undecidedVotes.nodes) {
-        table.push([vote.playerName, 'Undecided', '-']);
+        console.log('Friends votes');
+        console.log(table.toString());
     }
-
-    console.log('Friends votes');
-    console.log(table.toString());
 }

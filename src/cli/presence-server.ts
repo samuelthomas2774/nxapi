@@ -162,7 +162,7 @@ export class SplatNet3User {
             const schedules = await this.getSchedules();
             this.fest_vote_status =
                 !schedules.currentFest || new Date(schedules.currentFest.endTime).getTime() <= Date.now() ? null :
-                    this.fest_vote_status?.data.fest.id === schedules.currentFest.id ?
+                    this.fest_vote_status?.data.fest?.id === schedules.currentFest.id ?
                         await this.splatnet.getFestVotingStatusRefetch(schedules.currentFest.id) :
                     await this.splatnet.getFestVotingStatus(schedules.currentFest.id);
         }, this.update_interval_fest_voting_status ?? this.update_interval);
@@ -208,7 +208,7 @@ function createApp(
 
             const result: (Friend & {
                 splatoon3?: FriendListResult['friends']['nodes'][0] | null;
-                splatoon3_fest_team?: DetailVotingStatusResult['fest']['teams'][0] | null;
+                splatoon3_fest_team?: Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] | null;
             })[] = [];
 
             const users = await Promise.all(user_ids.map(async id => {
@@ -305,7 +305,7 @@ function createApp(
             let match_splatnet3_fest_team:
                 Exclude<StageScheduleResult['currentFest'], null>['teams'][0] | null | undefined = undefined;
             let match_splatnet3_fest_team_vote_status:
-                DetailVotingStatusResult['fest']['teams'][0] | null | undefined = undefined;
+                Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] | null | undefined = undefined;
 
             const additional_response_data: {
                 splatoon3_vs_setting?:
@@ -482,9 +482,9 @@ function createFestScheduleTeam(
 }
 
 function createFestVoteTeam(
-    team: DetailVotingStatusResult['fest']['teams'][0],
+    team: Exclude<DetailVotingStatusResult['fest'], null>['teams'][0],
     state?: FestVoteState | null
-): DetailVotingStatusResult['fest']['teams'][0] {
+): Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] {
     return {
         id: team.id,
         teamName: team.teamName,

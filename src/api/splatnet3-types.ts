@@ -146,8 +146,7 @@ interface ExtendedSpecialWeapon extends SpecialWeapon {
         overlayImageUrl: string;
     };
 }
-interface ExtendedWeaponSet extends WeaponSet {
-    specialWeapon: ExtendedSpecialWeapon;
+interface ExtendedWeapon extends Weapon {
     image3d: {
         url: string;
     };
@@ -160,6 +159,10 @@ interface ExtendedWeaponSet extends WeaponSet {
     image2dThumbnail: {
         url: string;
     };
+}
+interface ExtendedWeaponSet extends WeaponSet {
+    subWeapon: SubWeapon;
+    specialWeapon: ExtendedSpecialWeapon;
 }
 
 interface VsMode {
@@ -624,10 +627,14 @@ export interface DetailFestRecordDetailResult {
             url: string;
         };
         teams: DetailFestTeam[];
-        playerResult: unknown | null;
-        myTeam: unknown | null;
+        playerResult: FestPlayerResult | null;
+        myTeam: {
+            color: Colour;
+            teamName: string;
+            id: string;
+        } | null;
         isVotable: boolean;
-        undecidedVotes: NodeListTotal;
+        undecidedVotes: NodeListTotal | null;
     };
     currentPlayer: {
         name: string;
@@ -638,7 +645,7 @@ export interface DetailFestRecordDetailResult {
 }
 
 interface DetailFestTeam<Votes = NodeListTotal> {
-    result: unknown | null;
+    result: FestTeamResult | null;
     id: string;
     teamName: string;
     color: Colour;
@@ -646,9 +653,32 @@ interface DetailFestTeam<Votes = NodeListTotal> {
         url: string;
     };
     myVoteState: FestVoteState | null;
-    preVotes: Votes;
-    votes: Votes;
+    preVotes: Votes | null;
+    votes: Votes | null;
     role: FestTeamRole | null;
+}
+
+interface FestTeamResult {
+    __typename: 'FestTeamResult';
+    isWinner: boolean;
+    horagaiRatio: number;
+    isHoragaiRatioTop: boolean;
+    voteRatio: number;
+    isVoteRatioTop: boolean;
+    regularContributionRatio: number;
+    isRegularContributionRatioTop: boolean;
+    challengeContributionRatio: number;
+    isChallengeContributionRatioTop: boolean;
+}
+
+interface FestPlayerResult {
+    grade: string; // "Gear Ruler"
+    horagai: number;
+    regularContributionAverage: number;
+    regularContributionTotal: number;
+    challengeContributionAverage: number | null;
+    challengeContributionTotal: number | null;
+    maxFestPower: number | null;
 }
 
 /** 0eb7bac3d8aabcad0e9d663ee5b90846 DetailFestRefethQuery */
@@ -657,18 +687,64 @@ export type DetailFestRefetchResult = DetailFestRecordDetailResult;
 /** 92f51ed1ab462bbf1ab64cad49d36f79 DetailFestVotingStatusRefethQuery */
 export type DetailFestVotingStatusRefetchResult = DetailVotingStatusResult;
 
-/** 53ee6b6e2acc3859bf42454266d671fc DetailVotingStatusQuery */
-export interface DetailVotingStatusResult {
-    fest: {
-        __typename: 'Fest';
-        id: string;
-        lang: string;
-        teams: DetailVotingStatusTeam[];
-        undecidedVotes: NodeList<FestVotePlayer>;
-    };
+/** 58bdd28e3cf71c3bf38bc45836ee1e96 DetailRankingQuery */
+export interface DetailRankingResult {
+    fest: DetailRankingFest;
 }
 
-interface DetailVotingStatusTeam<Votes = NodeList<FestVotePlayer>> {
+interface DetailRankingFest {
+    id: string;
+    lang: string;
+    teams: DetailRankingTeam[];
+    __typename: 'Fest';
+}
+
+interface DetailRankingTeam {
+    color: Colour;
+    id: string;
+    image: {
+        url: string;
+    };
+    result: {
+        rankingHolders: NodeList<FestRankingHolder>;
+    };
+    teamName: string;
+}
+
+interface FestRankingHolder {
+    byname: string;
+    festPower: number;
+    id: string;
+    name: string;
+    nameId: string;
+    nameplate: Nameplate;
+    rank: number;
+    weapon: FestRankingHolderWeapon;
+    __isPlayer: 'FestRankingHolder';
+}
+
+interface FestRankingHolderWeapon extends ExtendedWeapon {
+    originalImage: {
+        url: string;
+    };
+    subWeapon: SubWeapon;
+    specialWeapon: SpecialWeapon;
+}
+
+/** 53ee6b6e2acc3859bf42454266d671fc DetailVotingStatusQuery */
+export interface DetailVotingStatusResult {
+    fest: DetailVotingStatusFest;
+}
+
+interface DetailVotingStatusFest {
+    __typename: 'Fest';
+    id: string;
+    lang: string;
+    teams: DetailVotingStatusTeam[];
+    undecidedVotes: NodeList<FestVotePlayer> | null;
+}
+
+interface DetailVotingStatusTeam<Votes = NodeList<FestVotePlayer> | null> {
     id: string;
     teamName: string;
     image: {
@@ -709,15 +785,17 @@ interface FestRecord {
     image: {
         url: string;
     };
-    playerResult: unknown | null;
+    playerResult: Pick<FestPlayerResult, 'grade'> | null;
     teams: FestRecordTeam[];
-    myTeam: unknown | null;
+    myTeam: Pick<DetailFestTeam, 'teamName' | 'image' | 'color' | 'id'> | null;
 }
 
 interface FestRecordTeam {
     id: string;
     teamName: string;
-    result: unknown | null;
+    result: {
+        isWinner: boolean;
+    } | null;
 }
 
 /** 73b9837d0e4dd29bfa2f1a7d7ee0814a FestRecordRefetchQuery */

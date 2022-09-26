@@ -34,7 +34,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     x_schedule: StageScheduleResult['xSchedules']['nodes'][0] | null = null;
     coop_schedule: StageScheduleResult['coopGroupingSchedule']['regularSchedules']['nodes'][0] | null = null;
     fest: StageScheduleResult['currentFest'] | null = null;
-    fest_team_voting_status: DetailVotingStatusResult['fest']['teams'][0] | null = null;
+    fest_team_voting_status: Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] | null = null;
     fest_team: Exclude<StageScheduleResult['currentFest'], null>['teams'][0] | null = null;
 
     constructor(
@@ -136,13 +136,13 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         this.fest = this.cached_schedules?.data.currentFest ?? null;
 
         // Identify the user by their icon as the vote list doesn't have friend IDs
-        let fest_team = this.cached_voting_status?.data.fest.teams
+        let fest_team = this.cached_voting_status?.data.fest?.teams
             .find(t => t.votes.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
 
         if (this.fest && friend && (!this.cached_voting_status || (friend?.vsMode?.mode === 'FEST' && !fest_team))) {
             this.cached_voting_status = await this.splatnet?.getFestVotingStatus(this.fest.id) ?? null;
 
-            fest_team = this.cached_voting_status?.data.fest.teams
+            fest_team = this.cached_voting_status?.data.fest?.teams
                 .find(t => t.votes.nodes.find(f => f.userIcon.url === friend?.userIcon.url));
         }
 
@@ -221,7 +221,7 @@ export function getConfigFromAppConfig(
 interface PresenceUrlResponse {
     splatoon3?: FriendListResult['friends']['nodes'][0] | null;
     splatoon3_fest_team?:
-        (DetailVotingStatusResult['fest']['teams'][0] &
+        (Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] &
             Exclude<StageScheduleResult['currentFest'], null>['teams'][0]) | null;
     splatoon3_vs_setting?:
         StageScheduleResult['regularSchedules']['nodes'][0]['regularMatchSetting'] |
