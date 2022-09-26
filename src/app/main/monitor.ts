@@ -393,10 +393,12 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
                 await this.loop();
             }
 
-            if (this._running === 0) {
+            if (this._running === 0 && !this.onStop) {
                 // Run one more time after the loop ends
                 const result = await this.loopRun();
             }
+
+            await this.onStop?.();
 
             debug('Monitor for user %s finished', this.data.nsoAccount.user.name);
         } finally {
@@ -449,10 +451,12 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
                 await this.loop();
             }
 
-            if (this._running === 0) {
+            if (this._running === 0 && !this.onStop) {
                 // Run one more time after the loop ends
                 const result = await this.loopRun();
             }
+
+            await this.onStop?.();
 
             debug('Monitor for presence URL %s finished', this.presence_url);
         } finally {

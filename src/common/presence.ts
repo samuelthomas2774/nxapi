@@ -304,6 +304,12 @@ class ZncDiscordPresenceClient {
         // @ts-expect-error
         client.transport.on('close', reconnect);
 
+        if (this.rpc) {
+            // Another client connected first
+            client!.destroy();
+            return (this.rpc as {client: DiscordRpcClient}).client;
+        }
+
         this.rpc = {client: client!, id: client_id};
         this.onUpdateClient?.call(null, client!);
         if (this.last_activity) this.rpc.client.setActivity(this.last_activity.activity);
@@ -450,6 +456,10 @@ export class ZncDiscordPresence extends ZncNotifications {
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
+    async onStop() {
+        await this.discord.setActivity(null);
+    }
+
     saved_presence = new Map<string, number>();
 
     async savePresenceForTitleUpdateAt(id: string, presence: Presence, title_since = Date.now()) {
@@ -530,6 +540,10 @@ export class ZncProxyDiscordPresence extends Loop {
 
         await this.discord.updatePresenceForDiscord(presence, user);
         await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
+    }
+
+    async onStop() {
+        await this.discord.setActivity(null);
     }
 
     async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
