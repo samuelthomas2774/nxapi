@@ -424,7 +424,7 @@ interface LatestBattleHistoryDetails {
     player: {
         weapon: Weapon;
         id: string;
-        festGrade: unknown | null;
+        festGrade: string | null;
     };
     knockout: JudgementKnockout;
     myTeam: {
