@@ -160,9 +160,11 @@ export class SplatNet3User {
     async getCurrentFestVotes(): Promise<DetailVotingStatusResult['fest'] | null> {
         await this.update('fest_vote_status', async () => {
             const schedules = await this.getSchedules();
-            this.fest_vote_status = !schedules.currentFest ? null : this.fest_vote_status ?
-                await this.splatnet.getFestVotingStatusRefetch(schedules.currentFest.id) :
-                await this.splatnet.getFestVotingStatus(schedules.currentFest.id);
+            this.fest_vote_status =
+                !schedules.currentFest || new Date(schedules.currentFest.endTime).getTime() <= Date.now() ? null :
+                    this.fest_vote_status?.data.fest.id === schedules.currentFest.id ?
+                        await this.splatnet.getFestVotingStatusRefetch(schedules.currentFest.id) :
+                    await this.splatnet.getFestVotingStatus(schedules.currentFest.id);
         }, this.update_interval_fest_voting_status ?? this.update_interval);
 
         return this.fest_vote_status?.data.fest ?? null;
