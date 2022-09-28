@@ -160,7 +160,7 @@ interface ExtendedWeapon extends Weapon {
         url: string;
     };
 }
-interface ExtendedWeaponSet extends WeaponSet {
+interface ExtendedWeaponSet extends ExtendedWeapon {
     subWeapon: SubWeapon;
     specialWeapon: ExtendedSpecialWeapon;
 }
