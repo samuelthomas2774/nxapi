@@ -78,7 +78,7 @@ export interface AccountLogin {
     };
 }
 
-/** /v3/Account/GetToken */
+/** /v3/Account/GetToken, /v3/Extension/Account/GetToken */
 export type AccountToken = AccountLogin;
 
 export interface AccountTokenParameter {
@@ -196,7 +196,7 @@ export interface WebServiceTokenParameter {
     f: string;
 }
 
-/** /v2/Game/GetWebServiceToken */
+/** /v2/Game/GetWebServiceToken, /v2/Extension/Game/GetWebServiceToken */
 export interface WebServiceToken {
     accessToken: string;
     expiresIn: number;
