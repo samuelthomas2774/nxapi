@@ -1,130 +1,190 @@
 image: node:18
 
 cache:
-    paths:
-        - node_modules/
+  paths:
+    - node_modules/
 
 before_script:
-    - npm --color="always" install --force
+  - npm --color="always" install --force
 
 build:
-    stage: build
-    script:
-        - npx tsc
-        # Uses CI_COMMIT_TAG
-        - NODE_ENV=production npx rollup --config
+  stage: build
+  script:
+    - npx tsc
+    # Uses CI_COMMIT_TAG
+    - NODE_ENV=production npx rollup --config
 
-        - node bin/nxapi.js util validate-discord-titles
+    - node bin/nxapi.js util validate-discord-titles
 
-        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
-        - PACKAGE=`npm --color="always" pack`
-        - mv "$PACKAGE" nxapi.tgz
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - PACKAGE=`npm --color="always" pack`
+    - mv "$PACKAGE" nxapi.tgz
 
-        - npx electron-builder build --macos zip --linux --publish never
-        - mv dist/app/package app
-    artifacts:
-        paths:
-            - dist
-            - nxapi.tgz
-            - app
-        exclude:
-            - app/mac/**/*
-            - app/win-unpacked/**/*
-            - app/linux-unpacked/**/*
+    - npx electron-builder build --macos zip --linux --publish never
+    - mv dist/app/package app
+  artifacts:
+    paths:
+      - dist
+      - nxapi.tgz
+      - app
+    exclude:
+      - app/mac/**/*
+      - app/win-unpacked/**/*
+      - app/linux-unpacked/**/*
+
+build-docker:
+  stage: build
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - |
+      [ "$DH_REGISTRY_IMAGE" != "" ] && docker login -u "$DH_REGISTRY_USER" -p "$DH_REGISTRY_PASSWORD" "$DH_REGISTRY"
+    - |
+      [ "$GH_REGISTRY_IMAGE" != "" ] && docker login -u "$GH_REGISTRY_USER" -p "$GH_REGISTRY_PASSWORD" "$GH_REGISTRY"
+  script:
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+
+    - docker build --pull --no-cache --tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" .
+    - |
+      if [ "$CI_COMMIT_TAG" = "" ]; then
+        docker push "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG"
+      fi
+
+    - |
+      if [ "$DH_REGISTRY_IMAGE" != "" ] && [ "$CI_COMMIT_TAG" = "" ]; then
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$DH_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG"
+        docker push "$DH_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG"
+      fi
+
+    - |
+      if [ "$GH_REGISTRY_IMAGE" != "" ] && [ "$CI_COMMIT_TAG" = "" ]; then
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$GH_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG"
+        docker push "$GH_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG"
+      fi
+
+    - |
+      if [ "$CI_COMMIT_TAG" != "" ]; then
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$CI_REGISTRY_IMAGE:latest"
+        docker push "$CI_REGISTRY_IMAGE:latest"
+      fi
+
+    - |
+      if [ "$CI_COMMIT_TAG" != "" ] && [ "$DH_REGISTRY_IMAGE" != "" ]; then
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$DH_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker push "$DH_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$DH_REGISTRY_IMAGE:latest"
+        docker push "$DH_REGISTRY_IMAGE:latest"
+      fi
+
+    - |
+      if [ "$CI_COMMIT_TAG" != "" ] && [ "$GH_REGISTRY_IMAGE" != "" ]; then
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$GH_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker push "$GH_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$GH_REGISTRY_IMAGE:latest"
+        docker push "$GH_REGISTRY_IMAGE:latest"
+      fi
+  tags:
+    - docker
+  only:
+    variables:
+      - $BUILD_DOCKER_IMAGE == "true"
+  cache:
+    policy: pull
 
 build-windows:
-    stage: build
-    image: electronuserland/builder:wine
-    script:
-        - npx tsc
-        # Uses CI_COMMIT_TAG
-        - NODE_ENV=production npx rollup --config
+  stage: build
+  image: electronuserland/builder:wine
+  script:
+    - npx tsc
+    # Uses CI_COMMIT_TAG
+    - NODE_ENV=production npx rollup --config
 
-        - node bin/nxapi.js util validate-discord-titles
+    - node bin/nxapi.js util validate-discord-titles
 
-        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
 
-        - npx electron-builder build --win nsis --publish never
-        - mv dist/app/package app
-    artifacts:
-        paths:
-            - app
-        exclude:
-            - app/mac/**/*
-            - app/win-unpacked/**/*
-            - app/linux-unpacked/**/*
-    only:
-        variables:
-            - $BUILD_WINDOWS_APP == "true"
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+    - npx electron-builder build --win nsis --publish never
+    - mv dist/app/package app
+  artifacts:
+    paths:
+      - app
+    exclude:
+      - app/mac/**/*
+      - app/win-unpacked/**/*
+      - app/linux-unpacked/**/*
+  only:
+    variables:
+      - $BUILD_WINDOWS_APP == "true"
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
 
 publish-npm:
-    stage: deploy
-    script:
-        - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-        - npm --color="always" publish
-    dependencies:
-        - build
-    only:
-        refs:
-            - /^v.*$/
-        variables:
-            - $NPM_TOKEN
-    except:
-        - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+  stage: deploy
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+    - npm --color="always" publish
+  dependencies:
+    - build
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $NPM_TOKEN
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
 
 publish-gitlab:
-    stage: deploy
-    script:
-        # Update the package.json and package-lock.json
-        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
-        - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+  stage: deploy
+  script:
+    # Update the package.json and package-lock.json
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
 
-        - echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
-        - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
-    dependencies:
-        - build
-    only:
-        refs:
-            - /^v.*$/
-        variables:
-            - $GITLAB_NPM_PUBLISH == "true"
-            - $GITLAB_NPM_PACKAGE_NAME
-    except:
-        - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+    - echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
+    - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
+  dependencies:
+    - build
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $GITLAB_NPM_PUBLISH == "true"
+      - $GITLAB_NPM_PACKAGE_NAME
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
 
 publish-github:
-    stage: deploy
-    script:
-        # Update the package.json and package-lock.json
-        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
-        - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+  stage: deploy
+  script:
+    # Update the package.json and package-lock.json
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
 
-        - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
-        - npm --color="always" --registry=https://npm.pkg.github.com/ publish
-    dependencies:
-        - build
-    only:
-        refs:
-            - /^v.*$/
-        variables:
-            - $GITHUB_REPOSITORY
-            - $GITHUB_NPM_PACKAGE_NAME
-            - $GITHUB_NPM_TOKEN
-    except:
-        - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
+    - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
+    - npm --color="always" --registry=https://npm.pkg.github.com/ publish
+  dependencies:
+    - build
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $GITHUB_REPOSITORY
+      - $GITHUB_NPM_PACKAGE_NAME
+      - $GITHUB_NPM_TOKEN
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
