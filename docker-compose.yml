@@ -13,39 +13,9 @@ services:
       traefik.http.services.nxapi-znc.loadbalancer.server.port: 80
     environment:
       DEBUG: '*,-express:*'
-      ZNCA_API_URL: http://znca-api/api/znca
+      # ZNCA_API_URL: http://znca-api/api/znca
     volumes:
       - data:/data
-
-  znca-api:
-    image: ${COMPOSE_PROJECT_NAME:-nxapi}_web
-    command:
-      - android-znca-api-server-frida
-      - $ZNCA_API_ANDROID_DEVICE
-      - --exec-command
-      - ${ZNCA_API_EXEC_COMMAND:-}
-      - --frida-server-path
-      - ${ZNCA_API_FRIDA_SERVER_PATH:-/data/local/tmp/frida-server}
-      - --listen
-      - '[::]:80'
-    restart: unless-stopped
-    depends_on:
-      - web
-    labels:
-      traefik.enable: true
-      traefik.http.routers.nxapi-znca.entrypoints: websecure
-      traefik.http.routers.nxapi-znca.rule: Host(`${TRAEFIK_HOST:-nxapi.ta.fancy.org.uk}`) && PathPrefix(`/api/znca/`)
-      traefik.http.routers.nxapi-znca.tls: true
-      traefik.http.services.nxapi-znca.loadbalancer.server.port: 80
-    environment:
-      DEBUG: '*,-express:*,-body-parser:*'
-    volumes:
-      - data:/data
-    healthcheck:
-      test: [ "ENTRYPOINT", "curl", "http://[::1]:80" ]
-      timeout: 45s
-      interval: 10s
-      retries: 10
 
 volumes:
   data:

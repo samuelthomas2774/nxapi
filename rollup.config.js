@@ -100,7 +100,6 @@ const main = {
     ],
     external: [
         'node-notifier',
-        'frida',
         'register-scheme',
         'bindings',
     ],

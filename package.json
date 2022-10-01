@@ -50,9 +50,6 @@
         "uuid": "^8.3.2",
         "yargs": "^17.5.1"
     },
-    "optionalDependencies": {
-        "frida": "^15.2.2"
-    },
     "devDependencies": {
         "@rollup/plugin-alias": "^3.1.9",
         "@rollup/plugin-commonjs": "^22.0.2",
@@ -77,7 +74,6 @@
         "@types/yargs": "^17.0.12",
         "electron": "^20.2.0",
         "electron-builder": "^23.3.3",
-        "frida": "^15.2.2",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
         "react-native-web": "^0.17.7",
