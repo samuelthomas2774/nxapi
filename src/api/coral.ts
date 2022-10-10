@@ -2,7 +2,7 @@ import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from 'debug';
 import { f, FResult, HashMethod } from './f.js';
-import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter } from './coral-types.js';
+import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter, WebServiceTokenParameter } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
 import { JwtPayload } from '../util/jwt.js';
@@ -205,10 +205,12 @@ export default class CoralApi {
         });
     }
 
-    async getWebServiceToken(id: number) {
+    async getWebServiceToken(id: number, /** @internal */ _attempt = 0): Promise<Result<WebServiceToken>> {
+        await this._renewToken;
+
         const data = await f(this.token, HashMethod.WEB_SERVICE, this.useragent ?? getAdditionalUserAgents());
 
-        const req = {
+        const req: WebServiceTokenParameter = {
             id,
             registrationToken: '',
             f: data.f,
@@ -216,7 +218,19 @@ export default class CoralApi {
             timestamp: data.timestamp,
         };
 
-        return this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req);
+        try {
+            return await this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req, false);
+        } catch (err) {
+            if (err instanceof ErrorResponse && err.data.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+                // _renewToken will be awaited when calling getWebServiceToken
+                this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).finally(() => {
+                    this._renewToken = null;
+                });
+                return this.getWebServiceToken(id, _attempt + 1);
+            } else {
+                throw err;
+            }
+        }
     }
 
     async getToken(token: string, user: NintendoAccountUser): Promise<PartialCoralAuthData> {
