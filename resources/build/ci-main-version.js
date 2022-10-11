@@ -24,10 +24,11 @@ const tags = tags_str.split('\n').filter(t => t.startsWith('tag: ')).map(t => t.
 const last_version = tags.find(t => t.startsWith('v'))?.substr(1) ?? null;
 const commit_count = parseInt(commit_count_str);
 
-if (!last_version || pkg.version !== last_version) {
+if (last_version && pkg.version !== last_version) {
     console.warn('Last tagged version does not match package.json version', {
         version: pkg.version,
         tag: last_version ? 'v' + last_version : null,
+        tags_str,
     });
     process.exit();
 }
