@@ -37,7 +37,7 @@ console.warn({
     commit_count,
 });
 
-if (last_tagged_version && pkg.version !== last_tagged_version) {
+if (!last_tagged_version || pkg.version !== last_tagged_version) {
     console.warn('Last tagged version does not match package.json version', {
         version: pkg.version,
         tag: last_tagged_version ? 'v' + last_tagged_version : null,
