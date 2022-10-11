@@ -25,15 +25,15 @@ build:
     - mv dist/app/package app
 
     - |
-      if [ "$CI_COMMIT_BRANCH" = "main" && "$VERSION" != "" ]; then
-        if [ "$NPM_PUBLISH_NEXT" = "true" && "$NPM_TOKEN" != "" ]; then
+      if [ "$CI_COMMIT_BRANCH" = "main" -a "$VERSION" != "" ]; then
+        if [ "$NPM_PUBLISH_NEXT" = "true" -a "$NPM_TOKEN" != "" ]; then
           echo "Publishing $VERSION to npm"
           # Prerelease version was already written to package.json
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
           npm --color="always" publish --tag next
         fi
 
-        if [ "$GITLAB_NPM_PUBLISH_NEXT" = "true" && "$GITLAB_NPM_PACKAGE_NAME" != "" ]; then
+        if [ "$GITLAB_NPM_PUBLISH_NEXT" = "true" -a "$GITLAB_NPM_PACKAGE_NAME" != "" ]; then
           echo "Publishing $VERSION to GitLab"
           node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
           node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
@@ -42,7 +42,7 @@ build:
           npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish --tag next
         fi
 
-        if [ "$GITHUB_NPM_PUBLISH_NEXT" = "true" && "$GITHUB_NPM_PACKAGE_NAME" != "" && "$GITHUB_REPOSITORY" != "" && "$GITHUB_TOKEN" != "" ]; then
+        if [ "$GITHUB_NPM_PUBLISH_NEXT" = "true" -a "$GITHUB_NPM_PACKAGE_NAME" != "" -a "$GITHUB_REPOSITORY" != "" -a "$GITHUB_TOKEN" != "" ]; then
           echo "Publishing $VERSION to GitHub"
           node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
           node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
