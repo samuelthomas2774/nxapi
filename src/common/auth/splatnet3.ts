@@ -53,8 +53,10 @@ export async function getBulletToken(
         await storage.setItem('BulletToken.' + token, existingToken);
 
         const splatnet = SplatNet3Api.createWithSavedToken(existingToken);
-        splatnet.onTokenExpired = createTokenExpiredHandler(storage, token, splatnet, existingToken, proxy_url);
-        splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(storage, token, splatnet, existingToken, proxy_url);
+
+        const renew_token_data = {existingToken, znc_proxy_url: proxy_url};
+        splatnet.onTokenExpired = createTokenExpiredHandler(storage, token, splatnet, renew_token_data);
+        splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(storage, token, splatnet, renew_token_data);
 
         return {splatnet, data: existingToken};
     }
@@ -64,45 +66,47 @@ export async function getBulletToken(
     const splatnet = SplatNet3Api.createWithSavedToken(existingToken);
 
     if (allow_fetch_token) {
-        splatnet.onTokenExpired = createTokenExpiredHandler(storage, token, splatnet, existingToken, proxy_url);
-        splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(storage, token, splatnet, existingToken, proxy_url);
+        const renew_token_data = {existingToken, znc_proxy_url: proxy_url};
+        splatnet.onTokenExpired = createTokenExpiredHandler(storage, token, splatnet, renew_token_data);
+        splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(storage, token, splatnet, renew_token_data);
     }
 
     return {splatnet, data: existingToken};
 }
 
 function createTokenExpiredHandler(
-    storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api, existingToken: SavedBulletToken,
-    znc_proxy_url?: string
+    storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api,
+    data: {existingToken: SavedBulletToken; znc_proxy_url?: string}
 ) {
     return (response: Response) => {
         debug('Token expired, renewing');
-        return renewToken(storage, token, splatnet, existingToken, znc_proxy_url);
+        return renewToken(storage, token, splatnet, data);
     };
 }
 
 function createTokenShouldRenewHandler(
-    storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api, existingToken: SavedBulletToken,
-    znc_proxy_url?: string
+    storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api,
+    data: {existingToken: SavedBulletToken; znc_proxy_url?: string}
 ) {
     return (remaining: number, response: Response) => {
         debug('Token will expire in %d seconds, renewing', remaining);
-        return renewToken(storage, token, splatnet, existingToken, znc_proxy_url);
+        return renewToken(storage, token, splatnet, data);
     };
 }
 
 async function renewToken(
-    storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api, previousToken: SavedBulletToken,
-    znc_proxy_url?: string
+    storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api,
+    renew_token_data: {existingToken: SavedBulletToken; znc_proxy_url?: string}
 ) {
     try {
         const data: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 
         if (data) {
             const existingToken: SavedBulletToken =
-                await splatnet.renewTokenWithWebServiceToken(previousToken.webserviceToken, data.user);
+                await splatnet.renewTokenWithWebServiceToken(renew_token_data.existingToken.webserviceToken, data.user);
 
             await storage.setItem('BulletToken.' + token, existingToken);
+            renew_token_data.existingToken = existingToken;
 
             return;
         } else {
@@ -117,7 +121,7 @@ async function renewToken(
         }
     }
 
-    const {nso, data} = await getToken(storage, token, znc_proxy_url);
+    const {nso, data} = await getToken(storage, token, renew_token_data.znc_proxy_url);
 
     if (data[Login]) {
         const announcements = await nso.getAnnouncements();
@@ -129,4 +133,5 @@ async function renewToken(
     const existingToken: SavedBulletToken = await splatnet.renewTokenWithCoral(nso, data.user);
 
     await storage.setItem('BulletToken.' + token, existingToken);
+    renew_token_data.existingToken = existingToken;
 }

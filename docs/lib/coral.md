@@ -54,13 +54,42 @@ import CoralApi, { CoralAuthData, PartialCoralAuthData } from 'nxapi/coral';
 
 const coral: CoralApi;
 const auth_data: CoralAuthData;
+const na_session_token: string;
 
-const data = await coral.renewToken(auth_data);
+const data = await coral.renewToken(na_session_token, auth_data.user);
 // data is a plain object of type PartialCoralAuthData
 
 const new_auth_data = Object.assign({}, auth_data, data);
 // new_auth_data is a plain object of type CoralAuthData
 // new_auth_data should be saved and reused
+```
+
+#### `CoralApi.onTokenExpired`
+
+Function called when a `9404 Token expired` response is received from the API.
+
+This function should either call `CoralApi.getToken` to renew the token, then return the `PartialCoralAuthData` object, or call `CoralApi.renewToken`.
+
+```ts
+import CoralApi, { CoralAuthData } from 'nxapi/coral';
+import { Response } from 'node-fetch';
+
+const coral = CoralApi.createWithSavedToken(...);
+let auth_data: CoralAuthData;
+const na_session_token: string;
+
+coral.onTokenExpired = async (response: Response) => {
+    const data = await coral.getToken(na_session_token, auth_data.user);
+    // data is a plain object of type PartialCoralAuthData
+
+    const new_auth_data = Object.assign({}, auth_data, data);
+    // new_auth_data is a plain object of type CoralAuthData
+    // new_auth_data should be saved and reused
+
+    auth_data = new_auth_data;
+
+    return data;
+};
 ```
 
 ### `ZncProxyApi`

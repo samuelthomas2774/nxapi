@@ -2,6 +2,7 @@ import * as util from 'node:util';
 import { Response as NodeFetchResponse } from 'node-fetch';
 
 export const ResponseSymbol = Symbol('Response');
+const ErrorResponseSymbol = Symbol('IsErrorResponse');
 
 export interface ResponseData<R> {
     [ResponseSymbol]: R;
@@ -23,6 +24,8 @@ export class ErrorResponse<T = unknown> extends Error {
         body?: string | T
     ) {
         super(message);
+
+        Object.defineProperty(this, ErrorResponseSymbol, {enumerable: false, value: ErrorResponseSymbol});
 
         if (typeof body === 'string') {
             this.body = body;
@@ -51,9 +54,6 @@ export class ErrorResponse<T = unknown> extends Error {
 Object.defineProperty(ErrorResponse, Symbol.hasInstance, {
     configurable: true,
     value: (instance: ErrorResponse) => {
-        return instance instanceof Error &&
-            'response' in instance &&
-            'body' in instance &&
-            'data' in instance;
+        return instance && ErrorResponseSymbol in instance;
     },
 });

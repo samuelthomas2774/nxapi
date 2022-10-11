@@ -224,6 +224,7 @@ export default class CoralApi {
             return await this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req, false);
         } catch (err) {
             if (err instanceof ErrorResponse && err.data.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+                debug('Error getting web service token, renewing token before retrying', err);
                 // _renewToken will be awaited when calling getWebServiceToken
                 this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).then(data => {
                     if (data) this.setTokenWithSavedToken(data);
