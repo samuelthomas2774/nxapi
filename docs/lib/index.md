@@ -112,3 +112,9 @@ This module exports the SplatNet 2 API library and types, as well as functions f
 This module exports the NookLink API library and types.
 
 [See docs/lib/nooklink.md.](nooklink.md)
+
+### `nxapi/splatnet3`
+
+This module exports the SplatNet 3 API library and types.
+
+[See docs/lib/splatnet3.md.](splatnet3.md)
