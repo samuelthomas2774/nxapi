@@ -16,12 +16,41 @@ build:
 
     - node bin/nxapi.js util validate-discord-titles
 
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - export VERSION=`[ "$CI_COMMIT_BRANCH" != "main" ] || node resources/build/ci-main-version.js`
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.version = process.env.VERSION || json.version; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
     - PACKAGE=`npm --color="always" pack`
     - mv "$PACKAGE" nxapi.tgz
 
     - npx electron-builder build --macos zip --linux --publish never
     - mv dist/app/package app
+
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "main" && "$VERSION" != "" ]; then
+        if [ "$NPM_PUBLISH_NEXT" = "true" && "$NPM_TOKEN" != "" ]; then
+          echo "Publishing $VERSION to npm"
+          # Prerelease version was already written to package.json
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+          npm --color="always" publish --tag next
+        fi
+
+        if [ "$GITLAB_NPM_PUBLISH_NEXT" = "true" && "$GITLAB_NPM_PACKAGE_NAME" != "" ]; then
+          echo "Publishing $VERSION to GitLab"
+          node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
+          node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
+
+          echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
+          npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish --tag next
+        fi
+
+        if [ "$GITHUB_NPM_PUBLISH_NEXT" = "true" && "$GITHUB_NPM_PACKAGE_NAME" != "" && "$GITHUB_REPOSITORY" != "" && "$GITHUB_TOKEN" != "" ]; then
+          echo "Publishing $VERSION to GitHub"
+          node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
+          node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
+
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
+          npm --color="always" --registry=https://npm.pkg.github.com/ publish --tag next
+        fi
+      fi
   artifacts:
     paths:
       - dist

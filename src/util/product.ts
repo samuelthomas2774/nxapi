@@ -6,7 +6,7 @@ import * as child_process from 'node:child_process';
 import * as util from 'node:util';
 import createDebug from 'debug';
 
-const exec = util.promisify(child_process.exec);
+const execFile = util.promisify(child_process.execFile);
 
 const debug = createDebug('nxapi:util:product');
 
@@ -38,21 +38,24 @@ export const embedded_default_remote_config = globalThis.__NXAPI_BUNDLE_DEFAULT_
 export const dir = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..');
 
 export const pkg = embedded_pkg ?? JSON.parse(await fs.readFile(path.join(dir, 'package.json'), 'utf-8'));
-export const version: string = pkg.version;
+const match = pkg.version.match(/^(\d+\.\d+\.\d+)-next\b/i);
+export const version: string = match?.[1] ?? pkg.version;
 export const release: string | null = embedded_release ?? pkg.__nxapi_release ?? null;
+
+const execGit = (...args: string[]) => execFile('git', args, {cwd: dir}).then(({stdout}) => stdout.toString().trim());
 
 export const git = typeof embedded_git !== 'undefined' ? embedded_git : await (async () => {
     try {
         await fs.stat(path.join(dir, '.git'));
     } catch (err) {
+        if (!release) debug('Unable to find revision');
         return null;
     }
 
-    const options: child_process.ExecOptions = {cwd: dir};
     const [revision, branch, changed_files] = await Promise.all([
-        exec('git rev-parse HEAD', options).then(({stdout}) => stdout.toString().trim()),
-        exec('git rev-parse --abbrev-ref HEAD', options).then(({stdout}) => stdout.toString().trim()),
-        exec('git diff --name-only HEAD', options).then(({stdout}) => stdout.toString().trim()),
+        execGit('rev-parse', 'HEAD'),
+        execGit('rev-parse', '--abbrev-ref', 'HEAD'),
+        execGit('diff', '--name-only', 'HEAD'),
     ]);
 
     return {
@@ -66,4 +69,5 @@ export const dev = process.env.NODE_ENV !== 'production' &&
     (!!git || process.env.NODE_ENV === 'development');
 
 export const product = 'nxapi ' + version +
-    (!release && git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') : '');
+    (!release && git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') :
+        !release ? '-?' : '');
