@@ -42,7 +42,7 @@ build:
           npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish --tag next
         fi
 
-        if [ "$GITHUB_NPM_PUBLISH_NEXT" = "true" -a "$GITHUB_NPM_PACKAGE_NAME" != "" -a "$GITHUB_REPOSITORY" != "" -a "$GITHUB_TOKEN" != "" ]; then
+        if [ "$GITHUB_NPM_PUBLISH_NEXT" = "true" -a "$GITHUB_NPM_PACKAGE_NAME" != "" -a "$GITHUB_REPOSITORY" != "" -a "$GITHUB_NPM_TOKEN" != "" ]; then
           echo "Publishing $VERSION to GitHub"
           node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
           node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
