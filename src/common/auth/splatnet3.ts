@@ -1,11 +1,12 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import { Response } from 'node-fetch';
-import { getToken, Login } from './coral.js';
+import { getToken, Login, SavedToken } from './coral.js';
 import SplatNet3Api, { SplatNet3AuthData } from '../../api/splatnet3.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
+import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('nxapi:auth:splatnet3');
 
@@ -94,6 +95,28 @@ async function renewToken(
     storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api, previousToken: SavedBulletToken,
     znc_proxy_url?: string
 ) {
+    try {
+        const data: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
+
+        if (data) {
+            const existingToken: SavedBulletToken =
+                await splatnet.renewTokenWithWebServiceToken(previousToken.webserviceToken, data.user);
+
+            await storage.setItem('BulletToken.' + token, existingToken);
+
+            return;
+        } else {
+            debug('Unable to renew bullet token with saved web services token - cached data for this session token doesn\'t exist??');
+        }
+    } catch (err) {
+        if (err instanceof ErrorResponse && err.response.status === 401) {
+            // Web service token invalid/expired...
+            debug('Web service token expired, authenticating with new token', err);
+        } else {
+            throw err;
+        }
+    }
+
     const {nso, data} = await getToken(storage, token, znc_proxy_url);
 
     if (data[Login]) {
@@ -103,12 +126,7 @@ async function renewToken(
         const activeevent = await nso.getActiveEvent();
     }
 
-    const existingToken: SavedBulletToken = await SplatNet3Api.loginWithCoral(nso, data.user);
-
-    splatnet.bullet_token = existingToken.bullet_token.bulletToken;
-    splatnet.version = existingToken.version;
-    splatnet.language = existingToken.bullet_token.lang;
-    splatnet.useragent = existingToken.useragent;
+    const existingToken: SavedBulletToken = await splatnet.renewTokenWithCoral(nso, data.user);
 
     await storage.setItem('BulletToken.' + token, existingToken);
 }

@@ -2,7 +2,7 @@ import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralErrorResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
-import CoralApi, { CorrelationIdSymbol, ResponseDataSymbol, Result } from './coral.js';
+import CoralApi, { CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -12,7 +12,7 @@ const debug = createDebug('nxapi:api:znc-proxy');
 
 export default class ZncProxyApi implements CoralApi {
     // Not used by ZncProxyApi
-    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
+    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
@@ -145,6 +145,11 @@ export default class ZncProxyApi implements CoralApi {
         const data = await this.fetch<SavedToken>('/auth');
         data.proxy_url = this.url;
         return data;
+    }
+
+    /** @private */
+    setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
+        throw new Error('Not supported in ZncProxyApi');
     }
 
     static async createWithSessionToken(url: string, token: string) {

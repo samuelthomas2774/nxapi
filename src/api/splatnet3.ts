@@ -5,7 +5,7 @@ import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
-import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult, CoopHistoryResult, CoopHistoryDetailResult, FestRecordResult, FestRecordRefetchResult, DetailFestRecordDetailResult, DetailVotingStatusResult, DetailFestVotingStatusRefetchResult, VotesUpdateFestVoteResult } from './splatnet3-types.js';
+import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult, CoopHistoryResult, CoopHistoryDetailResult, FestRecordResult, FestRecordRefetchResult, DetailFestRecordDetailResult, DetailVotingStatusResult, DetailFestVotingStatusRefetchResult, VotesUpdateFestVoteResult, VsHistoryDetailPagerRefetchResult } from './splatnet3-types.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -21,10 +21,22 @@ const languages = [
 
 const SPLATNET3_URL = SPLATNET3_WEBSERVICE_URL + '/api';
 const SHOULD_RENEW_TOKEN_AT = 300; // 5 minutes in seconds
+const TOKEN_EXPIRES_IN = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+const AUTH_ERROR_CODES = {
+    204: 'USER_NOT_REGISTERED',
+    400: 'ERROR_INVALID_PARAMETERS',
+    401: 'ERROR_INVALID_GAME_WEB_TOKEN',
+    403: 'ERROR_OBSOLETE_VERSION',
+    429: 'ERROR_RATE_LIMIT',
+    500: 'ERROR_SERVER',
+    503: 'ERROR_SERVER_MAINTENANCE',
+    599: 'ERROR_SERVER',
+} as const;
 
 export default class SplatNet3Api {
-    onTokenShouldRenew: ((remaining: number, res: Response) => Promise<void>) | null = null;
-    onTokenExpired: ((res: Response) => Promise<void>) | null = null;
+    onTokenShouldRenew: ((remaining: number, res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
+    onTokenExpired: ((res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
@@ -67,7 +79,9 @@ export default class SplatNet3Api {
 
         if (response.status === 401 && !_attempt && this.onTokenExpired) {
             // _renewToken will be awaited when calling fetch
-            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, response).finally(() => {
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, response).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
                 this._renewToken = null;
             });
             return this.fetch(url, method, body, headers, _log, _attempt + 1);    
@@ -81,7 +95,9 @@ export default class SplatNet3Api {
 
         if (remaining <= SHOULD_RENEW_TOKEN_AT && !_attempt && this.onTokenShouldRenew) {
             // _renewToken will be awaited when calling fetch
-            this._renewToken = this._renewToken ?? this.onTokenShouldRenew.call(null, remaining, response).finally(() => {
+            this._renewToken = this._renewToken ?? this.onTokenShouldRenew.call(null, remaining, response).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
                 this._renewToken = null;
             });
         }
@@ -205,7 +221,7 @@ export default class SplatNet3Api {
     }
 
     async getBattleHistoryDetailPagerRefetch(id: string) {
-        return this.persistedQuery<VsHistoryDetailResult>(RequestId.VsHistoryDetailPagerRefetchQuery, {
+        return this.persistedQuery<VsHistoryDetailPagerRefetchResult>(RequestId.VsHistoryDetailPagerRefetchQuery, {
             vsResultId: id,
         });
     }
@@ -218,6 +234,25 @@ export default class SplatNet3Api {
         return this.persistedQuery<CoopHistoryDetailResult>(RequestId.CoopHistoryDetailQuery, {
             coopHistoryDetailId: id
         });
+    }
+
+    async renewTokenWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+        const data = await SplatNet3Api.loginWithCoral(nso, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    async renewTokenWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser) {
+        const data = await SplatNet3Api.loginWithWebServiceToken(webserviceToken, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    protected setTokenWithSavedToken(data: SplatNet3AuthData) {
+        this.bullet_token = data.bullet_token.bulletToken;
+        this.version = data.version;
+        this.language = data.bullet_token.lang;
+        this.useragent = data.useragent;
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
@@ -294,7 +329,7 @@ export default class SplatNet3Api {
         const cookies = response.headers.get('Set-Cookie');
 
         const [signal2, cancel2] = timeoutSignal();
-        const token_response = await fetch(SPLATNET3_URL + '/bullet_tokens', {
+        const tr = await fetch(SPLATNET3_URL + '/bullet_tokens', {
             method: 'POST',
             headers: {
                 'User-Agent': SPLATNET3_WEBSERVICE_USERAGENT,
@@ -313,21 +348,13 @@ export default class SplatNet3Api {
 
         debug('fetch %s %s, response %s', 'POST', '/bullet_tokens', response.status);
 
-        if (token_response.status === 401) {
-            throw new ErrorResponse('[splatnet3] ERROR_INVALID_GAME_WEB_TOKEN', token_response, await token_response.text());
-        }
-        if (token_response.status === 403) {
-            throw new ErrorResponse('[splatnet3] ERROR_OBSOLETE_VERSION', token_response, await token_response.text());
-        }
-        if (token_response.status === 204) {
-            throw new ErrorResponse('[splatnet3] USER_NOT_REGISTERED', token_response, await token_response.text());
-        }
-        if (token_response.status !== 201) {
-            throw new ErrorResponse('[splatnet3] Non-201 status code', token_response, await token_response.text());
-        }
+        const error: string | undefined = AUTH_ERROR_CODES[tr.status as keyof typeof AUTH_ERROR_CODES];
+        if (error) throw new ErrorResponse('[splatnet3] ' + error, tr, await tr.text());
+        if (tr.status !== 201) throw new ErrorResponse('[splatnet3] Non-201 status code', tr, await tr.text());
 
-        const bullet_token = await token_response.json() as BulletToken;
-        const expires_at = Date.now() + (2 * 60 * 60 * 1000); // ??
+        const bullet_token = await tr.json() as BulletToken;
+        const created_at = Date.now();
+        const expires_at = created_at + TOKEN_EXPIRES_IN;
 
         return {
             webserviceToken,
@@ -340,6 +367,7 @@ export default class SplatNet3Api {
             version,
 
             bullet_token,
+            created_at,
             expires_at,
             useragent: SPLATNET3_WEBSERVICE_USERAGENT,
         };
@@ -357,6 +385,12 @@ export interface SplatNet3AuthData {
     version: string;
 
     bullet_token: BulletToken;
+    created_at: number;
+    /**
+     * /api/bullet_tokens does not provide the token validity duration. Instead this assumes
+     * the token is valid for 2 hours. GraphQL responses include the actual remaining time
+     * in the x-bullettoken-remaining header.
+     */
     expires_at: number;
     useragent: string;
 }

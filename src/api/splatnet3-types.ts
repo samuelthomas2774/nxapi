@@ -1046,7 +1046,7 @@ interface FooterSeasonMessage {
 }
 
 /** 994cf141e55213e6923426caf37a1934 VsHistoryDetailPagerRefetchQuery */
-export interface VsHistoryDetailPagerRefetchQueryResult {
+export interface VsHistoryDetailPagerRefetchResult {
     vsHistoryDetail: {
         __typename: 'VsHistoryDetail';
         nextHistoryDetail: {

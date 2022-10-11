@@ -41,7 +41,7 @@ export interface ResultData<T> {
 }
 
 export default class CoralApi {
-    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<void>) | null = null;
+    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
@@ -85,7 +85,9 @@ export default class CoralApi {
 
         if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
             // _renewToken will be awaited when calling fetch
-            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).finally(() => {
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
                 this._renewToken = null;
             });
             return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
@@ -223,7 +225,9 @@ export default class CoralApi {
         } catch (err) {
             if (err instanceof ErrorResponse && err.data.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
                 // _renewToken will be awaited when calling getWebServiceToken
-                this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).finally(() => {
+                this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).then(data => {
+                    if (data) this.setTokenWithSavedToken(data);
+                }).finally(() => {
                     this._renewToken = null;
                 });
                 return this.getWebServiceToken(id, _attempt + 1);
@@ -261,10 +265,13 @@ export default class CoralApi {
 
     async renewToken(token: string, user: NintendoAccountUser) {
         const data = await this.getToken(token, user);
-
-        this.token = data.credential.accessToken;
-
+        this.setTokenWithSavedToken(data);
         return data;
+    }
+
+    /** @private */
+    setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
+        this.token = data.credential.accessToken;
     }
 
     static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
