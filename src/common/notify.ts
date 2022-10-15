@@ -187,6 +187,10 @@ export class ZncNotifications extends Loop {
             debug('Request error, waiting %ds before retrying', this.update_interval, err);
 
             return LoopResult.OK;
+        } else if ('code' in err && (err as any).type === 'system' && err.code === 'EAI_AGAIN') {
+            debug('Request error - name resolution failed, waiting %ds before retrying', this.update_interval, err);
+
+            return LoopResult.OK;
         } else {
             throw err;
         }
