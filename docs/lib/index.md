@@ -10,8 +10,80 @@ nxapi exports it's API library and types. nxapi is split into several modules th
 > By default nxapi will fetch certain settings, mostly version numbers to report to Nintendo, from my server. This can be disabled using environment variables.
 
 > nxapi uses native ECMAScript modules. nxapi also uses features like top-level await, so it cannot be converted to CommonJS using Rollup or similar. If you need to use nxapi from CommonJS modules or other module systems, use a [dynamic import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import).
+>
+> For TypeScript projects, this means you need to set `moduleResolution` to `node16` (or `nodenext`) (https://www.typescriptlang.org/tsconfig#moduleResolution). I recommend setting the following options:
+>
+> ```jsonc
+> {
+>     "compilerOptions": {
+>         "strict": true,
+>         "target": "es2020",
+>         "module": "node16",
+>         "moduleResolution": "node16",
+>         "skipLibCheck": true
+>     }
+> }
+> ```
 
 > If you need any help using nxapi as a library [join the Discord server](https://discord.com/invite/4D82rFkXRv) or [create a discussion](https://github.com/samuelthomas2774/nxapi/discussions/new).
+
+Example authenticating to the Nintendo Switch Online app:
+
+> This is a simplified example of authenticating to the Coral API and using cached tokens. More logic is required to ensure you are using these APIs properly, and to renew expired tokens - [see src/common/auth/coral.ts for the authentication functions used in nxapi's CLI and Electron app](src/common/auth/coral.ts).
+
+```ts
+import { addUserAgent } from 'nxapi';
+import CoralApi, { CoralAuthData } from 'nxapi/coral';
+
+addUserAgent('your-script/1.0.0 (+https://github.com/...)');
+
+declare function getCachedCoralToken(): [CoralAuthData, Date];
+declare function setCachedCoralToken(auth_data: CoralAuthData, expires_at: Date): void;
+declare function getNintendoAccountSessionToken(): string;
+
+let coral;
+
+try {
+    const [auth_data, expires_at] = getCachedCoralToken();
+    if (expires_at.getTime() > Date.now()) throw new Error('Token expired');
+
+    coral = CoralApi.createWithSavedToken(auth_data);
+} catch (err) {
+    const na_session_token = getNintendoAccountSessionToken();
+    const {nso, data} = await CoralApi.createWithSessionToken(na_session_token);
+    setCachedCoralToken(data, Date.now() + (data.credential.expiresIn * 1000));
+    coral = nso;
+}
+
+const friends = await coral.getFriendList();
+```
+
+Example getting SplatNet 2 records:
+
+> This example does not include authenticating to SplatNet 2. To benefit from the caching in the nxapi command, the `nxapi splatnet2 token --json` command can be used in most scripts. For example:
+>
+> ```sh
+> SPLATNET_TOKEN=`nxapi splatnet2 token --json` node your-script.js
+> ```
+>
+> your-script.js can then read the iksm_session, unique player ID and region like this:
+>
+> ```ts
+> import SplatNet2Api from 'nxapi/splatnet2';
+>
+> const data = JSON.parse(process.env.SPLATNET_TOKEN);
+> const splatnet2 = SplatNet2Api.createWithCliTokenData(data);
+> ```
+
+```ts
+import SplatNet2Api from 'nxapi/splatnet2';
+
+const iksm_session = '...';
+const unique_id = '...';
+const splatnet2 = SplatNet2Api.createWithIksmSession(iksm_session, unique_id);
+
+const records = await splatnet2.getRecords();
+```
 
 ### Install
 
