@@ -132,8 +132,8 @@ export async function init() {
 
     app.configureHostResolver({enableBuiltInResolver: false});
 
-    if (process.platform === "win32") {
-            app.setAppUserModelId("Nintendo Switch Online (nxapi)");
+    if (process.platform === 'win32') {
+        app.setAppUserModelId('uk.org.fancy.nxapi.app');
     }
 
     appinstance.store.restoreMonitorState(appinstance.monitors);
