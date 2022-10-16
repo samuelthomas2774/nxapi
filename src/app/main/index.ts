@@ -132,6 +132,10 @@ export async function init() {
 
     app.configureHostResolver({enableBuiltInResolver: false});
 
+    if (process.platform === "win32") {
+            app.setAppUserModelId("Nintendo Switch Online (nxapi)");
+    }
+
     appinstance.store.restoreMonitorState(appinstance.monitors);
 
     const menu = new MenuApp(appinstance);
