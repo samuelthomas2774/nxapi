@@ -1,11 +1,12 @@
 import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
+import { GraphQLRequest, GraphQLResponse, KnownRequestId, RequestId, RequestParametersFor, RequestResultFor } from 'splatnet3-types/splatnet3';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import CoralApi from './coral.js';
 import { timeoutSignal } from '../util/misc.js';
-import { BankaraBattleHistoriesResult, BattleHistoryCurrentPlayerResult, BulletToken, CurrentFestResult, FriendListResult, GraphQLRequest, GraphQLResponse, HistoryRecordResult, HomeResult, LatestBattleHistoriesResult, PrivateBattleHistoriesResult, RegularBattleHistoriesResult, RequestId, SettingResult, StageScheduleResult, VsHistoryDetailResult, CoopHistoryResult, CoopHistoryDetailResult, FestRecordResult, FestRecordRefetchResult, DetailFestRecordDetailResult, DetailVotingStatusResult, DetailFestVotingStatusRefetchResult, VotesUpdateFestVoteResult, VsHistoryDetailPagerRefetchResult } from './splatnet3-types.js';
+import { BulletToken } from './splatnet3-types.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -107,7 +108,11 @@ export default class SplatNet3Api {
         return defineResponse(data, response);
     }
 
-    async persistedQuery<T = unknown, V = unknown>(id: string, variables: V) {
+    async persistedQuery<
+        I extends string,
+        T = I extends KnownRequestId ? RequestResultFor<I> : unknown,
+        V = I extends KnownRequestId ? RequestParametersFor<I> : unknown,
+    >(id: I, variables: V) {
         const req: GraphQLRequest<V> = {
             variables,
             extensions: {
@@ -125,11 +130,11 @@ export default class SplatNet3Api {
     }
 
     async getHome() {
-        return this.persistedQuery<HomeResult>(RequestId.HomeQuery, {});
+        return this.persistedQuery(RequestId.HomeQuery, {});
     }
 
     async getCurrentFest() {
-        return this.persistedQuery<CurrentFestResult>(RequestId.CurrentFestQuery, {});
+        return this.persistedQuery(RequestId.CurrentFestQuery, {});
     }
 
     async getConfigureAnalytics() {
@@ -137,102 +142,102 @@ export default class SplatNet3Api {
     }
 
     async getSettings() {
-        return this.persistedQuery<SettingResult>(RequestId.SettingQuery, {});
+        return this.persistedQuery(RequestId.SettingQuery, {});
     }
 
     async getFestRecords() {
-        return this.persistedQuery<FestRecordResult>(RequestId.FestRecordQuery, {});
+        return this.persistedQuery(RequestId.FestRecordQuery, {});
     }
 
     async getFestRecordsRefetch() {
-        return this.persistedQuery<FestRecordRefetchResult>(RequestId.FestRecordRefetchQuery, {});
+        return this.persistedQuery(RequestId.FestRecordRefetchQuery, {});
     }
 
     async getFestDetail(id: string) {
-        return this.persistedQuery<DetailFestRecordDetailResult>(RequestId.DetailFestRecordDetailQuery, {
+        return this.persistedQuery(RequestId.DetailFestRecordDetailQuery, {
             festId: id,
         });
     }
 
     async getFestDetailRefetch(id: string) {
-        return this.persistedQuery<FestRecordRefetchResult>(RequestId.DetailFestRefethQuery, {
+        return this.persistedQuery(RequestId.DetailFestRefethQuery, {
             festId: id,
         });
     }
 
     async getFestVotingStatus(id: string) {
-        return this.persistedQuery<DetailVotingStatusResult>(RequestId.DetailVotingStatusQuery, {
+        return this.persistedQuery(RequestId.DetailVotingStatusQuery, {
             festId: id,
         });
     }
 
     async getFestVotingStatusRefetch(id: string) {
-        return this.persistedQuery<DetailFestVotingStatusRefetchResult>(RequestId.DetailFestVotingStatusRefethQuery, {
+        return this.persistedQuery(RequestId.DetailFestVotingStatusRefethQuery, {
             festId: id,
         });
     }
 
     async updateFestPoll(id: string) {
-        return this.persistedQuery<VotesUpdateFestVoteResult>(RequestId.VotesUpdateFestVoteMutation, {
+        return this.persistedQuery(RequestId.VotesUpdateFestVoteMutation, {
             teamId: id,
         });
     }
 
     async getFriends() {
-        return this.persistedQuery<FriendListResult>(RequestId.FriendListQuery, {});
+        return this.persistedQuery(RequestId.FriendListQuery, {});
     }
 
     async getFriendsRefetch() {
-        return this.persistedQuery<FriendListResult>(RequestId.FriendListRefetchQuery, {});
+        return this.persistedQuery(RequestId.FriendListRefetchQuery, {});
     }
 
     async getHistoryRecords() {
-        return this.persistedQuery<HistoryRecordResult>(RequestId.HistoryRecordQuery, {});
+        return this.persistedQuery(RequestId.HistoryRecordQuery, {});
     }
 
     async getSchedules() {
-        return this.persistedQuery<StageScheduleResult>(RequestId.StageScheduleQuery, {});
+        return this.persistedQuery(RequestId.StageScheduleQuery, {});
     }
 
     async getBattleHistoryCurrentPlayer() {
-        return this.persistedQuery<BattleHistoryCurrentPlayerResult>(RequestId.BattleHistoryCurrentPlayerQuery, {});
+        return this.persistedQuery(RequestId.BattleHistoryCurrentPlayerQuery, {});
     }
 
     async getLatestBattleHistories() {
-        return this.persistedQuery<LatestBattleHistoriesResult>(RequestId.LatestBattleHistoriesQuery, {});
+        return this.persistedQuery(RequestId.LatestBattleHistoriesQuery, {});
     }
 
     async getRegularBattleHistories() {
-        return this.persistedQuery<RegularBattleHistoriesResult>(RequestId.RegularBattleHistoriesQuery, {});
+        return this.persistedQuery(RequestId.RegularBattleHistoriesQuery, {});
     }
 
     async getBankaraBattleHistories() {
-        return this.persistedQuery<BankaraBattleHistoriesResult>(RequestId.BankaraBattleHistoriesQuery, {});
+        return this.persistedQuery(RequestId.BankaraBattleHistoriesQuery, {});
     }
 
     async getPrivateBattleHistories() {
-        return this.persistedQuery<PrivateBattleHistoriesResult>(RequestId.PrivateBattleHistoriesQuery, {});
+        return this.persistedQuery(RequestId.PrivateBattleHistoriesQuery, {});
     }
 
     async getBattleHistoryDetail(id: string) {
-        return this.persistedQuery<VsHistoryDetailResult>(RequestId.VsHistoryDetailQuery, {
+        return this.persistedQuery(RequestId.VsHistoryDetailQuery, {
             vsResultId: id,
         });
     }
 
     async getBattleHistoryDetailPagerRefetch(id: string) {
-        return this.persistedQuery<VsHistoryDetailPagerRefetchResult>(RequestId.VsHistoryDetailPagerRefetchQuery, {
+        return this.persistedQuery(RequestId.VsHistoryDetailPagerRefetchQuery, {
             vsResultId: id,
         });
     }
 
     async getCoopHistory() {
-        return this.persistedQuery<CoopHistoryResult>(RequestId.CoopHistoryQuery, {});
+        return this.persistedQuery(RequestId.CoopHistoryQuery, {});
     }
 
     async getCoopHistoryDetail(id: string) {
-        return this.persistedQuery<CoopHistoryDetailResult>(RequestId.CoopHistoryDetailQuery, {
-            coopHistoryDetailId: id
+        return this.persistedQuery(RequestId.CoopHistoryDetailQuery, {
+            coopHistoryDetailId: id,
         });
     }
 

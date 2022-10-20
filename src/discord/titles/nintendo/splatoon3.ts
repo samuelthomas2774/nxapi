@@ -1,8 +1,8 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
 import { Game } from '../../../api/coral-types.js';
-import { BankaraMatchMode, DetailVotingStatusResult, FestState, FestTeamRole, FriendListResult, FriendOnlineState, GraphQLResponse, StageScheduleResult } from '../../../api/splatnet3-types.js';
 import SplatNet3Api from '../../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../../app/common/types.js';
 import { Arguments } from '../../../cli/nso/presence.js';
@@ -27,15 +27,15 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
     friend: FriendListResult['friends']['nodes'][0] | null = null;
 
-    regular_schedule: StageScheduleResult['regularSchedules']['nodes'][0] | null = null;
-    anarchy_schedule: StageScheduleResult['bankaraSchedules']['nodes'][0] | null = null;
-    fest_schedule: StageScheduleResult['festSchedules']['nodes'][0] | null = null;
-    league_schedule: StageScheduleResult['leagueSchedules']['nodes'][0] | null = null;
-    x_schedule: StageScheduleResult['xSchedules']['nodes'][0] | null = null;
-    coop_schedule: StageScheduleResult['coopGroupingSchedule']['regularSchedules']['nodes'][0] | null = null;
-    fest: StageScheduleResult['currentFest'] | null = null;
-    fest_team_voting_status: Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] | null = null;
-    fest_team: Exclude<StageScheduleResult['currentFest'], null>['teams'][0] | null = null;
+    regular_schedule: VsSchedule_regular | null = null;
+    anarchy_schedule: VsSchedule_bankara | null = null;
+    fest_schedule: VsSchedule_fest | null = null;
+    league_schedule: VsSchedule_league | null = null;
+    x_schedule: VsSchedule_xMatch | null = null;
+    coop_schedule: CoopSchedule | null = null;
+    fest: Fest_schedule | null = null;
+    fest_team_voting_status: FestTeam_votingStatus | null = null;
+    fest_team: FestTeam_schedule | null = null;
 
     constructor(
         readonly discord_presence: ExternalMonitorPresenceInterface,
@@ -119,7 +119,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         // to check if the player may join a Tricolour battle
         const tricolour_open = this.fest && new Date(this.fest.midtermTime).getTime() < Date.now();
         const should_refresh_fest = this.fest && tricolour_open &&
-            ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.fest.state);
+            ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.fest.state as FestState);
 
         this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
 
@@ -220,19 +220,12 @@ export function getConfigFromAppConfig(
 
 interface PresenceUrlResponse {
     splatoon3?: FriendListResult['friends']['nodes'][0] | null;
-    splatoon3_fest_team?:
-        (Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] &
-            Exclude<StageScheduleResult['currentFest'], null>['teams'][0]) | null;
+    splatoon3_fest_team?: (FestTeam_votingStatus & FestTeam_schedule) | null;
     splatoon3_vs_setting?:
-        StageScheduleResult['regularSchedules']['nodes'][0]['regularMatchSetting'] |
-        Exclude<StageScheduleResult['bankaraSchedules']['nodes'][0]['bankaraMatchSettings'], null>[0] |
-        StageScheduleResult['festSchedules']['nodes'][0]['festMatchSetting'] |
-        StageScheduleResult['leagueSchedules']['nodes'][0]['leagueMatchSetting'] |
-        StageScheduleResult['xSchedules']['nodes'][0]['xMatchSetting'] |
-        null;
-    splatoon3_coop_setting?:
-        StageScheduleResult['coopGroupingSchedule']['regularSchedules']['nodes'][0]['setting'] | null;
-    splatoon3_fest?: StageScheduleResult['currentFest'] | null;
+        RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
+        LeagueMatchSetting | XMatchSetting | null;
+    splatoon3_coop_setting?: CoopSetting | null;
+    splatoon3_fest?: Fest_schedule | null;
 }
 
 export function callback(activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) {

@@ -1,11 +1,11 @@
 import * as net from 'node:net';
 import createDebug from 'debug';
-import express, { Request, Response } from 'express';
+import express from 'express';
 import * as persist from 'node-persist';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, Friend as SplatNetFriend, FriendListResult, FriendOnlineState, GraphQLResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, XMatchSetting } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
-import { SavedToken } from '../common/auth/coral.js';
 import { addCliFeatureUserAgent } from '../util/useragent.js';
 import { parseListenAddress } from '../util/net.js';
 import { product } from '../util/product.js';
@@ -13,7 +13,6 @@ import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
 import SplatNet3Api from '../api/splatnet3.js';
-import { BankaraMatchMode, DetailVotingStatusResult, FestState, FestVoteState, FriendListResult, FriendOnlineState, GraphQLResponse, StageScheduleResult } from '../api/splatnet3-types.js';
 
 const debug = createDebug('cli:presence-server');
 
@@ -131,12 +130,12 @@ export class SplatNet3User {
         }
     }
 
-    async getFriends(): Promise<FriendListResult['friends']> {
+    async getFriends(): Promise<SplatNetFriend[]> {
         await this.update('friends', async () => {
             this.friends = await this.splatnet.getFriendsRefetch();
         }, this.update_interval);
 
-        return this.friends.data.friends;
+        return this.friends.data.friends.nodes;
     }
 
     async getSchedules(): Promise<StageScheduleResult> {
@@ -145,7 +144,7 @@ export class SplatNet3User {
         if (this.schedules && this.schedules.data.currentFest) {
             const tricolour_open = new Date(this.schedules.data.currentFest.midtermTime).getTime() <= Date.now();
             const should_refresh_fest = tricolour_open &&
-                ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.schedules.data.currentFest.state);
+                ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.schedules.data.currentFest.state as FestState);
 
             if (should_refresh_fest) update_interval = this.update_interval;
         }
@@ -207,8 +206,8 @@ function createApp(
             const include_splatnet3 = splatnet3_users && req.query['include-splatoon3'] === '1';
 
             const result: (Friend & {
-                splatoon3?: FriendListResult['friends']['nodes'][0] | null;
-                splatoon3_fest_team?: Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] | null;
+                splatoon3?: SplatNetFriend | null;
+                splatoon3_fest_team?: FestTeam_votingStatus | null;
             })[] = [];
 
             const users = await Promise.all(user_ids.map(async id => {
@@ -248,7 +247,7 @@ function createApp(
                     const friends = await user.getFriends();
                     const fest_vote_status = await user.getCurrentFestVotes();
 
-                    for (const friend of friends.nodes) {
+                    for (const friend of friends) {
                         const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
                             .replace(/^Friend-([0-9a-f]{16})$/, '$1');
                         const match = result.find(f => f.nsaId === friend_nsaid);
@@ -303,23 +302,16 @@ function createApp(
 
             let match_coral: Friend | null = null;
             let match_user_id: string | null = null;
-            let match_splatnet3: FriendListResult['friends']['nodes'][0] | null = null;
-            let match_splatnet3_fest_team:
-                Exclude<StageScheduleResult['currentFest'], null>['teams'][0] | null | undefined = undefined;
-            let match_splatnet3_fest_team_vote_status:
-                Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] | null | undefined = undefined;
+            let match_splatnet3: SplatNetFriend | null = null;
+            let match_splatnet3_fest_team: FestTeam_schedule | null | undefined = undefined;
+            let match_splatnet3_fest_team_vote_status: FestTeam_votingStatus | null | undefined = undefined;
 
             const additional_response_data: {
                 splatoon3_vs_setting?:
-                    StageScheduleResult['regularSchedules']['nodes'][0]['regularMatchSetting'] |
-                    Exclude<StageScheduleResult['bankaraSchedules']['nodes'][0]['bankaraMatchSettings'], null>[0] |
-                    StageScheduleResult['festSchedules']['nodes'][0]['festMatchSetting'] |
-                    StageScheduleResult['leagueSchedules']['nodes'][0]['leagueMatchSetting'] |
-                    StageScheduleResult['xSchedules']['nodes'][0]['xMatchSetting'] |
-                    null;
-                splatoon3_coop_setting?:
-                    StageScheduleResult['coopGroupingSchedule']['regularSchedules']['nodes'][0]['setting'] | null;
-                splatoon3_fest?: StageScheduleResult['currentFest'] | null;
+                    RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
+                    LeagueMatchSetting | XMatchSetting | null;
+                splatoon3_coop_setting?: CoopSetting | null;
+                splatoon3_fest?: Fest_schedule | null;
             } = {};
 
             for (const user_naid of user_ids) {
@@ -356,7 +348,7 @@ function createApp(
                 const friends = await user.getFriends();
                 const fest_vote_status = await user.getCurrentFestVotes();
 
-                for (const friend of friends.nodes) {
+                for (const friend of friends) {
                     const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
                         .replace(/^Friend-([0-9a-f]{16})$/, '$1');
                     if (match_coral.nsaId !== friend_nsaid) continue;
@@ -462,9 +454,8 @@ function createApp(
 }
 
 function createScheduleFest(
-    fest: Exclude<StageScheduleResult['currentFest'], null>,
-    vote_team?: string, state?: FestVoteState | null
-): Exclude<StageScheduleResult['currentFest'], null> {
+    fest: Fest_schedule, vote_team?: string, state?: FestVoteState | null
+): Fest_schedule {
     return {
         ...fest,
         teams: fest.teams.map(t => createFestScheduleTeam(t, t.id === vote_team ? state : null)),
@@ -472,9 +463,8 @@ function createScheduleFest(
 }
 
 function createFestScheduleTeam(
-    team: Exclude<StageScheduleResult['currentFest'], null>['teams'][0],
-    state: FestVoteState | null = null
-): Exclude<StageScheduleResult['currentFest'], null>['teams'][0] {
+    team: FestTeam_schedule, state: FestVoteState | null = null
+): FestTeam_schedule {
     return {
         id: team.id,
         color: team.color,
@@ -484,9 +474,8 @@ function createFestScheduleTeam(
 }
 
 function createFestVoteTeam(
-    team: Exclude<DetailVotingStatusResult['fest'], null>['teams'][0],
-    state?: FestVoteState | null
-): Exclude<DetailVotingStatusResult['fest'], null>['teams'][0] {
+    team: FestTeam_votingStatus, state: FestVoteState | null
+): FestTeam_votingStatus {
     return {
         id: team.id,
         teamName: team.teamName,

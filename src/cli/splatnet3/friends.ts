@@ -1,10 +1,10 @@
 import createDebug from 'debug';
+import { FriendOnlineState } from 'splatnet3-types/splatnet3';
 import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
-import { FriendOnlineState } from '../../api/splatnet3-types.js';
 
 const debug = createDebug('cli:splatnet3:friends');
 
