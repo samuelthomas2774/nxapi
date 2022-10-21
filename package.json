@@ -2,6 +2,7 @@
     "name": "nxapi",
     "version": "1.4.0",
     "description": "Nintendo Switch app APIs",
+    "license": "AGPL-3.0-or-later",
     "author": "Samuel Elliott",
     "main": "dist/index.js",
     "type": "module",
@@ -9,6 +10,8 @@
         "type": "git",
         "url": "git@gitlab.fancy.org.uk:samuel/nxapi.git"
     },
+    "homepage": "https://gitlab.fancy.org.uk/samuel/nxapi",
+    "bugs": "https://github.com/samuelthomas2774/nxapi/issues",
     "files": [
         "dist",
         "!dist/app",
