@@ -2,7 +2,7 @@ import * as net from 'node:net';
 import createDebug from 'debug';
 import express from 'express';
 import * as persist from 'node-persist';
-import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, Friend as SplatNetFriend, FriendListResult, FriendOnlineState, GraphQLResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, XMatchSetting } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, Friend as SplatNetFriend, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, XMatchSetting } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -92,8 +92,8 @@ export class SplatNet3User {
     created_at = Date.now();
     expires_at = Infinity;
 
-    schedules: GraphQLResponse<StageScheduleResult> | null = null;
-    fest_vote_status: GraphQLResponse<DetailVotingStatusResult> | null = null;
+    schedules: GraphQLSuccessResponse<StageScheduleResult> | null = null;
+    fest_vote_status: GraphQLSuccessResponse<DetailVotingStatusResult> | null = null;
 
     promise = new Map<string, Promise<void>>();
 
@@ -109,7 +109,7 @@ export class SplatNet3User {
     constructor(
         public splatnet: SplatNet3Api,
         public data: SavedBulletToken,
-        public friends: GraphQLResponse<FriendListResult>,
+        public friends: GraphQLSuccessResponse<FriendListResult>,
     ) {}
 
     private async update(key: keyof SplatNet3User['updated'], callback: () => Promise<void>, ttl: number) {
@@ -261,19 +261,19 @@ function createApp(
 
                                 for (const player of team.votes.nodes) {
                                     if (player.userIcon.url !== friend.userIcon.url) continue;
-        
+
                                     match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.VOTED);
                                     break;
                                 }
-        
+
                                 for (const player of team.preVotes.nodes) {
                                     if (player.userIcon.url !== friend.userIcon.url) continue;
-        
+
                                     match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.PRE_VOTED);
                                     break;
                                 }
                             }
-        
+
                             if (!match.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
                                 match.splatoon3_fest_team = null;
                             }
@@ -310,7 +310,7 @@ function createApp(
                 splatoon3_vs_setting?:
                     RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
                     LeagueMatchSetting | XMatchSetting | null;
-                splatoon3_coop_setting?: CoopSetting | null;
+                splatoon3_coop_setting?: Pick<CoopSetting, '__typename' | 'coopStage' | 'weapons'> | null;
                 splatoon3_fest?: Fest_schedule | null;
             } = {};
 

@@ -23,7 +23,7 @@ export function builder(yargs: Argv<ParentArguments>) {
             ],
             colWidths: [10, 42, 80],
         });
-    
+
         for await (const data of iterateLocalStorage(storage)) {
             const value = util.inspect(data.value, {
                 compact: true,

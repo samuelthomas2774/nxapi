@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
-import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
 import { Game } from '../../../api/coral-types.js';
 import SplatNet3Api from '../../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../../app/common/types.js';
@@ -21,9 +21,9 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     splatnet: SplatNet3Api | null = null;
     data: SavedBulletToken | null = null;
 
-    cached_friends: GraphQLResponse<FriendListResult> | null = null;
-    cached_schedules: GraphQLResponse<StageScheduleResult> | null = null;
-    cached_voting_status: GraphQLResponse<DetailVotingStatusResult> | null = null;
+    cached_friends: GraphQLSuccessResponse<FriendListResult> | null = null;
+    cached_schedules: GraphQLSuccessResponse<StageScheduleResult> | null = null;
+    cached_voting_status: GraphQLSuccessResponse<DetailVotingStatusResult> | null = null;
 
     friend: FriendListResult['friends']['nodes'][0] | null = null;
 
@@ -32,7 +32,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     fest_schedule: VsSchedule_fest | null = null;
     league_schedule: VsSchedule_league | null = null;
     x_schedule: VsSchedule_xMatch | null = null;
-    coop_schedule: CoopSchedule | null = null;
+    coop_schedule: Pick<CoopSchedule, 'startTime' | 'endTime' | 'setting'> | null = null;
     fest: Fest_schedule | null = null;
     fest_team_voting_status: FestTeam_votingStatus | null = null;
     fest_team: FestTeam_schedule | null = null;

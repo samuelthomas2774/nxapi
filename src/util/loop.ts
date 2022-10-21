@@ -95,7 +95,7 @@ export abstract class EmbeddedLoop extends Loop {
         try {
             const result = await this.loop(true);
             if (result === LoopResult.STOP) return;
-            
+
             while (i === this._running) {
                 const result = await this.loop();
 
@@ -104,7 +104,7 @@ export abstract class EmbeddedLoop extends Loop {
                     return;
                 }
             }
-            
+
             if (this._running === 0 && !this.onStop) {
                 // Run one more time after the loop ends
                 const result = await this.loopRun();
