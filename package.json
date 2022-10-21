@@ -3,7 +3,7 @@
     "version": "1.4.0",
     "description": "Nintendo Switch app APIs",
     "license": "AGPL-3.0-or-later",
-    "author": "Samuel Elliott",
+    "author": "Samuel Elliott <samuel+nxapi@fancy.org.uk>",
     "main": "dist/index.js",
     "type": "module",
     "repository": {

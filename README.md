@@ -72,6 +72,9 @@ node Nintendo\ Switch\ Online.app/Contents/Resources/app/dist/bundle/cli-bundle.
 
 # Windows
 node 'Nintendo Switch Online/resources/app/dist/bundle/cli-bundle.js' ...
+
+# Linux, installed via dpkg
+node /opt/Nintendo\ Switch\ Online/resources/app/dist/bundle/cli-bundle.js ...
 ```
 
 #### Do I need a Nintendo Switch Online membership?
