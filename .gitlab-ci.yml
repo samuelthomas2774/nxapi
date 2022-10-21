@@ -24,11 +24,6 @@ build:
     paths:
       - dist
       - nxapi.tgz
-      - app
-    exclude:
-      - app/mac/**/*
-      - app/win-unpacked/**/*
-      - app/linux-unpacked/**/*
 
 build-docker:
   stage: build
@@ -97,8 +92,8 @@ build-app:
 
     - npx electron-builder build --macos zip --linux deb snap appimage --publish never
     - mv dist/app/package app
-  dependencies:
-    - build
+  needs:
+    - job: build
   artifacts:
     paths:
       - app
@@ -122,8 +117,8 @@ build-windows:
 
     - npx electron-builder build --win nsis --publish never
     - mv dist/app/package app
-  dependencies:
-    - build
+  needs:
+    - job: build
   artifacts:
     paths:
       - app
