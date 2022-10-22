@@ -207,10 +207,10 @@ publish-github:
 publish-next:
   stage: deploy
   script:
-    - |
-      export VERSION=`[ "$CI_COMMIT_BRANCH" != "main" ] || node resources/build/ci-main-version.js`
-      "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.version = process.env.VERSION || json.version; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - export VERSION=`[ "$CI_COMMIT_BRANCH" != "main" ] || node resources/build/ci-main-version.js`
+    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.version = process.env.VERSION || json.version; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
 
+    - |
       if [ "$CI_COMMIT_BRANCH" = "main" -a "$VERSION" != "" ]; then
         if [ "$NPM_PUBLISH_NEXT" = "true" -a "$NPM_TOKEN" != "" ]; then
           echo "Publishing $VERSION to npm"
