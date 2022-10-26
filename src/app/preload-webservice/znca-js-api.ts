@@ -7,56 +7,141 @@ const debug = createDebug('app:preload-webservice:znca-js-api');
 // All others aren't required
 
 declare global {
-    interface Window {
-        /**
-         * window.invokeNativeShare(JSON.stringify({text: e.text, image_url: e.url, hashtags: e.hashtags}))
-         */
-        // SplatNet 2
-        invokeNativeShare?: (data: string) => void;
+    interface Window extends Partial<WebServiceJsApi> {
+        jsBridge?: WebServiceJsApi;
 
-        /**
-         * window.invokeNativeShareUrl(JSON.stringify({url: '', text: ''}))
-         */
-        // Smash World
-        invokeNativeShareUrl?: (data: string) => void;
-
-        // NookLink
-        requestGameWebToken?: () => void;
         onGameWebTokenReceive?: (token: string) => void;
-
-        // NookLink
-        restorePersistentData?: () => void;
         onPersistentDataRestore?: (data: string) => void;
-        // NookLink
-        storePersistentData?: (data: string) => void;
         onPersistentDataStore?: (data: string) => void;
-
-        // NookLink
-        openQRCodeReader?: (data: string) => void;
-        // NookLink
-        openQRCodeReaderFromPhotoLibrary?: (data: string) => void;
         onQRCodeRead?: (data: string) => void;
-        // NookLink
-        closeQRCodeReader?: () => void;
-        // NookLink
-        closeQRCodeReaderFromPhotoLibrary?: () => void;
-
-        // Unused
-        sendMessage?(data: string): void;
-        // SplatNet 3
-        copyToClipboard?(data: string): void;
-        // SplatNet 3
-        openQRCodeReaderForCheckin?(data: string): void;
         onQRCodeReadForCheckin?(data: string): void;
-        // SplatNet 3
-        downloadImages?(imagesJson: string): void;
-        // SplatNet 3
-        completeLoading?(): void;
-        // SplatNet 3
-        closeWebView?(): void;
-        // SplatNet 3
-        reloadExtension?(): void;
     }
+}
+
+interface WebServiceJsApi {
+    /**
+     * Downloads an image and opens the native share menu.
+     *
+     * Used by SplatNet 2.
+     *
+     * Called as:
+     *
+     * ```js
+     * window.invokeNativeShare(JSON.stringify({text: e.text, image_url: e.url, hashtags: e.hashtags}))
+     * ```
+     */
+    invokeNativeShare(data: string): void;
+    /**
+     * Opens the native share menu.
+     *
+     * Used by Smash World.
+     *
+     * ```js
+     * window.invokeNativeShareUrl(JSON.stringify({url: '', text: ''}))
+     * ```
+     */
+    invokeNativeShareUrl(data: string): void;
+
+    /**
+     * Requests a web service token from the Coral API.
+     * `window.onGameWebTokenReceive` is called with the returned token.
+     *
+     * Used by NookLink and SplatNet 3.
+     */
+    requestGameWebToken(): void;
+
+    /**
+     * Load persistent data for this web service.
+     * `window.onPersistentDataRestore` is called with the stored data.
+     *
+     * Used by NookLink.
+     */
+    restorePersistentData(): void;
+    /**
+     * Store persistent data for this web service.
+     * `window.onPersistentDataStore` is called when complete.
+     *
+     * Used by NookLink.
+     */
+    storePersistentData(data: string): void;
+
+    /**
+     * Open the QR code reader.
+     * `window.onQRCodeRead` is called with the base64-encoded result.
+     *
+     * Used by NookLink.
+     */
+    openQRCodeReader(data: string): void;
+    /**
+     * Open the QR code reader.
+     * `window.onQRCodeRead` is called with the base64-encoded result.
+     *
+     * Used by NookLink.
+     */
+    openQRCodeReaderFromPhotoLibrary(data: string): void;
+    /**
+     * Close the QR code reader.
+     *
+     * Used by NookLink.
+     */
+    closeQRCodeReader(): void;
+    /**
+     * Close the QR code reader.
+     *
+     * Used by NookLink.
+     */
+    closeQRCodeReaderFromPhotoLibrary(): void;
+
+    /**
+     * Send a message to the app's main thread.
+     * This is used to show native message dialogs and control the QR code reader.
+     *
+     * Used by NookLink.
+     */
+    sendMessage(data: string): void;
+
+    /**
+     * Writes text to the clipboard.
+     *
+     * Used by SplatNet 3.
+     */
+    copyToClipboard(data: string): void;
+
+    /**
+     * Opens the QR code reader.
+     * `window.onQRCodeReadForCheckin` is called with a JSON document containing the result.
+     *
+     * Used by SplatNet 3.
+     */
+    openQRCodeReaderForCheckin(data: string): void;
+
+    /**
+     * Download images and save them to the photo library.
+     *
+     * Used by SplatNet 3.
+     */
+    downloadImages(imagesJson: string): void;
+
+    /**
+     * Report the web service is ready to show and hide the loading screen.
+     * Web services that set the `fullScreen` attribute to `true` must call this.
+     *
+     * Used by SplatNet 3.
+     */
+    completeLoading(): void;
+    /**
+     * Closes the web service.
+     * Web services that set the `fullScreen` attribute to `true` must have a button that calls this.
+     *
+     * Used by SplatNet 3.
+     */
+    closeWebView(): void;
+    /**
+     * Asks the OS to reload any native widget extensions.
+     *
+     * Used by SplatNet 3.
+     */
+    reloadExtension(): void;
 }
 
 //
@@ -86,9 +171,6 @@ function invokeNativeShareUrl(data: string) {
     ipc.invokeNativeShareUrl(data);
 }
 
-window.invokeNativeShare = invokeNativeShare;
-window.invokeNativeShareUrl = invokeNativeShareUrl;
-
 //
 // Web service token
 //
@@ -102,8 +184,6 @@ function requestGameWebToken() {
         debug('Error requesting web service token', err);
     });
 }
-
-window.requestGameWebToken = requestGameWebToken;
 
 //
 // Persistent data
@@ -125,68 +205,126 @@ function storePersistentData(data: string) {
     });
 }
 
-window.restorePersistentData = restorePersistentData;
-window.storePersistentData = storePersistentData;
-
 //
 // QR code scanner
 //
 
-function openQrCodeReader(data: string) {
+export interface QrCodeReaderCameraOptions {
+    messageResources: {
+        Camera_Page_Title: string;
+        Camera_Label_WaitingCameraPermission: string;
+        Camera_Label_WaitingCameraPermissionDescription: string;
+        Camera_Label_ChangeSetting: string;
+        Camera_Label_Searching: string;
+        Camera_Label_ProDialog1stQRCode: string;
+        Camera_Label_ProDialog1stQRCodeDescription: string;
+        Camera_Label_Pro2ndQRCodeRead: string;
+        Camera_Label_Pro3rdQRCodeRead: string;
+        Camera_Label_Pro4thQRCodeRead: string;
+        Cmn_Dialog_Button_Ok: string;
+        Cmn_Dialog_Button_Close: string;
+    };
+}
+export interface QrCodeReaderPhotoLibraryOptions {
+    messageResources: {
+        PhotoLibrary_Page_Title: string;
+        PhotoLibrary_Label_WaitingPhotoLibraryPermission: string;
+        PhotoLibrary_Label_WaitingPhotoLibraryPermissionDescription: string;
+        PhotoLibrary_Label_ChangeSetting: string;
+        PhotoLibrary_Label_Header: string;
+        PhotoLibrary_Label_Notice: string;
+        PhotoLibrary_Label_SelectPhoto: string;
+        PhotoLibrary_Label_ProDialog1stQRCode: string;
+        PhotoLibrary_Label_ProDialog1stQRCodeDescription: string;
+        PhotoLibrary_Label_Pro2ndQRCodeRead: string;
+        PhotoLibrary_Label_Pro3rdQRCodeRead: string;
+        PhotoLibrary_Label_Pro4thQRCodeRead: string;
+        Cmn_Dialog_Button_Ok: string;
+        Cmn_Dialog_Button_Close: string;
+        Error_Dialog_Message_Multiple_Error: string;
+        Error_Dialog_Message_Unknown_Error: string;
+    };
+}
+
+function openQrCodeReader(/** JSON.stringify(data: QrCodeReaderCameraOptions) */ data: string) {
     debug('openQRCodeReader called', data);
 
-    Promise.resolve().then(() => {
-        const base64EncodeText = '';
+    ipc.openQrCodeReader({
+        type: 'camera',
+        data,
+    }).then(result => {
+        const base64EncodeText = result;
         window.onQRCodeRead?.call(null, base64EncodeText);
     });
 }
 function closeQrCodeReader() {
-    //
+    ipc.closeQrCodeReader();
 }
 
-function openQrCodeReaderFromPhotoLibrary(data: string) {
+function openQrCodeReaderFromPhotoLibrary(/** JSON.stringify(data: QrCodeReaderPhotoLibraryOptions) */ data: string) {
     debug('openQRCodeReaderFromPhotoLibrary called', data);
 
-    Promise.resolve().then(() => {
-        const base64EncodeText = '';
+    ipc.openQrCodeReader({
+        type: 'photolibrary',
+        data,
+    }).then(result => {
+        const base64EncodeText = result;
         window.onQRCodeRead?.call(null, base64EncodeText);
     });
 }
 function closeQrCodeReaderFromPhotoLibrary() {
-    //
+    ipc.closeQrCodeReader();
 }
 
-function openQRCodeReaderForCheckin(data: string) {
-    //
+export interface QrCodeReaderCheckinOptions {
+    source: 'camera' | 'photo_library';
+}
+export type QrCodeReaderCheckinResult = {
+    status: 'SUCCEEDED';
+    /** base64 encoded data */
+    text: string;
+} | {
+    status: 'CANCELLED' | 'ERROR';
+    text: null;
+};
 
-    Promise.resolve().then(() => {
-        const base64EncodeText = '';
-        window.onQRCodeReadForCheckin?.call(null, base64EncodeText);
+function openQRCodeReaderForCheckin(/** JSON.stringify(data: QrCodeReaderCheckinOptions) */ data: string) {
+    debug('openQRCodeReaderForCheckin called', data);
+
+    ipc.openQrCodeReader({
+        type: 'checkin',
+        data,
+    }).then(result => {
+        window.onQRCodeReadForCheckin?.call(null, result);
     });
 }
-
-window.openQRCodeReader = openQrCodeReader;
-window.openQRCodeReaderFromPhotoLibrary = openQrCodeReaderFromPhotoLibrary;
-window.closeQRCodeReader = closeQrCodeReader;
-window.closeQRCodeReaderFromPhotoLibrary = closeQrCodeReaderFromPhotoLibrary;
-window.openQRCodeReaderForCheckin = openQRCodeReaderForCheckin;
 
 //
 // Other
 //
 
-function sendMessage(data: string) {
-    //
+export interface SendMessageOptions {
+    type: 'B_SHOW_SUCCESS' | 'B_SHOW_ERROR' | 'B_SET_INDEX';
+    message: string;
+}
+
+function sendMessage(/** JSON.stringify(data: SendMessageOptions) */ data: string) {
     debug('sendMessage called', data);
+    ipc.sendMessage(data);
 }
 
 function copyToClipboard(data: string) {
-    //
     debug('copyToClipboard called', data);
+    ipc.copyToClipboard(data);
 }
 
-function downloadImages(imagesJson: string) {
+export interface DownloadImagesRequest {
+    image_urls: string[];
+}
+
+function downloadImages(/** JSON.stringify(data: DownloadImagesRequest) */ imagesJson: string) {
     debug('downloadImages called', imagesJson);
+    ipc.downloadImages(imagesJson);
 }
 
 function completeLoading() {
@@ -201,9 +339,24 @@ function reloadExtension() {
     debug('reloadExtension called');
 }
 
-window.sendMessage = sendMessage;
-window.copyToClipboard = copyToClipboard;
-window.downloadImages = downloadImages;
-window.completeLoading = completeLoading;
-window.closeWebView = closeWebView;
-window.reloadExtension = reloadExtension;
+const api: WebServiceJsApi = {
+    invokeNativeShare,
+    invokeNativeShareUrl,
+    requestGameWebToken,
+    restorePersistentData,
+    storePersistentData,
+    openQRCodeReader: openQrCodeReader,
+    closeQRCodeReader: closeQrCodeReader,
+    openQRCodeReaderFromPhotoLibrary: openQrCodeReaderFromPhotoLibrary,
+    closeQRCodeReaderFromPhotoLibrary: closeQrCodeReaderFromPhotoLibrary,
+    sendMessage,
+    copyToClipboard,
+    openQRCodeReaderForCheckin: openQRCodeReaderForCheckin,
+    downloadImages,
+    completeLoading,
+    closeWebView,
+    reloadExtension,
+};
+
+window.jsBridge = api;
+Object.assign(window, api);

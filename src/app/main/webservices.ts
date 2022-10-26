@@ -4,13 +4,12 @@ import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import * as util from 'node:util';
 import createDebug from 'debug';
-import { app, BrowserWindow, dialog, IpcMainInvokeEvent, nativeTheme, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
 import CoralApi from '../../api/coral.js';
-import { dev } from '../../util/product.js';
 import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
 import { Store } from './index.js';
-import type { NativeShareRequest, NativeShareUrlRequest } from '../preload-webservice/znca-js-api.js';
+import type { DownloadImagesRequest, NativeShareRequest, NativeShareUrlRequest, QrCodeReaderCameraOptions, QrCodeReaderCheckinOptions, QrCodeReaderCheckinResult, QrCodeReaderPhotoLibraryOptions, SendMessageOptions } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { createWebServiceWindow } from './windows.js';
 import { askUserForUri } from './util.js';
@@ -201,6 +200,11 @@ export interface WebServiceData {
     url: string;
 }
 
+export interface QrCodeReaderOptions {
+    type: 'camera' | 'photolibrary' | 'checkin';
+    data: string;
+}
+
 export class WebServiceIpc {
     constructor(
         store: Store
@@ -251,7 +255,7 @@ export class WebServiceIpc {
         if (data.text) texts.push(data.text);
         if (data.hashtags) texts.push(data.hashtags.map(t => '#' + t).join(' '));
 
-        const imagepath = await this.downloadShareImage(data);
+        const imagepath = await this.downloadShareImage(data.image_url);
 
         const menu = new ShareMenu({
             texts,
@@ -261,9 +265,9 @@ export class WebServiceIpc {
         menu.popup({window: BrowserWindow.fromWebContents(event.sender)!});
     }
 
-    private async downloadShareImage(req: NativeShareRequest) {
+    private async downloadShareImage(image_url: string) {
         const dir = app.getPath('downloads');
-        const basename = path.basename(new URL(req.image_url).pathname);
+        const basename = path.basename(new URL(image_url).pathname);
         const extname = path.extname(basename);
         let filename;
         let i = 0;
@@ -274,9 +278,9 @@ export class WebServiceIpc {
             filename = i === 1 ? basename : basename.substr(0, basename.length - extname.length) + ' ' + i + extname;
         } while (await this.pathExists(path.join(dir, filename)));
 
-        debug('Downloading image %s to %s as %s', req.image_url, dir, filename);
+        debug('Downloading image %s to %s as %s', image_url, dir, filename);
 
-        const response = await fetch(req.image_url, {
+        const response = await fetch(image_url, {
             headers: {
                 'User-Agent': '',
             },
@@ -341,6 +345,83 @@ export class WebServiceIpc {
 
         const key = 'WebServicePersistentData.' + nsoAccount.user.nsaId + '.' + webservice.id;
         await store.storage.setItem(key, data);
+    }
+
+    async openQrCodeReader(event: IpcMainInvokeEvent, options: QrCodeReaderOptions): Promise<string> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        debug('openQrCodeReader', webservice.name, nsoAccount.user.name, options);
+
+        if (options.type === 'checkin') {
+            const request: QrCodeReaderCheckinOptions = JSON.parse(options.data);
+
+            const result: QrCodeReaderCheckinResult = {
+                status: 'ERROR',
+                text: null,
+            };
+
+            return JSON.stringify(result);
+        }
+
+        // camera/photolibrary
+        const request: QrCodeReaderCameraOptions | QrCodeReaderPhotoLibraryOptions = JSON.parse(options.data);
+
+        return '';
+    }
+
+    async closeQrCodeReader(event: IpcMainInvokeEvent): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        debug('closeQrCodeReader', webservice.name, nsoAccount.user.name);
+
+        //
+    }
+
+    async sendMessage(event: IpcMainInvokeEvent, json: string): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        const data: SendMessageOptions = JSON.parse(json);
+
+        debug('sendMessage', webservice.name, nsoAccount.user.name, data);
+
+        if (data.type === 'B_SHOW_SUCCESS') {
+            dialog.showMessageBox(BrowserWindow.fromWebContents(event.sender)!, {
+                message: data.message,
+            });
+        } else if (data.type === 'B_SHOW_ERROR') {
+            dialog.showMessageBox(BrowserWindow.fromWebContents(event.sender)!, {
+                type: 'error',
+                message: data.message,
+            });
+        } else {
+            debug('Unsupported message type', data.type);
+        }
+    }
+
+    async copyToClipboard(event: IpcMainInvokeEvent, data: string): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        debug('copyToClipboard', webservice.name, nsoAccount.user.name, data);
+
+        clipboard.writeText(data);
+    }
+
+    async downloadImages(event: IpcMainInvokeEvent, json: string): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        const data: DownloadImagesRequest = JSON.parse(json);
+
+        debug('downloadImages', webservice.name, nsoAccount.user.name, data);
+
+        for (const url of data.image_urls) {
+            const imagepath = await this.downloadShareImage(url);
+
+            new Notification({
+                title: 'Image saved from ' + webservice.name,
+                body: 'Image downloaded to ' + imagepath,
+                icon: nativeImage.createFromPath(imagepath),
+            }).show();
+        }
     }
 
     async completeLoading(event: IpcMainInvokeEvent): Promise<void> {

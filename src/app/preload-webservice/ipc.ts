@@ -1,7 +1,7 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
-import { WebServiceData } from '../main/webservices.js';
+import { QrCodeReaderOptions, WebServiceData } from '../main/webservices.js';
 
 const debug = createDebug('app:preload-webservice:ipc');
 
@@ -14,6 +14,11 @@ const ipc = {
     requestGameWebToken: () => ipcRenderer.invoke('nxapi:webserviceapi:requestGameWebToken') as Promise<string>,
     restorePersistentData: () => ipcRenderer.invoke('nxapi:webserviceapi:restorePersistentData') as Promise<string | undefined>,
     storePersistentData: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:storePersistentData', data) as Promise<void>,
+    openQrCodeReader: (data: QrCodeReaderOptions) => ipcRenderer.invoke('nxapi:webserviceapi:openQrCodeReader', data) as Promise<string>,
+    closeQrCodeReader: () => ipcRenderer.invoke('nxapi:webserviceapi:closeQrCodeReader') as Promise<void>,
+    sendMessage: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:sendMessage', data) as Promise<void>,
+    copyToClipboard: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:copyToClipboard', data) as Promise<void>,
+    downloadImages: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:downloadImages', data) as Promise<void>,
     completeLoading: () => ipcRenderer.invoke('nxapi:webserviceapi:completeLoading') as Promise<void>,
 };
 

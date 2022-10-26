@@ -2,7 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, LoginIte
 import * as util from 'node:util';
 import createDebug from 'debug';
 import { User } from 'discord-rpc';
-import openWebService, { WebServiceIpc, WebServiceValidationError } from './webservices.js';
+import openWebService, { QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
@@ -197,6 +197,11 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:webserviceapi:requestGameWebToken', e => webserviceipc.requestGameWebToken(e));
     ipcMain.handle('nxapi:webserviceapi:restorePersistentData', e => webserviceipc.restorePersistentData(e));
     ipcMain.handle('nxapi:webserviceapi:storePersistentData', (e, data: string) => webserviceipc.storePersistentData(e, data));
+    ipcMain.handle('nxapi:webserviceapi:openQrCodeReader', (e, data: QrCodeReaderOptions) => webserviceipc.openQrCodeReader(e, data));
+    ipcMain.handle('nxapi:webserviceapi:closeQrCodeReader', e => webserviceipc.closeQrCodeReader(e));
+    ipcMain.handle('nxapi:webserviceapi:sendMessage', (e, data: string) => webserviceipc.sendMessage(e, data));
+    ipcMain.handle('nxapi:webserviceapi:copyToClipboard', (e, data: string) => webserviceipc.copyToClipboard(e, data));
+    ipcMain.handle('nxapi:webserviceapi:downloadImages', (e, data: string) => webserviceipc.downloadImages(e, data));
     ipcMain.handle('nxapi:webserviceapi:completeLoading', e => webserviceipc.completeLoading(e));
 
     store.on('update-nintendo-accounts', () => sendToAllWindows('nxapi:accounts:shouldrefresh'));
