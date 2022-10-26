@@ -6,4 +6,6 @@ export * as festivals from './festivals.js';
 export * as festival from './festival.js';
 export * as battles from './battles.js';
 export * as dumpRecords from './dump-records.js';
+export * as dumpFests from './dump-fests.js';
+export * as dumpAlbum from './dump-album.js';
 export * as dumpResults from './dump-results.js';
