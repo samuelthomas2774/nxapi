@@ -441,6 +441,14 @@ function createApp(
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(response, replacer));
         } catch (err) {
+            if (err && 'type' in err && 'code' in err && (err as any).type === 'system') {
+                const code: string = (err as any).code;
+
+                if (code === 'ETIMEDOUT' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+                    res.setHeader('Retry-After', '60');
+                }
+            }
+
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({

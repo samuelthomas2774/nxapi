@@ -49,7 +49,7 @@ export default abstract class Loop {
     }
 
     private skip_interval_once = false;
-    private timeout_resolve: ((value: void) => void) | null = null;
+    protected timeout_resolve: ((value: void) => void) | null = null;
 
     skipIntervalInCurrentLoop() {
         debug('Skip update interval', this.is_loop_active);

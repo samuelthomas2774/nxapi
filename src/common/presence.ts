@@ -15,6 +15,7 @@ const debugSplatnet2 = createDebug('nxapi:nso:presence:splatnet2');
 
 const MAX_CONNECT_ATTEMPTS = Infinity; // 10
 const RECONNECT_INTERVAL = 5000; // 5 seconds
+const MAX_PROXY_AUTO_RETRY = 10;
 
 interface SavedPresence {
     presence: Presence;
@@ -529,17 +530,40 @@ export class ZncProxyDiscordPresence extends Loop {
     }
 
     async init() {
-        await this.update();
-
-        return LoopResult.OK;
+        return await this.update() ?? LoopResult.OK;
     }
 
-    async update() {
-        const [presence, user, data] = await getPresenceFromUrl(this.presence_url);
-        this.last_data = data;
+    protected proxy_temporary_errors = 0;
 
-        await this.discord.updatePresenceForDiscord(presence, user);
-        await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
+    async update() {
+        try {
+            const [presence, user, data] = await getPresenceFromUrl(this.presence_url);
+            this.last_data = data;
+            this.proxy_temporary_errors = 0;
+
+            await this.discord.updatePresenceForDiscord(presence, user);
+            await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
+        } catch (err) {
+            if (err instanceof ErrorResponse) {
+                const retry_after = err.response.headers.get('Retry-After');
+                if (!retry_after || !/^\d+$/.test(retry_after)) throw err;
+
+                debug('Received error response - suggests waiting %ds before retrying', retry_after, err.data);
+
+                this.proxy_temporary_errors++;
+                if (this.proxy_temporary_errors > MAX_PROXY_AUTO_RETRY) throw err;
+
+                // Still report the error to ZncDiscordPresenceClient to prevent presence being stuck
+                // on repeated errors
+                this.discord.onError(err);
+
+                await new Promise(rs => setTimeout(this.timeout_resolve = rs, parseInt(retry_after) * 1000));
+
+                return LoopResult.OK_SKIP_INTERVAL;
+            }
+
+            throw err;
+        }
     }
 
     async onStop() {
