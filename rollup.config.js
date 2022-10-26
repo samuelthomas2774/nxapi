@@ -220,9 +220,18 @@ const app_preload_webservice = {
 const app_browser = {
     input: 'src/app/browser/index.ts',
     output: {
-        file: 'dist/app/bundle/browser.js',
-        format: 'iife',
+        dir: 'dist/app/bundle',
+        format: 'es',
         sourcemap: true,
+        manualChunks(id) {
+            if (id.includes('node_modules')) {
+                return 'vendor';
+            }
+            if (id.startsWith('\0')) {
+                return 'internal';
+            }
+        },
+        chunkFileNames: 'chunk-[name].js',
     },
     plugins: [
         html({
@@ -230,9 +239,9 @@ const app_browser = {
         }),
         replace(replace_options),
         typescript({
+            outDir: 'dist/app/bundle/ts',
             noEmit: true,
             declaration: false,
-            module: 'es2022',
         }),
         commonjs({
             // the ".ts" extension is required
@@ -242,7 +251,13 @@ const app_browser = {
         nodePolyfill(),
         alias({
             entries: [
-                {find: 'react-native', replacement: path.resolve(__dirname, 'node_modules', 'react-native-web')},
+                // react-native-web has an ESM and CommonJS build. By default the ESM build is
+                // used when resolving react-native-web. For some reason this causes both versions
+                // to be included in the bundle, so here we explicitly use the CommonJS build.
+                {find: 'react-native', replacement: path.resolve(__dirname, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
+
+                // rollup-plugin-polyfill-node doesn't support node: module identifiers
+                {find: /^node:(.+)/, replacement: '$1'},
             ],
         }),
         nodeResolve({
