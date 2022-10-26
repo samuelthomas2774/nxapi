@@ -266,30 +266,54 @@ export default class SplatNet3Api {
 
     /** / -> /challenge -> /challenge/{id} */
     async getChallengeJourney(id: string) {
-        return this.persistedQuery(RequestId.JourneyQuery, {
+        const result = await this.persistedQuery(RequestId.JourneyQuery, {
             id,
         });
+
+        if (!result.data.journey) {
+            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /challenge -> /challenge/{id} -> pull-to-refresh */
     async getChallengeJourneyRefetch(id: string) {
-        return this.persistedQuery(RequestId.JourneyRefetchQuery, {
+        const result = await this.persistedQuery(RequestId.JourneyRefetchQuery, {
             id,
         });
+
+        if (!result.data.journey) {
+            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /challenge -> /challenge/{id} -> /challenge/{id}/*s */
     async getChallengeJourneyChallenges(id: string) {
-        return this.persistedQuery(RequestId.JourneyChallengeDetailQuery, {
+        const result = await this.persistedQuery(RequestId.JourneyChallengeDetailQuery, {
             journeyId: id,
         });
+
+        if (!result.data.journey) {
+            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /challenge -> /challenge/{id} -> /challenge/{id}/* -> pull-to-refresh */
     async getChallengeJourneyChallengesRefetch(id: string) {
-        return this.persistedQuery(RequestId.JourneyChallengeDetailRefetchQuery, {
+        const result = await this.persistedQuery(RequestId.JourneyChallengeDetailRefetchQuery, {
             journeyId: id,
         });
+
+        if (!result.data.journey) {
+            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /challenge -> /challenge/{id} -> /challenge/{id}/* -> support */
@@ -315,30 +339,54 @@ export default class SplatNet3Api {
 
     /** / -> /fest_record/{id} */
     async getFestDetail(id: string) {
-        return this.persistedQuery(RequestId.DetailFestRecordDetailQuery, {
+        const result = await this.persistedQuery(RequestId.DetailFestRecordDetailQuery, {
             festId: id,
         });
+
+        if (!result.data.fest) {
+            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /fest_record -> /fest_record/{id} -> pull-to-refresh */
     async getFestDetailRefetch(id: string) {
-        return this.persistedQuery(RequestId.DetailFestRefethQuery, {
+        const result = await this.persistedQuery(RequestId.DetailFestRefethQuery, {
             festId: id,
         });
+
+        if (!result.data.fest) {
+            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /fest_record -> /fest_record/{id} - not closed -> /fest_record/voting_status/{id} */
     async getFestVotingStatus(id: string) {
-        return this.persistedQuery(RequestId.DetailVotingStatusQuery, {
+        const result = await this.persistedQuery(RequestId.DetailVotingStatusQuery, {
             festId: id,
         });
+
+        if (!result.data.fest) {
+            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /fest_record -> /fest_record/{id} - not closed -> /fest_record/voting_status/{id} -> pull-to-refresh */
     async getFestVotingStatusRefetch(id: string) {
-        return this.persistedQuery(RequestId.DetailFestVotingStatusRefethQuery, {
+        const result = await this.persistedQuery(RequestId.DetailFestVotingStatusRefethQuery, {
             festId: id,
         });
+
+        if (!result.data.fest) {
+            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /fest_record -> /fest_record/{id} - not closed -> /fest_record/voting_status/{id} - not voted in game */
@@ -350,9 +398,15 @@ export default class SplatNet3Api {
 
     /** / -> /fest_record -> /fest_record/{id} - closed -> /fest_record/ranking/{id} */
     async getFestRanking(id: string) {
-        return this.persistedQuery(RequestId.DetailRankingQuery, {
+        const result = await this.persistedQuery(RequestId.DetailRankingQuery, {
             festId: id,
         });
+
+        if (!result.data.fest) {
+            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     //
@@ -371,9 +425,15 @@ export default class SplatNet3Api {
 
     /** / -> /gesotown -> /gesotown/{id} */
     async getSaleGearDetail(id: string) {
-        return this.persistedQuery(RequestId.SaleGearDetailQuery, {
+        const result = await this.persistedQuery(RequestId.SaleGearDetailQuery, {
             saleGearId: id,
         });
+
+        if (!result.data.saleGear) {
+            throw new ErrorResponse('[splatnet3] Sale gear not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /gesotown -> /gesotown/{id} -> order */
@@ -402,18 +462,24 @@ export default class SplatNet3Api {
 
     /** / -> /my_outfits -> /my_outfits/{id} */
     async getMyOutfitDetail(id: string) {
-        return this.persistedQuery(RequestId.MyOutfitDetailQuery, {
+        const result = await this.persistedQuery(RequestId.MyOutfitDetailQuery, {
             myOutfitId: id,
         });
+
+        if (!result.data.myOutfit) {
+            throw new ErrorResponse('[splatnet3] My outfit not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /my_outfits -> /my_outfits/{id / create} */
-    async getEquipmentFilters(id: string) {
+    async getEquipmentFilters() {
         return this.persistedQuery(RequestId.MyOutfitCommonDataFilteringConditionQuery, {});
     }
 
     /** / -> /my_outfits -> /my_outfits/{id / create} */
-    async getEquipment(id: string) {
+    async getEquipment() {
         return this.persistedQuery(RequestId.MyOutfitCommonDataEquipmentsQuery, {});
     }
 
@@ -459,9 +525,15 @@ export default class SplatNet3Api {
     async getReplaySearchResult(code: string) {
         if (!REPLAY_CODE_REGEX.test(code)) throw new Error('Invalid replay code');
 
-        return this.persistedQuery(RequestId.DownloadSearchReplayQuery, {
+        const result = await this.persistedQuery(RequestId.DownloadSearchReplayQuery, {
             code,
         });
+
+        if (!result.data.replay) {
+            throw new ErrorResponse('[splatnet3] Replay not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /replay -> enter code -> download */
@@ -487,9 +559,23 @@ export default class SplatNet3Api {
         return this.persistedQuery(RequestId.LatestBattleHistoriesQuery, {});
     }
 
+    /** / -> /history -> /history/latest -> pull-to-refresh */
+    async getLatestBattleHistoriesRefetch() {
+        return this.persistedQuery(RequestId.LatestBattleHistoriesRefetchQuery, {
+            fetchCurrentPlayer: true,
+        });
+    }
+
     /** / -> /history */
     async getRegularBattleHistories() {
         return this.persistedQuery(RequestId.RegularBattleHistoriesQuery, {});
+    }
+
+    /** / -> /history -> /history/regular -> pull-to-refresh */
+    async getRegularBattleHistoriesRefetch() {
+        return this.persistedQuery(RequestId.RegularBattleHistoriesRefetchQuery, {
+            fetchCurrentPlayer: true,
+        });
     }
 
     /** / -> /history */
@@ -497,23 +583,49 @@ export default class SplatNet3Api {
         return this.persistedQuery(RequestId.BankaraBattleHistoriesQuery, {});
     }
 
+    /** / -> /history -> /history/bankara -> pull-to-refresh */
+    async getBankaraBattleHistoriesRefetch() {
+        return this.persistedQuery(RequestId.BankaraBattleHistoriesRefetchQuery, {
+            fetchCurrentPlayer: true,
+        });
+    }
+
     /** / -> /history */
     async getPrivateBattleHistories() {
         return this.persistedQuery(RequestId.PrivateBattleHistoriesQuery, {});
     }
 
+    /** / -> /history -> /history/private -> pull-to-refresh */
+    async getPrivateBattleHistoriesRefetch() {
+        return this.persistedQuery(RequestId.PrivateBattleHistoriesRefetchQuery, {
+            fetchCurrentPlayer: true,
+        });
+    }
+
     /** / -> /history -> /history/detail/{id} */
     async getBattleHistoryDetail(id: string) {
-        return this.persistedQuery(RequestId.VsHistoryDetailQuery, {
+        const result = await this.persistedQuery(RequestId.VsHistoryDetailQuery, {
             vsResultId: id,
         });
+
+        if (!result.data.vsHistoryDetail) {
+            throw new ErrorResponse('[splatnet3] Battle history not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /history -> /history/detail/{id} -> pull-to-refresh */
     async getBattleHistoryDetailPagerRefetch(id: string) {
-        return this.persistedQuery(RequestId.VsHistoryDetailPagerRefetchQuery, {
+        const result = await this.persistedQuery(RequestId.VsHistoryDetailPagerRefetchQuery, {
             vsResultId: id,
         });
+
+        if (!result.data.vsHistoryDetail) {
+            throw new ErrorResponse('[splatnet3] Battle history not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /history -> /history/detail/* -> latest */
@@ -548,16 +660,28 @@ export default class SplatNet3Api {
 
     /** / -> /coop -> /coop/{id} */
     async getCoopHistoryDetail(id: string) {
-        return this.persistedQuery(RequestId.CoopHistoryDetailQuery, {
+        const result = await this.persistedQuery(RequestId.CoopHistoryDetailQuery, {
             coopHistoryDetailId: id,
         });
+
+        if (!result.data.coopHistoryDetail) {
+            throw new ErrorResponse('[splatnet3] Co-op history not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /coop -> /coop/{id} -> pull-to-refresh */
     async getCoopHistoryDetailRefetch(id: string) {
-        return this.persistedQuery(RequestId.CoopHistoryDetailRefetchQuery, {
+        const result = await this.persistedQuery(RequestId.CoopHistoryDetailRefetchQuery, {
             id,
         });
+
+        if (!result.data.node) {
+            throw new ErrorResponse('[splatnet3] Co-op history not found', result[ResponseSymbol], result);
+        }
+
+        return result;
     }
 
     /** / -> /coop -> /coop/* -> latest */

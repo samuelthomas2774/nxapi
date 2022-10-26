@@ -9,3 +9,4 @@ export * as dumpRecords from './dump-records.js';
 export * as dumpFests from './dump-fests.js';
 export * as dumpAlbum from './dump-album.js';
 export * as dumpResults from './dump-results.js';
+export * as monitor from './monitor.js';

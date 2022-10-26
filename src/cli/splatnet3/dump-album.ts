@@ -52,7 +52,7 @@ export async function dumpAlbumPhotos(
     refresh: PhotoAlbumResult | boolean = false
 ) {
     debug('Fetching photo album items');
-    console.warn('Fetching photo album items');
+    if (typeof refresh !== 'object') console.warn('Fetching photo album items');
 
     const results = refresh ?
         await splatnet.getPhotoAlbumRefetch() :
