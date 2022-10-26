@@ -137,6 +137,7 @@ export async function dumpResults(
     }, null, 4) + '\n', 'utf-8');
 
     const downloaded = [];
+    const latest_unique_ids = [];
     const skipped = [];
 
     // Reverse battle history order so oldest records are downloaded first
@@ -145,6 +146,45 @@ export async function dumpResults(
             const id_str = Buffer.from(item.id, 'base64').toString() || item.id;
             const match = id_str.match(/^VsHistoryDetail-(u-[0-9a-z]{20}):([A-Z]+):((\d{8,}T\d{6})_([0-9a-f-]{36}))$/);
             const id = match ? match[1] + '-' + match[3] : id_str;
+
+            latest_unique_ids.push(id);
+
+            const filename = 'splatnet3-result-' + id + '-' + RequestId.VsHistoryDetailQuery + '.json';
+            const file = path.join(directory, filename);
+
+            try {
+                await fs.stat(file);
+                skipped.push(item.id);
+            } catch (err) {
+                debug('Fetching battle result %s', id);
+                console.warn('Fetching battle result %s', id);
+                const result = await splatnet.getBattleHistoryDetail(item.id);
+                const pager = await splatnet.getBattleHistoryDetailPagerRefetch(item.id);
+
+                debug('Writing %s', filename);
+                await fs.writeFile(file, JSON.stringify({
+                    result: result.data.vsHistoryDetail,
+                    query: RequestId.VsHistoryDetailQuery,
+                    app_version: splatnet.version,
+                    be_version: result[ResponseSymbol].headers.get('x-be-version'),
+                }, null, 4) + '\n', 'utf-8');
+
+                downloaded.push(item.id);
+            }
+        }
+    }
+
+    for (const group of [
+        ...battles_regular.data.regularBattleHistories.historyGroups.nodes,
+        ...battles_anarchy.data.bankaraBattleHistories.historyGroups.nodes,
+        ...battles_private.data.privateBattleHistories.historyGroups.nodes,
+    ].reverse()) {
+        for (const item of [...group.historyDetails.nodes].reverse()) {
+            const id_str = Buffer.from(item.id, 'base64').toString() || item.id;
+            const match = id_str.match(/^VsHistoryDetail-(u-[0-9a-z]{20}):([A-Z]+):((\d{8,}T\d{6})_([0-9a-f-]{36}))$/);
+            const id = match ? match[1] + '-' + match[3] : id_str;
+
+            if (latest_unique_ids.includes(id)) continue;
 
             const filename = 'splatnet3-result-' + id + '-' + RequestId.VsHistoryDetailQuery + '.json';
             const file = path.join(directory, filename);
