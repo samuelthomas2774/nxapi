@@ -426,6 +426,67 @@ All SplatNet 3 commands may automatically request a web service token. This will
 nxapi splatnet3 user
 ```
 
+### Download history/hero/catalog records and stage/weapon stats
+
+```sh
+# Download user records to the splatnet3 directory in nxapi's data path
+nxapi splatnet3 dump-records
+# Download user records to data/splatnet3
+nxapi splatnet3 dump-records data/splatnet3
+
+# Only download history records
+nxapi splatnet3 dump-records --history
+# Only download hero records
+nxapi splatnet3 dump-records --hero
+# Only download catalog records
+nxapi splatnet3 dump-records --catalog
+# Only download stage stats
+nxapi splatnet3 dump-records --stage
+# Only download weapon stats
+nxapi splatnet3 dump-records --weapon
+```
+
+### Download Splatfest records
+
+```sh
+# Download Splatfest records to the splatnet3 directory in nxapi's data path
+nxapi splatnet3 dump-fests
+# Download Splatfest records to data/splatnet3
+nxapi splatnet3 dump-fests data/splatnet3
+
+# Include rankings
+nxapi splatnet3 dump-fests --include-rankings
+```
+
+### Download photo album items
+
+```sh
+# Download photos to the splatnet3 directory in nxapi's data path
+nxapi splatnet3 dump-album
+# Download photos to data/splatnet3
+nxapi splatnet3 dump-album data/splatnet3
+```
+
+### Download history/hero/catalog records and stage/weapon stats
+
+```sh
+# Download user records to the splatnet3 directory in nxapi's data path
+nxapi splatnet3 dump-records
+# Download user records to data/splatnet3
+nxapi splatnet3 dump-records data/splatnet3
+
+# Only download history records
+nxapi splatnet3 dump-records --history
+# Only download hero records
+nxapi splatnet3 dump-records --hero
+# Only download catalog records
+nxapi splatnet3 dump-records --catalog
+# Only download stage stats
+nxapi splatnet3 dump-records --stage
+# Only download weapon stats
+nxapi splatnet3 dump-records --weapon
+```
+
 ### Download battle/Salmon Run results
 
 ```sh
@@ -436,9 +497,46 @@ nxapi splatnet3 dump-results
 nxapi splatnet3 dump-results data/splatnet3
 
 # Only download battle results
-nxapi splatnet3 dump-results --no-coop
+nxapi splatnet3 dump-results --battles
 # Only download Salmon Run results
-nxapi splatnet3 dump-results --no-battles
+nxapi splatnet3 dump-results --coop
+
+# Additionally download history records
+nxapi splatnet3 dump-results --include-history
+# Additionally download catalog records
+nxapi splatnet3 dump-results --include-catalog
+```
+
+### Monitor SplatNet 3 for new user records/battle/Salmon Run results
+
+This will constantly check SplatNet 3 for new data.
+
+```sh
+# Watch for new battle and Salmon Run results and photo album items and download them
+# to the splatnet3 directory in nxapi's data path
+nxapi splatnet3 monitor
+
+# Watch for new battle and Salmon Run results and download them to data/splatnet3
+nxapi splatnet3 monitor data/splatnet3
+
+# Download history records when new battle/coop results are available
+nxapi splatnet3 monitor --include-history
+# Download catalog records when new battle/coop results are available
+nxapi splatnet3 monitor --include-catalog
+# Download stage stats when new battle results are available
+nxapi splatnet3 monitor --include-stage
+# Download weapon stats when new battle results are available
+nxapi splatnet3 monitor --include-weapon
+
+# Only monitor battle results
+nxapi splatnet3 monitor --battles
+# Only monitor Salmon Run results
+nxapi splatnet3 monitor --coop
+# Only monitor photo album items
+nxapi splatnet3 monitor --album
+
+# Set update interval to 1800 seconds (30 minutes)
+nxapi splatnet3 monitor --update-interval 1800
 ```
 
 ### Friends

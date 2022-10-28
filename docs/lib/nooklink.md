@@ -1,7 +1,7 @@
 `nxapi/nooklink`
 ---
 
-NookLink is more complex that SplatNet 2 as it supports multiple users linked to the same network account.
+NookLink is more complex than other web services as it supports multiple users linked to the same network account:
 
 - `NooklinkApi` is used at NSA-level, and is solely used to list available NookLink users and authenticate to NookLink at ACNH-level.
 - `NooklinkUserApi` is used at ACNH-level, and is used to perform all other actions in the NookLink web app.

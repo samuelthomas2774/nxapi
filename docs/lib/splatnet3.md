@@ -120,4 +120,4 @@ splatnet.onTokenShouldRenew = async (remaining: number, response: Response) => {
 
 ### API types
 
-`nxapi/splatnet3` exports all API types from [src/api/splatnet3-types.ts](../../src/api/splatnet3-types.ts).
+SplatNet 3 types are available from [splatnet3-types](https://gitlab.fancy.org.uk/samuel/splatnet3-types) ([GitHub](https://github.com/nintendoapis/splatnet3-types)).
