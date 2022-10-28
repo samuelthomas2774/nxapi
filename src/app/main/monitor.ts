@@ -8,9 +8,9 @@ import { LoopResult } from '../../util/loop.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { App } from './index.js';
 import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
-import { DiscordPresence, DiscordPresencePlayTime, ErrorResult, ExternalMonitor, ExternalMonitorConstructor } from '../../discord/types.js';
+import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
-import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/titles/nintendo/splatoon3.js';
+import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';
 
 const debug = createDebug('app:main:monitor');
 

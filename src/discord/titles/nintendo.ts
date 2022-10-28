@@ -1,5 +1,5 @@
 import { Title } from '../types.js';
-import SplatNet3Monitor, { callback as SplatNet3ActivityCallback } from './nintendo/splatoon3.js';
+import SplatNet3Monitor, { callback as SplatNet3ActivityCallback } from '../monitor/splatoon3.js';
 
 export const titles: Title[] = [
     {

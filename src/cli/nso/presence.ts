@@ -6,7 +6,7 @@ import { getToken } from '../../common/auth/coral.js';
 import { DiscordPresencePlayTime } from '../../discord/types.js';
 import { handleEnableSplatNet2Monitoring, TerminalNotificationManager } from './notify.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
-import SplatNet3Monitor, { getConfigFromArgv as getSplatNet3MonitorConfigFromArgv } from '../../discord/titles/nintendo/splatoon3.js';
+import SplatNet3Monitor, { getConfigFromArgv as getSplatNet3MonitorConfigFromArgv } from '../../discord/monitor/splatoon3.js';
 
 const debug = createDebug('cli:nso:presence');
 const debugProxy = createDebug('cli:nso:presence:proxy');

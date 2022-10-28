@@ -2,16 +2,18 @@ import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
-import { Game } from '../../../api/coral-types.js';
-import SplatNet3Api from '../../../api/splatnet3.js';
-import { DiscordPresenceExternalMonitorsConfiguration } from '../../../app/common/types.js';
-import { Arguments } from '../../../cli/nso/presence.js';
-import { getBulletToken, SavedBulletToken } from '../../../common/auth/splatnet3.js';
-import { ExternalMonitorPresenceInterface, ZncProxyDiscordPresence } from '../../../common/presence.js';
-import { EmbeddedLoop, LoopResult } from '../../../util/loop.js';
-import { ArgumentsCamelCase } from '../../../util/yargs.js';
-import { DiscordPresenceContext, ErrorResult } from '../../types.js';
-import { product } from '../../../util/product.js';
+import { Game } from '../../api/coral-types.js';
+import SplatNet3Api from '../../api/splatnet3.js';
+import { DiscordPresenceExternalMonitorsConfiguration } from '../../app/common/types.js';
+import { Arguments } from '../../cli/nso/presence.js';
+import { getBulletToken, SavedBulletToken } from '../../common/auth/splatnet3.js';
+import { ExternalMonitorPresenceInterface, ZncProxyDiscordPresence } from '../../common/presence.js';
+import { EmbeddedLoop, LoopResult } from '../../util/loop.js';
+import { ArgumentsCamelCase } from '../../util/yargs.js';
+import { DiscordPresenceContext, ErrorResult } from '../types.js';
+import { product } from '../../util/product.js';
+
+type CoopSchedule_schedule = Pick<CoopSchedule, 'startTime' | 'endTime' | 'setting'>;
 
 const debug = createDebug('nxapi:discord:splatnet3');
 
@@ -32,7 +34,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     fest_schedule: VsSchedule_fest | null = null;
     league_schedule: VsSchedule_league | null = null;
     x_schedule: VsSchedule_xMatch | null = null;
-    coop_schedule: Pick<CoopSchedule, 'startTime' | 'endTime' | 'setting'> | null = null;
+    coop_schedule: CoopSchedule_schedule | null = null;
     fest: Fest_schedule | null = null;
     fest_team_voting_status: FestTeam_votingStatus | null = null;
     fest_team: FestTeam_schedule | null = null;
@@ -328,7 +330,10 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
         if (coop_setting) {
             const coop_stage_image = new URL(coop_setting.coopStage.image.url);
             const match = coop_stage_image.pathname.match(/^\/resources\/prod\/(.+)$/);
-            const proxy_stage_image = match ? 'https://splatoon3.ink/assets/splatnet/' + match[1] : null;
+            const proxy_stage_image =
+                coop_stage_image.host === 'splatoon3.ink' ? coop_stage_image.href :
+                match ? 'https://splatoon3.ink/assets/splatnet/' + match[1] :
+                null;
 
             if (proxy_stage_image) {
                 activity.largeImageKey = proxy_stage_image;
