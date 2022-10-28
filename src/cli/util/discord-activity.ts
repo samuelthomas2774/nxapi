@@ -90,7 +90,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             readonly [Presence, CurrentUser | Friend | undefined, unknown] :
         await getPresenceFromCoral(argv);
 
-    const discordpresence = getActivityFromPresence(argv, presence, user, friendcode, activeevent);
+    const discordpresence = getActivityFromPresence(argv, presence, user, friendcode, activeevent, response);
     const application = argv.showDiscordApplication ?
         discordpresence ? await getDiscordApplicationRpc(discordpresence.id) : null : undefined;
 
@@ -175,6 +175,7 @@ function getActivityFromPresence(
     user?: CurrentUser | Friend,
     friendcode?: CurrentUser['links']['friendCode'],
     activeevent?: ActiveEvent,
+    proxy_response?: unknown,
 ) {
     const online = presence?.state === PresenceState.ONLINE || presence?.state === PresenceState.PLAYING;
 
@@ -203,6 +204,7 @@ function getActivityFromPresence(
         activeevent,
         show_play_time,
         // znc_discord_presence: this,
+        proxy_response,
         nsaid: argv.friendNsaid ?? user?.nsaId,
         user,
     };

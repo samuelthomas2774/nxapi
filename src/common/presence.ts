@@ -94,6 +94,7 @@ class ZncDiscordPresenceClient {
             activeevent: this.m.show_active_event ? activeevent : undefined,
             show_play_time: this.m.show_play_time,
             znc_discord_presence: this.m,
+            proxy_response: (this.m) instanceof ZncProxyDiscordPresence ? this.m.last_data : undefined,
             monitors: [...this.monitors.values()],
             nsaid: this.m.presence_user!,
             user,

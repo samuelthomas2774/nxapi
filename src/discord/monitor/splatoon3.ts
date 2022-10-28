@@ -232,9 +232,7 @@ interface PresenceUrlResponse {
 
 export function callback(activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) {
     const monitor = context?.monitors?.find(m => m instanceof SplatNet3Monitor) as SplatNet3Monitor | undefined;
-    const presence_proxy_data =
-        context?.znc_discord_presence instanceof ZncProxyDiscordPresence ?
-        context.znc_discord_presence.last_data as PresenceUrlResponse : null;
+    const presence_proxy_data = context?.proxy_response ? context.proxy_response as PresenceUrlResponse : null;
 
     const friend = presence_proxy_data?.splatoon3 ?? monitor?.friend;
     const fest = presence_proxy_data?.splatoon3_fest ?? monitor?.fest;
