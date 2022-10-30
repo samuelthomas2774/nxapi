@@ -13,14 +13,7 @@ export class HttpServer {
                 if (result) this.sendJsonResponse(res, result);
                 else res.end();
             } catch (err) {
-                if (err instanceof ResponseError) {
-                    err.sendResponse(req, res);
-                } else {
-                    this.sendJsonResponse(res, {
-                        error: err,
-                        error_message: (err as Error).message,
-                    }, 500);
-                }
+                this.handleRequestError(req, res, err);
             }
         };
     }
@@ -34,14 +27,7 @@ export class HttpServer {
 
                 next();
             } catch (err) {
-                if (err instanceof ResponseError) {
-                    err.sendResponse(req, res);
-                } else {
-                    this.sendJsonResponse(res, {
-                        error: err,
-                        error_message: (err as Error).message,
-                    }, 500);
-                }
+                this.handleRequestError(req, res, err);
             }
         };
     }
@@ -51,6 +37,33 @@ export class HttpServer {
         res.setHeader('Content-Type', 'application/json');
         res.end(res.req.headers['accept']?.match(/\/html\b/i) ?
             JSON.stringify(data, null, 4) : JSON.stringify(data));
+    }
+
+    protected handleRequestError(req: Request, res: Response, err: unknown) {
+        if (err instanceof ErrorResponse) {
+            const retry_after = err.response.headers.get('Retry-After');
+
+            if (retry_after && /^\d+$/.test(retry_after)) {
+                res.setHeader('Retry-After', retry_after);
+            }
+        }
+
+        if (err && 'type' in err && 'code' in err && (err as any).type === 'system') {
+            const code: string = (err as any).code;
+
+            if (code === 'ETIMEDOUT' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+                res.setHeader('Retry-After', '60');
+            }
+        }
+
+        if (err instanceof ResponseError) {
+            err.sendResponse(req, res);
+        } else {
+            this.sendJsonResponse(res, {
+                error: err,
+                error_message: (err as Error).message,
+            }, 500);
+        }
     }
 }
 

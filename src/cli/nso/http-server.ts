@@ -193,14 +193,7 @@ class Server extends HttpServer {
                 if (result) this.sendJsonResponse(res, result);
                 else res.end();
             } catch (err) {
-                if (err instanceof ResponseError) {
-                    err.sendResponse(req, res);
-                } else {
-                    this.sendJsonResponse(res, {
-                        error: err,
-                        error_message: (err as Error).message,
-                    }, 500);
-                }
+                this.handleRequestError(req, res, err);
             }
         };
     }
