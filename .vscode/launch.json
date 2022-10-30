@@ -25,6 +25,28 @@
                 "DEBUG_COLORS": "1",
                 "FORCE_COLOR": "3"
             },
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "name": "Coral API proxy",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "bin/nxapi.js",
+            "args": [
+                "nso",
+                "http-server",
+                "--listen",
+                "[::1]:8080",
+                "--no-require-token"
+            ],
+            "outputCapture": "std",
+            "env": {
+                "DEBUG": "*,-express:*,-body-parser:*",
+                "DEBUG_COLORS": "1",
+                "FORCE_COLOR": "3"
+            },
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

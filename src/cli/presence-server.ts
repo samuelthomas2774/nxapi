@@ -1,8 +1,8 @@
 import * as net from 'node:net';
 import createDebug from 'debug';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import * as persist from 'node-persist';
-import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, Friend as SplatNetFriend, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, XMatchSetting } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, Friend as SplatNetFriend, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsMode, XMatchSetting } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -15,6 +15,8 @@ import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
 import SplatNet3Api from '../api/splatnet3.js';
 
 const debug = createDebug('cli:presence-server');
+
+type CoopSetting_schedule = Pick<CoopSetting, '__typename' | 'coopStage' | 'weapons'>;
 
 export const command = 'presence-server';
 export const desc = 'Starts a HTTP server to fetch presence data from Coral and SplatNet 3';
@@ -73,10 +75,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         return new SplatNet3User(splatnet, data, friends);
     }) : null;
 
-    const app = createApp(
-        storage, coral_users, splatnet3_users, user_naids,
-        argv.allowAllUsers, argv.updateInterval * 1000
-    );
+    const server = new Server(storage, coral_users, splatnet3_users, user_naids);
+    server.allow_all_users = argv.allowAllUsers;
+    server.update_interval = argv.updateInterval * 1000;
+    const app = server.app;
 
     for (const address of argv.listen) {
         const [host, port] = parseListenAddress(address);
@@ -170,295 +172,317 @@ export class SplatNet3User {
     }
 }
 
-function createApp(
-    storage: persist.LocalStorage,
-    coral_users: Users<CoralUser>,
-    splatnet3_users: Users<SplatNet3User> | null,
-    user_ids: string[],
-    allow_all_users = false,
-    update_interval = 30 * 1000
-) {
-    const app = express();
+class Server {
+    allow_all_users = false;
+    update_interval = 30 * 1000;
 
-    app.use('/api/presence', (req, res, next) => {
-        console.log('[%s] %s %s HTTP/%s from %s, port %d%s, %s',
-            new Date(), req.method, req.url, req.httpVersion,
-            req.socket.remoteAddress, req.socket.remotePort,
-            req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
-            req.headers['user-agent']);
+    app: express.Express;
 
-        res.setHeader('Server', product + ' presence-server');
+    constructor(
+        readonly storage: persist.LocalStorage,
+        readonly coral_users: Users<CoralUser>,
+        readonly splatnet3_users: Users<SplatNet3User> | null,
+        readonly user_ids: string[],
+    ) {
+        const app = this.app = express();
 
-        next();
-    });
+        app.use('/api/presence', (req, res, next) => {
+            console.log('[%s] %s %s HTTP/%s from %s, port %d%s, %s',
+                new Date(), req.method, req.url, req.httpVersion,
+                req.socket.remoteAddress, req.socket.remotePort,
+                req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
+                req.headers['user-agent']);
 
-    app.get('/api/presence', async (req, res) => {
-        if (!allow_all_users) {
-            res.statusCode = 403;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                error: 'forbidden',
-            }));
-            return;
+            res.setHeader('Server', product + ' presence-server');
+
+            next();
+        });
+
+        app.get('/api/presence', this.createApiRequestHandler((req, res) =>
+            this.handleAllUsersRequest(req, res)));
+        app.get('/api/presence/:user', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceRequest(req, res, req.params.user)));
+    }
+
+    sendJsonResponse(res: Response, data: {}, status?: number) {
+        if (status) res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(res.req.headers['accept']?.match(/\/html\b/i) ?
+            JSON.stringify(data, replacer, 4) : JSON.stringify(data, replacer));
+    }
+
+    createApiRequestHandler(callback: (req: Request, res: Response) => Promise<{} | void>) {
+        return async (req: Request, res: Response) => {
+            try {
+                const result = await callback.call(null, req, res);
+
+                if (result) this.sendJsonResponse(res, result);
+                else res.end();
+            } catch (err) {
+                if (err instanceof ResponseError) {
+                    err.sendResponse(req, res);
+                } else {
+                    this.sendJsonResponse(res, {
+                        error: err,
+                        error_message: (err as Error).message,
+                    }, 500);
+                }
+            }
+        };
+    }
+
+    async handleAllUsersRequest(req: Request, res: Response) {
+        if (!this.allow_all_users) {
+            throw new ResponseError(403, 'forbidden');
         }
 
-        try {
-            const include_splatnet3 = splatnet3_users && req.query['include-splatoon3'] === '1';
+        const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
-            const result: (Friend & {
-                splatoon3?: SplatNetFriend | null;
-                splatoon3_fest_team?: FestTeam_votingStatus | null;
-            })[] = [];
+        const result: (Friend & {
+            splatoon3?: SplatNetFriend | null;
+            splatoon3_fest_team?: FestTeam_votingStatus | null;
+        })[] = [];
 
-            const users = await Promise.all(user_ids.map(async id => {
-                const token = await storage.getItem('NintendoAccountToken.' + id);
-                const user = await coral_users.get(token);
-                user.update_interval = update_interval;
+        const users = await Promise.all(this.user_ids.map(async id => {
+            const token = await this.storage.getItem('NintendoAccountToken.' + id);
+            const user = await this.coral_users.get(token);
+            user.update_interval = this.update_interval;
+            return user;
+        }));
+
+        for (const user of users) {
+            const friends = await user.getFriends();
+
+            for (const friend of friends) {
+                const index = result.findIndex(f => f.nsaId === friend.nsaId);
+                if (index >= 0) {
+                    const match = result[index];
+
+                    if (match.presence.updatedAt && !friend.presence.updatedAt) continue;
+                    if (match.presence.updatedAt >= friend.presence.updatedAt) continue;
+
+                    result.splice(index, 1);
+                }
+
+                result.push(include_splatnet3 ? Object.assign(friend, {splatoon3: null}) : friend);
+            }
+        }
+
+        if (this.splatnet3_users && include_splatnet3) {
+            const users = await Promise.all(this.user_ids.map(async id => {
+                const token = await this.storage.getItem('NintendoAccountToken.' + id);
+                const user = await this.splatnet3_users!.get(token);
+                user.update_interval = this.update_interval;
                 return user;
             }));
 
             for (const user of users) {
-                const friends = await user.getFriends();
-
-                for (const friend of friends) {
-                    const index = result.findIndex(f => f.nsaId === friend.nsaId);
-                    if (index >= 0) {
-                        const match = result[index];
-
-                        if (match.presence.updatedAt && !friend.presence.updatedAt) continue;
-                        if (match.presence.updatedAt >= friend.presence.updatedAt) continue;
-
-                        result.splice(index, 1);
-                    }
-
-                    result.push(include_splatnet3 ? Object.assign(friend, {splatoon3: null}) : friend);
-                }
-            }
-
-            if (splatnet3_users && include_splatnet3) {
-                const users = await Promise.all(user_ids.map(async id => {
-                    const token = await storage.getItem('NintendoAccountToken.' + id);
-                    const user = await splatnet3_users.get(token);
-                    user.update_interval = update_interval;
-                    return user;
-                }));
-
-                for (const user of users) {
-                    const friends = await user.getFriends();
-                    const fest_vote_status = await user.getCurrentFestVotes();
-
-                    for (const friend of friends) {
-                        const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
-                            .replace(/^Friend-([0-9a-f]{16})$/, '$1');
-                        const match = result.find(f => f.nsaId === friend_nsaid);
-                        if (!match) continue;
-
-                        match.splatoon3 = friend;
-
-                        if (fest_vote_status) {
-                            for (const team of fest_vote_status.teams) {
-                                if (!team.votes || !team.preVotes) continue;
-
-                                for (const player of team.votes.nodes) {
-                                    if (player.userIcon.url !== friend.userIcon.url) continue;
-
-                                    match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.VOTED);
-                                    break;
-                                }
-
-                                for (const player of team.preVotes.nodes) {
-                                    if (player.userIcon.url !== friend.userIcon.url) continue;
-
-                                    match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.PRE_VOTED);
-                                    break;
-                                }
-                            }
-
-                            if (!match.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
-                                match.splatoon3_fest_team = null;
-                            }
-                        }
-                    }
-                }
-            }
-
-            result.sort((a, b) => b.presence.updatedAt - a.presence.updatedAt);
-
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({result}, replacer));
-        } catch (err) {
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                error: err,
-                error_message: (err as Error).message,
-            }));
-        }
-    });
-
-    app.get('/api/presence/:user', async (req, res) => {
-        try {
-            const include_splatnet3 = splatnet3_users && req.query['include-splatoon3'] === '1';
-
-            let match_coral: Friend | null = null;
-            let match_user_id: string | null = null;
-            let match_splatnet3: SplatNetFriend | null = null;
-            let match_splatnet3_fest_team: FestTeam_schedule | null | undefined = undefined;
-            let match_splatnet3_fest_team_vote_status: FestTeam_votingStatus | null | undefined = undefined;
-
-            const additional_response_data: {
-                splatoon3_vs_setting?:
-                    RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
-                    LeagueMatchSetting | XMatchSetting | null;
-                splatoon3_coop_setting?: Pick<CoopSetting, '__typename' | 'coopStage' | 'weapons'> | null;
-                splatoon3_fest?: Fest_schedule | null;
-            } = {};
-
-            for (const user_naid of user_ids) {
-                const token = await storage.getItem('NintendoAccountToken.' + user_naid);
-                const user = await coral_users.get(token);
-                user.update_interval = update_interval;
-
-                const has_friend = user.friends.result.friends.find(f => f.nsaId === req.params.user);
-                if (!has_friend) continue;
-
-                const friends = await user.getFriends();
-                const friend = friends.find(f => f.nsaId === req.params.user);
-                if (!friend) continue;
-
-                match_coral = friend;
-                match_user_id = user_naid;
-
-                // Keep searching if the authenticated user doesn't have permission to view this user's presence
-                if (friend.presence.updatedAt) break;
-            }
-
-            if (!match_coral) {
-                res.statusCode = 404;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({error: 'not_found'}));
-                return;
-            }
-
-            if (splatnet3_users && include_splatnet3) {
-                const token = await storage.getItem('NintendoAccountToken.' + match_user_id);
-                const user = await splatnet3_users.get(token);
-                user.update_interval = update_interval;
-
                 const friends = await user.getFriends();
                 const fest_vote_status = await user.getCurrentFestVotes();
 
                 for (const friend of friends) {
                     const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
                         .replace(/^Friend-([0-9a-f]{16})$/, '$1');
-                    if (match_coral.nsaId !== friend_nsaid) continue;
+                    const match = result.find(f => f.nsaId === friend_nsaid);
+                    if (!match) continue;
 
-                    match_splatnet3 = friend;
+                    match.splatoon3 = friend;
 
                     if (fest_vote_status) {
-                        const schedules = await user.getSchedules();
-
                         for (const team of fest_vote_status.teams) {
-                            const schedule_team = schedules.currentFest?.teams.find(t => t.id === team.id);
-                            if (!schedule_team || !team.votes || !team.preVotes) continue; // Shouldn't ever happen
+                            if (!team.votes || !team.preVotes) continue;
 
                             for (const player of team.votes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
-                                match_splatnet3_fest_team = createFestScheduleTeam(schedule_team, FestVoteState.VOTED);
-                                match_splatnet3_fest_team_vote_status = createFestVoteTeam(team, FestVoteState.VOTED);
+                                match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.VOTED);
                                 break;
                             }
 
                             for (const player of team.preVotes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
-                                match_splatnet3_fest_team = createFestScheduleTeam(schedule_team, FestVoteState.VOTED);
-                                match_splatnet3_fest_team_vote_status = createFestVoteTeam(team, FestVoteState.PRE_VOTED);
+                                match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.PRE_VOTED);
                                 break;
                             }
                         }
 
-                        if (!match_splatnet3_fest_team && fest_vote_status.undecidedVotes) {
-                            match_splatnet3_fest_team = null;
+                        if (!match.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
+                            match.splatoon3_fest_team = null;
                         }
                     }
-
-                    if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
-                        friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
-                    ) {
-                        const schedules = await user.getSchedules();
-
-                        const vs_setting =
-                            friend.vsMode.mode === 'REGULAR' ? getSchedule(schedules.regularSchedules)?.regularMatchSetting :
-                            friend.vsMode.mode === 'BANKARA' ?
-                                friend.vsMode.id === 'VnNNb2RlLTI=' ?
-                                    getSchedule(schedules.bankaraSchedules)?.bankaraMatchSettings
-                                        ?.find(s => s.mode === BankaraMatchMode.CHALLENGE) :
-                                friend.vsMode.id === 'VnNNb2RlLTUx' ?
-                                    getSchedule(schedules.bankaraSchedules)?.bankaraMatchSettings
-                                        ?.find(s => s.mode === BankaraMatchMode.OPEN) :
-                                null :
-                            friend.vsMode.mode === 'FEST' ? getSchedule(schedules.festSchedules)?.festMatchSetting :
-                            friend.vsMode.mode === 'LEAGUE' ? getSchedule(schedules.leagueSchedules)?.leagueMatchSetting :
-                            friend.vsMode.mode === 'X_MATCH' ? getSchedule(schedules.xSchedules)?.xMatchSetting :
-                            null;
-
-                        additional_response_data.splatoon3_vs_setting = vs_setting ?? null;
-
-                        if (friend.vsMode.mode === 'FEST') {
-                            additional_response_data.splatoon3_fest = schedules.currentFest ?
-                                createScheduleFest(schedules.currentFest,
-                                    match_splatnet3_fest_team?.id, match_splatnet3_fest_team?.myVoteState) : null;
-                        }
-                    }
-
-                    if (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
-                        friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
-                    ) {
-                        const schedules = await user.getSchedules();
-
-                        const coop_setting =
-                            getSchedule(schedules.coopGroupingSchedule.regularSchedules)?.setting;
-
-                        additional_response_data.splatoon3_coop_setting = coop_setting ?? null;
-                    }
-
-                    break;
                 }
             }
-
-            const response = {
-                friend: match_coral,
-                splatoon3: include_splatnet3 ? match_splatnet3 : undefined,
-                splatoon3_fest_team: include_splatnet3 ? match_splatnet3_fest_team ? {
-                    ...match_splatnet3_fest_team,
-                    ...match_splatnet3_fest_team_vote_status,
-                } : match_splatnet3_fest_team : undefined,
-                ...additional_response_data,
-            };
-
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(response, replacer));
-        } catch (err) {
-            if (err && 'type' in err && 'code' in err && (err as any).type === 'system') {
-                const code: string = (err as any).code;
-
-                if (code === 'ETIMEDOUT' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
-                    res.setHeader('Retry-After', '60');
-                }
-            }
-
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-                error: err,
-                error_message: (err as Error).message,
-            }));
         }
-    });
 
-    return app;
+        result.sort((a, b) => b.presence.updatedAt - a.presence.updatedAt);
+
+        return {result};
+    }
+
+    async handlePresenceRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
+
+        let match_coral: Friend | null = null;
+        let match_user_id: string | null = null;
+
+        for (const user_naid of this.user_ids) {
+            const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);
+            const user = await this.coral_users.get(token);
+            user.update_interval = this.update_interval;
+
+            const has_friend = user.friends.result.friends.find(f => f.nsaId === presence_user_nsaid);
+            if (!has_friend) continue;
+
+            const friends = await user.getFriends();
+            const friend = friends.find(f => f.nsaId === presence_user_nsaid);
+            if (!friend) continue;
+
+            match_coral = friend;
+            match_user_id = user_naid;
+
+            // Keep searching if the authenticated user doesn't have permission to view this user's presence
+            if (friend.presence.updatedAt) break;
+        }
+
+        if (!match_coral) {
+            throw new ResponseError(404, 'not_found');
+        }
+
+        const response: {
+            friend: Friend;
+            splatoon3?: SplatNetFriend | null;
+            splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
+            splatoon3_vs_setting?:
+                RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
+                LeagueMatchSetting | XMatchSetting | null;
+            splatoon3_coop_setting?: CoopSetting_schedule | null;
+            splatoon3_fest?: Fest_schedule | null;
+        } = {
+            friend: match_coral,
+        };
+
+        if (this.splatnet3_users && include_splatnet3) {
+            const token = await this.storage.getItem('NintendoAccountToken.' + match_user_id);
+            const user = await this.splatnet3_users.get(token);
+            user.update_interval = this.update_interval;
+
+            const friends = await user.getFriends();
+            const fest_vote_status = await user.getCurrentFestVotes();
+
+            for (const friend of friends) {
+                const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
+                    .replace(/^Friend-([0-9a-f]{16})$/, '$1');
+                if (match_coral.nsaId !== friend_nsaid) continue;
+
+                response.splatoon3 = friend;
+
+                if (fest_vote_status) {
+                    const schedules = await user.getSchedules();
+
+                    for (const team of fest_vote_status.teams) {
+                        const schedule_team = schedules.currentFest?.teams.find(t => t.id === team.id);
+                        if (!schedule_team || !team.votes || !team.preVotes) continue; // Shouldn't ever happen
+
+                        for (const player of team.votes.nodes) {
+                            if (player.userIcon.url !== friend.userIcon.url) continue;
+
+                            response.splatoon3_fest_team = {
+                                ...createFestScheduleTeam(schedule_team, FestVoteState.VOTED),
+                                ...createFestVoteTeam(team, FestVoteState.VOTED),
+                            };
+                            break;
+                        }
+
+                        for (const player of team.preVotes.nodes) {
+                            if (player.userIcon.url !== friend.userIcon.url) continue;
+
+                            response.splatoon3_fest_team = {
+                                ...createFestScheduleTeam(schedule_team, FestVoteState.PRE_VOTED),
+                                ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
+                            };
+                            break;
+                        }
+                    }
+
+                    if (!response.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
+                        response.splatoon3_fest_team = null;
+                    }
+                }
+
+                if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
+                    friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
+                ) {
+                    const schedules = await user.getSchedules();
+                    const vs_setting = this.getSettingForVsMode(schedules, friend.vsMode);
+
+                    response.splatoon3_vs_setting = vs_setting ?? null;
+
+                    if (friend.vsMode.mode === 'FEST') {
+                        response.splatoon3_fest = schedules.currentFest ?
+                            createScheduleFest(schedules.currentFest,
+                                response.splatoon3_fest_team?.id, response.splatoon3_fest_team?.myVoteState) : null;
+                    }
+                }
+
+                if (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
+                    friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
+                ) {
+                    const schedules = await user.getSchedules();
+                    const coop_setting = getSchedule(schedules.coopGroupingSchedule.regularSchedules)?.setting;
+
+                    response.splatoon3_coop_setting = coop_setting ?? null;
+                }
+
+                break;
+            }
+        }
+
+        return response;
+    }
+
+    getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pick<VsMode, 'id' | 'mode'>) {
+        if (vs_mode.mode === 'REGULAR') {
+            return getSchedule(schedules.regularSchedules)?.regularMatchSetting;
+        }
+        if (vs_mode.mode === 'BANKARA') {
+            const settings = getSchedule(schedules.bankaraSchedules)?.bankaraMatchSettings;
+            if (vs_mode.id === 'VnNNb2RlLTI=') {
+                return settings?.find(s => s.mode === BankaraMatchMode.CHALLENGE);
+            }
+            if (vs_mode.id === 'VnNNb2RlLTUx') {
+                return settings?.find(s => s.mode === BankaraMatchMode.OPEN);
+            }
+        }
+        if (vs_mode.mode === 'FEST') {
+            return getSchedule(schedules.festSchedules)?.festMatchSetting;
+        }
+        if (vs_mode.mode === 'LEAGUE') {
+            return getSchedule(schedules.leagueSchedules)?.leagueMatchSetting;
+        }
+        if (vs_mode.mode === 'X_MATCH') {
+            return getSchedule(schedules.xSchedules)?.xMatchSetting;
+        }
+        return null;
+    }
+}
+
+class ResponseError extends Error {
+    constructor(readonly status: number, readonly code: string, message?: string) {
+        super(message);
+    }
+
+    sendResponse(req: Request, res: Response) {
+        const data = {
+            error: this.code,
+            error_message: this.message,
+        };
+
+        res.statusCode = this.status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(req.headers['accept']?.match(/\/html\b/i) ?
+            JSON.stringify(data, null, 4) : JSON.stringify(data));
+    }
 }
 
 function createScheduleFest(

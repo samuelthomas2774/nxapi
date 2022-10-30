@@ -43,6 +43,14 @@ export default class Users<T extends UserData> {
         return promise;
     }
 
+    async remove(token: string) {
+        const promise = this.promise.get(token);
+        this.promise.delete(token);
+
+        await promise;
+        this.users.delete(token);
+    }
+
     static coral(store: Store | persist.LocalStorage, znc_proxy_url: string, ratelimit?: boolean): Users<CoralUser<ZncProxyApi>>
     static coral(store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser>
     static coral(_store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean) {
