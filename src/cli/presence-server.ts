@@ -13,6 +13,7 @@ import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
 import SplatNet3Api from '../api/splatnet3.js';
+import { HttpServer, ResponseError } from './util/http-server.js';
 
 const debug = createDebug('cli:presence-server');
 
@@ -172,7 +173,7 @@ export class SplatNet3User {
     }
 }
 
-class Server {
+class Server extends HttpServer {
     allow_all_users = false;
     update_interval = 30 * 1000;
 
@@ -184,6 +185,8 @@ class Server {
         readonly splatnet3_users: Users<SplatNet3User> | null,
         readonly user_ids: string[],
     ) {
+        super();
+
         const app = this.app = express();
 
         app.use('/api/presence', (req, res, next) => {
@@ -204,32 +207,6 @@ class Server {
             this.handlePresenceRequest(req, res, req.params.user)));
     }
 
-    sendJsonResponse(res: Response, data: {}, status?: number) {
-        if (status) res.statusCode = status;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(res.req.headers['accept']?.match(/\/html\b/i) ?
-            JSON.stringify(data, replacer, 4) : JSON.stringify(data, replacer));
-    }
-
-    createApiRequestHandler(callback: (req: Request, res: Response) => Promise<{} | void>) {
-        return async (req: Request, res: Response) => {
-            try {
-                const result = await callback.call(null, req, res);
-
-                if (result) this.sendJsonResponse(res, result);
-                else res.end();
-            } catch (err) {
-                if (err instanceof ResponseError) {
-                    err.sendResponse(req, res);
-                } else {
-                    this.sendJsonResponse(res, {
-                        error: err,
-                        error_message: (err as Error).message,
-                    }, 500);
-                }
-            }
-        };
-    }
 
     async handleAllUsersRequest(req: Request, res: Response) {
         if (!this.allow_all_users) {
@@ -464,24 +441,6 @@ class Server {
             return getSchedule(schedules.xSchedules)?.xMatchSetting;
         }
         return null;
-    }
-}
-
-class ResponseError extends Error {
-    constructor(readonly status: number, readonly code: string, message?: string) {
-        super(message);
-    }
-
-    sendResponse(req: Request, res: Response) {
-        const data = {
-            error: this.code,
-            error_message: this.message,
-        };
-
-        res.statusCode = this.status;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(req.headers['accept']?.match(/\/html\b/i) ?
-            JSON.stringify(data, null, 4) : JSON.stringify(data));
     }
 }
 

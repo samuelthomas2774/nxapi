@@ -17,6 +17,7 @@ import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/zn
 import { addCliFeatureUserAgent } from '../../util/useragent.js';
 import { ErrorResponse } from '../../api/util.js';
 import Users, { CoralUser } from '../../common/users.js';
+import { EventStreamResponse, HttpServer, ResponseError } from '../util/http-server.js';
 
 declare global {
     namespace Express {
@@ -90,7 +91,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
 const FRIEND_CODE = /^\d{4}-\d{4}-\d{4}$/;
 
-class Server {
+class Server extends HttpServer {
     require_token = true;
     update_interval = 30 * 1000;
 
@@ -104,6 +105,8 @@ class Server {
         readonly storage: persist.LocalStorage,
         readonly users: Users<CoralUser>,
     ) {
+        super();
+
         const app = this.app = express();
 
         app.use('/api/znc', (req, res, next) => {
@@ -118,64 +121,64 @@ class Server {
             next();
         });
 
-        app.get('/api/znc/auth', this.createApiRequestHandler(r => this.handleAuthRequest(r), true));
+        app.get('/api/znc/auth', this.createProxyRequestHandler(r => this.handleAuthRequest(r), true));
 
         app.get('/api/znc/token', this.authTokenMiddleware,
-            this.createApiRequestHandler(r => this.handleTokenRequest(r)));
+            this.createProxyRequestHandler(r => this.handleTokenRequest(r)));
         app.delete('/api/znc/token', this.authTokenMiddleware,
-            this.createApiRequestHandler(r => this.handleDeleteTokenRequest(r)));
-        app.get('/api/znc/tokens', this.createApiRequestHandler(r => this.handleTokensRequest(r), true));
+            this.createProxyRequestHandler(r => this.handleDeleteTokenRequest(r)));
+        app.get('/api/znc/tokens', this.createProxyRequestHandler(r => this.handleTokensRequest(r), true));
         app.post('/api/znc/tokens', bodyParser.json(),
-            this.createApiRequestHandler(r => this.handleCreateTokenRequest(r), true));
+            this.createProxyRequestHandler(r => this.handleCreateTokenRequest(r), true));
 
         app.get('/api/znc/announcements', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleCreateTokenRequest(r), true));
+            this.createProxyRequestHandler(r => this.handleCreateTokenRequest(r), true));
 
         app.get('/api/znc/user', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleCurrentUserRequest(r)));
+            this.createProxyRequestHandler(r => this.handleCurrentUserRequest(r)));
         app.get('/api/znc/user/presence', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleUserPresenceRequest(r)));
+            this.createProxyRequestHandler(r => this.handleUserPresenceRequest(r)));
 
         app.get('/api/znc/friends', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFriendsRequest(r)));
+            this.createProxyRequestHandler(r => this.handleFriendsRequest(r)));
         app.get('/api/znc/friends/favourites', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFavouriteFriendsRequest(r)));
+            this.createProxyRequestHandler(r => this.handleFavouriteFriendsRequest(r)));
         app.get('/api/znc/friends/presence', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFriendsPresenceRequest(r)));
+            this.createProxyRequestHandler(r => this.handleFriendsPresenceRequest(r)));
         app.get('/api/znc/friends/favourites/presence', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFavouriteFriendsPresenceRequest(r)));
+            this.createProxyRequestHandler(r => this.handleFavouriteFriendsPresenceRequest(r)));
 
         app.get('/api/znc/friend/:nsaid', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFriendRequest(r, r.req.params.nsaid)));
+            this.createProxyRequestHandler(r => this.handleFriendRequest(r, r.req.params.nsaid)));
         app.post('/api/znc/friend/:nsaid', bodyParser.json(),
-            this.createApiRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid), true));
+            this.createProxyRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid), true));
         app.get('/api/znc/friend/:nsaid/presence', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFriendPresenceRequest(r, r.req.params.nsaid)));
+            this.createProxyRequestHandler(r => this.handleFriendPresenceRequest(r, r.req.params.nsaid)));
 
         app.get('/api/znc/webservices', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleWebServicesRequest(r)));
+            this.createProxyRequestHandler(r => this.handleWebServicesRequest(r)));
         app.get('/api/znc/webservice/:id/token',
-            this.createApiRequestHandler(r => this.handleWebServiceTokenRequest(r, r.req.params.id), true));
+            this.createProxyRequestHandler(r => this.handleWebServiceTokenRequest(r, r.req.params.id), true));
         app.get('/api/znc/activeevent', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleActiveEventRequest(r)));
+            this.createProxyRequestHandler(r => this.handleActiveEventRequest(r)));
 
         app.get('/api/znc/event/:id',
-            this.createApiRequestHandler(r => this.handleEventRequest(r, r.req.params.id), true));
+            this.createProxyRequestHandler(r => this.handleEventRequest(r, r.req.params.id), true));
         app.get('/api/znc/user/:id',
-            this.createApiRequestHandler(r => this.handleUserRequest(r, r.req.params.id), true));
+            this.createProxyRequestHandler(r => this.handleUserRequest(r, r.req.params.id), true));
 
         app.get('/api/znc/friendcode/:friendcode', this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFriendCodeRequest(r, r.req.params.friendcode), true));
+            this.createProxyRequestHandler(r => this.handleFriendCodeRequest(r, r.req.params.friendcode), true));
         app.get('/api/znc/friendcode', this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handleFriendCodeUrlRequest(r), true));
+            this.createProxyRequestHandler(r => this.handleFriendCodeUrlRequest(r), true));
 
         app.get('/api/znc/presence/events', this.localAuthMiddleware,
-            this.createApiRequestHandler(r => this.handlePresenceEventStreamRequest(r), true));
+            this.createProxyRequestHandler(r => this.handlePresenceEventStreamRequest(r), true));
     }
 
-    protected createApiRequestHandler(callback: (data: RequestDataWithUser) => Promise<{} | void>, auth: true): RequestHandler
-    protected createApiRequestHandler(callback: (data: RequestData) => Promise<{} | void>, auth?: boolean): RequestHandler
-    protected createApiRequestHandler(callback: (data: RequestDataWithUser) => Promise<{} | void>, auth = false) {
+    protected createProxyRequestHandler(callback: (data: RequestDataWithUser) => Promise<{} | void>, auth: true): RequestHandler
+    protected createProxyRequestHandler(callback: (data: RequestData) => Promise<{} | void>, auth?: boolean): RequestHandler
+    protected createProxyRequestHandler(callback: (data: RequestDataWithUser) => Promise<{} | void>, auth = false) {
         return async (req: Request, res: Response) => {
             try {
                 const user = req.coralUser ?? auth ? await this.getCoralUser(req) : undefined;
@@ -200,34 +203,6 @@ class Server {
                 }
             }
         };
-    }
-
-    protected createApiMiddleware(
-        callback: (req: Request, res: Response) => Promise<void>
-    ): RequestHandler {
-        return async (req: Request, res: Response, next: NextFunction) => {
-            try {
-                await callback.call(null, req, res);
-
-                next();
-            } catch (err) {
-                if (err instanceof ResponseError) {
-                    err.sendResponse(req, res);
-                } else {
-                    this.sendJsonResponse(res, {
-                        error: err,
-                        error_message: (err as Error).message,
-                    }, 500);
-                }
-            }
-        };
-    }
-
-    protected sendJsonResponse(res: Response, data: {}, status?: number) {
-        if (status) res.statusCode = status;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(res.req.headers['accept']?.match(/\/html\b/i) ?
-            JSON.stringify(data, null, 4) : JSON.stringify(data));
     }
 
     protected async _cache<T>(
@@ -765,9 +740,6 @@ class Server {
     //
 
     async handlePresenceEventStreamRequest({req, res, user}: RequestDataWithUser) {
-        res.setHeader('Cache-Control', 'no-store');
-        res.setHeader('Content-Type', 'text/event-stream');
-
         const na_session_token = req.headers['authorization']!.substr(3);
         const i = new ZncNotifications(this.storage, na_session_token, user.nso, user.data, user);
 
@@ -775,7 +747,8 @@ class Server {
         i.friend_notifications = true;
         i.update_interval = this.update_interval / 1000;
 
-        const es = i.notifications = new EventStreamNotificationManager(req, res);
+        const stream = new EventStreamResponse(req, res);
+        i.notifications = new EventStreamNotificationManager(stream);
 
         try {
             await i.loop(true);
@@ -786,29 +759,11 @@ class Server {
                 this.resetAuthTimeout(na_session_token, () => user.data.user.id);
             }
         } catch (err) {
-            es.sendEvent('error', {
+            stream.sendEvent('error', {
                 error: (err as Error).name,
                 error_message: (err as Error).message,
             });
         }
-    }
-}
-
-class ResponseError extends Error {
-    constructor(readonly status: number, readonly code: string, message?: string) {
-        super(message);
-    }
-
-    sendResponse(req: Request, res: Response) {
-        const data = {
-            error: this.code,
-            error_message: this.message,
-        };
-
-        res.statusCode = this.status;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(req.headers['accept']?.match(/\/html\b/i) ?
-            JSON.stringify(data, null, 4) : JSON.stringify(data));
     }
 }
 
@@ -817,48 +772,39 @@ function cacheMaxAge(updated_timestamp_ms: number, update_interval_ms: number) {
 }
 
 class EventStreamNotificationManager extends NotificationManager {
-    constructor(
-        public req: Request,
-        public res: Response
-    ) {
+    constructor(readonly stream: EventStreamResponse) {
         super();
-    }
-
-    sendEvent(event: string | null, ...data: unknown[]) {
-        if (event) this.res.write('event: ' + event + '\n');
-        for (const d of data) this.res.write('data: ' + JSON.stringify(d) + '\n');
-        this.res.write('\n');
     }
 
     onPresenceUpdated(
         friend: CurrentUser | Friend, prev?: CurrentUser | Friend, type?: PresenceEvent,
         naid?: string, ir?: boolean
     ) {
-        this.sendEvent(ZncPresenceEventStreamEvent.PRESENCE_UPDATED, {
+        this.stream.sendEvent(ZncPresenceEventStreamEvent.PRESENCE_UPDATED, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
     onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_ONLINE, {
+        this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_ONLINE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
     onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_OFFLINE, {
+        this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_OFFLINE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
     onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_CHANGE, {
+        this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_CHANGE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
     onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        this.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_STATECHANGE, {
+        this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_STATECHANGE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
