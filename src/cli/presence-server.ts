@@ -71,8 +71,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         const {splatnet, data} = await getBulletToken(storage, token, argv.zncProxyUrl, true);
 
         const friends = await splatnet.getFriends();
-        await splatnet.getCurrentFest();
-        await splatnet.getConfigureAnalytics();
+
+        Promise.all([
+            splatnet.getCurrentFest(),
+            splatnet.getConfigureAnalytics(),
+        ]).catch(err => {
+            debug('Error in useCurrentFest/ConfigureAnalyticsQuery', err);
+        });
 
         return new SplatNet3User(splatnet, data, friends);
     }) : null;

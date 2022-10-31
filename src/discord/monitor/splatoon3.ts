@@ -89,8 +89,13 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         }
 
         const history = await this.splatnet!.getHistoryRecords();
-        await this.splatnet!.getConfigureAnalytics();
-        await this.splatnet!.getCurrentFest();
+
+        Promise.all([
+            this.splatnet!.getCurrentFest(),
+            this.splatnet!.getConfigureAnalytics(),
+        ]).catch(err => {
+            debug('Error in useCurrentFest/ConfigureAnalyticsQuery', err);
+        });
 
         debug('Authenticated to SplatNet 3 %s - player %s#%s (title %s, first played %s)', this.data!.version,
             history.data.currentPlayer.name,
