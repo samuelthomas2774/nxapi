@@ -629,6 +629,62 @@ nxapi pctl dump-summaries data/summaries
 nxapi pctl dump-summaries --device 0123456789abcdef
 ```
 
+Presence server
+---
+
+nxapi includes a HTTP server for fetching presence data from Coral and SplatNet 3.
+
+```sh
+# Start the server listening on all interfaces on a random port
+# The `--user` option is required and can be used multiple times
+nxapi presence-server --user 0123456789abcdef
+
+# Start the server listening on a specific address/port
+# The `--listen` option can be used multiple times
+nxapi presence-server --listen "[::1]:12345" --user 0123456789abcdef
+
+# Enable Splatoon 3 presence data using SplatNet 3
+# All users specified with the `--user` option must be able to access SplatNet 3
+nxapi presence-server --user 0123456789abcdef --splatnet3
+
+# Allow returning presence data for all users at `/api/presence`
+nxapi presence-server --user 0123456789abcdef --allow-all-users
+
+# Set the update interval to 5 minutes (300 seconds)
+nxapi presence-server --user 0123456789abcdef --update-interval 300
+```
+
+```sh
+# Fetch all available presence data using curl (requires the `--allow-all-users` option)
+curl http://[::1]:12345/api/presence
+
+# Fetch presence data for a specific user using curl
+# Replace `0123456789abcdef` with the user's NSA ID
+curl http://[::1]:12345/api/presence/0123456789abcdef
+# Fetch presence data for a specific user including Splatoon 3 presence using curl
+curl http://[::1]:12345/api/presence/0123456789abcdef?include-splatoon3=1
+
+# Watch for presence events
+curl --no-buffer http://[::1]:12345/api/presence/0123456789abcdef/events
+curl --no-buffer http://[::1]:12345/api/presence/0123456789abcdef/events?include-splatoon3=1
+```
+
+Example EventStream use:
+
+```ts
+const events = new EventSource('https://[::1]:12345/api/presence/0123456789abcdef/events');
+
+events.addEventListener('close', event => {
+    console.error('Event stream closed', event);
+    // Handle reconnecting to the server...
+});
+
+events.addEventListener('friend', event => {
+    const data = JSON.parse(event.data);
+    console.log('Received Coral presence data', data.presence);
+});
+```
+
 Misc. commands/options
 ---
 
