@@ -132,7 +132,7 @@ class Server extends HttpServer {
             this.createProxyRequestHandler(r => this.handleCreateTokenRequest(r), true));
 
         app.get('/api/znc/announcements', this.authTokenMiddleware, this.localAuthMiddleware,
-            this.createProxyRequestHandler(r => this.handleCreateTokenRequest(r), true));
+            this.createProxyRequestHandler(r => this.handleAnnouncementsRequest(r), true));
 
         app.get('/api/znc/user', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleCurrentUserRequest(r)));
