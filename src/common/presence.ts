@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
-import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
+import { EmbeddedSplatNet2Monitor, handleError, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
@@ -603,5 +603,11 @@ export class ZncProxyDiscordPresence extends Loop {
             if (monitor.enabled) debugSplatnet2('Stopping monitor for user %s', name ?? nsa_id);
             monitor.disable();
         }
+    }
+
+    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+        this.discord.onError(err);
+
+        return handleError(err, this);
     }
 }

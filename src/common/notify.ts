@@ -179,21 +179,28 @@ export class ZncNotifications extends Loop {
     }
 
     async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
-        if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
-            debug('Request timed out, waiting %ds before retrying', this.update_interval, err);
+        return handleError(err, this);
+    }
+}
 
-            return LoopResult.OK;
-        } else if ('code' in err && (err as any).type === 'system' && err.code === 'ENOTFOUND') {
-            debug('Request error, waiting %ds before retrying', this.update_interval, err);
+export async function handleError(
+    err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException,
+    loop: Loop,
+): Promise<LoopResult> {
+    if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
+        debug('Request timed out, waiting %ds before retrying', loop.update_interval, err);
 
-            return LoopResult.OK;
-        } else if ('code' in err && (err as any).type === 'system' && err.code === 'EAI_AGAIN') {
-            debug('Request error - name resolution failed, waiting %ds before retrying', this.update_interval, err);
+        return LoopResult.OK;
+    } else if ('code' in err && (err as any).type === 'system' && err.code === 'ENOTFOUND') {
+        debug('Request error, waiting %ds before retrying', loop.update_interval, err);
 
-            return LoopResult.OK;
-        } else {
-            throw err;
-        }
+        return LoopResult.OK;
+    } else if ('code' in err && (err as any).type === 'system' && err.code === 'EAI_AGAIN') {
+        debug('Request error - name resolution failed, waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else {
+        throw err;
     }
 }
 
