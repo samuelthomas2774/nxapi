@@ -13,7 +13,8 @@ import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
 import SplatNet3Api from '../api/splatnet3.js';
-import { HttpServer, ResponseError } from './util/http-server.js';
+import { ErrorResponse } from '../api/util.js';
+import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
 
 const debug = createDebug('cli:presence-server');
 
@@ -205,6 +206,8 @@ class Server extends HttpServer {
             this.handleAllUsersRequest(req, res)));
         app.get('/api/presence/:user', this.createApiRequestHandler((req, res) =>
             this.handlePresenceRequest(req, res, req.params.user)));
+        app.get('/api/presence/:user/events', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceStreamRequest(req, res, req.params.user)));
     }
 
 
@@ -441,6 +444,70 @@ class Server extends HttpServer {
             return getSchedule(schedules.xSchedules)?.xMatchSetting;
         }
         return null;
+    }
+
+    async handlePresenceStreamRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        const result = await this.handlePresenceRequest(req, res, presence_user_nsaid);
+
+        const stream = new EventStreamResponse(req, res);
+
+        stream.sendEvent(null, 'debug: timestamp ' + new Date().toISOString());
+
+        for (const [key, value] of Object.entries(result) as
+            [keyof typeof result, typeof result[keyof typeof result]][]
+        ) {
+            stream.sendEvent(key, JSON.stringify(value));
+        }
+
+        await new Promise(rs => setTimeout(rs, this.update_interval));
+
+        let last_result = result;
+
+        while (!req.socket.closed) {
+            try {
+                const result = await this.handlePresenceRequest(req, res, presence_user_nsaid);
+
+                stream.sendEvent('update', 'debug: timestamp ' + new Date().toISOString());
+
+                for (const [key, value] of Object.entries(result) as
+                    [keyof typeof result, typeof result[keyof typeof result]][]
+                ) {
+                    const json = JSON.stringify(value);
+                    if (json === JSON.stringify(last_result[key])) continue;
+
+                    stream.sendEvent(key, json);
+                }
+
+                last_result = result;
+
+                await new Promise(rs => setTimeout(rs, this.update_interval));
+            } catch (err) {
+                if (err instanceof ErrorResponse) {
+                    const retry_after = err.response.headers.get('Retry-After');
+
+                    if (retry_after && /^\d+$/.test(retry_after)) {
+                        await new Promise(rs => setTimeout(rs, parseInt(retry_after) * 1000));
+
+                        continue;
+                    }
+                }
+
+                if (err instanceof ResponseError) {
+                    stream.sendEvent('error', JSON.stringify({
+                        error: err.code,
+                        error_message: err.message,
+                    }));
+                } else {
+                    stream.sendEvent('error', JSON.stringify({
+                        error: err,
+                        error_message: (err as Error).message,
+                    }));
+                }
+
+                res.end();
+                break;
+            }
+        }
     }
 }
 
