@@ -15,10 +15,26 @@ import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
 import SplatNet3Api from '../api/splatnet3.js';
 import { ErrorResponse } from '../api/util.js';
 import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
+import { getTitleIdFromEcUrl } from '../index.js';
 
 const debug = createDebug('cli:presence-server');
 
 type CoopSetting_schedule = Pick<CoopSetting, '__typename' | 'coopStage' | 'weapons'>;
+
+interface AllUsersResult extends Friend {
+    splatoon3?: SplatNetFriend | null;
+    splatoon3_fest_team?: FestTeam_votingStatus | null;
+}
+interface PresenceResponse {
+    friend: Friend;
+    splatoon3?: SplatNetFriend | null;
+    splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
+    splatoon3_vs_setting?:
+        RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
+        LeagueMatchSetting | XMatchSetting | null;
+    splatoon3_coop_setting?: CoopSetting_schedule | null;
+    splatoon3_fest?: Fest_schedule | null;
+}
 
 export const command = 'presence-server';
 export const desc = 'Starts a HTTP server to fetch presence data from Coral and SplatNet 3';
@@ -215,7 +231,6 @@ class Server extends HttpServer {
             this.handlePresenceStreamRequest(req, res, req.params.user)));
     }
 
-
     async handleAllUsersRequest(req: Request, res: Response) {
         if (!this.allow_all_users) {
             throw new ResponseError(403, 'forbidden');
@@ -223,10 +238,7 @@ class Server extends HttpServer {
 
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
-        const result: (Friend & {
-            splatoon3?: SplatNetFriend | null;
-            splatoon3_fest_team?: FestTeam_votingStatus | null;
-        })[] = [];
+        const result: AllUsersResult[] = [];
 
         const users = await Promise.all(this.user_ids.map(async id => {
             const token = await this.storage.getItem('NintendoAccountToken.' + id);
@@ -284,12 +296,16 @@ class Server extends HttpServer {
                                 break;
                             }
 
+                            if (match.splatoon3_fest_team) break;
+                            
                             for (const player of team.preVotes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
                                 match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.PRE_VOTED);
                                 break;
                             }
+    
+                            if (match.splatoon3_fest_team) break;
                         }
 
                         if (!match.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
@@ -334,96 +350,102 @@ class Server extends HttpServer {
             throw new ResponseError(404, 'not_found');
         }
 
-        const response: {
-            friend: Friend;
-            splatoon3?: SplatNetFriend | null;
-            splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
-            splatoon3_vs_setting?:
-                RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
-                LeagueMatchSetting | XMatchSetting | null;
-            splatoon3_coop_setting?: CoopSetting_schedule | null;
-            splatoon3_fest?: Fest_schedule | null;
-        } = {
+        const response: PresenceResponse = {
             friend: match_coral,
         };
 
         if (this.splatnet3_users && include_splatnet3) {
             const token = await this.storage.getItem('NintendoAccountToken.' + match_user_id);
-            const user = await this.splatnet3_users.get(token);
+            const user = await this.splatnet3_users!.get(token);
             user.update_interval = this.update_interval;
 
-            const friends = await user.getFriends();
-            const fest_vote_status = await user.getCurrentFestVotes();
-
-            for (const friend of friends) {
-                const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
-                    .replace(/^Friend-([0-9a-f]{16})$/, '$1');
-                if (match_coral.nsaId !== friend_nsaid) continue;
-
-                response.splatoon3 = friend;
-
-                if (fest_vote_status) {
-                    const schedules = await user.getSchedules();
-
-                    for (const team of fest_vote_status.teams) {
-                        const schedule_team = schedules.currentFest?.teams.find(t => t.id === team.id);
-                        if (!schedule_team || !team.votes || !team.preVotes) continue; // Shouldn't ever happen
-
-                        for (const player of team.votes.nodes) {
-                            if (player.userIcon.url !== friend.userIcon.url) continue;
-
-                            response.splatoon3_fest_team = {
-                                ...createFestScheduleTeam(schedule_team, FestVoteState.VOTED),
-                                ...createFestVoteTeam(team, FestVoteState.VOTED),
-                            };
-                            break;
-                        }
-
-                        for (const player of team.preVotes.nodes) {
-                            if (player.userIcon.url !== friend.userIcon.url) continue;
-
-                            response.splatoon3_fest_team = {
-                                ...createFestScheduleTeam(schedule_team, FestVoteState.PRE_VOTED),
-                                ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
-                            };
-                            break;
-                        }
-                    }
-
-                    if (!response.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
-                        response.splatoon3_fest_team = null;
-                    }
-                }
-
-                if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
-                    friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
-                ) {
-                    const schedules = await user.getSchedules();
-                    const vs_setting = this.getSettingForVsMode(schedules, friend.vsMode);
-
-                    response.splatoon3_vs_setting = vs_setting ?? null;
-
-                    if (friend.vsMode.mode === 'FEST') {
-                        response.splatoon3_fest = schedules.currentFest ?
-                            createScheduleFest(schedules.currentFest,
-                                response.splatoon3_fest_team?.id, response.splatoon3_fest_team?.myVoteState) : null;
-                    }
-                }
-
-                if (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
-                    friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
-                ) {
-                    const schedules = await user.getSchedules();
-                    const coop_setting = getSchedule(schedules.coopGroupingSchedule.regularSchedules)?.setting;
-
-                    response.splatoon3_coop_setting = coop_setting ?? null;
-                }
-
-                break;
-            }
+            await this.handleSplatoon3Presence(match_coral, user, response);
         }
 
         return response;
+    }
+
+    async handleSplatoon3Presence(coral_friend: Friend, user: SplatNet3User, response: PresenceResponse) {
+        const is_playing_splatoon3 = 'name' in coral_friend.presence.game ?
+            getTitleIdFromEcUrl(coral_friend.presence.game.shopUri) === '0100c2500fc20000' : false;
+
+        const fest_vote_status = await user.getCurrentFestVotes();
+
+        if (!is_playing_splatoon3 && !fest_vote_status) {
+            debug('User %s (%s) is not playing Splatoon 3 and no fest data to return, skipping Splatoon 3 presence',
+                coral_friend.nsaId, coral_friend.name);
+            return;
+        }
+
+        const friends = await user.getFriends();
+
+        const friend = friends.find(f => Buffer.from(f.id, 'base64').toString()
+            .match(/^Friend-([0-9a-f]{16})$/)?.[1] === coral_friend.nsaId);
+
+        if (!friend) return;
+
+        response.splatoon3 = friend;
+
+        if (fest_vote_status) {
+            const schedules = await user.getSchedules();
+
+            for (const team of fest_vote_status.teams) {
+                const schedule_team = schedules.currentFest?.teams.find(t => t.id === team.id);
+                if (!schedule_team || !team.votes || !team.preVotes) continue; // Shouldn't ever happen
+
+                for (const player of team.votes.nodes) {
+                    if (player.userIcon.url !== friend.userIcon.url) continue;
+
+                    response.splatoon3_fest_team = {
+                        ...createFestScheduleTeam(schedule_team, FestVoteState.VOTED),
+                        ...createFestVoteTeam(team, FestVoteState.VOTED),
+                    };
+                    break;
+                }
+
+                if (response.splatoon3_fest_team) break;
+
+                for (const player of team.preVotes.nodes) {
+                    if (player.userIcon.url !== friend.userIcon.url) continue;
+
+                    response.splatoon3_fest_team = {
+                        ...createFestScheduleTeam(schedule_team, FestVoteState.PRE_VOTED),
+                        ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
+                    };
+                    break;
+                }
+
+                if (response.splatoon3_fest_team) break;
+            }
+
+            if (!response.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
+                response.splatoon3_fest_team = null;
+            }
+        }
+
+        if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
+            friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
+        ) {
+            const schedules = await user.getSchedules();
+            const vs_setting = this.getSettingForVsMode(schedules, friend.vsMode);
+
+            response.splatoon3_vs_setting = vs_setting ?? null;
+
+            if (friend.vsMode.mode === 'FEST') {
+                response.splatoon3_fest = schedules.currentFest ?
+                    createScheduleFest(schedules.currentFest,
+                        response.splatoon3_fest_team?.id, response.splatoon3_fest_team?.myVoteState) : null;
+            }
+        }
+
+        if (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
+            friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
+        ) {
+            const schedules = await user.getSchedules();
+            const coop_setting = getSchedule(schedules.coopGroupingSchedule.regularSchedules)?.setting;
+
+            response.splatoon3_coop_setting = coop_setting ?? null;
+        }
     }
 
     getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pick<VsMode, 'id' | 'mode'>) {
@@ -461,7 +483,7 @@ class Server extends HttpServer {
         for (const [key, value] of Object.entries(result) as
             [keyof typeof result, typeof result[keyof typeof result]][]
         ) {
-            stream.sendEvent(key, JSON.stringify(value));
+            stream.sendEvent(key, value);
         }
 
         await new Promise(rs => setTimeout(rs, this.update_interval));
@@ -477,10 +499,9 @@ class Server extends HttpServer {
                 for (const [key, value] of Object.entries(result) as
                     [keyof typeof result, typeof result[keyof typeof result]][]
                 ) {
-                    const json = JSON.stringify(value);
-                    if (json === JSON.stringify(last_result[key])) continue;
+                    if (JSON.stringify(value) === JSON.stringify(last_result[key])) continue;
 
-                    stream.sendEvent(key, json);
+                    stream.sendEvent(key, value);
                 }
 
                 last_result = result;
@@ -498,15 +519,15 @@ class Server extends HttpServer {
                 }
 
                 if (err instanceof ResponseError) {
-                    stream.sendEvent('error', JSON.stringify({
+                    stream.sendEvent('error', {
                         error: err.code,
                         error_message: err.message,
-                    }));
+                    });
                 } else {
-                    stream.sendEvent('error', JSON.stringify({
+                    stream.sendEvent('error', {
                         error: err,
                         error_message: (err as Error).message,
-                    }));
+                    });
                 }
 
                 res.end();
