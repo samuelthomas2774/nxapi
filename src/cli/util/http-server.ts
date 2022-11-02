@@ -35,8 +35,11 @@ export class HttpServer {
     protected sendJsonResponse(res: Response, data: {}, status?: number) {
         if (status) res.statusCode = status;
         res.setHeader('Content-Type', 'application/json');
-        res.end(res.req.headers['accept']?.match(/\/html\b/i) ?
-            JSON.stringify(data, null, 4) : JSON.stringify(data));
+        res.end(this.encodeJsonForResponse(data, res.req.headers['accept']?.match(/\/html\b/i) ? 4 : 0));
+    }
+
+    protected encodeJsonForResponse(data: unknown, space?: number) {
+        return JSON.stringify(data, null, space);
     }
 
     protected handleRequestError(req: Request, res: Response, err: unknown) {
@@ -86,6 +89,8 @@ export class ResponseError extends Error {
 }
 
 export class EventStreamResponse {
+    json_replacer: ((key: string, value: unknown) => any) | null = null;
+
     constructor(
         readonly req: Request,
         readonly res: Response,
@@ -96,7 +101,7 @@ export class EventStreamResponse {
 
     sendEvent(event: string | null, ...data: unknown[]) {
         if (event) this.res.write('event: ' + event + '\n');
-        for (const d of data) this.res.write('data: ' + JSON.stringify(d) + '\n');
+        for (const d of data) this.res.write('data: ' + JSON.stringify(d, this.json_replacer ?? undefined) + '\n');
         this.res.write('\n');
     }
 }

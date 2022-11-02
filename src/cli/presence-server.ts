@@ -231,6 +231,10 @@ class Server extends HttpServer {
             this.handlePresenceStreamRequest(req, res, req.params.user)));
     }
 
+    protected encodeJsonForResponse(data: unknown, space?: number) {
+        return JSON.stringify(data, replacer, space);
+    }
+
     async handleAllUsersRequest(req: Request, res: Response) {
         if (!this.allow_all_users) {
             throw new ResponseError(403, 'forbidden');
@@ -477,6 +481,7 @@ class Server extends HttpServer {
         const result = await this.handlePresenceRequest(req, res, presence_user_nsaid);
 
         const stream = new EventStreamResponse(req, res);
+        stream.json_replacer = replacer;
 
         stream.sendEvent(null, 'debug: timestamp ' + new Date().toISOString());
 
@@ -574,7 +579,7 @@ function createFestVoteTeam(
 }
 
 function replacer(key: string, value: any) {
-    if (key === 'image' || key.endsWith('Image') && value && typeof value === 'object' && 'url' in value) {
+    if ((key === 'image' || key.endsWith('Image')) && value && typeof value === 'object' && 'url' in value) {
         return {
             ...value,
             url: getSplatoon3inkUrl(value.url),
