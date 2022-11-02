@@ -432,8 +432,12 @@ class Server extends HttpServer {
         ) {
             const schedules = await user.getSchedules();
             const vs_setting = this.getSettingForVsMode(schedules, friend.vsMode);
+            const vs_stages = vs_setting?.vsStages.map(stage => ({
+                ...stage,
+                image: schedules.vsStages.nodes.find(s => s.id === stage.id)?.originalImage ?? stage.image,
+            }));
 
-            response.splatoon3_vs_setting = vs_setting ?? null;
+            response.splatoon3_vs_setting = vs_setting ? {...vs_setting, vsStages: vs_stages!} : null;
 
             if (friend.vsMode.mode === 'FEST') {
                 response.splatoon3_fest = schedules.currentFest ?
