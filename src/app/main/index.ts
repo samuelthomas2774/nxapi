@@ -9,7 +9,7 @@ import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createWindow } from './windows.js';
-import { DiscordPresenceConfiguration, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
 import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
@@ -29,10 +29,28 @@ export const protocol_registration_options = dev && process.platform === 'win32'
         path.join(dir, 'dist', 'app', 'app-entry.cjs'),
     ],
 } : null;
-export const login_item_options: LoginItemSettingsOptions = {};
+export const login_item_options: LoginItemSettingsOptions = {
+    path: process.execPath,
+    args: dev ? [
+        path.join(dir, 'dist', 'app', 'app-entry.cjs'),
+        '--app-open-at-login=1',
+    ] : [
+        '--app-open-at-login=1',
+    ],
+};
+
+enum LoginItemType {
+    NATIVE,
+    NATIVE_PARTIAL,
+    NOT_SUPPORTED,
+}
+const login_item_type: LoginItemType =
+    process.platform === 'darwin' ? LoginItemType.NATIVE :
+    process.platform === 'win32' ? LoginItemType.NATIVE_PARTIAL :
+    LoginItemType.NOT_SUPPORTED;
 
 debug('Protocol registration options', protocol_registration_options);
-debug('Login item registration options', login_item_options);
+debug('Login item registration options', LoginItemType[login_item_type], login_item_options);
 
 export class App {
     readonly store: Store;
@@ -184,7 +202,11 @@ export async function init() {
 
     debug('App started');
 
-    if (!app.getLoginItemSettings(login_item_options).wasOpenedAsHidden) {
+    const should_hide =
+        login_item_type === LoginItemType.NATIVE ? app.getLoginItemSettings(login_item_options).wasOpenedAsHidden :
+        process.argv.includes('--app-open-at-login=1') && (await appinstance.store.getLoginItem()).startup_hidden;
+
+    if (!should_hide) {
         appinstance.showMainWindow();
     }
 }
@@ -254,6 +276,10 @@ class Updater {
     }
 }
 
+interface SavedStartupOptions {
+    hide: boolean;
+}
+
 interface SavedMonitorState {
     users: {
         /** Nintendo Account ID */
@@ -275,6 +301,63 @@ export class Store extends EventEmitter {
 
         // ratelimit = false, as most users.get calls are triggered by user interaction (or at startup)
         this.users = Users.coral(this, process.env.ZNC_PROXY_URL, false);
+    }
+
+    async getLoginItem(): Promise<LoginItem> {
+        const settings = app.getLoginItemSettings(login_item_options);
+
+        if (login_item_type === LoginItemType.NATIVE) {
+            // Fully supported
+            return {
+                supported: true,
+                startup_enabled: settings.openAtLogin,
+                startup_hidden: settings.openAsHidden,
+            };
+        }
+
+        const startup_options: SavedStartupOptions | undefined = await this.storage.getItem('StartupOptions');
+        const was_opened_at_login = process.argv.includes('--app-open-at-login=1');
+
+        if (login_item_type === LoginItemType.NATIVE_PARTIAL) {
+            // Partial native support
+            return {
+                supported: true,
+                startup_enabled: settings.openAtLogin,
+                startup_hidden: startup_options?.hide ?? false,
+            };
+        }
+
+        return {
+            supported: false,
+            startup_enabled: was_opened_at_login,
+            startup_hidden: startup_options?.hide ?? false,
+        };
+    }
+
+    async setLoginItem(settings: LoginItemOptions) {
+        if (login_item_type === LoginItemType.NATIVE) {
+            // Fully supported
+            app.setLoginItemSettings({
+                ...login_item_options,
+                openAtLogin: settings.startup_enabled,
+                openAsHidden: settings.startup_hidden,
+            });
+            return;
+        }
+
+        if (login_item_type === LoginItemType.NATIVE_PARTIAL) {
+            // Partial native support
+            app.setLoginItemSettings({
+                ...login_item_options,
+                openAtLogin: settings.startup_enabled,
+            });
+        }
+
+        const startup_options: SavedStartupOptions = {
+            hide: settings.startup_hidden,
+        };
+
+        await this.storage.setItem('StartupOptions', startup_options);
     }
 
     async saveMonitorState(monitors: PresenceMonitorManager) {

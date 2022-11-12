@@ -47,3 +47,10 @@ export interface DiscordPresenceSourceUrl {
 export interface DiscordPresenceExternalMonitorsConfiguration {
     enable_splatnet3_monitoring?: boolean;
 }
+
+export interface LoginItem {
+    supported: boolean;
+    startup_enabled: boolean;
+    startup_hidden: boolean;
+}
+export type LoginItemOptions = Omit<LoginItem, 'supported'>;

@@ -1,10 +1,10 @@
-import { app, BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, LoginItemSettings, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { app, BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
 import createDebug from 'debug';
 import { User } from 'discord-rpc';
 import openWebService, { QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
-import { DiscordPresenceConfiguration, DiscordPresenceSource, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItemOptions, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App, login_item_options } from './index.js';
@@ -40,8 +40,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         sendToAllWindows('nxapi:systemPreferences:accent-colour', accent_colour);
     });
 
-    ipcMain.handle('nxapi:systemPreferences:getloginitem', () => app.getLoginItemSettings(login_item_options));
-    ipcMain.handle('nxapi:systemPreferences:setloginitem', (e, settings: Settings) => app.setLoginItemSettings({...login_item_options, ...settings}));
+    ipcMain.handle('nxapi:systemPreferences:getloginitem', () => appinstance.store.getLoginItem());
+    ipcMain.handle('nxapi:systemPreferences:setloginitem', (e, settings: LoginItemOptions) => appinstance.store.setLoginItem(settings));
 
     ipcMain.handle('nxapi:update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
     ipcMain.handle('nxapi:update:check', () => appinstance.updater.check());

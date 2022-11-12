@@ -22,11 +22,11 @@ export default function Preferences(props: PreferencesProps) {
     const [login_item, ,, forceRefreshLoginItem] = useAsync(useCallback(() => ipc.getLoginItemSettings(), [ipc]));
 
     const setOpenAtLogin = useCallback(async (open_at_login: boolean | 'mixed') => {
-        await ipc.setLoginItemSettings({...login_item, openAtLogin: !!open_at_login});
+        await ipc.setLoginItemSettings({...login_item!, startup_enabled: !!open_at_login});
         forceRefreshLoginItem();
     }, [ipc, login_item]);
     const setOpenAsHidden = useCallback(async (open_as_hidden: boolean | 'mixed') => {
-        await ipc.setLoginItemSettings({...login_item, openAsHidden: !!open_as_hidden});
+        await ipc.setLoginItemSettings({...login_item!, startup_hidden: !!open_as_hidden});
         forceRefreshLoginItem();
     }, [ipc, login_item]);
 
@@ -114,7 +114,7 @@ export default function Preferences(props: PreferencesProps) {
         <View style={styles.main}>
             {/* <Text style={theme.text}>Preferences</Text> */}
 
-            {ipc.platform === 'darwin' || ipc.platform === 'win32' ? <View style={styles.section}>
+            {login_item.supported || login_item.startup_enabled ? <View style={styles.section}>
                 <View style={styles.sectionLeft}>
                     <Text style={[styles.label, theme.text]}>Startup</Text>
                 </View>
@@ -124,32 +124,33 @@ export default function Preferences(props: PreferencesProps) {
 
                     <View style={styles.checkboxContainer}>
                         <CheckBox
-                            value={login_item.openAtLogin}
+                            value={login_item.startup_enabled}
                             onValueChange={setOpenAtLogin}
+                            disabled={!login_item.supported}
                             color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
                             style={styles.checkbox}
                         />
-                        <TouchableOpacity style={styles.checkboxLabel} onPress={() => setOpenAtLogin(!login_item.openAtLogin)}>
+                        <TouchableOpacity disabled={!login_item.supported} style={styles.checkboxLabel} onPress={() => setOpenAtLogin(!login_item.startup_enabled)}>
                             <Text style={[styles.checkboxLabelText, theme.text]}>Open at login</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {ipc.platform === 'darwin' ? <View
-                        style={[styles.checkboxContainer, !login_item.openAtLogin ? styles.disabled : null]}
+                    <View
+                        style={[styles.checkboxContainer, !login_item.startup_enabled ? styles.disabled : null]}
                     >
                         <CheckBox
-                            value={login_item.openAsHidden}
+                            value={login_item.startup_hidden}
                             onValueChange={setOpenAsHidden}
-                            disabled={!login_item.openAtLogin}
+                            disabled={!login_item.startup_enabled}
                             color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
                             style={styles.checkbox}
                         />
-                        <TouchableOpacity disabled={!login_item.openAtLogin} style={styles.checkboxLabel}
-                            onPress={() => setOpenAsHidden(!login_item.openAsHidden)}
+                        <TouchableOpacity disabled={!login_item.startup_enabled} style={styles.checkboxLabel}
+                            onPress={() => setOpenAsHidden(!login_item.startup_hidden)}
                         >
                             <Text style={[styles.checkboxLabelText, theme.text]}>Open in background</Text>
                         </TouchableOpacity>
-                    </View> : null}
+                    </View>
                 </View>
             </View> : null}
 

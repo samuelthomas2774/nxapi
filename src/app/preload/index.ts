@@ -2,8 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import type { User } from 'discord-rpc';
-import type { LoginItemSettings, Settings, SharingItem } from '../main/electron.js';
-import type { DiscordPresenceConfiguration, DiscordPresenceSource, WindowConfiguration } from '../common/types.js';
+import type { SharingItem } from '../main/electron.js';
+import type { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
@@ -30,8 +30,8 @@ events.setMaxListeners(0);
 const ipc = {
     getWindowData: () => invSync<WindowConfiguration>('browser:getwindowdata'),
 
-    getLoginItemSettings: () => inv<LoginItemSettings>('systemPreferences:getloginitem'),
-    setLoginItemSettings: (settings: Settings) => inv('systemPreferences:setloginitem', settings),
+    getLoginItemSettings: () => inv<LoginItem>('systemPreferences:getloginitem'),
+    setLoginItemSettings: (settings: LoginItemOptions) => inv('systemPreferences:setloginitem', settings),
 
     getUpdateData: () => inv<UpdateCacheData | null>('update:get'),
     checkUpdates: () => inv<UpdateCacheData | null>('update:check'),
