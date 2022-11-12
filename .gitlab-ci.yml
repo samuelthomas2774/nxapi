@@ -90,7 +90,7 @@ build-app:
   script:
     - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
 
-    - npx electron-builder build --macos zip --linux deb snap appimage --publish never
+    - npx electron-builder build --macos zip:x64 zip:arm64 --linux deb snap appimage --publish never
     - mv dist/app/package app
   needs:
     - job: build
