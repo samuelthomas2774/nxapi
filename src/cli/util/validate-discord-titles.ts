@@ -47,7 +47,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                     warn('Invalid title ID, must be lowercase hex', title.id);
                 else warn('Invalid title ID', title.id);
             }
-            if (!title.client.match(/^\d{18}$/)) warn('Invalid Discord client ID', title.id, title.client);
+            if (!title.client.match(/^\d{16,}$/)) warn('Invalid Discord client ID', title.id, title.client);
 
             if (has_errors) continue;
 
