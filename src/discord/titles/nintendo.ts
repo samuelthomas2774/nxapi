@@ -1125,4 +1125,27 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
+
+    {
+        // Bayonetta 3
+        id: '01004a4010fea000',
+        client: '1037891425318215820',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Pokémon Scarlet
+        id: '0100a3d008c5c000',
+        client: '1037891706483384360',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Pokémon Violet
+        id: '01008f6008c5e000',
+        client: '1037891823286366288',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 ];
