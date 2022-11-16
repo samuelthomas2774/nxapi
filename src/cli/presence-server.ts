@@ -46,8 +46,8 @@ export function builder(yargs: Argv<ParentArguments>) {
         default: ['[::]:0'],
     }).option('user', {
         describe: 'Nintendo Account ID',
-        type: 'array',
-        default: null,
+        type: 'string',
+        array: true,
     }).option('splatnet3', {
         describe: 'Enable SplatNet 3 presence',
         type: 'boolean',
@@ -76,6 +76,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const user_naid: string | undefined = !argv.user ? await storage.getItem('SelectedUser') : undefined;
     const user_naids = argv.user ?? (user_naid ? [user_naid] : []);
+
+    debug('user', user_naids);
 
     if (!user_naids.length) {
         throw new Error('No user selected');
