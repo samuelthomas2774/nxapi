@@ -34,5 +34,5 @@ export function timeoutSignal(ms = 60 * 1000) {
         controller.abort(new Error('Timeout'));
     }, ms);
 
-    return [controller.signal, () => clearTimeout(timeout)] as const;
+    return [controller.signal, () => clearTimeout(timeout), controller] as const;
 }

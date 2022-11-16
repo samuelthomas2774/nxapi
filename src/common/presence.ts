@@ -577,6 +577,12 @@ export class ZncProxyDiscordPresence extends Loop {
             }
         } catch (err) {
             if (err instanceof ErrorResponse) {
+                if (err.response.headers.get('Content-Type')?.match(/^text\/event-stream(;|$)/)) {
+                    this.is_sse = true;
+                    debug('Presence URL responded with an event stream');
+                    return LoopResult.OK_SKIP_INTERVAL;
+                }
+
                 const retry_after = err.response.headers.get('Retry-After');
                 if (!retry_after || !/^\d+$/.test(retry_after)) throw err;
 
@@ -635,6 +641,7 @@ export class ZncProxyDiscordPresence extends Loop {
 
         let user: CurrentUser | Friend | undefined = undefined;
         let presence: Presence | null = null;
+        this.last_data = {};
 
         events.onmessage = event => {
             if (event.type === 'message') {

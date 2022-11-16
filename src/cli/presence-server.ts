@@ -515,6 +515,7 @@ class Server extends HttpServer {
 
         while (!req.socket.closed) {
             try {
+                debug('Updating data for event stream %d', stream.id);
                 const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
 
                 stream.sendEvent('update', 'debug: timestamp ' + new Date().toISOString());
@@ -552,6 +553,8 @@ class Server extends HttpServer {
                         error_message: (err as Error).message,
                     });
                 }
+
+                debug('Error in event stream %d', stream.id, err);
 
                 res.end();
                 break;

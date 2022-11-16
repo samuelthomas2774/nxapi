@@ -91,12 +91,25 @@ export class ResponseError extends Error {
 export class EventStreamResponse {
     json_replacer: ((key: string, value: unknown) => any) | null = null;
 
+    private static id = 0;
+    readonly id = EventStreamResponse.id++;
+
     constructor(
         readonly req: Request,
         readonly res: Response,
     ) {
         res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Content-Type', 'text/event-stream');
+
+        console.log('[%s] Event stream %d connected to %s from %s, port %d%s, %s',
+            new Date(), this.id, req.url,
+            req.socket.remoteAddress, req.socket.remotePort,
+            req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
+            req.headers['user-agent']);
+
+        res.on('close', () => {
+            console.log('[%s] Event stream %d closed', new Date(), this.id);
+        });
     }
 
     sendEvent(event: string | null, ...data: unknown[]) {

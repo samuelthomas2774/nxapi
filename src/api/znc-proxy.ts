@@ -213,7 +213,7 @@ export type PresenceUrlResponse =
     Friend | {friend: Friend};
 
 export async function getPresenceFromUrl(presence_url: string, useragent?: string) {
-    const [signal, cancel] = timeoutSignal();
+    const [signal, cancel, controller] = timeoutSignal();
     const response = await fetch(presence_url, {
         headers: {
             'User-Agent': getUserAgent(useragent),
@@ -225,6 +225,11 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
 
     if (response.status !== 200) {
         throw new ErrorResponse('[zncproxy] Unknown error', response, await response.text());
+    }
+
+    if (!response.headers.get('Content-Type')?.match(/^application\/json(;|$)$/)) {
+        controller.abort();
+        throw new ErrorResponse('[zncproxy] Unacceptable content type', response);
     }
 
     const data = await response.json() as PresenceUrlResponse;
