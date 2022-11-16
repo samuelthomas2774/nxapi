@@ -99,7 +99,7 @@ build-app:
       - app
     exclude:
       - app/mac/**/*
-      - app/win-unpacked/**/*
+      - app/mac-arm64/**/*
       - app/linux-unpacked/**/*
   only:
     variables:
@@ -123,9 +123,7 @@ build-windows:
     paths:
       - app
     exclude:
-      - app/mac/**/*
       - app/win-unpacked/**/*
-      - app/linux-unpacked/**/*
   only:
     variables:
       - $BUILD_WINDOWS_APP == "true"
