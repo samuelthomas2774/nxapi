@@ -1,15 +1,19 @@
 import createDebug from 'debug';
+import EventSource from 'eventsource';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
 import { EmbeddedSplatNet2Monitor, handleError, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
-import { ErrorResponse } from '../api/util.js';
+import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl } from '../index.js';
+import { parseLinkHeader } from '../util/http.js';
+import { getUserAgent } from '../util/useragent.js';
 
 const debug = createDebug('nxapi:nso:presence');
+const debugEventStream = createDebug('nxapi:nso:presence:sse');
 const debugDiscord = createDebug('nxapi:nso:presence:discordrpc');
 const debugSplatnet2 = createDebug('nxapi:nso:presence:splatnet2');
 
@@ -246,7 +250,7 @@ class ZncDiscordPresenceClient {
         let i = ++this.i;
 
         while (attempts < MAX_CONNECT_ATTEMPTS) {
-            if (this.i !== i) return;
+            if (this.i !== i || client!) return;
 
             if (attempts === 0) debugDiscord('RPC connecting', client_id, i);
             else debugDiscord('RPC connecting, attempt %d', attempts + 1, client_id, i);
@@ -518,6 +522,10 @@ export class ZncProxyDiscordPresence extends Loop {
 
     readonly discord = new ZncDiscordPresenceClient(this);
 
+    is_first_request = true;
+    is_sse = false;
+    eventstream_url: string | null = null;
+
     last_data: unknown | null = null;
 
     constructor(
@@ -537,13 +545,36 @@ export class ZncProxyDiscordPresence extends Loop {
     protected proxy_temporary_errors = 0;
 
     async update() {
+        if (this.is_sse) {
+            return await this.useEventStream();
+        }
+
         try {
-            const [presence, user, data] = await getPresenceFromUrl(this.presence_url);
+            const result = await getPresenceFromUrl(this.presence_url);
+            const [presence, user, data] = result;
             this.last_data = data;
             this.proxy_temporary_errors = 0;
 
             await this.discord.updatePresenceForDiscord(presence, user);
             await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
+
+            if (this.is_first_request) {
+                const link_header = result[ResponseSymbol].headers.get('Link');
+                const links = link_header ? parseLinkHeader(link_header) : [];
+                debug('presence links', links);
+                const eventstream_link = links.find(l => l.rel.includes('alternate') && l.type === 'text/event-stream');
+
+                if (eventstream_link) {
+                    this.eventstream_url = new URL(eventstream_link.uri, this.presence_url).href;
+                    this.is_sse = true;
+                    debug('Presence URL included server-sent events link, switching now', this.eventstream_url);
+                }
+
+                this.is_first_request = false;
+
+                // Connect to the event stream immediately
+                if (eventstream_link) return LoopResult.OK_SKIP_INTERVAL;
+            }
         } catch (err) {
             if (err instanceof ErrorResponse) {
                 const retry_after = err.response.headers.get('Retry-After');
@@ -565,6 +596,93 @@ export class ZncProxyDiscordPresence extends Loop {
 
             throw err;
         }
+    }
+
+    async useEventStream() {
+        const events = new EventSource(this.eventstream_url ?? this.presence_url, {
+            headers: {
+                'User-Agent': getUserAgent(),
+            },
+        });
+
+        // Fix emitting "message" event for all messages
+        // @ts-ignore
+        const _emit = events.emit;
+        // @ts-ignore
+        events.emit = (type: string, event: MessageEvent, ...args: any[]) => {
+            if (event.data && type !== 'message') {
+                _emit.call(events, 'message', event, ...args);
+            }
+
+            return _emit.call(events, type, event, ...args);
+        };
+        // @ts-ignore
+        const _listeners = events.listeners;
+        // @ts-ignore
+        events.listeners = (type: string, ...args: any[]) => {
+            let a = null;
+
+            if (type !== 'message' && type !== 'open' && type !== 'error') {
+                a = _listeners.call(events, 'message', ...args);
+            }
+
+            return a ? [...a, ..._listeners.call(events, type, ...args)] : _listeners.call(events, type, ...args);
+        };
+
+        events.onopen = event => {
+            debugEventStream('EventSource connected', event);
+        };
+
+        let user: CurrentUser | Friend | undefined = undefined;
+        let presence: Presence | null = null;
+
+        events.onmessage = event => {
+            if (event.type === 'message') {
+                debugEventStream('Received debug message', event.data);
+            } else if (event.type === 'update') {
+                debugEventStream('Received presence updated message', event.data);
+            } else {
+                const data = JSON.parse(event.data);
+                debugEventStream('Received updated %s data', event.type, data);
+
+                Object.assign(this.last_data!, {[event.type]: data});
+
+                if (event.type === 'user' || event.type === 'friend') {
+                    user = data;
+                    presence = data.presence;
+                }
+                if (event.type === 'presence') {
+                    presence = data;
+                }
+
+                if (presence) {
+                    this.discord.updatePresenceForDiscord(presence, user);
+                    this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
+                }
+            }
+        };
+
+        return new Promise<void>((rs, rj) => {
+            this.timeout_resolve = () => {
+                debugEventStream('Update interval cancelled, closing event stream');
+                events.close();
+                rs();
+            };
+
+            events.onerror = event => {
+                debugEventStream('EventSource error', event);
+                events.close();
+
+                if ((event as any).message) {
+                    const err = new Error((event as any).message);
+                    Object.assign(err, event);
+                    rj(err);
+                } else {
+                    // No error message
+                    rs();
+                }
+            };
+        });
     }
 
     async onStop() {
