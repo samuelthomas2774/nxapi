@@ -327,7 +327,14 @@ class Server extends HttpServer {
         return {result};
     }
 
-    async handlePresenceRequest(req: Request, res: Response, presence_user_nsaid: string) {
+    async handlePresenceRequest(req: Request, res: Response | null, presence_user_nsaid: string, is_stream = false) {
+        if (res && !is_stream) {
+            const req_url = new URL(req.url, 'http://localhost');
+            const stream_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid) + '/events', req_url);
+            res.setHeader('Link', '<' + encodeURI(stream_url.pathname + req_url.search) +
+                '>; rel="alternate"; type="text/event-stream"');
+        }
+
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
         let match_coral: Friend | null = null;
@@ -484,7 +491,12 @@ class Server extends HttpServer {
     }
 
     async handlePresenceStreamRequest(req: Request, res: Response, presence_user_nsaid: string) {
-        const result = await this.handlePresenceRequest(req, res, presence_user_nsaid);
+        const req_url = new URL(req.url, 'http://localhost');
+        const presence_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid), req_url);
+        res.setHeader('Link', '<' + encodeURI(presence_url.pathname + req_url.search) +
+            '>; rel="alternate"; type="application/json"');
+
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
 
         const stream = new EventStreamResponse(req, res);
         stream.json_replacer = replacer;
@@ -503,7 +515,7 @@ class Server extends HttpServer {
 
         while (!req.socket.closed) {
             try {
-                const result = await this.handlePresenceRequest(req, res, presence_user_nsaid);
+                const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
 
                 stream.sendEvent('update', 'debug: timestamp ' + new Date().toISOString());
 
