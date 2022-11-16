@@ -15,7 +15,7 @@ import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
 import SplatNet3Api from '../api/splatnet3.js';
 import { ErrorResponse } from '../api/util.js';
 import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
-import { getTitleIdFromEcUrl } from '../index.js';
+import { getTitleIdFromEcUrl } from '../util/misc.js';
 
 const debug = createDebug('cli:presence-server');
 
@@ -200,6 +200,8 @@ export class SplatNet3User {
 class Server extends HttpServer {
     allow_all_users = false;
     update_interval = 30 * 1000;
+    /** Interval coral friends data should be updated if the requested user isn't friends with the authenticated user */
+    update_interval_unknown_friends = 10 * 60 * 1000; // 10 minutes
 
     app: express.Express;
 
@@ -346,7 +348,9 @@ class Server extends HttpServer {
             user.update_interval = this.update_interval;
 
             const has_friend = user.friends.result.friends.find(f => f.nsaId === presence_user_nsaid);
-            if (!has_friend) continue;
+            const skip_update_unknown_friends =
+                (user.updated.friends + this.update_interval_unknown_friends) > Date.now();
+            if (!has_friend && skip_update_unknown_friends) continue;
 
             const friends = await user.getFriends();
             const friend = friends.find(f => f.nsaId === presence_user_nsaid);
