@@ -80,6 +80,7 @@ export abstract class EmbeddedLoop extends Loop {
 
     disable() {
         this._running = 0;
+        this.skipIntervalInCurrentLoop();
     }
 
     get enabled() {

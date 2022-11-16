@@ -604,7 +604,11 @@ export class ZncProxyDiscordPresence extends Loop {
         }
     }
 
-    async useEventStream() {
+    events: EventSource | null = null;
+
+    useEventStream() {
+        if (this.events) this.events.close();
+
         const events = new EventSource(this.eventstream_url ?? this.presence_url, {
             headers: {
                 'User-Agent': getUserAgent(),
@@ -634,6 +638,8 @@ export class ZncProxyDiscordPresence extends Loop {
 
             return a ? [...a, ..._listeners.call(events, type, ...args)] : _listeners.call(events, type, ...args);
         };
+
+        this.events = events;
 
         events.onopen = event => {
             debugEventStream('EventSource connected', event);

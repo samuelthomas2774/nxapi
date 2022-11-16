@@ -374,6 +374,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
     disable() {
         this._running = 0;
+        this.skipIntervalInCurrentLoop();
     }
 
     get enabled() {
@@ -432,6 +433,7 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
 
     disable() {
         this._running = 0;
+        this.skipIntervalInCurrentLoop();
     }
 
     get enabled() {
