@@ -139,7 +139,7 @@ publish-npm:
 
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
     - npm --color="always" publish
-  dependencies:
+  needs:
     - build
   only:
     refs:
@@ -161,7 +161,7 @@ publish-gitlab:
 
     - echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
     - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
-  dependencies:
+  needs:
     - build
   only:
     refs:
@@ -184,7 +184,7 @@ publish-github:
 
     - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
     - npm --color="always" --registry=https://npm.pkg.github.com/ publish
-  dependencies:
+  needs:
     - build
   only:
     refs:
@@ -231,7 +231,7 @@ publish-next:
           npm --color="always" --registry=https://npm.pkg.github.com/ publish --tag next
         fi
       fi
-  dependencies:
+  needs:
     - build
   only:
     refs:
