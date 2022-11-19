@@ -2,11 +2,8 @@ import process from 'node:process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs/promises';
-import * as child_process from 'node:child_process';
 import * as util from 'node:util';
 import createDebug from 'debug';
-
-const execFile = util.promisify(child_process.execFile);
 
 const debug = createDebug('nxapi:util:product');
 
@@ -42,9 +39,7 @@ const match = pkg.version.match(/^(\d+\.\d+\.\d+)-next\b/i);
 export const version: string = match?.[1] ?? pkg.version;
 export const release: string | null = embedded_release ?? pkg.__nxapi_release ?? null;
 
-const execGit = (...args: string[]) => execFile('git', args, {cwd: dir}).then(({stdout}) => stdout.toString().trim());
-
-export const git = typeof embedded_git !== 'undefined' ? embedded_git : await (async () => {
+export const git = typeof embedded_git !== 'undefined' ? embedded_git : pkg.__nxapi_git ?? await (async () => {
     try {
         await fs.stat(path.join(dir, '.git'));
     } catch (err) {
@@ -52,10 +47,14 @@ export const git = typeof embedded_git !== 'undefined' ? embedded_git : await (a
         return null;
     }
 
+    const child_process = await import('node:child_process');
+    const execFile = util.promisify(child_process.execFile);
+    const git = (...args: string[]) => execFile('git', args, {cwd: dir}).then(({stdout}) => stdout.toString().trim());
+
     const [revision, branch, changed_files] = await Promise.all([
-        execGit('rev-parse', 'HEAD'),
-        execGit('rev-parse', '--abbrev-ref', 'HEAD'),
-        execGit('diff', '--name-only', 'HEAD'),
+        git('rev-parse', 'HEAD'),
+        git('rev-parse', '--abbrev-ref', 'HEAD'),
+        git('diff', '--name-only', 'HEAD'),
     ]);
 
     return {
@@ -66,7 +65,7 @@ export const git = typeof embedded_git !== 'undefined' ? embedded_git : await (a
 })();
 
 export const dev = process.env.NODE_ENV !== 'production' &&
-    (!!git || process.env.NODE_ENV === 'development');
+    (!release || process.env.NODE_ENV === 'development');
 
 export const product = 'nxapi ' + version +
     (!release && git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') :

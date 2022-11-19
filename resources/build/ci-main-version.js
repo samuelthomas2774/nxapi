@@ -20,7 +20,7 @@ const [revision, branch_str, changed_files_str, tags_str, commit_count_str] = aw
 
 const branch = branch_str && branch_str !== 'HEAD' ? branch_str : null;
 const changed_files = changed_files_str.length ? changed_files_str.split('\n') : [];
-const tags = tags_str.split('\n').filter(t => t.startsWith('tag: ')).map(t => t.substr(5));
+const tags = tags_str.split(/\n|, /).filter(t => t.startsWith('tag: ')).map(t => t.substr(5));
 const last_tagged_version = tags.find(t => t.startsWith('v'))?.substr(1) ?? null;
 const last_version = last_tagged_version ?? pkg.version;
 const commit_count = parseInt(commit_count_str);

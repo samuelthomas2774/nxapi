@@ -17,7 +17,7 @@ build:
     - node bin/nxapi.js util validate-discord-titles
 
     - export VERSION=`[ "$CI_COMMIT_BRANCH" != "main" ] || node resources/build/ci-main-version.js`
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.version = process.env.VERSION || json.version; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js
     - PACKAGE=`npm --color="always" pack`
     - mv "$PACKAGE" nxapi.tgz
   artifacts:
@@ -34,7 +34,7 @@ build-docker:
     - |
       [ "$GH_REGISTRY_IMAGE" != "" ] && docker login -u "$GH_REGISTRY_USER" -p "$GH_REGISTRY_PASSWORD" "$GH_REGISTRY"
   script:
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js
 
     - docker build --pull --no-cache --tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" .
     - |
@@ -88,7 +88,7 @@ build-docker:
 build-app:
   stage: build
   script:
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js
 
     - npx electron-builder build --macos zip:x64 zip:arm64 --linux deb snap appimage --publish never
     - mv dist/app/package app
@@ -113,7 +113,7 @@ build-windows:
   stage: build
   image: electronuserland/builder:wine
   script:
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js
 
     - npx electron-builder build --win nsis --publish never
     - mv dist/app/package app
@@ -135,7 +135,7 @@ build-windows:
 publish-npm:
   stage: deploy
   script:
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js
 
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
     - npm --color="always" publish
@@ -157,8 +157,7 @@ publish-gitlab:
   stage: deploy
   script:
     # Update the package.json and package-lock.json
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
-    - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js gitlab
 
     - echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
     - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
@@ -181,8 +180,7 @@ publish-github:
   stage: deploy
   script:
     # Update the package.json and package-lock.json
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
-    - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js github
 
     - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
     - npm --color="always" --registry=https://npm.pkg.github.com/ publish
@@ -206,7 +204,7 @@ publish-next:
   stage: deploy
   script:
     - export VERSION=`[ "$CI_COMMIT_BRANCH" != "main" ] || node resources/build/ci-main-version.js`
-    - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.version = process.env.VERSION || json.version; json.__nxapi_release = process.env.CI_COMMIT_TAG; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+    - node resources/build/ci-package-json.js
 
     - |
       if [ "$CI_COMMIT_BRANCH" = "main" -a "$VERSION" != "" ]; then
@@ -219,8 +217,7 @@ publish-next:
 
         if [ "$GITLAB_NPM_PUBLISH_NEXT" = "true" -a "$GITLAB_NPM_PACKAGE_NAME" != "" ]; then
           echo "Publishing $VERSION to GitLab"
-          node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
-          node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITLAB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
+          node resources/build/ci-package-json.js gitlab
 
           echo "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" | sed s/^https:// > .npmrc
           npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish --tag next
@@ -228,8 +225,7 @@ publish-next:
 
         if [ "$GITHUB_NPM_PUBLISH_NEXT" = "true" -a "$GITHUB_NPM_PACKAGE_NAME" != "" -a "$GITHUB_REPOSITORY" != "" -a "$GITHUB_NPM_TOKEN" != "" ]; then
           echo "Publishing $VERSION to GitHub"
-          node -e "fs.writeFileSync('package.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; json.publishConfig = {access: 'public'}; json.repository = {type: 'git', url: 'https://github.com/' + process.env.GITHUB_REPOSITORY + '.git'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
-          node -e "fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = process.env.GITHUB_NPM_PACKAGE_NAME; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\n', 'utf-8')"
+          node resources/build/ci-package-json.js github
 
           echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
           npm --color="always" --registry=https://npm.pkg.github.com/ publish --tag next
