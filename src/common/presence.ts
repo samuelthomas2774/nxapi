@@ -615,30 +615,6 @@ export class ZncProxyDiscordPresence extends Loop {
             },
         });
 
-        // Fix emitting "message" event for all messages
-        // @ts-ignore
-        const _emit = events.emit;
-        // @ts-ignore
-        events.emit = (type: string, event: MessageEvent, ...args: any[]) => {
-            if (event.data && type !== 'message') {
-                _emit.call(events, 'message', event, ...args);
-            }
-
-            return _emit.call(events, type, event, ...args);
-        };
-        // @ts-ignore
-        const _listeners = events.listeners;
-        // @ts-ignore
-        events.listeners = (type: string, ...args: any[]) => {
-            let a = null;
-
-            if (type !== 'message' && type !== 'open' && type !== 'error') {
-                a = _listeners.call(events, 'message', ...args);
-            }
-
-            return a ? [...a, ..._listeners.call(events, type, ...args)] : _listeners.call(events, type, ...args);
-        };
-
         this.events = events;
 
         events.onopen = event => {
@@ -647,33 +623,60 @@ export class ZncProxyDiscordPresence extends Loop {
 
         let user: CurrentUser | Friend | undefined = undefined;
         let presence: Presence | null = null;
+        let supported_events: readonly string[] = ['friend'];
+
         this.last_data = {};
 
-        events.onmessage = event => {
+        const onmessage = (event: MessageEvent) => {
             if (event.type === 'message') {
                 debugEventStream('Received debug message', event.data);
-            } else if (event.type === 'update') {
+                return;
+            }
+            if (event.type === 'update') {
                 debugEventStream('Received presence updated message', event.data);
-            } else {
-                const data = JSON.parse(event.data);
-                debugEventStream('Received updated %s data', event.type, data);
+                return;
+            }
+            if (event.type === 'supported_events') {
+                const new_supported_events: readonly string[] = (JSON.parse(event.data) as readonly string[])
+                    .filter(e => e !== 'open' && e !== 'error' &&
+                        e !== 'message' && e !== 'update' &&
+                        e !== 'supported_events');
+                debugEventStream('Received supported events message', new_supported_events);
 
-                Object.assign(this.last_data!, {[event.type]: data});
+                for (const type of supported_events) {
+                    events.removeEventListener(type, onmessage);
+                }
+                for (const type of new_supported_events) {
+                    events.addEventListener(type, onmessage);
+                }
+                supported_events = new_supported_events;
 
-                if (event.type === 'user' || event.type === 'friend') {
-                    user = data;
-                    presence = data.presence;
-                }
-                if (event.type === 'presence') {
-                    presence = data;
-                }
+                return;
+            }
 
-                if (presence) {
-                    this.discord.updatePresenceForDiscord(presence, user);
-                    this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
-                }
+            const data = JSON.parse(event.data);
+            debugEventStream('Received updated %s data', event.type, data);
+
+            Object.assign(this.last_data!, {[event.type]: data});
+
+            if (event.type === 'user' || event.type === 'friend') {
+                user = data;
+                presence = data.presence;
+            }
+            if (event.type === 'presence') {
+                presence = data;
+            }
+
+            if (presence) {
+                this.discord.updatePresenceForDiscord(presence, user);
+                this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
             }
         };
+
+        events.onmessage = onmessage;
+        events.addEventListener('supported_events', onmessage);
+        events.addEventListener('update', onmessage);
+        events.addEventListener('friend', onmessage);
 
         return new Promise<void>((rs, rj) => {
             this.timeout_resolve = () => {

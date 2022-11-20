@@ -494,6 +494,8 @@ class Server extends HttpServer {
         return null;
     }
 
+    presence_streams = new Set<EventStreamResponse>();
+
     async handlePresenceStreamRequest(req: Request, res: Response, presence_user_nsaid: string) {
         const req_url = new URL(req.url, 'http://localhost');
         const presence_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid), req_url);
@@ -505,7 +507,21 @@ class Server extends HttpServer {
         const stream = new EventStreamResponse(req, res);
         stream.json_replacer = replacer;
 
+        this.presence_streams.add(stream);
+        res.on('close', () => this.presence_streams.delete(stream));
+
         stream.sendEvent(null, 'debug: timestamp ' + new Date().toISOString());
+
+        stream.sendEvent('supported_events', [
+            'friend',
+            ...(this.splatnet3_users && req.query['include-splatoon3'] === '1' ? [
+                'splatoon3',
+                'splatoon3_fest_team',
+                'splatoon3_vs_setting',
+                'splatoon3_coop_setting',
+                'splatoon3_fest',
+            ] : []),
+        ]);
 
         for (const [key, value] of Object.entries(result) as
             [keyof typeof result, typeof result[keyof typeof result]][]
