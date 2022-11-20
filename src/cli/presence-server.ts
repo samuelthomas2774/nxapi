@@ -337,6 +337,8 @@ class Server extends HttpServer {
                 '>; rel="alternate"; type="text/event-stream"');
         }
 
+        res?.setHeader('Access-Control-Allow-Origin', '*');
+
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
         let match_coral: Friend | null = null;
@@ -501,6 +503,8 @@ class Server extends HttpServer {
         const presence_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid), req_url);
         res.setHeader('Link', '<' + encodeURI(presence_url.pathname + req_url.search) +
             '>; rel="alternate"; type="application/json"');
+
+        res.setHeader('Access-Control-Allow-Origin', '*');
 
         const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
 
