@@ -617,8 +617,13 @@ export class ZncProxyDiscordPresence extends Loop {
 
         this.events = events;
 
+        let timeout: NodeJS.Timeout;
+        let timeout_interval = 90000;
+        const ontimeout = () => events.dispatchEvent({type: 'error', message: 'Timeout'} as any);
+
         events.onopen = event => {
             debugEventStream('EventSource connected', event);
+            timeout = setTimeout(ontimeout, timeout_interval);
         };
 
         let user: CurrentUser | Friend | undefined = undefined;
@@ -628,6 +633,9 @@ export class ZncProxyDiscordPresence extends Loop {
         this.last_data = {};
 
         const onmessage = (event: MessageEvent) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(ontimeout, timeout_interval);
+
             if (event.type === 'message') {
                 debugEventStream('Received debug message', event.data);
                 return;
