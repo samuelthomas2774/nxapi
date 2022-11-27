@@ -560,6 +560,11 @@ class Server extends HttpServer {
                     const retry_after = err.response.headers.get('Retry-After');
 
                     if (retry_after && /^\d+$/.test(retry_after)) {
+                        stream.sendEvent(null, 'debug: timestamp ' + new Date().toISOString(), {
+                            error: err,
+                            error_message: (err as Error).message,
+                        });
+
                         await new Promise(rs => setTimeout(rs, parseInt(retry_after) * 1000));
 
                         continue;
