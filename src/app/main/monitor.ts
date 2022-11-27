@@ -127,7 +127,7 @@ export class PresenceMonitorManager {
 
     getDiscordPresence(): DiscordPresence | null {
         const presence = this.getActiveDiscordPresenceMonitor()?.discord.last_activity;
-        return presence ? {...presence, config: undefined} : null;
+        return presence && typeof presence === 'object' ? {...presence, config: undefined} : null;
     }
 
     getActiveDiscordPresenceOptions(): Omit<DiscordPresenceConfiguration, 'source'> | null {
