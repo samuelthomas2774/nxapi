@@ -8,7 +8,7 @@ import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/ut
 import { DiscordPresenceContext, DiscordPresencePlayTime } from '../../discord/types.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken } from '../../common/auth/coral.js';
+import { getToken, Login } from '../../common/auth/coral.js';
 import { timeoutSignal } from '../../util/misc.js';
 import { getUserAgent } from '../../util/useragent.js';
 
@@ -153,7 +153,7 @@ async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
     const friends = await nso.getFriendList();
     const webservices = await nso.getWebServices();
     const activeevent = await nso.getActiveEvent();
-    const user = 'expires_at' in data ? await nso.getCurrentUser() : data.nsoAccount.user;
+    const user = data[Login] ? data.nsoAccount.user : await nso.getCurrentUser();
 
     if (argv.friendNsaid) {
         const friend = friends.friends.find(f => f.nsaId === argv.friendNsaid);

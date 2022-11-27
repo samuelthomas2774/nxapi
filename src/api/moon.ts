@@ -24,7 +24,7 @@ export default class MoonApi {
         readonly znma_useragent = ZNMA_USER_AGENT,
     ) {}
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
+    async fetch<T extends object>(url: string, method = 'GET', body?: string, headers?: object) {
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(MOON_URL + url, {
             method,

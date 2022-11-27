@@ -31,7 +31,7 @@ export default class SplatNet2Api {
         public useragent: string,
     ) {}
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+    async fetch<T extends object>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(SPLATNET2_URL + url, {
             method,

@@ -23,7 +23,7 @@ export default class NooklinkApi {
         readonly client_version = BLANCO_VERSION,
     ) {}
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+    async fetch<T extends object>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(NOOKLINK_URL + url, {
             method,
@@ -164,7 +164,7 @@ export class NooklinkUserApi {
         readonly client_version = BLANCO_VERSION,
     ) {}
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+    async fetch<T extends object>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(NOOKLINK_URL + url, {
             method,
@@ -224,7 +224,7 @@ export class NooklinkUserApi {
     }
 
     async postMessage(body: string, type: MessageType, destination_user_id?: string) {
-        return this.fetch<unknown>('/sd/v1/messages', 'POST', JSON.stringify({
+        return this.fetch('/sd/v1/messages', 'POST', JSON.stringify({
             type,
             body,
             userId: destination_user_id,

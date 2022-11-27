@@ -93,7 +93,7 @@ export class ZncNotifications extends Loop {
             const activeevent: GetActiveEventResult = this.user ?
                 await this.user.getActiveEvent() :
                 await this.nso.getActiveEvent();
-            result.activeevent = 'id' in activeevent ? activeevent : undefined;
+            result.activeevent = 'id' in activeevent ? activeevent as ActiveEvent : undefined;
         }
         if (req.includes('user')) {
             result.user = await this.nso.getCurrentUser();

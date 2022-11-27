@@ -51,7 +51,7 @@ export class HttpServer {
             }
         }
 
-        if (err && 'type' in err && 'code' in err && (err as any).type === 'system') {
+        if (err && typeof err === 'object' && 'type' in err && 'code' in err && (err as any).type === 'system') {
             const code: string = (err as any).code;
 
             if (code === 'ETIMEDOUT' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
