@@ -38,7 +38,7 @@ class ZncDiscordPresenceClient {
     last_friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
     last_event: ActiveEvent | undefined = undefined;
 
-    last_activity: DiscordPresence | null = null;
+    last_activity: DiscordPresence | string | null = null;
     onUpdateActivity: ((activity: DiscordPresence | null) => void) | null = null;
     onUpdateClient: ((client: DiscordRpcClient | null) => void) | null = null;
     onWillStartMonitor: (<T>(monitor: ExternalMonitorConstructor<T>) => any | T | null | Promise<T | null>) | null = null;
@@ -75,20 +75,20 @@ class ZncDiscordPresenceClient {
                 this.monitors.delete(monitor);
             }
 
-            if (this.m.presence_enabled && this.m.discord_preconnect && !this.rpc) {
-                debugDiscord('No presence but Discord preconnect enabled - connecting');
-                const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
-                this.setActivity(discordpresence.id);
+            if (this.m.presence_enabled && this.m.discord_preconnect) {
+                if (this.rpc) {
+                    debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
+                    this.setActivity(this.rpc.id);
+                } else {
+                    debugDiscord('No presence but Discord preconnect enabled - connecting');
+                    const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
+                    this.setActivity(discordpresence.id);
+                }
+
                 return;
             }
 
-            if (this.rpc && !(this.m.presence_enabled && this.m.discord_preconnect)) {
-                this.setActivity(null);
-            } else if (this.rpc && this.title) {
-                debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
-                this.setActivity(this.rpc.id);
-            }
-
+            this.setActivity(null);
             this.title = null;
             return;
         }
@@ -209,7 +209,7 @@ class ZncDiscordPresenceClient {
 
     async setActivity(activity: DiscordPresence | string | null) {
         this.onUpdateActivity?.call(null, typeof activity === 'string' ? null : activity);
-        this.last_activity = typeof activity === 'string' ? null : activity;
+        this.last_activity = activity;
 
         if (!activity) {
             // No activity, no IPC connection
@@ -304,7 +304,7 @@ class ZncDiscordPresenceClient {
             if (!connected) throw new Error('Failed to reconnect to Discord');
 
             this.onUpdateClient?.call(null, this.rpc.client);
-            if (this.last_activity) this.rpc.client.setActivity(this.last_activity.activity);
+            this.setActivity(this.last_activity);
         };
 
         // @ts-expect-error
@@ -318,7 +318,7 @@ class ZncDiscordPresenceClient {
 
         this.rpc = {client: client!, id: client_id};
         this.onUpdateClient?.call(null, client!);
-        if (this.last_activity) this.rpc.client.setActivity(this.last_activity.activity);
+        this.setActivity(this.last_activity);
 
         return client!;
     }
