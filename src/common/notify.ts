@@ -7,7 +7,7 @@ import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
 import Loop, { LoopResult } from '../util/loop.js';
-import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
+import { getTitleIdFromEcUrl, hrduration, TemporaryErrorSymbol } from '../util/misc.js';
 import { CoralUser } from './users.js';
 
 const debug = createDebug('nxapi:nso:notify');
@@ -187,7 +187,11 @@ export async function handleError(
     err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException,
     loop: Loop,
 ): Promise<LoopResult> {
-    if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
+    if (TemporaryErrorSymbol in err && err[TemporaryErrorSymbol]) {
+        debug('Temporary error, waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
         debug('Request timed out, waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;

@@ -1,4 +1,6 @@
 
+export const TemporaryErrorSymbol = Symbol('TemporaryError');
+
 export function getTitleIdFromEcUrl(url: string) {
     const match = url.match(/^https:\/\/ec\.nintendo\.com\/apps\/([0-9a-f]{16})\//);
     return match?.[1] ?? null;
@@ -31,7 +33,9 @@ export function timeoutSignal(ms = 60 * 1000) {
     const controller = new AbortController();
 
     const timeout = setTimeout(() => {
-        controller.abort(new Error('Timeout'));
+        const err = new Error('Timeout');
+        Object.assign(err, TemporaryErrorSymbol, true);
+        controller.abort(err);
     }, ms);
 
     return [controller.signal, () => clearTimeout(timeout), controller] as const;

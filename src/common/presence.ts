@@ -11,6 +11,7 @@ import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl } from '../index.js';
 import { parseLinkHeader } from '../util/http.js';
 import { getUserAgent } from '../util/useragent.js';
+import { TemporaryErrorSymbol } from '../util/misc.js';
 
 const debug = createDebug('nxapi:nso:presence');
 const debugEventStream = createDebug('nxapi:nso:presence:sse');
@@ -619,7 +620,13 @@ export class ZncProxyDiscordPresence extends Loop {
 
         let timeout: NodeJS.Timeout;
         let timeout_interval = 90000;
-        const ontimeout = () => events.dispatchEvent({type: 'error', message: 'Timeout'} as any);
+        const ontimeout = () => {
+            const err = new Error('Timeout') as any;
+            err.type = 'error';
+            err[TemporaryErrorSymbol] = true;
+            Object.defineProperty(err, 'detail', {enumerable: false, value: err});
+            events.dispatchEvent(err);
+        };
 
         events.onopen = event => {
             debugEventStream('EventSource connected', event);
@@ -697,7 +704,9 @@ export class ZncProxyDiscordPresence extends Loop {
                 debugEventStream('EventSource error', event);
                 events.close();
 
-                if ((event as any).message) {
+                if (event instanceof Error) {
+                    rj(event);
+                } else if ((event as any).message) {
                     const err = new Error((event as any).message);
                     Object.assign(err, event);
                     rj(err);
