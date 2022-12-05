@@ -34,7 +34,8 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     fest_schedule: VsSchedule_fest | null = null;
     league_schedule: VsSchedule_league | null = null;
     x_schedule: VsSchedule_xMatch | null = null;
-    coop_schedule: CoopSchedule_schedule | null = null;
+    coop_regular_schedule: CoopSchedule_schedule | null = null;
+    coop_big_run_schedule: CoopSchedule_schedule | null = null;
     fest: Fest_schedule | null = null;
     fest_team_voting_status: FestTeam_votingStatus | null = null;
     fest_team: FestTeam_schedule | null = null;
@@ -121,16 +122,9 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
         this.friend = friend;
 
-        // Refresh Splatfest data at the start of the second half
-        // At the point one team becomes the defending team and others attacking teams, this needs to be known
-        // to check if the player may join a Tricolour battle
-        const tricolour_open = this.fest && new Date(this.fest.midtermTime).getTime() < Date.now();
-        const should_refresh_fest = this.fest && tricolour_open &&
-            ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.fest.state as FestState);
-
         this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
 
-        if (!this.regular_schedule || should_refresh_fest) {
+        if (!this.regular_schedule) {
             this.cached_schedules = await this.splatnet?.getSchedules() ?? null;
             this.regular_schedule = this.getSchedule(this.cached_schedules?.data.regularSchedules.nodes ?? []);
         }
@@ -139,7 +133,8 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         this.fest_schedule = this.getSchedule(this.cached_schedules?.data.festSchedules.nodes ?? []);
         this.league_schedule = this.getSchedule(this.cached_schedules?.data.leagueSchedules.nodes ?? []);
         this.x_schedule = this.getSchedule(this.cached_schedules?.data.xSchedules.nodes ?? []);
-        this.coop_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.regularSchedules.nodes ?? []);
+        this.coop_regular_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.regularSchedules.nodes ?? []);
+        this.coop_big_run_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.bigRunSchedules.nodes ?? []);
         this.fest = this.cached_schedules?.data.currentFest ?? null;
 
         // Identify the user by their icon as the vote list doesn't have friend IDs
@@ -154,7 +149,6 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         }
 
         this.fest_team_voting_status = fest_team ?? null;
-        this.fest_team = this.fest?.teams.find(t => t.id === fest_team?.id) ?? null;
 
         this.discord_presence.refreshPresence();
     }
@@ -289,10 +283,11 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             // In the second half the player may be in a Tricolour battle if either:
             // the player is on the defending team and joins Splatfest Battle (Open) or
             // the player is on the attacking team and joins Tricolour Battle
-            const possibly_tricolour = fest?.state === FestState.SECOND_HALF && (
-                (friend.vsMode?.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
-                (friend.vsMode?.id === 'VnNNb2RlLTg=')
-            );
+            // const possibly_tricolour = fest?.state === FestState.SECOND_HALF && (
+            //     (friend.vsMode?.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
+            //     (friend.vsMode?.id === 'VnNNb2RlLTg=')
+            // );
+            const possibly_tricolour = friend.vsMode?.id === 'VnNNb2RlLTg=';
 
             activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
                 a: setting.vsStages[0].id,
@@ -327,7 +322,10 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
         const coop_setting =
             presence_proxy_data && 'splatoon3_coop_setting' in presence_proxy_data ?
                 presence_proxy_data.splatoon3_coop_setting :
-            monitor ? monitor.coop_schedule?.setting :
+            monitor ?
+                friend.coopMode === 'BIG_RUN' ?
+                    monitor.coop_big_run_schedule?.setting :
+                    monitor.coop_regular_schedule?.setting :
             null;
 
         if (coop_setting) {

@@ -2,7 +2,7 @@ import * as net from 'node:net';
 import createDebug from 'debug';
 import express, { Request, Response } from 'express';
 import * as persist from 'node-persist';
-import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, Friend as SplatNetFriend, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsMode, XMatchSetting } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsMode, XMatchSetting } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -22,12 +22,12 @@ const debug = createDebug('cli:presence-server');
 type CoopSetting_schedule = Pick<CoopSetting, '__typename' | 'coopStage' | 'weapons'>;
 
 interface AllUsersResult extends Friend {
-    splatoon3?: SplatNetFriend | null;
+    splatoon3?: Friend_friendList | null;
     splatoon3_fest_team?: FestTeam_votingStatus | null;
 }
 interface PresenceResponse {
     friend: Friend;
-    splatoon3?: SplatNetFriend | null;
+    splatoon3?: Friend_friendList | null;
     splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
     splatoon3_vs_setting?:
         RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
@@ -157,7 +157,7 @@ export class SplatNet3User {
         }
     }
 
-    async getFriends(): Promise<SplatNetFriend[]> {
+    async getFriends(): Promise<Friend_friendList[]> {
         await this.update('friends', async () => {
             this.friends = await this.splatnet.getFriendsRefetch();
         }, this.update_interval);
@@ -465,7 +465,10 @@ class Server extends HttpServer {
             friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
         ) {
             const schedules = await user.getSchedules();
-            const coop_setting = getSchedule(schedules.coopGroupingSchedule.regularSchedules)?.setting;
+            const coop_schedules = friend.coopMode === 'BIG_RUN' ?
+                schedules.coopGroupingSchedule.bigRunSchedules :
+                schedules.coopGroupingSchedule.regularSchedules;
+            const coop_setting = getSchedule(coop_schedules)?.setting;
 
             response.splatoon3_coop_setting = coop_setting ?? null;
         }
@@ -608,7 +611,6 @@ function createFestScheduleTeam(
         id: team.id,
         color: team.color,
         myVoteState: state,
-        role: team.role,
     };
 }
 

@@ -46,28 +46,29 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const req_id = argv.id;
     const encoded_req_id = Buffer.from(req_id).toString('base64');
     const encoded_part_req_id = Buffer.from('Fest-' + req_id).toString('base64');
-    const fest = fest_records.data.festRecords.nodes.find(f => f.id === req_id ||
+    const fest_record = fest_records.data.festRecords.nodes.find(f => f.id === req_id ||
         f.id === encoded_req_id || f.id === encoded_part_req_id);
 
-    if (!fest) {
+    if (!fest_record) {
         throw new Error('Invalid Splatfest ID');
     }
 
-    const detail = await splatnet.getFestDetail(fest.id);
-    const votes = detail.data.fest.state !== FestState.CLOSED ? await splatnet.getFestVotingStatus(fest.id) : null;
+    const fest = (await splatnet.getFestDetail(fest_record.id)).data.fest!;
+    const fest_votes = fest.state !== FestState.CLOSED ?
+        (await splatnet.getFestVotingStatus(fest_record.id)).data.fest : null;
 
     if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify({fest: detail.data.fest, votes: votes?.data.fest ?? undefined}, null, 4));
+        console.log(JSON.stringify({fest: fest, votes: fest_votes ?? undefined}, null, 4));
         return;
     }
     if (argv.json) {
-        console.log(JSON.stringify({fest: detail.data.fest, votes: votes?.data.fest ?? undefined}));
+        console.log(JSON.stringify({fest: fest, votes: fest_votes ?? undefined}));
         return;
     }
 
-    console.log('Details', detail.data.fest);
+    console.log('Details', fest);
 
-    if (votes) {
+    if (fest_votes) {
         const table = new Table({
             head: [
                 'Name',
@@ -76,7 +77,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             ],
         });
 
-        for (const team of votes.data.fest.teams) {
+        for (const team of fest_votes.teams) {
             for (const vote of team.votes?.nodes ?? []) {
                 table.push([vote.playerName, 'Voted', team.teamName]);
             }
@@ -85,7 +86,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             }
         }
 
-        for (const vote of votes.data.fest.undecidedVotes?.nodes ?? []) {
+        for (const vote of fest_votes.undecidedVotes?.nodes ?? []) {
             table.push([vote.playerName, 'Undecided', '-']);
         }
 

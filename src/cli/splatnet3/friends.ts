@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { FriendOnlineState } from 'splatnet3-types/splatnet3';
+import { FriendOnlineState, Friend_friendList } from 'splatnet3-types/splatnet3';
 import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -53,7 +53,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             'NSA ID',
             'Name',
             'Status',
-            'Favourite?',
             'Locked?',
             'Voice chat?',
         ],
@@ -69,8 +68,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             friend.playerName === friend.nickname ? friend.playerName :
                 friend.playerName ? friend.playerName + ' (' + friend.nickname + ')' :
                 friend.nickname,
-            getStateDescription(friend.onlineState, getVsModeDescription(friend.vsMode) ?? friend.vsMode?.name),
-            friend.isFavorite ? 'Yes' : 'No',
+            getStateDescription(friend.onlineState,
+                getVsModeDescription(friend.vsMode) ?? friend.vsMode?.name,
+                getCoopModeDescription(friend.coopMode) ?? undefined),
             typeof friend.isLocked === 'boolean' ? friend.isLocked ? 'Yes' : 'No' : '-',
             typeof friend.isVcEnabled === 'boolean' ? friend.isVcEnabled ? 'Yes' : 'No' : '-',
         ]);
@@ -79,7 +79,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log(table.toString());
 }
 
-function getStateDescription(state: FriendOnlineState, vs_mode_desc?: string) {
+function getStateDescription(state: FriendOnlineState, vs_mode_desc?: string, coop_mode_desc?: string) {
     switch (state) {
         case FriendOnlineState.OFFLINE:
             return 'Offline';
@@ -88,16 +88,16 @@ function getStateDescription(state: FriendOnlineState, vs_mode_desc?: string) {
         case FriendOnlineState.VS_MODE_MATCHING:
             return 'In lobby (' + (vs_mode_desc ?? 'VS') + ')';
         case FriendOnlineState.COOP_MODE_MATCHING:
-            return 'In lobby (Salmon Run)';
+            return 'In lobby (' + (coop_mode_desc ?? 'Salmon Run') + ')';
         case FriendOnlineState.VS_MODE_FIGHTING:
             return 'In game (' + (vs_mode_desc ?? 'VS') + ')';
         case FriendOnlineState.COOP_MODE_FIGHTING:
-            return 'In game (Salmon Run)';
+            return 'In game (' + (coop_mode_desc ?? 'Salmon Run') + ')';
         default: return state;
     }
 }
 
-function getVsModeDescription(vs_mode: {id: string; mode: string;} | null) {
+function getVsModeDescription(vs_mode: Friend_friendList['vsMode'] | null) {
     if (!vs_mode) return null;
 
     if (vs_mode.mode === 'REGULAR') return 'Regular Battle';
@@ -110,6 +110,15 @@ function getVsModeDescription(vs_mode: {id: string; mode: string;} | null) {
     if (vs_mode.mode === 'FEST') return 'Splatfest Battle';
     if (vs_mode.mode === 'LEAGUE') return 'League Battle';
     if (vs_mode.mode === 'X_MATCH') return 'X Battle';
+
+    return null;
+}
+
+function getCoopModeDescription(coop_mode: string | null) {
+    if (!coop_mode) return null;
+
+    if (coop_mode === 'REGULAR') return 'Salmon Run';
+    if (coop_mode === 'BIG_RUN') return 'Big Run';
 
     return null;
 }

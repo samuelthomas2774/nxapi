@@ -17,8 +17,8 @@
         "blanco_version": "2.1.1"
     },
     "coral_gws_splatnet3": {
-        "app_ver": "2.0.0-8a061f6c",
+        "app_ver": "2.0.0-18810d39",
         "version": "2.0.0",
-        "revision": "8a061f6c34f6149b4775a13262f9e059fda92a31"
+        "revision": "18810d3918b0a7ac1c9e23c0c15a5ec0f71aa409"
     }
 }

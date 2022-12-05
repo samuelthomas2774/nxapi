@@ -116,11 +116,11 @@ export default class SplatNet3Api {
         /** @private */
         _Id extends string = string,
         /** @private */
-        _Result extends (T extends unknown ? _Id extends KnownRequestId ? ResultTypes[_Id] : unknown : T) =
-            (T extends unknown ? _Id extends KnownRequestId ? ResultTypes[_Id] : unknown : T),
+        _Result extends (T extends object ? T : _Id extends KnownRequestId ? ResultTypes[_Id] : unknown) =
+            (T extends object ? T : _Id extends KnownRequestId ? ResultTypes[_Id] : unknown),
         /** @private */
-        _Variables extends (V extends unknown ? _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown : V) =
-            (V extends unknown ? _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown : V),
+        _Variables extends (V extends object ? V : _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown) =
+            (V extends object ? V : _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown),
     >(id: _Id, variables: _Variables) {
         const req: GraphQLRequest<_Variables> = {
             variables,
@@ -135,7 +135,7 @@ export default class SplatNet3Api {
         const data = await this.fetch<GraphQLResponse<_Result>>('/graphql', 'POST', JSON.stringify(req), undefined,
             'graphql query ' + id);
 
-        if ('errors' in data) {
+        if (!('data' in data)) {
             throw new ErrorResponse('[splatnet3] GraphQL error: ' + data.errors.map(e => e.message).join(', '),
                 data[ResponseSymbol], data);
         }

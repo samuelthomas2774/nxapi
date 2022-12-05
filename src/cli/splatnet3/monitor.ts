@@ -191,7 +191,7 @@ async function update(
 
         const pager = await splatnet.getBattleHistoryDetailPagerRefetch(latest_id);
 
-        if (pager.data.vsHistoryDetail.nextHistoryDetail) {
+        if (pager.data.vsHistoryDetail?.nextHistoryDetail) {
             // New battle results available
             debug('New battle result', pager.data.vsHistoryDetail.nextHistoryDetail);
             vs = await dumpResults(splatnet, directory, vs.battles.data);
@@ -204,7 +204,7 @@ async function update(
 
         const pager = await splatnet.getCoopHistoryDetailRefetch(latest_id);
 
-        if (pager.data.node.nextHistoryDetail) {
+        if (pager.data.node?.nextHistoryDetail) {
             // New coop results available
             debug('New coop result', pager.data.node.nextHistoryDetail);
             coop = await dumpCoopResults(splatnet, directory, coop.results.data);

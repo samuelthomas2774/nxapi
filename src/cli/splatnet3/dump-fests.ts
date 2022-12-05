@@ -137,7 +137,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
                 // Fetch this now to match the behavour of Nintendo's app
                 if (!record) {
                     const result = await splatnet.getFestDetail(fest_record.id);
-                    record = result.data.fest;
+                    record = result.data.fest!;
                 }
 
                 const rankings_available = record.state === FestState.CLOSED &&
