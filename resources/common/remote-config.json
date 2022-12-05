@@ -1,7 +1,7 @@
 {
     "require_version": [],
     "coral": {
-        "znca_version": "2.3.1"
+        "znca_version": "2.4.0"
     },
     "coral_auth": {
         "default": "imink",
