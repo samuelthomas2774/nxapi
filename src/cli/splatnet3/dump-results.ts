@@ -108,28 +108,28 @@ export async function dumpResults(
             result: battles.data.latestBattleHistories,
             fest: battles.data.currentFest,
             player: 'currentPlayer' in battles.data ?
-                (battles.data as LatestBattleHistoriesRefetchResult).currentPlayer : undefined,
+                (battles.data as LatestBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
             query: refresh ? RequestId.LatestBattleHistoriesRefetchQuery : RequestId.LatestBattleHistoriesQuery,
             be_version: battles[ResponseSymbol].headers.get('x-be-version'),
         },
         regularBattleHistories: {
             result: battles_regular.data.regularBattleHistories,
             player: 'currentPlayer' in battles_regular.data ?
-                (battles_regular.data as RegularBattleHistoriesRefetchResult).currentPlayer : undefined,
+                (battles_regular.data as RegularBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
             query: refresh ? RequestId.RegularBattleHistoriesRefetchQuery : RequestId.RegularBattleHistoriesQuery,
             be_version: battles_regular[ResponseSymbol].headers.get('x-be-version'),
         },
         bankaraBattleHistories: {
             result: battles_anarchy.data.bankaraBattleHistories,
             player: 'currentPlayer' in battles_anarchy.data ?
-                (battles_anarchy.data as BankaraBattleHistoriesRefetchResult).currentPlayer : undefined,
+                (battles_anarchy.data as BankaraBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
             query: refresh ? RequestId.BankaraBattleHistoriesRefetchQuery : RequestId.BankaraBattleHistoriesQuery,
             be_version: battles_anarchy[ResponseSymbol].headers.get('x-be-version'),
         },
         privateBattleHistories: {
             result: battles_private.data.privateBattleHistories,
             player: 'currentPlayer' in battles_private.data ?
-                (battles_private.data as PrivateBattleHistoriesRefetchResult).currentPlayer : undefined,
+                (battles_private.data as PrivateBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
             query: refresh ? RequestId.PrivateBattleHistoriesRefetchQuery : RequestId.PrivateBattleHistoriesQuery,
             be_version: battles_private[ResponseSymbol].headers.get('x-be-version'),
         },

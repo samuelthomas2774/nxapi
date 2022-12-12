@@ -1,19 +1,17 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
-import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSchedule_schedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
 import { Game } from '../../api/coral-types.js';
 import SplatNet3Api from '../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../app/common/types.js';
 import { Arguments } from '../../cli/nso/presence.js';
 import { getBulletToken, SavedBulletToken } from '../../common/auth/splatnet3.js';
-import { ExternalMonitorPresenceInterface, ZncProxyDiscordPresence } from '../../common/presence.js';
+import { ExternalMonitorPresenceInterface } from '../../common/presence.js';
 import { EmbeddedLoop, LoopResult } from '../../util/loop.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';
 import { DiscordPresenceContext, ErrorResult } from '../types.js';
 import { product } from '../../util/product.js';
-
-type CoopSchedule_schedule = Pick<CoopSchedule, 'startTime' | 'endTime' | 'setting'>;
 
 const debug = createDebug('nxapi:discord:splatnet3');
 
@@ -323,7 +321,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             presence_proxy_data && 'splatoon3_coop_setting' in presence_proxy_data ?
                 presence_proxy_data.splatoon3_coop_setting :
             monitor ?
-                friend.coopMode === 'BIG_RUN' ?
+                friend.coopRule === 'BIG_RUN' ?
                     monitor.coop_big_run_schedule?.setting :
                     monitor.coop_regular_schedule?.setting :
             null;

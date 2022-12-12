@@ -57,8 +57,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
         console.warn('Downloading summaries for device %s (%s)', device.label, device.deviceId);
 
-        await dumpMonthlySummariesForDevice(moon, directory, device.deviceId);
-        await dumpDailySummariesForDevice(moon, directory, device.deviceId);
+        const monthly = await dumpMonthlySummariesForDevice(moon, directory, device.deviceId);
+        const daily = await dumpDailySummariesForDevice(moon, directory, device.deviceId);
+
+        console.warn('Downloaded %d monthly and %d daily summaries for device %s (%s)',
+            monthly.length, daily.length, device.label, device.deviceId);
     }
 }
 
@@ -66,28 +69,44 @@ async function dumpMonthlySummariesForDevice(moon: MoonApi, directory: string, d
     debug('Fetching monthly summaries for device %s', device);
     const monthlySummaries = await moon.getMonthlySummaries(device);
 
+    const downloaded = [];
+    const skipped = [];
+
     for (const item of monthlySummaries.items) {
         const filename = 'pctl-monthly-' + item.deviceId + '-' + item.month + '.json';
         const file = path.join(directory, filename);
 
         try {
             await fs.stat(file);
-            debug('Skipping monthly summary %s for device %s, file already exists', item.month, item.deviceId);
+            skipped.push(item.month);
             continue;
         } catch (err) {}
 
         debug('Fetching monthly summary %s for device %s', item.month, item.deviceId);
+        console.warn('Fetching monthly summary %s for device %s', item.month, item.deviceId);
         const summary = await moon.getMonthlySummary(item.deviceId, item.month);
 
         debug('Writing %s', filename);
         await fs.writeFile(file, JSON.stringify(summary, null, 4) + '\n', 'utf-8');
+
+        downloaded.push(item.month);
     }
+
+    if (skipped.length) {
+        if (skipped.length === 1) debug('Skipped monthly summary %s for device %s, file already exists', skipped[0], device);
+        else debug('Skipped monthly summaries %s for device %s, files already exist', skipped.join(', '), device);
+    }
+
+    return downloaded;
 }
 
 async function dumpDailySummariesForDevice(moon: MoonApi, directory: string, device: string) {
     debug('Fetching daily summaries for device %s', device);
     const summaries = await moon.getDailySummaries(device);
     const timestamp = Date.now();
+
+    const downloaded = [];
+    const skipped = [];
 
     for (const summary of summaries.items) {
         const filename = 'pctl-daily-' + summary.deviceId + '-' + summary.date +
@@ -96,11 +115,20 @@ async function dumpDailySummariesForDevice(moon: MoonApi, directory: string, dev
 
         try {
             await fs.stat(file);
-            debug('Skipping daily summary %s for device %s, file already exists', summary.date, summary.deviceId);
+            skipped.push(summary.date);
             continue;
         } catch (err) {}
 
         debug('Writing %s', filename);
         await fs.writeFile(file, JSON.stringify(summary, null, 4) + '\n', 'utf-8');
+
+        downloaded.push(summary.date);
     }
+
+    if (skipped.length) {
+        if (skipped.length === 1) debug('Skipped daily summary %s for device %s, file already exists', skipped[0], device);
+        else debug('Skipped daily summaries %s for device %s, files already exist', skipped.join(', '), device);
+    }
+
+    return downloaded;
 }

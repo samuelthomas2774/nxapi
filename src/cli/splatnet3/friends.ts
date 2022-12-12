@@ -70,7 +70,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 friend.nickname,
             getStateDescription(friend.onlineState,
                 getVsModeDescription(friend.vsMode) ?? friend.vsMode?.name,
-                getCoopModeDescription(friend.coopMode) ?? undefined),
+                getCoopModeDescription(friend.coopRule) ?? undefined),
             typeof friend.isLocked === 'boolean' ? friend.isLocked ? 'Yes' : 'No' : '-',
             typeof friend.isVcEnabled === 'boolean' ? friend.isVcEnabled ? 'Yes' : 'No' : '-',
         ]);
