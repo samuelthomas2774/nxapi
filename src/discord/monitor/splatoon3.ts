@@ -251,7 +251,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             friend.vsMode.id === 'VnNNb2RlLTg=' ? 'Tricolour Battle' : // VsMode-8
             friend.vsMode.mode === 'FEST' ? 'Splatfest Battle' :
             friend.vsMode.mode === 'LEAGUE' ? 'League Battle' :
-            friend.vsMode.mode === 'X_MATCH' ? 'X Battle' :
+            friend.vsMode.mode === 'X_MATCH' ? 'X Battle' : // VsMode-3
             undefined;
 
         const setting =

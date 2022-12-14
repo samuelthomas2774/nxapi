@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { BankaraBattleHistoriesRefetchResult, CoopHistoryResult, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesResult, PrivateBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchResult, RequestId } from 'splatnet3-types/splatnet3';
+import { BankaraBattleHistoriesRefetchResult, CoopHistoryResult, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesResult, PrivateBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchResult, RequestId, XBattleHistoriesRefetchResult } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -86,11 +86,12 @@ export async function dumpResults(
     debug('Fetching battle results');
     console.warn('Fetching battle results');
 
-    const [player, battles, battles_regular, battles_anarchy, battles_private] = await Promise.all([
+    const [player, battles, battles_regular, battles_anarchy, battles_xmatch, battles_private] = await Promise.all([
         refresh ? null : splatnet.getBattleHistoryCurrentPlayer(),
         refresh ? splatnet.getLatestBattleHistoriesRefetch() : splatnet.getLatestBattleHistories(),
         refresh ? splatnet.getRegularBattleHistoriesRefetch() : splatnet.getRegularBattleHistories(),
         refresh ? splatnet.getBankaraBattleHistoriesRefetch() : splatnet.getBankaraBattleHistories(),
+        refresh ? splatnet.getXBattleHistoriesRefetch() : splatnet.getXBattleHistories(),
         refresh ? splatnet.getPrivateBattleHistoriesRefetch() : splatnet.getPrivateBattleHistories(),
     ]);
 
@@ -137,7 +138,7 @@ export async function dumpResults(
             result: battles_private.data.privateBattleHistories,
             player: 'currentPlayer' in battles_private.data ?
                 (battles_private.data as PrivateBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
-            query: refresh ? RequestId.PrivateBattleHistoriesRefetchQuery : RequestId.PrivateBattleHistoriesQuery,
+            query: battles_private[RequestIdSymbol],
             be_version: battles_private[ResponseSymbol].headers.get('x-be-version'),
         },
         app_version: splatnet.version,
@@ -184,6 +185,7 @@ export async function dumpResults(
     for (const group of [
         ...battles_regular.data.regularBattleHistories.historyGroups.nodes,
         ...battles_anarchy.data.bankaraBattleHistories.historyGroups.nodes,
+        ...battles_xmatch.data.xBattleHistories.historyGroups.nodes,
         ...battles_private.data.privateBattleHistories.historyGroups.nodes,
     ].reverse()) {
         for (const item of [...group.historyDetails.nodes].reverse()) {
