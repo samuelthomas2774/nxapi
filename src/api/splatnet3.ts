@@ -1,12 +1,12 @@
-import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
-import { GraphQLRequest, GraphQLResponse, KnownRequestId, MyOutfitInput, RequestId, ResultTypes, VariablesTypes } from 'splatnet3-types/splatnet3';
-import { WebServiceToken } from './coral-types.js';
-import { NintendoAccountUser } from './na.js';
-import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
-import CoralApi from './coral.js';
+import fetch, { Response } from 'node-fetch';
+import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
 import { timeoutSignal } from '../util/misc.js';
+import { WebServiceToken } from './coral-types.js';
+import CoralApi from './coral.js';
+import { NintendoAccountUser } from './na.js';
 import { BulletToken } from './splatnet3-types.js';
+import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 
@@ -409,6 +409,103 @@ export default class SplatNet3Api {
         return result;
     }
 
+    /**
+     * / -> /fest_record -> /fest_record/* - closed -> /fest_record/ranking/* -> scroll down
+     *
+     * @param {string} id FestTeam ID
+     */
+    async getFestRankingPagination(id: string, cursor: string) {
+        const result = await this.persistedQuery(RequestId.RankingHoldersFestTeamRankingHoldersPaginationQuery, {
+            cursor,
+            first: 25,
+            id,
+        });
+
+        if (!result.data.node) {
+            throw new ErrorResponse('[splatnet3] FestTeam not found', result[ResponseSymbol], result);
+        }
+
+        return result;
+    }
+
+    //
+    // X Rankings
+    //
+
+    /** / -> /x_ranking */
+    async getXRanking(region?: XRankingRegion | null) {
+        return this.persistedQuery(RequestId.XRankingQuery, {
+            region: region ?? undefined,
+        });
+    }
+
+    /** / -> /x_ranking -> pull-to-refresh */
+    async getXRankingRefetch(region?: XRankingRegion | null) {
+        return this.persistedQuery(RequestId.XRankingQuery, {
+            region: region ?? null,
+        });
+    }
+
+    /** / -> /x_ranking/{id}/{rule} */
+    async getXRankingDetail(id: string) {
+        return this.persistedQuery(RequestId.XRankingQuery, {
+            id,
+        });
+    }
+
+    /** / -> /x_ranking/{id}/{rule} -> pull-to-refresh */
+    async getXRankingDetailRefetch(id: string) {
+        return this.persistedQuery(RequestId.XRankingRefetchQuery, {
+            id,
+            pageAr: 1,
+            pageCl: 1,
+            pageGl: 1,
+            pageLf: 1,
+        });
+    }
+
+    /** / -> /x_ranking/{id}/{rule} -> scroll down */
+    async getXRankingDetailPagination<
+        T extends XRankingLeaderboardType, R extends XRankingLeaderboardRule
+    >(id: string, type: T, rule: R, cursor: string) {
+        const query =
+            type === XRankingLeaderboardType.X_RANKING ?
+                rule === XRankingLeaderboardRule.SPLAT_ZONES ? RequestId.DetailTabViewXRankingArRefetchQuery :
+                rule === XRankingLeaderboardRule.TOWER_CONTROL ? RequestId.DetailTabViewXRankingLfRefetchQuery :
+                rule === XRankingLeaderboardRule.RAINMAKER ? RequestId.DetailTabViewXRankingGlRefetchQuery :
+                rule === XRankingLeaderboardRule.CLAM_BLITZ ? RequestId.DetailTabViewXRankingClRefetchQuery :
+                null :
+            type === XRankingLeaderboardType.WEAPON ?
+                rule === XRankingLeaderboardRule.SPLAT_ZONES ? RequestId.DetailTabViewWeaponTopsArRefetchQuery :
+                rule === XRankingLeaderboardRule.TOWER_CONTROL ? RequestId.DetailTabViewWeaponTopsLfRefetchQuery :
+                rule === XRankingLeaderboardRule.RAINMAKER ? RequestId.DetailTabViewWeaponTopsGlRefetchQuery :
+                rule === XRankingLeaderboardRule.CLAM_BLITZ ? RequestId.DetailTabViewWeaponTopsClRefetchQuery :
+                null :
+            null;
+
+        if (!query) throw new Error('Invalid leaderboard');
+
+        return this.persistedQuery<{
+            [XRankingLeaderboardType.X_RANKING]: {
+                [XRankingLeaderboardRule.SPLAT_ZONES]: ResultTypes[RequestId.DetailTabViewXRankingArRefetchQuery];
+                [XRankingLeaderboardRule.TOWER_CONTROL]: ResultTypes[RequestId.DetailTabViewXRankingLfRefetchQuery];
+                [XRankingLeaderboardRule.RAINMAKER]: ResultTypes[RequestId.DetailTabViewXRankingGlRefetchQuery];
+                [XRankingLeaderboardRule.CLAM_BLITZ]: ResultTypes[RequestId.DetailTabViewXRankingClRefetchQuery];
+            };
+            [XRankingLeaderboardType.WEAPON]: {
+                [XRankingLeaderboardRule.SPLAT_ZONES]: ResultTypes[RequestId.DetailTabViewWeaponTopsArRefetchQuery];
+                [XRankingLeaderboardRule.TOWER_CONTROL]: ResultTypes[RequestId.DetailTabViewWeaponTopsLfRefetchQuery];
+                [XRankingLeaderboardRule.RAINMAKER]: ResultTypes[RequestId.DetailTabViewWeaponTopsGlRefetchQuery];
+                [XRankingLeaderboardRule.CLAM_BLITZ]: ResultTypes[RequestId.DetailTabViewWeaponTopsClRefetchQuery];
+            };
+        }[T][R]>(query, {
+            cursor,
+            first: 25,
+            id,
+            page: 1,
+        });
+    }
+
     //
     // SplatNet Shop
     //
@@ -561,7 +658,9 @@ export default class SplatNet3Api {
 
     /** / -> /history -> /history/latest -> pull-to-refresh */
     async getLatestBattleHistoriesRefetch() {
-        return this.persistedQuery(RequestId.LatestBattleHistoriesRefetchQuery, {
+        return this.persistedQuery<
+            LatestBattleHistoriesRefetchResult<true>, LatestBattleHistoriesRefetchVariables
+        >(RequestId.LatestBattleHistoriesRefetchQuery, {
             fetchCurrentPlayer: true,
         });
     }
@@ -573,7 +672,9 @@ export default class SplatNet3Api {
 
     /** / -> /history -> /history/regular -> pull-to-refresh */
     async getRegularBattleHistoriesRefetch() {
-        return this.persistedQuery(RequestId.RegularBattleHistoriesRefetchQuery, {
+        return this.persistedQuery<
+            RegularBattleHistoriesRefetchResult<true>, RegularBattleHistoriesRefetchVariables
+        >(RequestId.RegularBattleHistoriesRefetchQuery, {
             fetchCurrentPlayer: true,
         });
     }
@@ -585,7 +686,23 @@ export default class SplatNet3Api {
 
     /** / -> /history -> /history/bankara -> pull-to-refresh */
     async getBankaraBattleHistoriesRefetch() {
-        return this.persistedQuery(RequestId.BankaraBattleHistoriesRefetchQuery, {
+        return this.persistedQuery<
+            BankaraBattleHistoriesRefetchResult<true>, BankaraBattleHistoriesRefetchVariables
+        >(RequestId.BankaraBattleHistoriesRefetchQuery, {
+            fetchCurrentPlayer: true,
+        });
+    }
+
+    /** / -> /history */
+    async getXBattleHistories() {
+        return this.persistedQuery(RequestId.XBattleHistoriesQuery, {});
+    }
+
+    /** / -> /history -> /history/xmatch -> pull-to-refresh */
+    async getXBattleHistoriesRefetch() {
+        return this.persistedQuery<
+            XBattleHistoriesRefetchResult<true>, XBattleHistoriesRefetchVariables
+        >(RequestId.XBattleHistoriesRefetchQuery, {
             fetchCurrentPlayer: true,
         });
     }
@@ -597,7 +714,9 @@ export default class SplatNet3Api {
 
     /** / -> /history -> /history/private -> pull-to-refresh */
     async getPrivateBattleHistoriesRefetch() {
-        return this.persistedQuery(RequestId.PrivateBattleHistoriesRefetchQuery, {
+        return this.persistedQuery<
+            PrivateBattleHistoriesRefetchResult<true>, PrivateBattleHistoriesRefetchVariables
+        >(RequestId.PrivateBattleHistoriesRefetchQuery, {
             fetchCurrentPlayer: true,
         });
     }
@@ -635,7 +754,10 @@ export default class SplatNet3Api {
 
     /** / -> /history -> /history/detail/* -> latest */
     async getBattleHistoryPagerUpdateByVsMode() {
-        return this.persistedQuery(RequestId.PagerUpdateBattleHistoriesByVsModeQuery, {
+        return this.persistedQuery<
+            PagerUpdateBattleHistoriesByVsModeResult<false, false, false, false, false>,
+            PagerUpdateBattleHistoriesByVsModeVariables
+        >(RequestId.PagerUpdateBattleHistoriesByVsModeQuery, {
             isBankara: false,
             isLeague: false,
             isPrivate: false,
@@ -856,4 +978,23 @@ export interface SplatNet3CliTokenData {
     expires_at: number;
     language: string;
     version: string;
+}
+
+export enum XRankingRegion {
+    /** Takoroka division */
+    PACIFIC = 'PACIFIC',
+    /** Tentatek division */
+    ATLANTIC = 'ATLANTIC',
+}
+
+export enum XRankingLeaderboardType {
+    X_RANKING,
+    WEAPON,
+}
+
+export enum XRankingLeaderboardRule {
+    SPLAT_ZONES,
+    TOWER_CONTROL,
+    RAINMAKER,
+    CLAM_BLITZ,
 }
