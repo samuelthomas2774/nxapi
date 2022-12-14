@@ -2,6 +2,9 @@ export {
     default,
     CoralAuthData,
     PartialCoralAuthData,
+
+    ResponseDataSymbol,
+    CorrelationIdSymbol,
 } from '../api/coral.js';
 
 export * from '../api/coral-types.js';

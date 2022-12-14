@@ -9,6 +9,9 @@ import { BulletToken } from './splatnet3-types.js';
 import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
+const debugGraphQl = createDebug('nxapi:api:splatnet3:graphql');
+debugGraphQl.enabled = true;
+const debugUpgradeQuery = createDebug('nxapi:api:splatnet3:upgrade-query');
 
 export const SPLATNET3_WEBSERVICE_ID = 4834290508791808;
 export const SPLATNET3_WEBSERVICE_URL = 'https://api.lp1.av5ja.srv.nintendo.net';
@@ -48,6 +51,17 @@ export interface PersistedQueryResultData {
     [VariablesSymbol]: {};
 }
 
+enum MapQueriesMode {
+    /** NXAPI_SPLATNET3_UPGRADE_QUERIES=0 - never upgrade persisted query IDs (not recommended) */
+    NEVER,
+    /** NXAPI_SPLATNET3_UPGRADE_QUERIES=1 - upgrade persisted query IDs that do not contain potentially breaking changes (not recommended) */
+    ONLY_SAFE_NO_REJECT,
+    /** NXAPI_SPLATNET3_UPGRADE_QUERIES=2 - upgrade persisted query IDs, but reject requests that contain potentially breaking changes */
+    ONLY_SAFE,
+    /** NXAPI_SPLATNET3_UPGRADE_QUERIES=3 - upgrade persisted query IDs, including requests that contain potentially breaking changes (default) */
+    ALL,
+}
+
 export default class SplatNet3Api {
     onTokenShouldRenew: ((remaining: number, res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
     onTokenExpired: ((res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
@@ -59,6 +73,8 @@ export default class SplatNet3Api {
     protected constructor(
         public bullet_token: string,
         public version: string,
+        public map_queries: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean]>>,
+        readonly map_queries_mode: MapQueriesMode,
         public language: string,
         public useragent: string,
     ) {}
@@ -135,6 +151,8 @@ export default class SplatNet3Api {
         _Variables extends (V extends object ? V : _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown) =
             (V extends object ? V : _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown),
     >(id: _Id, variables: _Variables): Promise<PersistedQueryResult<_Result>> {
+        id = this.getUpgradedPersistedQueryId(id) as _Id;
+
         const req: GraphQLRequest<_Variables> = {
             variables,
             extensions: {
@@ -161,6 +179,37 @@ export default class SplatNet3Api {
         Object.defineProperty(data, VariablesSymbol, {value: variables});
 
         return data as PersistedQueryResult<_Result>;
+    }
+
+    getPersistedQueryId(id: RequestId) {
+        return this.getUpgradedPersistedQueryId(id, false);
+    }
+
+    private getUpgradedPersistedQueryId(id: string, reject = true) {
+        if (this.map_queries_mode === MapQueriesMode.NEVER) return id;
+
+        let new_id = id;
+        let unsafe = false;
+
+        while (this.map_queries[new_id]) {
+            const [map_id, map_unsafe] = this.map_queries[new_id]!;
+
+            if (map_unsafe && this.map_queries_mode === MapQueriesMode.ONLY_SAFE && reject) {
+                throw new Error('[splatnet3] Updated persisted query ' + map_id + ' for ' + id +
+                    ' contains potentially breaking changes');
+            }
+            if (map_unsafe && this.map_queries_mode !== MapQueriesMode.ALL) break;
+
+            new_id = map_id;
+            unsafe = unsafe || map_unsafe;
+        }
+
+        if (reject) {
+            debugUpgradeQuery('Using persisted query %s for %s', new_id, id);
+            if (unsafe) console.warn('[warn] Upgrading SplatNet 3 persisted query %s with potentially breaking changes', id);
+        }
+
+        return new_id;
     }
 
     /** * */
@@ -862,6 +911,8 @@ export default class SplatNet3Api {
         return new this(
             data.bullet_token.bulletToken,
             data.version,
+            {},
+            getMapPersistedQueriesModeFromEnvironment(),
             data.bullet_token.lang,
             data.useragent,
         );
@@ -871,6 +922,8 @@ export default class SplatNet3Api {
         return new this(
             data.bullet_token,
             data.version,
+            {},
+            getMapPersistedQueriesModeFromEnvironment(),
             data.language,
             SPLATNET3_WEBSERVICE_USERAGENT,
         );
@@ -970,6 +1023,15 @@ export default class SplatNet3Api {
             useragent: SPLATNET3_WEBSERVICE_USERAGENT,
         };
     }
+}
+
+function getMapPersistedQueriesModeFromEnvironment(): MapQueriesMode {
+    if (process.env.NXAPI_SPLATNET3_UPGRADE_QUERIES === '0') return MapQueriesMode.NEVER;
+    if (process.env.NXAPI_SPLATNET3_UPGRADE_QUERIES === '1') return MapQueriesMode.ONLY_SAFE_NO_REJECT;
+    if (process.env.NXAPI_SPLATNET3_UPGRADE_QUERIES === '2') return MapQueriesMode.ONLY_SAFE;
+    if (process.env.NXAPI_SPLATNET3_UPGRADE_QUERIES === '3') return MapQueriesMode.ALL;
+
+    return MapQueriesMode.ALL;
 }
 
 export interface SplatNet3AuthData {

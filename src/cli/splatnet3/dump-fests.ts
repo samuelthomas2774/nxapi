@@ -104,7 +104,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
 
         if (fest_record.state !== FestState.CLOSED) {
             const filename = 'splatnet3-festvotes-' + id + '-' + Date.now() + '-' +
-                RequestId.DetailVotingStatusQuery + '.json';
+                splatnet.getPersistedQueryId(RequestId.DetailVotingStatusQuery) + '.json';
             const file = path.join(directory, filename);
 
             // Fetch this now to match the behavour of Nintendo's app
@@ -128,7 +128,8 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
         }
 
         if (include_rankings) {
-            const filename = 'splatnet3-festranking-' + id + '-' + RequestId.DetailRankingQuery + '.json';
+            const filename = 'splatnet3-festranking-' + id + '-' +
+                splatnet.getPersistedQueryId(RequestId.DetailRankingQuery) + '.json';
             const file = path.join(directory, filename);
 
             try {

@@ -157,7 +157,8 @@ export async function dumpResults(
 
             latest_unique_ids.push(id);
 
-            const filename = 'splatnet3-result-' + id + '-' + RequestId.VsHistoryDetailQuery + '.json';
+            const filename = 'splatnet3-result-' + id + '-' +
+                splatnet.getPersistedQueryId(RequestId.VsHistoryDetailQuery) + '.json';
             const file = path.join(directory, filename);
 
             try {
@@ -195,7 +196,8 @@ export async function dumpResults(
 
             if (latest_unique_ids.includes(id)) continue;
 
-            const filename = 'splatnet3-result-' + id + '-' + RequestId.VsHistoryDetailQuery + '.json';
+            const filename = 'splatnet3-result-' + id + '-' +
+                splatnet.getPersistedQueryId(RequestId.VsHistoryDetailQuery) + '.json';
             const file = path.join(directory, filename);
 
             try {
@@ -267,7 +269,8 @@ export async function dumpCoopResults(
             const match = id_str.match(/^CoopHistoryDetail-(u-[0-9a-z]{20}):((\d{8,}T\d{6})_([0-9a-f-]{36}))$/);
             const id = match ? match[1] + '-' + match[2] : id_str;
 
-            const filename = 'splatnet3-coop-result-' + id + '-' + RequestId.CoopHistoryDetailQuery + '.json';
+            const filename = 'splatnet3-coop-result-' + id + '-' +
+                splatnet.getPersistedQueryId(RequestId.CoopHistoryDetailQuery) + '.json';
             const file = path.join(directory, filename);
 
             try {

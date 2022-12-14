@@ -1,6 +1,7 @@
 export {
     default,
     SplatNet2AuthData,
+    SplatNet2CliTokenData,
 
     LeagueType,
     LeagueRegion,
