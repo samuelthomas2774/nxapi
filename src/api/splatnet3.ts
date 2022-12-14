@@ -37,11 +37,24 @@ const AUTH_ERROR_CODES = {
 
 const REPLAY_CODE_REGEX = /^[A-Z0-9]{16}$/;
 
+export const RequestIdSymbol = Symbol('RequestId');
+export const VariablesSymbol = Symbol('Variables');
+
+export type PersistedQueryResult<T> = GraphQLSuccessResponse<T> & PersistedQueryResultData;
+
+export interface PersistedQueryResultData {
+    [ResponseSymbol]: Response;
+    [RequestIdSymbol]: KnownRequestId;
+    [VariablesSymbol]: {};
+}
+
 export default class SplatNet3Api {
     onTokenShouldRenew: ((remaining: number, res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
     onTokenExpired: ((res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+
+    graphql_strict = process.env.NXAPI_SPLATNET3_STRICT !== '0';
 
     protected constructor(
         public bullet_token: string,
@@ -121,7 +134,7 @@ export default class SplatNet3Api {
         /** @private */
         _Variables extends (V extends object ? V : _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown) =
             (V extends object ? V : _Id extends KnownRequestId ? VariablesTypes[_Id] : unknown),
-    >(id: _Id, variables: _Variables) {
+    >(id: _Id, variables: _Variables): Promise<PersistedQueryResult<_Result>> {
         const req: GraphQLRequest<_Variables> = {
             variables,
             extensions: {
@@ -135,12 +148,19 @@ export default class SplatNet3Api {
         const data = await this.fetch<GraphQLResponse<_Result>>('/graphql', 'POST', JSON.stringify(req), undefined,
             'graphql query ' + id);
 
-        if (!('data' in data)) {
-            throw new ErrorResponse('[splatnet3] GraphQL error: ' + data.errors.map(e => e.message).join(', '),
+        if (!('data' in data) || (this.graphql_strict && data.errors?.length)) {
+            throw new ErrorResponse('[splatnet3] GraphQL error: ' + data.errors!.map(e => e.message).join(', '),
                 data[ResponseSymbol], data);
         }
 
-        return data;
+        for (const error of data.errors ?? []) {
+            debugGraphQl('GraphQL error in query %s: %s', id, error.message, error);
+        }
+
+        Object.defineProperty(data, RequestIdSymbol, {value: id});
+        Object.defineProperty(data, VariablesSymbol, {value: variables});
+
+        return data as PersistedQueryResult<_Result>;
     }
 
     /** * */

@@ -2,12 +2,11 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { RequestId } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
-import SplatNet3Api from '../../api/splatnet3.js';
+import SplatNet3Api, { RequestIdSymbol } from '../../api/splatnet3.js';
 import { ResponseSymbol } from '../../api/util.js';
 
 const debug = createDebug('cli:splatnet3:dump-records');
@@ -96,7 +95,7 @@ export async function dumpHistoryRecords(splatnet: SplatNet3Api, directory: stri
     await fs.writeFile(file, JSON.stringify({
         result: results.data.playHistory,
         player: results.data.currentPlayer,
-        query: refresh ? RequestId.HistoryRecordRefetchQuery : RequestId.HistoryRecordQuery,
+        query: results[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: results[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');
@@ -114,7 +113,7 @@ export async function dumpHeroRecords(splatnet: SplatNet3Api, directory: string)
     debug('Writing %s', filename);
     await fs.writeFile(file, JSON.stringify({
         result: results.data.heroRecord,
-        query: RequestId.HeroHistoryQuery,
+        query: results[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: results[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');
@@ -134,7 +133,7 @@ export async function dumpCatalogRecords(splatnet: SplatNet3Api, directory: stri
     debug('Writing %s', filename);
     await fs.writeFile(file, JSON.stringify({
         result: results.data.catalog,
-        query: refresh ? RequestId.CatalogRefetchQuery : RequestId.CatalogQuery,
+        query: results[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: results[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');
@@ -154,7 +153,7 @@ export async function dumpStageStats(splatnet: SplatNet3Api, directory: string, 
     debug('Writing %s', filename);
     await fs.writeFile(file, JSON.stringify({
         result: results.data.stageRecords,
-        query: refresh ? RequestId.StageRecordsRefetchQuery : RequestId.StageRecordQuery,
+        query: results[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: results[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');
@@ -174,7 +173,7 @@ export async function dumpWeaponStats(splatnet: SplatNet3Api, directory: string,
     debug('Writing %s', filename);
     await fs.writeFile(file, JSON.stringify({
         result: results.data.weaponRecords,
-        query: refresh ? RequestId.WeaponRecordsRefetchQuery : RequestId.WeaponRecordQuery,
+        query: results[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: results[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');

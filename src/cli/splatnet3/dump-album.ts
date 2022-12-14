@@ -3,12 +3,12 @@ import * as fs from 'node:fs/promises';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import fetch from 'node-fetch';
-import { PhotoAlbumResult, RequestId } from 'splatnet3-types/splatnet3';
+import { PhotoAlbumResult } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
-import SplatNet3Api from '../../api/splatnet3.js';
+import SplatNet3Api, { RequestIdSymbol } from '../../api/splatnet3.js';
 import { ResponseSymbol } from '../../api/util.js';
 import { timeoutSignal } from '../../util/misc.js';
 
@@ -67,7 +67,7 @@ export async function dumpAlbumPhotos(
         debug('Writing %s', filename);
         await fs.writeFile(file, JSON.stringify({
             result: results.data.photoAlbum,
-            query: refresh ? RequestId.PhotoAlbumRefetchQuery : RequestId.PhotoAlbumQuery,
+            query: results[RequestIdSymbol],
             app_version: splatnet.version,
             be_version: results[ResponseSymbol].headers.get('x-be-version'),
         }, null, 4) + '\n', 'utf-8');

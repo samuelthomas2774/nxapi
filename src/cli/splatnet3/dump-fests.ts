@@ -7,7 +7,7 @@ import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
-import SplatNet3Api from '../../api/splatnet3.js';
+import SplatNet3Api, { RequestIdSymbol } from '../../api/splatnet3.js';
 import { ResponseSymbol } from '../../api/util.js';
 
 const debug = createDebug('cli:splatnet3:dump-records');
@@ -62,7 +62,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
     await fs.writeFile(file, JSON.stringify({
         result: records.data.festRecords,
         player: records.data.currentPlayer,
-        query: RequestId.FestRecordQuery,
+        query: records[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: records[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');
@@ -77,7 +77,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
 
         const filename = 'splatnet3-fest-' + id + '-' +
             (fest_record.state !== FestState.CLOSED ? Date.now() + '-' : '') +
-            RequestId.DetailFestRecordDetailQuery + '.json';
+            records[RequestIdSymbol] + '.json';
         const file = path.join(directory, filename);
 
         let record: Fest_detail | null = null;
@@ -96,7 +96,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
             await fs.writeFile(file, JSON.stringify({
                 result: result.data.fest,
                 player: result.data.currentPlayer,
-                query: RequestId.DetailFestRecordDetailQuery,
+                query: result[RequestIdSymbol],
                 app_version: splatnet.version,
                 be_version: result[ResponseSymbol].headers.get('x-be-version'),
             }, null, 4) + '\n', 'utf-8');
@@ -121,7 +121,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
             debug('Writing %s', filename);
             await fs.writeFile(file, JSON.stringify({
                 result: result.data.fest,
-                query: RequestId.DetailVotingStatusQuery,
+                query: result[RequestIdSymbol],
                 app_version: splatnet.version,
                 be_version: result[ResponseSymbol].headers.get('x-be-version'),
             }, null, 4) + '\n', 'utf-8');
@@ -151,7 +151,7 @@ export async function dumpFestRecords(splatnet: SplatNet3Api, directory: string,
                     debug('Writing %s', filename);
                     await fs.writeFile(file, JSON.stringify({
                         result: result.data.fest,
-                        query: RequestId.DetailFestRecordDetailQuery,
+                        query: result[RequestIdSymbol],
                         app_version: splatnet.version,
                         be_version: result[ResponseSymbol].headers.get('x-be-version'),
                     }, null, 4) + '\n', 'utf-8');

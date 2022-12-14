@@ -7,7 +7,7 @@ import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
-import SplatNet3Api from '../../api/splatnet3.js';
+import SplatNet3Api, { RequestIdSymbol } from '../../api/splatnet3.js';
 import { ResponseSymbol } from '../../api/util.js';
 import { dumpCatalogRecords, dumpHistoryRecords } from './dump-records.js';
 
@@ -101,7 +101,7 @@ export async function dumpResults(
     await fs.writeFile(file, JSON.stringify({
         player: player ? {
             result: player.data.currentPlayer,
-            query: RequestId.BattleHistoryCurrentPlayerQuery,
+            query: player[RequestIdSymbol],
             be_version: player[ResponseSymbol].headers.get('x-be-version'),
         } : undefined,
         latestBattleHistories: {
@@ -109,22 +109,29 @@ export async function dumpResults(
             fest: battles.data.currentFest,
             player: 'currentPlayer' in battles.data ?
                 (battles.data as LatestBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
-            query: refresh ? RequestId.LatestBattleHistoriesRefetchQuery : RequestId.LatestBattleHistoriesQuery,
+            query: battles[RequestIdSymbol],
             be_version: battles[ResponseSymbol].headers.get('x-be-version'),
         },
         regularBattleHistories: {
             result: battles_regular.data.regularBattleHistories,
             player: 'currentPlayer' in battles_regular.data ?
                 (battles_regular.data as RegularBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
-            query: refresh ? RequestId.RegularBattleHistoriesRefetchQuery : RequestId.RegularBattleHistoriesQuery,
+            query: battles_regular[RequestIdSymbol],
             be_version: battles_regular[ResponseSymbol].headers.get('x-be-version'),
         },
         bankaraBattleHistories: {
             result: battles_anarchy.data.bankaraBattleHistories,
             player: 'currentPlayer' in battles_anarchy.data ?
                 (battles_anarchy.data as BankaraBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
-            query: refresh ? RequestId.BankaraBattleHistoriesRefetchQuery : RequestId.BankaraBattleHistoriesQuery,
+            query: battles_anarchy[RequestIdSymbol],
             be_version: battles_anarchy[ResponseSymbol].headers.get('x-be-version'),
+        },
+        xBattleHistories: {
+            result: battles_xmatch.data.xBattleHistories,
+            player: 'currentPlayer' in battles_xmatch.data ?
+                (battles_xmatch.data as XBattleHistoriesRefetchResult<true>).currentPlayer : undefined,
+            query: battles_xmatch[RequestIdSymbol],
+            be_version: battles_xmatch[ResponseSymbol].headers.get('x-be-version'),
         },
         privateBattleHistories: {
             result: battles_private.data.privateBattleHistories,
@@ -164,7 +171,7 @@ export async function dumpResults(
                 debug('Writing %s', filename);
                 await fs.writeFile(file, JSON.stringify({
                     result: result.data.vsHistoryDetail,
-                    query: RequestId.VsHistoryDetailQuery,
+                    query: result[RequestIdSymbol],
                     app_version: splatnet.version,
                     be_version: result[ResponseSymbol].headers.get('x-be-version'),
                 }, null, 4) + '\n', 'utf-8');
@@ -201,7 +208,7 @@ export async function dumpResults(
                 debug('Writing %s', filename);
                 await fs.writeFile(file, JSON.stringify({
                     result: result.data.vsHistoryDetail,
-                    query: RequestId.VsHistoryDetailQuery,
+                    query: result[RequestIdSymbol],
                     app_version: splatnet.version,
                     be_version: result[ResponseSymbol].headers.get('x-be-version'),
                 }, null, 4) + '\n', 'utf-8');
@@ -243,7 +250,7 @@ export async function dumpCoopResults(
     debug('Writing %s', filename);
     await fs.writeFile(file, JSON.stringify({
         result: results.data.coopResult,
-        query: refresh ? RequestId.RefetchableCoopHistory_CoopResultQuery : RequestId.CoopHistoryQuery,
+        query: results[RequestIdSymbol],
         app_version: splatnet.version,
         be_version: results[ResponseSymbol].headers.get('x-be-version'),
     }, null, 4) + '\n', 'utf-8');
@@ -272,7 +279,7 @@ export async function dumpCoopResults(
                 debug('Writing %s', filename);
                 await fs.writeFile(file, JSON.stringify({
                     result: result.data.coopHistoryDetail,
-                    query: RequestId.CoopHistoryDetailQuery,
+                    query: result[RequestIdSymbol],
                     app_version: splatnet.version,
                     be_version: result[ResponseSymbol].headers.get('x-be-version'),
                 }, null, 4) + '\n', 'utf-8');
