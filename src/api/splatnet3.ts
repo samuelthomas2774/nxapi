@@ -73,7 +73,7 @@ export default class SplatNet3Api {
     protected constructor(
         public bullet_token: string,
         public version: string,
-        public map_queries: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean]>>,
+        public map_queries: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>,
         readonly map_queries_mode: MapQueriesMode,
         public language: string,
         public useragent: string,
@@ -188,11 +188,19 @@ export default class SplatNet3Api {
     private getUpgradedPersistedQueryId(id: string, reject = true) {
         if (this.map_queries_mode === MapQueriesMode.NEVER) return id;
 
+        const ids = [id];
         let new_id = id;
         let unsafe = false;
 
-        while (this.map_queries[new_id]) {
-            const [map_id, map_unsafe] = this.map_queries[new_id]!;
+        while (typeof this.map_queries[new_id] === 'object') {
+            const [map_id, map_unsafe] = this.map_queries[new_id] ?? [null, false];
+
+            if (!map_id) {
+                if (this.map_queries_mode !== MapQueriesMode.ONLY_SAFE_NO_REJECT && reject) {
+                    throw new Error('[splatnet3] Updated persisted query for ' + id + ' does not exist');
+                }
+                break;
+            }
 
             if (map_unsafe && this.map_queries_mode === MapQueriesMode.ONLY_SAFE && reject) {
                 throw new Error('[splatnet3] Updated persisted query ' + map_id + ' for ' + id +
@@ -202,9 +210,11 @@ export default class SplatNet3Api {
 
             new_id = map_id;
             unsafe = unsafe || map_unsafe;
+            if (ids.includes(new_id)) throw new Error('[splatnet3] Loop detected while upgrading persisted query');
+            ids.push(new_id);
         }
 
-        if (reject) {
+        if (reject && id !== new_id) {
             debugUpgradeQuery('Using persisted query %s for %s', new_id, id);
             if (unsafe) console.warn('[warn] Upgrading SplatNet 3 persisted query %s with potentially breaking changes', id);
         }
