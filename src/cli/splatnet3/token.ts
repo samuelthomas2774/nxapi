@@ -41,6 +41,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             expires_at: data.expires_at,
             language: data.bullet_token.lang,
             version: data.version,
+            queries: data.queries,
         };
 
         console.log(JSON.stringify(result, null, argv.jsonPrettyPrint ? 4 : 0));

@@ -259,4 +259,5 @@ export interface SplatNet3RemoteConfig {
     app_ver: string;
     version: string;
     revision: string;
+    map_queries?: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>;
 }

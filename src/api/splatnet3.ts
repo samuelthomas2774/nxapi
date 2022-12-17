@@ -921,7 +921,7 @@ export default class SplatNet3Api {
         return new this(
             data.bullet_token.bulletToken,
             data.version,
-            {},
+            data.queries ?? {},
             getMapPersistedQueriesModeFromEnvironment(),
             data.bullet_token.lang,
             data.useragent,
@@ -932,7 +932,7 @@ export default class SplatNet3Api {
         return new this(
             data.bullet_token,
             data.version,
-            {},
+            data.queries ?? {},
             getMapPersistedQueriesModeFromEnvironment(),
             data.language,
             SPLATNET3_WEBSERVICE_USERAGENT,
@@ -1026,6 +1026,7 @@ export default class SplatNet3Api {
             language,
             country: user.country,
             version,
+            queries: config.map_queries,
 
             bullet_token,
             created_at,
@@ -1053,6 +1054,7 @@ export interface SplatNet3AuthData {
     language: string;
     country: string;
     version: string;
+    queries?: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>;
 
     bullet_token: BulletToken;
     created_at: number;
@@ -1070,6 +1072,7 @@ export interface SplatNet3CliTokenData {
     expires_at: number;
     language: string;
     version: string;
+    queries?: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>;
 }
 
 export enum XRankingRegion {

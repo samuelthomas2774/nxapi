@@ -231,6 +231,8 @@ Environment variable            | Description
 `NXAPI_REMOTE_CONFIG_FALLBACK`  | Allows using local configuration data if the remote configuration data cannot be fetched if set to `1`. This should not be used, as it can cause nxapi to revert to local configuration data after previously using newer remote configuration data.
 `NXAPI_CONFIG_URL`              | Sets the URL to fetch remote configuration data from.
 `NXAPI_SKIP_UPDATE_CHECK`       | Disables the update check in the nxapi command and the Electron app if set to `1`.
+`NXAPI_SPLATNET3_UPGRADE_QUERIES` | Sets when the SplatNet 3 client is allowed to upgrade persisted query IDs to newer versions. If `0` queries are never upgraded (not recommended). If `1` queries are upgraded if they do not contain potentially breaking changes (not recommended, as like `0` this allows older queries to be sent to the API). If `2` queries are upgraded, requests that would include breaking changes are rejected. If `3` all queries are upgraded, even if they contain potentially breaking changes (default).
+`NXAPI_SPLATNET3_STRICT`        | Disables strict handling of errors from the SplatNet 3 GraphQL API if set to `0`. If set to `1` (default) requests will be rejected if the response includes any errors, even if the response includes a result.
 `DEBUG`                         | Used by the [debug](https://github.com/debug-js/debug) package. Sets which modules should have debug logging enabled. See [debug logs](#debug-logs).
 
 Other environment variables may also be used by Node.js, Electron or other packages nxapi depends on.
