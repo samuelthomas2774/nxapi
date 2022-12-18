@@ -1,7 +1,8 @@
 import * as net from 'node:net';
+import * as os from 'node:os';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
-import express, { NextFunction, Request, RequestHandler, Response } from 'express';
+import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
 import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
@@ -117,6 +118,8 @@ class Server extends HttpServer {
                 req.headers['user-agent']);
 
             res.setHeader('Server', product + ' znc-proxy');
+            res.setHeader('X-Server', product + ' znc-proxy');
+            res.setHeader('X-Served-By', os.hostname());
 
             next();
         });

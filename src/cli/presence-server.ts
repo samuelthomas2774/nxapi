@@ -1,12 +1,14 @@
 import * as net from 'node:net';
+import * as os from 'node:os';
 import createDebug from 'debug';
 import express, { Request, Response } from 'express';
+import fetch from 'node-fetch';
 import * as persist from 'node-persist';
 import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopSetting_schedule, DetailVotingStatusResult, FestMatchSetting_schedule, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
-import { addCliFeatureUserAgent } from '../util/useragent.js';
+import { addCliFeatureUserAgent, getUserAgent } from '../util/useragent.js';
 import { parseListenAddress } from '../util/net.js';
 import { product } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
@@ -18,6 +20,7 @@ import { EventStreamResponse, HttpServer, ResponseError } from './util/http-serv
 import { getTitleIdFromEcUrl } from '../util/misc.js';
 
 const debug = createDebug('cli:presence-server');
+const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
 
 interface AllUsersResult extends Friend {
     splatoon3?: Friend_friendList | null;
@@ -54,6 +57,13 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Enable returning all users',
         type: 'boolean',
         default: false,
+    }).option('splatnet3-proxy', {
+        describe: 'Enable SplatNet 3 proxy',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet3-proxy-url', {
+        describe: 'SplatNet 3 proxy URL',
+        type: 'string',
     }).option('update-interval', {
         describe: 'Max. update interval in seconds',
         type: 'number',
@@ -77,29 +87,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     debug('user', user_naids);
 
-    if (!user_naids.length) {
+    if (!user_naids.length && !argv.splatnet3Proxy) {
         throw new Error('No user selected');
     }
 
     const coral_users = Users.coral(storage, argv.zncProxyUrl);
 
     const splatnet3_users = argv.splatnet3 ? new Users(async token => {
-        const {splatnet, data} = await getBulletToken(storage, token, argv.zncProxyUrl, true);
-
-        const friends = await splatnet.getFriends();
-
-        Promise.all([
-            splatnet.getCurrentFest(),
-            splatnet.getConfigureAnalytics(),
-        ]).catch(err => {
-            debug('Error in useCurrentFest/ConfigureAnalyticsQuery', err);
-        });
-
-        return new SplatNet3User(splatnet, data, friends);
+        return argv.splatnet3ProxyUrl ?
+            SplatNet3ProxyUser.create(argv.splatnet3ProxyUrl, token) :
+            SplatNet3ApiUser.create(storage, token, argv.zncProxyUrl);
     }) : null;
 
     const server = new Server(storage, coral_users, splatnet3_users, user_naids);
     server.allow_all_users = argv.allowAllUsers;
+    server.enable_splatnet3_proxy = argv.splatnet3Proxy;
     server.update_interval = argv.updateInterval * 1000;
     const app = server.app;
 
@@ -113,7 +115,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 }
 
-export class SplatNet3User {
+abstract class SplatNet3User {
     created_at = Date.now();
     expires_at = Infinity;
 
@@ -132,12 +134,10 @@ export class SplatNet3User {
     update_interval_fest_voting_status: number | null = null; // 10 seconds
 
     constructor(
-        public splatnet: SplatNet3Api,
-        public data: SavedBulletToken,
         public friends: GraphQLSuccessResponse<FriendListResult>,
     ) {}
 
-    private async update(key: keyof SplatNet3User['updated'], callback: () => Promise<void>, ttl: number) {
+    protected async update(key: keyof SplatNet3User['updated'], callback: () => Promise<void>, ttl: number) {
         if (((this.updated[key] ?? 0) + ttl) < Date.now()) {
             const promise = this.promise.get(key) ?? callback.call(null).then(() => {
                 this.updated[key] = Date.now();
@@ -157,11 +157,13 @@ export class SplatNet3User {
 
     async getFriends(): Promise<Friend_friendList[]> {
         await this.update('friends', async () => {
-            this.friends = await this.splatnet.getFriendsRefetch();
+            this.friends = await this.getFriendsData();
         }, this.update_interval);
 
         return this.friends.data.friends.nodes;
     }
+
+    abstract getFriendsData(): Promise<GraphQLSuccessResponse<FriendListResult>>;
 
     async getSchedules(): Promise<StageScheduleResult> {
         let update_interval = this.update_interval_schedules;
@@ -175,28 +177,125 @@ export class SplatNet3User {
         }
 
         await this.update('schedules', async () => {
-            this.schedules = await this.splatnet.getSchedules();
+            this.schedules = await this.getSchedulesData();
         }, update_interval);
 
         return this.schedules!.data;
     }
 
+    abstract getSchedulesData(): Promise<GraphQLSuccessResponse<StageScheduleResult>>;
+
     async getCurrentFestVotes(): Promise<DetailVotingStatusResult['fest'] | null> {
         await this.update('fest_vote_status', async () => {
-            const schedules = await this.getSchedules();
-            this.fest_vote_status =
-                !schedules.currentFest || new Date(schedules.currentFest.endTime).getTime() <= Date.now() ? null :
-                    this.fest_vote_status?.data.fest?.id === schedules.currentFest.id ?
-                        await this.splatnet.getFestVotingStatusRefetch(schedules.currentFest.id) :
-                    await this.splatnet.getFestVotingStatus(schedules.currentFest.id);
+            this.fest_vote_status = await this.getCurrentFestVotingStatusData();
         }, this.update_interval_fest_voting_status ?? this.update_interval);
 
         return this.fest_vote_status?.data.fest ?? null;
+    }
+
+    abstract getCurrentFestVotingStatusData(): Promise<GraphQLSuccessResponse<DetailVotingStatusResult> | null>;
+}
+
+class SplatNet3ApiUser extends SplatNet3User {
+    constructor(
+        public splatnet: SplatNet3Api,
+        public data: SavedBulletToken,
+        public friends: GraphQLSuccessResponse<FriendListResult>,
+    ) {
+        super(friends);
+    }
+
+    async getFriendsData() {
+        return this.splatnet.getFriendsRefetch();
+    }
+
+    async getSchedulesData() {
+        return this.splatnet.getSchedules();
+    }
+
+    async getCurrentFestVotingStatusData() {
+        const schedules = await this.getSchedules();
+        return !schedules.currentFest || new Date(schedules.currentFest.endTime).getTime() <= Date.now() ? null :
+            await this.getFestVotingStatusData(schedules.currentFest.id);
+    }
+
+    async getFestVotingStatusData(id: string) {
+        return this.fest_vote_status?.data.fest?.id === id ?
+            await this.splatnet.getFestVotingStatusRefetch(id) :
+            await this.splatnet.getFestVotingStatus(id);
+    }
+
+    static async create(storage: persist.LocalStorage, token: string, znc_proxy_url?: string) {
+        const {splatnet, data} = await getBulletToken(storage, token, znc_proxy_url, true);
+
+        const friends = await splatnet.getFriends();
+
+        splatnet.getCurrentFest().catch(err => {
+            debug('Error in useCurrentFest request', err);
+        });
+        splatnet.getConfigureAnalytics().catch(err => {
+            debug('Error in ConfigureAnalyticsQuery request', err);
+        });
+
+        return new SplatNet3ApiUser(splatnet, data, friends);
+    }
+}
+
+class SplatNet3ProxyUser extends SplatNet3User {
+    constructor(
+        readonly url: string,
+        private readonly token: string,
+        public friends: GraphQLSuccessResponse<FriendListResult>,
+    ) {
+        super(friends);
+    }
+
+    async fetch(url: string) {
+        return SplatNet3ProxyUser.fetch(this.url, url, this.token);
+    }
+
+    async getFriendsData() {
+        return this.fetch('/friends');
+    }
+
+    async getSchedulesData() {
+        return this.fetch('/schedules');
+    }
+
+    async getCurrentFestVotingStatusData() {
+        return this.fetch('/fest/current/voting-status');
+    }
+
+    static async fetch(base_url: string, url: string, token: string) {
+        const response = await fetch(base_url + url, {
+            method: 'GET',
+            headers: {
+                'User-Agent': getUserAgent(),
+                'Authorization': 'na ' + token,
+            },
+        });
+
+        debugSplatnet3Proxy('fetch %s %s, response %s', 'GET', url, response.status);
+
+        if (response.status !== 200) {
+            throw new ErrorResponse('[splatnet3] Non-200 status code', response, await response.text());
+        }
+
+        const data: any = await response.json();
+        return data.result;
+    }
+
+    static async create(url: string, token: string) {
+        const friends = await this.fetch(url, '/friends', token);
+
+        return new SplatNet3ProxyUser(url, token, friends);
     }
 }
 
 class Server extends HttpServer {
     allow_all_users = false;
+    enable_splatnet3_proxy = false;
+
     update_interval = 30 * 1000;
     /** Interval coral friends data should be updated if the requested user isn't friends with the authenticated user */
     update_interval_unknown_friends = 10 * 60 * 1000; // 10 minutes
@@ -221,6 +320,8 @@ class Server extends HttpServer {
                 req.headers['user-agent']);
 
             res.setHeader('Server', product + ' presence-server');
+            res.setHeader('X-Server', product + ' presence-server');
+            res.setHeader('X-Served-By', os.hostname());
 
             next();
         });
@@ -231,6 +332,27 @@ class Server extends HttpServer {
             this.handlePresenceRequest(req, res, req.params.user)));
         app.get('/api/presence/:user/events', this.createApiRequestHandler((req, res) =>
             this.handlePresenceStreamRequest(req, res, req.params.user)));
+
+        app.use('/api/splatnet3-presence', (req, res, next) => {
+            console.log('[%s] [splatnet3 proxy] %s %s HTTP/%s from %s, port %d%s, %s',
+                new Date(), req.method, req.url, req.httpVersion,
+                req.socket.remoteAddress, req.socket.remotePort,
+                req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
+                req.headers['user-agent']);
+
+            res.setHeader('Server', product + ' presence-server splatnet3-proxy');
+            res.setHeader('X-Server', product + ' presence-server splatnet3-proxy');
+            res.setHeader('X-Served-By', os.hostname());
+
+            next();
+        });
+
+        app.get('/api/splatnet3-presence/friends', this.createApiRequestHandler((req, res) =>
+            this.handleSplatNet3ProxyFriends(req, res)));
+        app.get('/api/splatnet3-presence/schedules', this.createApiRequestHandler((req, res) =>
+            this.handleSplatNet3ProxySchedules(req, res)));
+        app.get('/api/splatnet3-presence/fest/current/voting-status', this.createApiRequestHandler((req, res) =>
+            this.handleSplatNet3ProxyCurrentFestVotingStatus(req, res)));
     }
 
     protected encodeJsonForResponse(data: unknown, space?: number) {
@@ -590,6 +712,48 @@ class Server extends HttpServer {
                 break;
             }
         }
+    }
+
+    async handleSplatNet3ProxyFriends(req: Request, res: Response) {
+        if (!this.enable_splatnet3_proxy) throw new ResponseError(403, 'forbidden');
+
+        const token = req.headers.authorization?.substr(0, 3) === 'na ' ?
+            req.headers.authorization.substr(3) : null;
+        if (!token) throw new ResponseError(401, 'unauthorised');
+
+        const user = await this.splatnet3_users!.get(token);
+        user.update_interval = this.update_interval;
+
+        await user.getFriends();
+        return {result: user.friends};
+    }
+
+    async handleSplatNet3ProxySchedules(req: Request, res: Response) {
+        if (!this.enable_splatnet3_proxy) throw new ResponseError(403, 'forbidden');
+
+        const token = req.headers.authorization?.substr(0, 3) === 'na ' ?
+            req.headers.authorization.substr(3) : null;
+        if (!token) throw new ResponseError(401, 'unauthorised');
+
+        const user = await this.splatnet3_users!.get(token);
+        user.update_interval = this.update_interval;
+
+        await user.getSchedules();
+        return {result: user.schedules!};
+    }
+
+    async handleSplatNet3ProxyCurrentFestVotingStatus(req: Request, res: Response) {
+        if (!this.enable_splatnet3_proxy) throw new ResponseError(403, 'forbidden');
+
+        const token = req.headers.authorization?.substr(0, 3) === 'na ' ?
+            req.headers.authorization.substr(3) : null;
+        if (!token) throw new ResponseError(401, 'unauthorised');
+
+        const user = await this.splatnet3_users!.get(token);
+        user.update_interval = this.update_interval;
+
+        await user.getCurrentFestVotes();
+        return {result: user.fest_vote_status};
     }
 }
 

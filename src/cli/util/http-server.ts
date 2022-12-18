@@ -43,6 +43,8 @@ export class HttpServer {
     }
 
     protected handleRequestError(req: Request, res: Response, err: unknown) {
+        debug('Error in request %s %s', req.method, req.url, err);
+
         if (err instanceof ErrorResponse) {
             const retry_after = err.response.headers.get('Retry-After');
 
