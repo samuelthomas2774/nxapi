@@ -10,7 +10,7 @@ import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
 import { addCliFeatureUserAgent, getUserAgent } from '../util/useragent.js';
 import { parseListenAddress } from '../util/net.js';
-import { product } from '../util/product.js';
+import { product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
@@ -23,11 +23,13 @@ const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
 
 interface AllUsersResult extends Friend {
+    title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
     splatoon3_fest_team?: FestTeam_votingStatus | null;
 }
 interface PresenceResponse {
     friend: Friend;
+    title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
     splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
     splatoon3_vs_setting?:
@@ -35,6 +37,13 @@ interface PresenceResponse {
         LeagueMatchSetting_schedule | XMatchSetting_schedule | null;
     splatoon3_coop_setting?: CoopSetting_schedule | null;
     splatoon3_fest?: Fest_schedule | null;
+}
+interface TitleResult {
+    id: string;
+    name: string;
+    image_url: string;
+    url: string;
+    since: string;
 }
 
 export const command = 'presence-server';
@@ -306,6 +315,8 @@ class Server extends HttpServer {
 
     app: express.Express;
 
+    titles = new Map</** NSA ID */ string, [TitleResult | null, /** updated */ number]>();
+
     constructor(
         readonly storage: persist.LocalStorage,
         readonly coral_users: Users<CoralUser>,
@@ -393,7 +404,12 @@ class Server extends HttpServer {
                     result.splice(index, 1);
                 }
 
-                result.push(include_splatnet3 ? Object.assign(friend, {splatoon3: null}) : friend);
+                const title = this.getTitleResult(friend, user.updated.friends, req);
+
+                result.push(Object.assign({}, friend, {
+                    title,
+                    ...include_splatnet3 ? {splatoon3: null} : {},
+                }));
             }
         }
 
@@ -465,8 +481,7 @@ class Server extends HttpServer {
 
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
-        let match_coral: Friend | null = null;
-        let match_user_id: string | null = null;
+        let match: [CoralUser, Friend, string] | null = null;
 
         for (const user_naid of this.user_ids) {
             const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);
@@ -482,30 +497,54 @@ class Server extends HttpServer {
             const friend = friends.find(f => f.nsaId === presence_user_nsaid);
             if (!friend) continue;
 
-            match_coral = friend;
-            match_user_id = user_naid;
+            match = [user, friend, user_naid];
 
             // Keep searching if the authenticated user doesn't have permission to view this user's presence
             if (friend.presence.updatedAt) break;
         }
 
-        if (!match_coral) {
+        if (!match) {
             throw new ResponseError(404, 'not_found');
         }
 
+        const [user, friend, user_naid] = match;
+        const title = this.getTitleResult(friend, user.updated.friends, req);
+
         const response: PresenceResponse = {
-            friend: match_coral,
+            friend,
+            title,
         };
 
         if (this.splatnet3_users && include_splatnet3) {
-            const token = await this.storage.getItem('NintendoAccountToken.' + match_user_id);
+            const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);
             const user = await this.splatnet3_users!.get(token);
             user.update_interval = this.update_interval;
 
-            await this.handleSplatoon3Presence(match_coral, user, response);
+            await this.handleSplatoon3Presence(friend, user, response);
         }
 
         return response;
+    }
+
+    getTitleResult(friend: Friend, updated: number, req: Request) {
+        const title_cache = this.titles.get(friend.nsaId);
+
+        if (title_cache && title_cache[1] >= updated) return title_cache[0];
+
+        const game = 'name' in friend.presence.game ? friend.presence.game : null;
+        const id = game ? getTitleIdFromEcUrl(game.shopUri) : null;
+
+        const title: TitleResult | null = title_cache?.[0]?.id === id ? title_cache[0] : game && id ? {
+            id,
+            name: game.name,
+            image_url: game.imageUri,
+            url: 'https://fancy.org.uk/api/nxapi/title/' + encodeURIComponent(id) + '/redirect?source=' +
+                encodeURIComponent('nxapi-' + version + '-presenceserver-' + req.headers.host),
+            since: new Date(Math.min(Date.now(), friend.presence.updatedAt * 1000)).toISOString(),
+        } : null;
+
+        this.titles.set(friend.nsaId, [title, updated]);
+        return title;
     }
 
     async handleSplatoon3Presence(coral_friend: Friend, user: SplatNet3User, response: PresenceResponse) {
@@ -645,6 +684,7 @@ class Server extends HttpServer {
 
         stream.sendEvent('supported_events', [
             'friend',
+            'title',
             ...(this.splatnet3_users && req.query['include-splatoon3'] === '1' ? [
                 'splatoon3',
                 'splatoon3_fest_team',
