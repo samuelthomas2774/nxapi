@@ -53,7 +53,7 @@ services:
     environment:
       DEBUG: '*,-express:*'
       ZNC_PROXY_URL: http://znc-proxy
-      NXAPI_PRESENCE_SERVER_USER: ${NXAPI_PRESENCE_SERVER_USER}
+      NXAPI_PRESENCE_SERVER_USER: ${NXAPI_PRESENCE_SERVER_USER:-}
       NXAPI_PRESENCE_SERVER_SPLATNET3_PROXY_URL: http://presence-splatnet3-proxy/api/splatnet3-presence
     volumes:
       - data:/data

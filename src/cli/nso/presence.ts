@@ -31,7 +31,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         type: 'boolean',
         default: false,
     }).option('show-play-time', {
-        describe: 'Play time format ("hidden", "nintendo", "approximate", "approximate-since", "detailed", "detailed-since")',
+        describe: 'Play time format ("hidden", "nintendo", "approximate", "approximate-since", "hour", "hour-since", "detailed", "detailed-since")',
         type: 'string',
         default: 'detailed-since',
     }).option('friend-nsaid', {
@@ -151,6 +151,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             argv.showPlayTime.toLowerCase() === 'nintendo' ? DiscordPresencePlayTime.NINTENDO :
             argv.showPlayTime.toLowerCase() === 'approximate' ? DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME :
             argv.showPlayTime.toLowerCase() === 'approximate-since' ? DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE :
+            argv.showPlayTime.toLowerCase() === 'hour' ? DiscordPresencePlayTime.HOUR_PLAY_TIME :
+            argv.showPlayTime.toLowerCase() === 'hour-since' ? DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE :
             argv.showPlayTime.toLowerCase() === 'detailed' ? DiscordPresencePlayTime.DETAILED_PLAY_TIME :
             argv.showPlayTime.toLowerCase() === 'detailed-since' ? DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE :
             DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE;

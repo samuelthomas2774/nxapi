@@ -99,6 +99,10 @@ function getPlayTimeText(type: DiscordPresencePlayTime, game: Game) {
         case DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE:
             if (game.totalPlayTime < 60) return null;
             return 'Played for ' + hrduration(getApproximatePlayTime(game.totalPlayTime)) + ' or more since ' + since;
+        case DiscordPresencePlayTime.HOUR_PLAY_TIME:
+            return 'Played for ' + hrduration(Math.floor(game.totalPlayTime / 60) * 60);
+        case DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE:
+            return 'Played for ' + hrduration(Math.floor(game.totalPlayTime / 60) * 60) + ' since ' + since;
         case DiscordPresencePlayTime.DETAILED_PLAY_TIME:
             return 'Played for ' + hrduration(game.totalPlayTime);
         case DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE:

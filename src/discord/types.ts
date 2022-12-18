@@ -120,6 +120,10 @@ export enum DiscordPresencePlayTime {
     DETAILED_PLAY_TIME,
     /** "Played for x hours and x minutes since dd/mm/yyyy" */
     DETAILED_PLAY_TIME_SINCE,
+    /** "Played for x hours" */
+    HOUR_PLAY_TIME,
+    /** "Played for x hours since dd/mm/yyyy" */
+    HOUR_PLAY_TIME_SINCE,
 }
 
 export interface ExternalMonitorConstructor<T = unknown, I extends ExternalMonitor<T> = ExternalMonitor<T>> {

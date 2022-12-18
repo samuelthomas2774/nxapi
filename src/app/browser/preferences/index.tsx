@@ -243,6 +243,10 @@ export default function Preferences(props: PreferencesProps) {
                             label="Show approximate play time (nearest 5 hours)" />
                         <Picker.Item key={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE}
                             label="Show approximate play time (nearest 5 hours) with first played date" />
+                        <Picker.Item key={DiscordPresencePlayTime.HOUR_PLAY_TIME} value={DiscordPresencePlayTime.HOUR_PLAY_TIME}
+                            label="Show approximate play time (nearest hour)" />
+                        <Picker.Item key={DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE}
+                            label="Show approximate play time (nearest hour) with first played date" />
                         <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME}
                             label="Show exact play time" />
                         <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE}
