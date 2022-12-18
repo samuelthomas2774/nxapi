@@ -45,6 +45,7 @@ export class ErrorResponse<T = unknown> extends Error {
                 '    from ' + response.url + ' (' + response.status + ' ' + response.statusText + ')\n' +
                 '      ' + util.inspect(this.data ? this.data : this.body, {
                     compact: true,
+                    maxStringLength: 100,
                 }).replace(/\n/g, '\n      ') +
                 (lines.length ? '\n' + lines.join('\n') : ''),
         });
