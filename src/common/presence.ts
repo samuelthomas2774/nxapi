@@ -510,6 +510,7 @@ export class ZncProxyDiscordPresence extends Loop {
     readonly user_notifications = false;
     readonly friend_notifications = false;
     update_interval = 30;
+    upgrade_to_sse = process.env.NXAPI_PRESENCE_SSE === '1';
 
     presence_user: null = null;
     discord_preconnect = false;
@@ -565,7 +566,7 @@ export class ZncProxyDiscordPresence extends Loop {
                 debug('presence links', links);
                 const eventstream_link = links.find(l => l.rel.includes('alternate') && l.type === 'text/event-stream');
 
-                if (eventstream_link) {
+                if (eventstream_link && this.upgrade_to_sse) {
                     this.eventstream_url = new URL(eventstream_link.uri, this.presence_url).href;
                     this.is_sse = true;
                     debug('Presence URL included server-sent events link, switching now', this.eventstream_url);
@@ -574,7 +575,7 @@ export class ZncProxyDiscordPresence extends Loop {
                 this.is_first_request = false;
 
                 // Connect to the event stream immediately
-                if (eventstream_link) return LoopResult.OK_SKIP_INTERVAL;
+                if (this.is_sse) return LoopResult.OK_SKIP_INTERVAL;
             }
         } catch (err) {
             if (err instanceof ErrorResponse) {
