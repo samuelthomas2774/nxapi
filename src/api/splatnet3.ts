@@ -520,21 +520,21 @@ export default class SplatNet3Api {
 
     /** / -> /x_ranking -> pull-to-refresh */
     async getXRankingRefetch(region?: XRankingRegion | null) {
-        return this.persistedQuery(RequestId.XRankingQuery, {
+        return this.persistedQuery(RequestId.XRankingRefetchQuery, {
             region: region ?? null,
         });
     }
 
     /** / -> /x_ranking/{id}/{rule} */
     async getXRankingDetail(id: string) {
-        return this.persistedQuery(RequestId.XRankingQuery, {
+        return this.persistedQuery(RequestId.XRankingDetailQuery, {
             id,
         });
     }
 
     /** / -> /x_ranking/{id}/{rule} -> pull-to-refresh */
     async getXRankingDetailRefetch(id: string) {
-        return this.persistedQuery(RequestId.XRankingRefetchQuery, {
+        return this.persistedQuery(RequestId.XRankingDetailRefetchQuery, {
             id,
             pageAr: 1,
             pageCl: 1,
