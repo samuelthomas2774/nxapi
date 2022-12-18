@@ -1,7 +1,11 @@
 version: '3'
 
 services:
-  web:
+  #
+  # Coral/znc proxy
+  #
+
+  znc-proxy:
     build: .
     command: nso http-server --listen \[::]:80
     restart: unless-stopped
@@ -12,8 +16,57 @@ services:
       traefik.http.routers.nxapi-znc.tls: true
       traefik.http.services.nxapi-znc.loadbalancer.server.port: 80
     environment:
-      DEBUG: '*,-express:*'
+      DEBUG: '*,-express:*,-body-parser:*'
       # ZNCA_API_URL: http://znca-api/api/znca
+    env_file: .env
+    volumes:
+      - data:/data
+
+  #
+  # Presence server
+  #
+  # Start with docker compose --profile presence-server up -d.
+  #
+  # Users used to fetch presence data must have a saved session token, e.g. by
+  # running docker compose run --rm -it presence-server nso auth/token. If not
+  # all users have access to SplatNet 3, remove the --splatnet3 option and don't
+  # start the presence-splatnet3-proxy service.
+  #
+  # The znc-proxy and presence-splatnet3-proxy services allow the presence-server
+  # service to be scaled without sending additional requests to Nintendo servers.
+  # The znc-proxy and presence-splatnet3-proxy services should not be scaled as
+  # they handle fetching data from Nintendo.
+  #
+
+  presence-server:
+    build: .
+    command: presence-server --listen \[::]:80 --splatnet3
+    restart: unless-stopped
+    profiles:
+      - presence-server
+    labels:
+      traefik.enable: true
+      traefik.http.routers.nxapi-presence.entrypoints: websecure
+      traefik.http.routers.nxapi-presence.rule: Host(`${TRAEFIK_HOST:-nxapi.ta.fancy.org.uk}`) && (Path(`/api/presence`) || PathPrefix(`/api/presence/`))
+      traefik.http.routers.nxapi-presence.tls: true
+      traefik.http.services.nxapi-presence.loadbalancer.server.port: 80
+    environment:
+      DEBUG: '*,-express:*'
+      ZNC_PROXY_URL: http://znc-proxy
+      NXAPI_PRESENCE_SERVER_USER: ${NXAPI_PRESENCE_SERVER_USER}
+      NXAPI_PRESENCE_SERVER_SPLATNET3_PROXY_URL: http://presence-splatnet3-proxy/api/splatnet3-presence
+    volumes:
+      - data:/data
+
+  presence-splatnet3-proxy:
+    build: .
+    command: presence-server --listen \[::]:80 --splatnet3 --splatnet3-proxy
+    restart: unless-stopped
+    profiles:
+      - presence-server
+    environment:
+      DEBUG: '*,-express:*'
+      ZNC_PROXY_URL: http://znc-proxy
     volumes:
       - data:/data
 
