@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import fetch from 'node-fetch';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { dir, version } from '../util/product.js';
+import { dir, docker, version } from '../util/product.js';
 import { paths } from '../util/storage.js';
 import { timeoutSignal } from '../util/misc.js';
 
@@ -12,6 +12,11 @@ const debug = createDebug('nxapi:update');
 const RELEASES_URL = 'https://api.github.com/repos/samuelthomas2774/nxapi/releases';
 
 export async function checkUpdates() {
+    if (docker) {
+        debug('Running in Docker container, skipping update check');
+        return null;
+    }
+
     try {
         if (!process.versions.electron) {
             await fs.stat(path.join(dir, '.git'));

@@ -1,10 +1,11 @@
 import * as process from 'node:process';
 import * as os from 'node:os';
-import { git, release, version } from '../util/product.js';
+import { docker, git, release, version } from '../util/product.js';
 
 const default_useragent = 'nxapi/' + version + ' (' +
     (!release && git ? 'git ' + git.revision.substr(0, 7) + (git.branch ? ' ' + git.branch : '') + '; ' :
         !release ? 'no-git; ' : '') +
+    (typeof docker === 'string' ? 'docker ' + docker + '; ' : docker ? 'docker; ' : '') +
     'node ' + process.versions.node + '; ' +
     process.platform + ' ' + os.release() +
     ')';

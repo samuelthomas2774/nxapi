@@ -32,6 +32,10 @@ if (process.argv[2] === 'github') {
 pkg.version = process.env.VERSION || pkg.version;
 pkg.__nxapi_release = process.env.CI_COMMIT_TAG;
 
+if (process.argv[2] === 'docker') {
+    pkg.__nxapi_docker = process.argv[3];
+}
+
 pkg.__nxapi_git = pkg.__nxapi_git ?? {
     revision,
     branch: branch && branch !== 'HEAD' ? branch : null,

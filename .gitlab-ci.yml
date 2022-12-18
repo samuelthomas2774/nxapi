@@ -34,7 +34,7 @@ build-docker:
     - |
       [ "$GH_REGISTRY_IMAGE" != "" ] && docker login -u "$GH_REGISTRY_USER" -p "$GH_REGISTRY_PASSWORD" "$GH_REGISTRY"
   script:
-    - node resources/build/ci-package-json.js
+    - node resources/build/ci-package-json.js docker "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG"
 
     - docker build --pull --no-cache --tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" .
     - |

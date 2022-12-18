@@ -39,6 +39,15 @@ const match = pkg.version.match(/^(\d+\.\d+\.\d+)-next\b/i);
 export const version: string = match?.[1] ?? pkg.version;
 export const release: string | null = embedded_release ?? pkg.__nxapi_release ?? null;
 
+export const docker: string | true | null = pkg.__nxapi_docker ?? await (async () => {
+    try {
+        await fs.stat('/.dockerenv');
+        return true;
+    } catch (err) {
+        return null;
+    }
+})();
+
 export const git = typeof embedded_git !== 'undefined' ? embedded_git : pkg.__nxapi_git ?? await (async () => {
     try {
         await fs.stat(path.join(dir, '.git'));
