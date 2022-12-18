@@ -49,6 +49,9 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Nintendo Account ID',
         type: 'string',
         array: true,
+        ...process.env.NXAPI_PRESENCE_SERVER_USER ? {
+            default: process.env.NXAPI_PRESENCE_SERVER_USER.split(','),
+        } : {},
     }).option('splatnet3', {
         describe: 'Enable SplatNet 3 presence',
         type: 'boolean',
@@ -64,6 +67,7 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('splatnet3-proxy-url', {
         describe: 'SplatNet 3 proxy URL',
         type: 'string',
+        default: process.env.NXAPI_PRESENCE_SERVER_SPLATNET3_PROXY_URL,
     }).option('update-interval', {
         describe: 'Max. update interval in seconds',
         type: 'number',
