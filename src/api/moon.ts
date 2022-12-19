@@ -1,7 +1,7 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
-import { defineResponse, ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
 import { timeoutSignal } from '../util/misc.js';
 
@@ -16,6 +16,10 @@ const ZNMA_USER_AGENT = 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; b
     '; ANDROID 26)';
 
 export default class MoonApi {
+    onTokenExpired: ((data: MoonError, res: Response) => Promise<MoonAuthData | PartialMoonAuthData | void>) | null = null;
+    /** @internal */
+    _renewToken: Promise<void> | null = null;
+
     protected constructor(
         public token: string,
         public naId: string,
@@ -24,7 +28,15 @@ export default class MoonApi {
         readonly znma_useragent = ZNMA_USER_AGENT,
     ) {}
 
-    async fetch<T extends object>(url: string, method = 'GET', body?: string, headers?: object) {
+    async fetch<T extends object>(
+        url: string, method = 'GET', body?: string, headers?: object,
+        /** @internal */ _autoRenewToken = true,
+        /** @internal */ _attempt = 0
+    ): Promise<HasResponse<T, Response>> {
+        if (this._renewToken && _autoRenewToken) {
+            await this._renewToken;
+        }
+
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(MOON_URL + url, {
             method,
@@ -48,6 +60,18 @@ export default class MoonApi {
         }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
+
+        if (response.status === 401 && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            const data = await response.json() as MoonError;
+
+            // _renewToken will be awaited when calling fetch
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+            return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
+        }
 
         if (response.status !== 200) {
             throw new ErrorResponse('[moon] Non-200 status code', response, await response.text());
@@ -92,11 +116,13 @@ export default class MoonApi {
 
     async renewToken(token: string) {
         const data = await MoonApi.loginWithSessionToken(token);
-
-        this.token = data.nintendoAccountToken.access_token!;
-        this.naId = data.user.id;
-
+        this.setTokenWithSavedToken(data);
         return data;
+    }
+
+    private setTokenWithSavedToken(data: MoonAuthData | PartialMoonAuthData) {
+        this.token = data.nintendoAccountToken.access_token!;
+        if ('user' in data) this.naId = data.user.id;
     }
 
     static async createWithSessionToken(token: string) {
@@ -144,4 +170,7 @@ export interface MoonAuthData {
     znma_version: string;
     znma_build: string;
     znma_useragent: string;
+}
+export interface PartialMoonAuthData {
+    nintendoAccountToken: NintendoAccountToken;
 }

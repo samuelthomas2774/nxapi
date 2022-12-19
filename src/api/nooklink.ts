@@ -1,8 +1,8 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 import createDebug from 'debug';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
-import { defineResponse, ErrorResponse } from './util.js';
+import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import CoralApi from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -17,13 +17,25 @@ const NOOKLINK_URL = NOOKLINK_WEBSERVICE_URL + '/api';
 const BLANCO_VERSION = '2.1.1';
 
 export default class NooklinkApi {
+    onTokenExpired: ((data: WebServiceError, res: Response) => Promise<NooklinkAuthData | void>) | null = null;
+    /** @internal */
+    _renewToken: Promise<void> | null = null;
+
     protected constructor(
         public gtoken: string,
         public useragent: string,
         readonly client_version = BLANCO_VERSION,
     ) {}
 
-    async fetch<T extends object>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+    async fetch<T extends object>(
+        url: string, method = 'GET', body?: string | FormData, headers?: object,
+        /** @internal */ _autoRenewToken = true,
+        /** @internal */ _attempt = 0
+    ): Promise<HasResponse<T, Response>> {
+        if (this._renewToken && _autoRenewToken) {
+            await this._renewToken;
+        }
+
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(NOOKLINK_URL + url, {
             method,
@@ -43,6 +55,18 @@ export default class NooklinkApi {
         }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
+
+        if (response.status === 401 && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            const data = await response.json() as WebServiceError;
+
+            // _renewToken will be awaited when calling fetch
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+            return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
+        }
 
         if (response.status !== 200 && response.status !== 201) {
             throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
@@ -69,6 +93,22 @@ export default class NooklinkApi {
 
     async createUserClient(user_id: string) {
         return NooklinkUserApi._createWithNooklinkApi(this, user_id);
+    }
+
+    async renewTokenWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+        const data = await NooklinkApi.loginWithCoral(nso, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    async renewTokenWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser) {
+        const data = await NooklinkApi.loginWithWebServiceToken(webserviceToken, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    private setTokenWithSavedToken(data: NooklinkAuthData) {
+        this.gtoken = data.gtoken;
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
@@ -155,6 +195,10 @@ export default class NooklinkApi {
 }
 
 export class NooklinkUserApi {
+    onTokenExpired: ((data: WebServiceError, res: Response) => Promise<NooklinkUserAuthData | PartialNooklinkUserAuthData | void>) | null = null;
+    /** @internal */
+    _renewToken: Promise<void> | null = null;
+
     protected constructor(
         public user_id: string,
         public auth_token: string,
@@ -164,7 +208,15 @@ export class NooklinkUserApi {
         readonly client_version = BLANCO_VERSION,
     ) {}
 
-    async fetch<T extends object>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+    async fetch<T extends object>(
+        url: string, method = 'GET', body?: string | FormData, headers?: object,
+        /** @internal */ _autoRenewToken = true,
+        /** @internal */ _attempt = 0
+    ): Promise<HasResponse<T, Response>> {
+        if (this._renewToken && _autoRenewToken) {
+            await this._renewToken;
+        }
+
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(NOOKLINK_URL + url, {
             method,
@@ -185,6 +237,18 @@ export class NooklinkUserApi {
         }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
+
+        if (response.status === 401 && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            const data = await response.json() as WebServiceError;
+
+            // _renewToken will be awaited when calling fetch
+            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+            return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
+        }
 
         if (response.status !== 200 && response.status !== 201) {
             throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
@@ -241,6 +305,28 @@ export class NooklinkUserApi {
 
     async reaction(reaction: Reaction) {
         return this.postMessage(reaction.label, MessageType.EMOTICON);
+    }
+
+    async getToken(client: NooklinkApi): Promise<PartialNooklinkUserAuthData> {
+        const token = await client.getAuthToken(this.user_id);
+
+        return {
+            gtoken: client.gtoken,
+            user_id: this.user_id,
+            token,
+        };
+    }
+
+    async renewToken(client: NooklinkApi) {
+        const data = await this.getToken(client);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    private setTokenWithSavedToken(data: NooklinkUserAuthData | PartialNooklinkUserAuthData) {
+        this.user_id = data.user_id;
+        this.auth_token = data.token.token;
+        this.gtoken = data.gtoken;
     }
 
     /** @internal */
@@ -300,6 +386,8 @@ export interface NooklinkUserAuthData {
     token: AuthToken;
     language: string;
 }
+export type PartialNooklinkUserAuthData =
+    Pick<NooklinkUserAuthData, 'gtoken' | 'user_id' | 'token'>;
 
 export interface NooklinkUserCliTokenData {
     gtoken: string;

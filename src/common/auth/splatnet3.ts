@@ -76,28 +76,36 @@ export async function getBulletToken(
 
 function createTokenExpiredHandler(
     storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api,
-    data: {existingToken: SavedBulletToken; znc_proxy_url?: string}
+    data: {existingToken: SavedBulletToken; znc_proxy_url?: string},
+    ratelimit = true
 ) {
     return (response: Response) => {
         debug('Token expired, renewing');
-        return renewToken(storage, token, splatnet, data);
+        return renewToken(storage, token, splatnet, data, ratelimit);
     };
 }
 
 function createTokenShouldRenewHandler(
     storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api,
-    data: {existingToken: SavedBulletToken; znc_proxy_url?: string}
+    data: {existingToken: SavedBulletToken; znc_proxy_url?: string},
+    ratelimit = true
 ) {
     return (remaining: number, response: Response) => {
         debug('Token will expire in %d seconds, renewing', remaining);
-        return renewToken(storage, token, splatnet, data);
+        return renewToken(storage, token, splatnet, data, ratelimit);
     };
 }
 
 async function renewToken(
     storage: persist.LocalStorage, token: string, splatnet: SplatNet3Api,
-    renew_token_data: {existingToken: SavedBulletToken; znc_proxy_url?: string}
+    renew_token_data: {existingToken: SavedBulletToken; znc_proxy_url?: string},
+    ratelimit = true
 ) {
+    if (ratelimit) {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+        await checkUseLimit(storage, 'splatnet3', jwt.payload.sub);
+    }
+
     try {
         const data: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 

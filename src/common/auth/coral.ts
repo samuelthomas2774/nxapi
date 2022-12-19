@@ -73,7 +73,7 @@ export async function getToken(
             expires_at: Date.now() + (data.credential.expiresIn * 1000),
         };
 
-        nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, existingToken);
+        nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
 
         await storage.setItem('NsoToken.' + token, existingToken);
         await storage.setItem('NintendoAccountToken.' + data.user.id, token);
@@ -90,30 +90,38 @@ export async function getToken(
         new ZncProxyApi(proxy_url, token) :
         CoralApi.createWithSavedToken(existingToken);
 
-    nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, existingToken);
+    nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
 
     return {nso, data: existingToken};
 }
 
 function createTokenExpiredHandler(
-    storage: persist.LocalStorage, token: string, nso: CoralApi, existingToken: SavedToken
+    storage: persist.LocalStorage, token: string, nso: CoralApi,
+    renew_token_data: {existingToken: SavedToken}, ratelimit = true
 ) {
     return (data: CoralErrorResponse, response: Response) => {
-        debug('Token expired', existingToken.user.id, data);
-        return renewToken(storage, token, nso, existingToken);
+        debug('Token expired', renew_token_data.existingToken.user.id, data);
+        return renewToken(storage, token, nso, renew_token_data, ratelimit);
     };
 }
 
 async function renewToken(
-    storage: persist.LocalStorage, token: string, nso: CoralApi, previousToken: SavedToken
+    storage: persist.LocalStorage, token: string, nso: CoralApi,
+    renew_token_data: {existingToken: SavedToken}, ratelimit = true
 ) {
-    const data = await nso.renewToken(token, previousToken.user);
+    if (ratelimit) {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);    
+        await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
+    }
+
+    const data = await nso.renewToken(token, renew_token_data.existingToken.user);
 
     const existingToken: SavedToken = {
-        ...previousToken,
+        ...renew_token_data.existingToken,
         ...data,
         expires_at: Date.now() + (data.credential.expiresIn * 1000),
     };
 
     await storage.setItem('NsoToken.' + token, existingToken);
+    renew_token_data.existingToken = existingToken;
 }

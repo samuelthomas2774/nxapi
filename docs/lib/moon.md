@@ -56,6 +56,31 @@ const data = await moon.renewToken(na_session_token);
 // data should be saved and reused
 ```
 
+#### `MoonApi.onTokenExpired`
+
+Function called when a `401 Unauthorized` response is received from the API.
+
+This function should either call `MoonApi.loginWithSessionToken` to renew the token, then return the `MoonAuthData` object, or call `MoonApi.renewToken`.
+
+```ts
+import MoonApi, { MoonAuthData } from 'nxapi/moon';
+import { Response } from 'node-fetch';
+
+const moon = MoonApi.createWithSavedToken(...);
+let auth_data: MoonAuthData;
+const na_session_token: string;
+
+moon.onTokenExpired = async (error: MoonError, response: Response) => {
+    const data = await MoonApi.loginWithSessionToken(na_session_token);
+    // data is a plain object of type MoonAuthData
+    // data should be saved and reused
+
+    auth_data = data;
+
+    return data;
+};
+```
+
 ### API types
 
 `nxapi/moon` exports all API types from [src/api/moon-types.ts](../../src/api/moon-types.ts).

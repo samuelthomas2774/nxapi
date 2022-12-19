@@ -4,6 +4,7 @@ export {
 
     NooklinkUserApi,
     NooklinkUserAuthData,
+    PartialNooklinkUserAuthData,
     NooklinkUserCliTokenData,
 
     MessageType,

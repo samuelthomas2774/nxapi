@@ -1,8 +1,9 @@
 import createDebug from 'debug';
 import persist from 'node-persist';
+import { Response } from 'node-fetch';
 import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
-import { Users } from '../../api/nooklink-types.js';
+import { Users, WebServiceError } from '../../api/nooklink-types.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
@@ -51,18 +52,62 @@ export async function getWebServiceToken(
 
         await storage.setItem('NookToken.' + token, existingToken);
 
-        return {
-            nooklink: NooklinkApi.createWithSavedToken(existingToken),
-            data: existingToken,
-        };
+        const nooklink = NooklinkApi.createWithSavedToken(existingToken);
+
+        nooklink.onTokenExpired = createTokenExpiredHandler(storage, token, nooklink, {
+            existingToken,
+            znc_proxy_url: proxy_url,
+        });
+
+        return {nooklink, data: existingToken};
     }
 
     debug('Using existing web service token');
 
-    return {
-        nooklink: NooklinkApi.createWithSavedToken(existingToken),
-        data: existingToken,
+    const nooklink = NooklinkApi.createWithSavedToken(existingToken);
+
+    nooklink.onTokenExpired = createTokenExpiredHandler(storage, token, nooklink, {
+        existingToken,
+        znc_proxy_url: proxy_url,
+    });
+
+    return {nooklink, data: existingToken};
+}
+
+function createTokenExpiredHandler(
+    storage: persist.LocalStorage, token: string, nooklink: NooklinkApi,
+    renew_token_data: {existingToken: SavedToken; znc_proxy_url?: string},
+    ratelimit = true
+) {
+    return (data: WebServiceError, response: Response) => {
+        debug('Token expired, renewing', data);
+        return renewToken(storage, token, nooklink, renew_token_data, ratelimit);
     };
+}
+
+async function renewToken(
+    storage: persist.LocalStorage, token: string, nooklink: NooklinkApi,
+    renew_token_data: {existingToken: SavedToken; znc_proxy_url?: string},
+    ratelimit = true
+) {
+    if (ratelimit) {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+        await checkUseLimit(storage, 'nooklink', jwt.payload.sub);
+    }
+
+    const {nso, data} = await getToken(storage, token, renew_token_data.znc_proxy_url);
+
+    if (data[Login]) {
+        const announcements = await nso.getAnnouncements();
+        const friends = await nso.getFriendList();
+        const webservices = await nso.getWebServices();
+        const activeevent = await nso.getActiveEvent();
+    }
+
+    const existingToken: SavedToken = await nooklink.renewTokenWithCoral(nso, data.user);
+
+    await storage.setItem('NookToken.' + token, existingToken);
+    renew_token_data.existingToken = existingToken;
 }
 
 export interface SavedUserToken extends NooklinkUserAuthData {}
@@ -122,6 +167,12 @@ export async function getUserToken(
         const {nooklinkuser, data} = await nooklink.createUserClient(user);
         const existingToken: SavedUserToken = data;
 
+        nooklinkuser.onTokenExpired = createUserTokenExpiredHandler(storage, nintendoAccountToken, nooklinkuser, {
+            existingToken,
+            znc_proxy_url: proxy_url,
+            nooklink,
+        });
+
         await storage.setItem('NookAuthToken.' + nintendoAccountToken + '.' + user, existingToken);
 
         return {nooklinkuser, data: existingToken};
@@ -129,8 +180,52 @@ export async function getUserToken(
 
     debug('Using existing NookLink auth token');
 
-    return {
-        nooklinkuser: NooklinkUserApi.createWithSavedToken(existingToken),
-        data: existingToken,
+    const nooklinkuser = NooklinkUserApi.createWithSavedToken(existingToken);
+
+    nooklinkuser.onTokenExpired = createUserTokenExpiredHandler(storage, nintendoAccountToken, nooklinkuser, {
+        existingToken,
+        znc_proxy_url: proxy_url,
+        nooklink: null,
+    });
+
+    return {nooklinkuser, data: existingToken};
+}
+
+function createUserTokenExpiredHandler(
+    storage: persist.LocalStorage, token: string, nooklinkuser: NooklinkUserApi,
+    renew_token_data: {existingToken: SavedUserToken; znc_proxy_url?: string; nooklink: NooklinkApi | null},
+    ratelimit = true
+) {
+    return (data: WebServiceError, response: Response) => {
+        debug('Token expired', nooklinkuser.user_id, data);
+        return renewUserToken(storage, token, nooklinkuser, renew_token_data);
     };
+}
+
+async function renewUserToken(
+    storage: persist.LocalStorage, token: string, nooklinkuser: NooklinkUserApi,
+    renew_token_data: {existingToken: SavedUserToken; znc_proxy_url?: string; nooklink: NooklinkApi | null},
+    ratelimit = true
+) {
+    if (!renew_token_data.nooklink) {
+        const wst = await getWebServiceToken(storage, token, renew_token_data.znc_proxy_url, true, ratelimit);
+        const {nooklink, data: webserviceToken} = wst;
+
+        renew_token_data.nooklink = nooklink;
+    }
+
+    if (ratelimit) {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+        await checkUseLimit(storage, 'nooklink-user', jwt.payload.sub);
+    }
+
+    const data = await nooklinkuser.renewToken(renew_token_data.nooklink);
+
+    const existingToken: SavedUserToken = {
+        ...renew_token_data.existingToken,
+        ...data,
+    };
+
+    await storage.setItem('NookAuthToken.' + token + '.' + nooklinkuser.user_id, existingToken);
+    renew_token_data.existingToken = existingToken;
 }

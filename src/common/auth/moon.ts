@@ -1,10 +1,12 @@
 import createDebug from 'debug';
 import * as persist from 'node-persist';
+import { Response } from 'node-fetch';
 import { MoonAuthData, ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import { Jwt } from '../../util/jwt.js';
 import MoonApi from '../../api/moon.js';
 import { checkUseLimit, LIMIT_REQUESTS, SHOULD_LIMIT_USE } from './util.js';
+import { MoonError } from '../../api/moon-types.js';
 
 const debug = createDebug('nxapi:auth:moon');
 
@@ -53,6 +55,8 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string,
             expires_at: Date.now() + (data.nintendoAccountToken.expires_in * 1000),
         };
 
+        moon.onTokenExpired = createTokenExpiredHandler(storage, token, moon, {existingToken});
+
         await storage.setItem('MoonToken.' + token, existingToken);
         await storage.setItem('NintendoAccountToken-pctl.' + data.user.id, token);
 
@@ -61,9 +65,40 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string,
 
     debug('Using existing token');
     await storage.setItem('NintendoAccountToken-pctl.' + existingToken.user.id, token);
+    
+    const moon = MoonApi.createWithSavedToken(existingToken);
+    moon.onTokenExpired = createTokenExpiredHandler(storage, token, moon, {existingToken});
 
-    return {
-        moon: MoonApi.createWithSavedToken(existingToken),
-        data: existingToken,
+    return {moon, data: existingToken};
+}
+
+function createTokenExpiredHandler(
+    storage: persist.LocalStorage, token: string, moon: MoonApi,
+    renew_token_data: {existingToken: SavedMoonToken}, ratelimit = true
+) {
+    return (data: MoonError, response: Response) => {
+        debug('Token expired', renew_token_data.existingToken.user.id, data);
+        return renewToken(storage, token, moon, renew_token_data, ratelimit);
     };
+}
+
+async function renewToken(
+    storage: persist.LocalStorage, token: string, moon: MoonApi,
+    renew_token_data: {existingToken: SavedMoonToken}, ratelimit = true
+) {
+    if (ratelimit) {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+        await checkUseLimit(storage, 'moon', jwt.payload.sub, ratelimit, [LIMIT_REQUESTS, LIMIT_PERIOD]);
+    }
+
+    const data = await moon.renewToken(token);
+
+    const existingToken: SavedMoonToken = {
+        ...renew_token_data.existingToken,
+        ...data,
+        expires_at: Date.now() + (data.nintendoAccountToken.expires_in * 1000),
+    };
+
+    await storage.setItem('MoonToken.' + token, existingToken);
+    renew_token_data.existingToken = existingToken;
 }

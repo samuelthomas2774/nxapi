@@ -76,6 +76,31 @@ const {nooklinkuser, data} = await nooklink.createUserClient(user_id);
 // data is a plain object of type NooklinkUserAuthData
 ```
 
+#### `NooklinkApi.onTokenExpired`
+
+Function called when a `401 Unauthorized` response is received from the API.
+
+This function should either call `NooklinkApi.loginWithWebServiceToken` or `NooklinkApi.loginWithCoral` to renew the token, then return the `NooklinkAuthData` object, or call `NooklinkApi.renewTokenWithWebServiceToken` or `NooklinkApi.renewTokenWithCoral`.
+
+```ts
+import NooklinkApi, { NooklinkAuthData, WebServiceError } from 'nxapi/nooklink';
+import { Response } from 'node-fetch';
+
+const nooklink = NooklinkApi.createWithSavedToken(...);
+let auth_data: NooklinkAuthData;
+const na_session_token: string;
+
+nooklink.onTokenExpired = async (error: WebServiceError, response: Response) => {
+    const data = await NooklinkApi.loginWithSessionToken(na_session_token);
+    // data is a plain object of type NooklinkAuthData
+    // data should be saved and reused
+
+    auth_data = data;
+
+    return data;
+};
+```
+
 ### `NooklinkUserApi`
 
 NookLink ACNH-level API client. An instance of this class should not be created directly; instead `NooklinkApi.createUserClient` or one of the `createWith*` static methods should be used.
@@ -108,6 +133,37 @@ const data: NooklinkUserCliTokenData;
 
 const nooklinkuser = NooklinkUserApi.createWithCliTokenData(data);
 // nooklinkuser instanceof NooklinkUserApi
+```
+
+#### `NooklinkUserApi.onTokenExpired`
+
+Function called when a `401 Unauthorized` response is received from the API.
+
+This function should either call `NooklinkUserApi.getToken` to renew the token, then return the `PartialNooklinkUserAuthData` object, or call `NooklinkUserApi.renewToken`.
+
+```ts
+import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, PartialNooklinkUserAuthData, WebServiceError } from 'nxapi/nooklink';
+import { Response } from 'node-fetch';
+
+const nooklink: NooklinkApi;
+
+const nooklinkuser = NooklinkUserApi.createWithSavedToken(...);
+let auth_data: NooklinkUserAuthData;
+const na_session_token: string;
+
+nooklinkuser.onTokenExpired = async (error: WebServiceError, response: Response) => {
+    const data = await nooklinkuser.getToken(nooklink);
+    // data is a plain object of type PartialNooklinkUserAuthData
+    // data should be saved and reused
+
+    const new_auth_data = Object.assign({}, auth_data, data);
+    // new_auth_data is a plain object of type NooklinkUserAuthData
+    // new_auth_data should be saved and reused
+
+    auth_data = new_auth_data;
+
+    return data;
+};
 ```
 
 ### API types
