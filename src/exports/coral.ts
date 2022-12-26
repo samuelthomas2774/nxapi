@@ -30,3 +30,7 @@ export {
     AndroidZncaFResponse,
     AndroidZncaFError,
 } from '../api/f.js';
+
+export {
+    default as Coral,
+} from '../client/coral.js';

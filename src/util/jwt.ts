@@ -33,7 +33,7 @@ export interface JwtPayload {
     /** Issuer */
     iss: string;
     /** Token ID */
-    jti: string;
+    jti: string | number;
     /** Subject */
     sub: string | number;
     /** Token type */

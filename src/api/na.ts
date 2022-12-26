@@ -116,7 +116,7 @@ export interface NintendoAccountSessionToken {
     code: string;
 }
 export interface NintendoAccountSessionTokenJwtPayload extends JwtPayload {
-    jti: string;
+    jti: number;
     typ: 'session_token';
     iss: 'https://accounts.nintendo.com';
     /** Unknown - scopes the token is valid for? */

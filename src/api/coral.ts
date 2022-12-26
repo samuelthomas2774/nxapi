@@ -280,6 +280,14 @@ export default class CoralApi {
         return {nso: this.createWithSavedToken(data, useragent), data};
     }
 
+    static async createWithNintendoAccountToken(
+        token: NintendoAccountToken, user: NintendoAccountUser,
+        useragent = getAdditionalUserAgents()
+    ) {
+        const data = await this.loginWithNintendoAccountToken(token, user, useragent);
+        return {nso: this.createWithSavedToken(data, useragent), data};
+    }
+
     static createWithSavedToken(data: CoralAuthData, useragent = getAdditionalUserAgents()) {
         return new this(
             data.credential.accessToken,
@@ -291,15 +299,26 @@ export default class CoralApi {
 
     static async loginWithSessionToken(token: string, useragent = getAdditionalUserAgents()): Promise<CoralAuthData> {
         const { default: { coral: config } } = await import('../common/remote-config.js');
-
         if (!config) throw new Error('Remote configuration prevents Coral authentication');
-        const znca_useragent = `com.nintendo.znca/${config.znca_version}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
+
+        return this.loginWithNintendoAccountToken(nintendoAccountToken, user, useragent);
+    }
+
+    static async loginWithNintendoAccountToken(
+        nintendoAccountToken: NintendoAccountToken,
+        user: NintendoAccountUser,
+        useragent = getAdditionalUserAgents()
+    ) {
+        const { default: { coral: config } } = await import('../common/remote-config.js');
+
+        if (!config) throw new Error('Remote configuration prevents Coral authentication');
+        const znca_useragent = `com.nintendo.znca/${config.znca_version}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
         const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, useragent);
 

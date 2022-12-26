@@ -12,3 +12,7 @@ export {
 } from '../api/splatnet3.js';
 
 // export * from '../api/splatnet3-types.js';
+
+export {
+    default as SplatNet3,
+} from '../client/splatnet3.js';
