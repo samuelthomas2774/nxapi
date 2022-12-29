@@ -3,7 +3,7 @@ import { Response } from 'node-fetch';
 import CoralApi, { CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralErrorResponse } from '../api/coral-types.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
-import { checkUseLimit } from '../common/auth/util.js';
+import { checkUseLimit } from './util.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ArgumentsCamelCase } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -24,10 +24,10 @@ export default class Coral {
     promise = new Map<string, Promise<void>>();
 
     updated = {
-        announcements: Date.now(),
-        friends: Date.now(),
-        webservices: Date.now(),
-        active_event: Date.now(),
+        announcements: null as number | null,
+        friends: null as number | null,
+        webservices: null as number | null,
+        active_event: null as number | null,
     };
     update_interval = 10 * 1000; // 10 seconds
     update_interval_announcements = 30 * 60 * 1000; // 30 minutes
@@ -37,15 +37,20 @@ export default class Coral {
     constructor(
         public api: CoralApi,
         public data: CoralAuthData,
-        public announcements: Result<Announcements>,
-        public friends: Result<Friends>,
-        public webservices: Result<WebServices>,
-        public active_event: Result<GetActiveEventResult>,
-    ) {}
+        public announcements: Result<Announcements> | null = null,
+        public friends: Result<Friends> | null = null,
+        public webservices: Result<WebServices> | null = null,
+        public active_event: Result<GetActiveEventResult> | null = null,
+    ) {
+        if (announcements) this.updated.announcements = Date.now();
+        if (friends) this.updated.friends = Date.now();
+        if (webservices) this.updated.webservices = Date.now();
+        if (active_event) this.updated.active_event = Date.now();
+    }
 
-    private async update(key: keyof Coral['updated'], callback: () => Promise<void>, ttl: number) {
-        if ((this.updated[key] + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? callback.call(null).then(() => {
+    private update(key: keyof Coral['updated'], callback: () => Promise<void>, ttl: number) {
+        if (((this.updated[key] ?? 0) + ttl) < Date.now()) {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
                 this.promise.delete(key);
             }).catch(err => {
@@ -55,7 +60,7 @@ export default class Coral {
 
             this.promise.set(key, promise);
 
-            await promise;
+            return promise;
         } else {
             debug('Not updating %s data for coral user %s', key, this.data.nsoAccount.user.name);
         }
@@ -67,10 +72,14 @@ export default class Coral {
 
     async getAnnouncements() {
         await this.update('announcements', async () => {
+            this.getFriends();
+            this.getWebServices();
+            this.getActiveEvent();
+
             this.announcements = await this.api.getAnnouncements();
         }, this.update_interval_announcements);
 
-        return this.announcements;
+        return this.announcements!;
     }
 
     async getFriends() {
@@ -78,25 +87,31 @@ export default class Coral {
             this.friends = await this.api.getFriendList();
         }, this.update_interval);
 
-        return this.friends.friends;
+        return this.friends!.friends;
     }
 
     async getWebServices() {
         await this.update('webservices', async () => {
+            this.getFriends();
+            this.getActiveEvent();
+
             const webservices = this.webservices = await this.api.getWebServices();
 
             this.onUpdatedWebServices?.call(null, webservices);
         }, this.update_interval);
 
-        return this.webservices;
+        return this.webservices!;
     }
 
     async getActiveEvent() {
         await this.update('active_event', async () => {
+            this.getFriends();
+            this.getWebServices();
+
             this.active_event = await this.api.getActiveEvent();
         }, this.update_interval);
 
-        return 'id' in this.active_event ? this.active_event : null;
+        return 'id' in this.active_event! ? this.active_event : null;
     }
 
     async addFriend(nsa_id: string) {
@@ -115,7 +130,7 @@ export default class Coral {
 
         try {
             // Clear the last updated timestamp to force updating the friend list
-            this.updated.friends = 0;
+            this.updated.friends = null;
 
             const friends = await this.getFriends();
             friend = friends.find(f => f.nsaId === nsa_id) ?? null;
@@ -143,17 +158,17 @@ export default class Coral {
     static async createWithSession(session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDC) {
         const cached_auth_data = await session.getAuthenticationData();
 
-        const [coral, auth_data] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
-            [CoralApi.createWithSavedToken(cached_auth_data), cached_auth_data] :
+        const [coral, auth_data, skip_fetch] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
+            [CoralApi.createWithSavedToken(cached_auth_data), cached_auth_data, true] :
             await this.createWithSessionAuthenticate(session, oidc);
 
-        return this.createWithCoralApi(coral, auth_data);
+        return this.createWithCoralApi(coral, auth_data, skip_fetch);
     }
 
     private static async createWithSessionAuthenticate(
-        session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDC
+        session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDC, ratelimit = true
     ) {
-        // await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
+        await checkUseLimit(session, 'coral', ratelimit);
 
         console.warn('Authenticating to Nintendo Switch Online app');
         debug('Authenticating to znc with session token');
@@ -178,17 +193,17 @@ export default class Coral {
     static async createWithProxy(session: NintendoAccountSession<SavedToken>, proxy_url: string) {
         const cached_auth_data = await session.getAuthenticationData();
 
-        const [coral, auth_data] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
-            [new ZncProxyApi(proxy_url, session.token), cached_auth_data] :
+        const [coral, auth_data, skip_fetch] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
+            [new ZncProxyApi(proxy_url, session.token), cached_auth_data, true] :
             await this.createWithProxyAuthenticate(session, proxy_url);
 
-        return this.createWithCoralApi(coral, auth_data);
+        return this.createWithCoralApi(coral, auth_data, skip_fetch);
     }
 
     private static async createWithProxyAuthenticate(
-        session: NintendoAccountSession<SavedToken>, proxy_url: string
+        session: NintendoAccountSession<SavedToken>, proxy_url: string, ratelimit = true
     ) {
-        // await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
+        await checkUseLimit(session, 'coral', ratelimit);
 
         console.warn('Authenticating to Nintendo Switch Online app');
         debug('Authenticating to znc with session token');
@@ -205,7 +220,12 @@ export default class Coral {
         return [nso, auth_data] as const;
     }
 
-    static async createWithCoralApi(coral: CoralApi, data: SavedToken) {
+    static async createWithCoralApi(coral: CoralApi, data: SavedToken, skip_fetch = false) {
+        if (skip_fetch) {
+            debug('Already authenticated, skip fetching coral data');
+            return new Coral(coral, data, null, null, null, null);
+        }
+
         const [announcements, friends, webservices, active_event] = await Promise.all([
             coral.getAnnouncements(),
             coral.getFriendList(),
@@ -252,6 +272,8 @@ async function renewToken(
     //     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);    
     //     await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
     // }
+
+    await checkUseLimit(session, 'coral', ratelimit);
 
     const data = await coral.renewToken(session.token, renew_token_data.auth_data.user);
 

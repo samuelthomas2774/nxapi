@@ -1,7 +1,6 @@
 import createDebug from 'debug';
 import { NintendoAccountSession } from './storage/index.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from '../api/na.js';
-import Users from './users.js';
 
 const debug = createDebug('nxapi:client:na');
 

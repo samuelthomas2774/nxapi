@@ -7,6 +7,7 @@ import SplatNet3Api, { PersistedQueryResult, SplatNet3AuthData } from '../api/sp
 import Coral, { SavedToken as SavedCoralToken } from './coral.js';
 import { ErrorResponse } from '../api/util.js';
 import Users from './users.js';
+import { checkUseLimit } from './util.js';
 
 const debug = createDebug('nxapi:client:splatnet3');
 
@@ -26,7 +27,7 @@ export default class SplatNet3 {
     updated = {
         configure_analytics: null as number | null,
         current_fest: null as number | null,
-        home: Date.now(),
+        home: null as number | null,
         friends: null as number | null,
         schedules: null as number | null,
     };
@@ -38,10 +39,11 @@ export default class SplatNet3 {
         public data: SplatNet3AuthData,
         public configure_analytics: PersistedQueryResult<ConfigureAnalyticsResult> | null = null,
         public current_fest: PersistedQueryResult<CurrentFestResult> | null = null,
-        public home: PersistedQueryResult<HomeResult>,
+        public home: PersistedQueryResult<HomeResult> | null = null,
     ) {
         if (configure_analytics) this.updated.configure_analytics = Date.now();
         if (current_fest) this.updated.current_fest = Date.now();
+        if (home) this.updated.home = Date.now();
     }
 
     protected async update(key: keyof SplatNet3['updated'], callback: () => Promise<void>, ttl: number) {
@@ -67,7 +69,7 @@ export default class SplatNet3 {
             this.home = await this.api.getHome();
         }, this.update_interval);
 
-        return this.home.data;
+        return this.home!.data;
     }
 
     async getFriends(): Promise<Friend_friendList[]> {
@@ -90,19 +92,21 @@ export default class SplatNet3 {
     static async createWithSession(session: NintendoAccountSession<SavedCoralToken>, coral: Coral) {
         const cached_auth_data = await session.getItem<SavedToken>('BulletToken');
 
-        const [splatnet, auth_data] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
-            [SplatNet3Api.createWithSavedToken(cached_auth_data), cached_auth_data] :
+        const [splatnet, auth_data, skip_fetch] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
+            [SplatNet3Api.createWithSavedToken(cached_auth_data), cached_auth_data, true] :
             await this.createWithSessionAuthenticate(session, coral);
 
         const renew_token_data = {coral, auth_data};
         splatnet.onTokenExpired = createTokenExpiredHandler(session, splatnet, renew_token_data);
         splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(session, splatnet, renew_token_data);
 
-        return this.createWithSplatNet3Api(splatnet, auth_data);
+        return this.createWithSplatNet3Api(splatnet, auth_data, skip_fetch);
     }
 
-    private static async createWithSessionAuthenticate(session: NintendoAccountSession<SavedCoralToken>, coral: Coral) {
-        //
+    private static async createWithSessionAuthenticate(
+        session: NintendoAccountSession<SavedCoralToken>, coral: Coral, ratelimit = true
+    ) {
+        await checkUseLimit(session, 'bullet', ratelimit);
 
         const {splatnet, data} = await SplatNet3Api.createWithCoral(coral.api, coral.data.user);
 
@@ -111,10 +115,10 @@ export default class SplatNet3 {
         return [splatnet, data] as const;
     }
 
-    static async createWithSplatNet3Api(splatnet: SplatNet3Api, data: SavedToken) {
-        const home = await splatnet.getHome();
+    static async createWithSplatNet3Api(splatnet: SplatNet3Api, data: SavedToken, skip_fetch = true) {
+        const home = skip_fetch ? null : await splatnet.getHome();
 
-        const [configure_analytics, current_fest] = await Promise.all([
+        const [configure_analytics, current_fest] = skip_fetch ? [null, null] : await Promise.all([
             splatnet.getConfigureAnalytics().catch(err => {
                 debug('Error in ConfigureAnalyticsQuery request', err);
             }),
@@ -165,10 +169,7 @@ async function renewToken(
     session: NintendoAccountSession<SavedCoralToken>, splatnet: SplatNet3Api,
     renew_token_data: {coral: Coral; auth_data: SavedToken; znc_proxy_url?: string}, ratelimit = true
 ) {
-    // if (ratelimit) {
-    //     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-    //     await checkUseLimit(storage, 'splatnet3', jwt.payload.sub);
-    // }
+    await checkUseLimit(session, 'bullet', ratelimit);
 
     try {
         const coral_auth_data = renew_token_data.coral.data ?? await session.getAuthenticationData();
