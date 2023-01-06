@@ -25,7 +25,7 @@ const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
 interface AllUsersResult extends Friend {
     title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
-    splatoon3_fest_team?: FestTeam_votingStatus | null;
+    splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
 }
 interface PresenceResponse {
     friend: Friend;
@@ -440,7 +440,10 @@ class Server extends HttpServer {
                             for (const player of team.votes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
-                                match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.VOTED);
+                                match.splatoon3_fest_team = {
+                                    ...createFestVoteTeam(team, FestVoteState.VOTED),
+                                    myVoteState: FestVoteState.VOTED,
+                                };
                                 break;
                             }
 
@@ -449,7 +452,10 @@ class Server extends HttpServer {
                             for (const player of team.preVotes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
-                                match.splatoon3_fest_team = createFestVoteTeam(team, FestVoteState.PRE_VOTED);
+                                match.splatoon3_fest_team = {
+                                    ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
+                                    myVoteState: FestVoteState.PRE_VOTED,
+                                };
                                 break;
                             }
     
