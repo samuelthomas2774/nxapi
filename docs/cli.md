@@ -386,7 +386,6 @@ nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000
 nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000 --json
 nxapi nooklink newspaper 00000000-0000-0000-0000-000000000000 --json-pretty-print
 ```
-
 ### Download newspapers
 
 ```sh
@@ -396,6 +395,17 @@ nxapi nooklink dump-newspapers
 
 # Download all island newspapers to data/nooklink
 nxapi nooklink dump-newspapers data/nooklink
+```
+
+### Download catalog
+
+```sh
+# Download all player catalog data to the nooklink directory in nxapi's data path
+# Data that already exists will not be redownloaded
+nxapi nooklink dump-catalog
+
+# Download all player catalog data to data/nooklink
+nxapi nooklink dump-catalog data/nooklink
 ```
 
 ### Messages
