@@ -203,6 +203,10 @@ export async function handleError(
         debug('Request error - name resolution failed, waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;
+    } else if ('code' in err && (err as any).type === 'system' && err.code === 'ECONNRESET') {
+        debug('Request error - connection reset, waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
     } else {
         throw err;
     }
