@@ -331,3 +331,412 @@ interface NewspaperAttributeValue {
     type: 'value';
     value: number;
 }
+
+/** GET /sd/v1/catalog_items?language={language}&current_year={year} */
+export interface Catalog {
+    updated_at: number;
+    items: CatalogItem[];
+    is_open_and_enter_remake_shop: boolean;
+    is_unlock_fence_remake: boolean;
+    is_unlock_regulation: boolean;
+}
+
+interface CatalogItem {
+    unique_id: number;
+    label: string;
+    kind_id: CatalogItemKind;
+    price: number;
+    catalog_type: CatalogItemCatalogType;
+    item_Size_id: CatalogItemSize;
+    ui_category: CatalogItemUiCategory;
+    icon?: string;
+    item_fossil_set_id: number;
+    hha_theme: number;
+    can_sell: number;
+    remakable: boolean;
+    color1?: CatalogItemColor;
+    color2?: CatalogItemColor;
+    refabric_pattern0_color0?: CatalogItemColor;
+    refabric_pattern0_color1?: CatalogItemColor;
+    rebody_pattern?: CatalogItemPattern[];
+    variations?: CatalogItemVariant[];
+    fashion_theme?: CatalogItemFashionTheme[];
+    from: string;
+    shop_remakable: boolean;
+    small_genre: CatalogItemSmallGenre;
+    is_tool_category: boolean;
+    region_event?: CatalogItemEvent;
+}
+interface CatalogItemPattern {
+    index: number;
+    name: string;
+    color0: CatalogItemColor;
+    color1: CatalogItemColor;
+    icon: string;
+}
+interface CatalogItemVariant {
+    unique_id: number;
+    name: string;
+    color1: CatalogItemColor;
+    color2: CatalogItemColor;
+    icon: string;
+}
+interface CatalogItemEvent {
+    name: string;
+    period: CatalogItemEventPeriod[];
+    countries: CatalogItemEventCountry[];
+}
+interface CatalogItemEventPeriod {
+    begin: string;
+    end: string;
+}
+interface CatalogItemEventCountry {
+    country_code: CatalogItemEventCountryCode;
+    country?: string;
+    flag?: string;
+}
+enum CatalogItemKind {
+    Money = "Money",
+    Ftr = "Ftr",
+    Tops = "Tops",
+    OnePiece = "OnePiece",
+    MarineSuit = "MarineSuit",
+    Bottoms = "Bottoms",
+    Socks = "Socks",
+    Shoes = "Shoes",
+    Cap = "Cap",
+    Accessory = "Accessory",
+    Axe = "Axe",
+    Net = "Net",
+    FishingRod = "FishingRod",
+    Shovel = "Shovel",
+    Slingshot = "Slingshot",
+    Watering = "Watering",
+    Timer = "Timer",
+    FireworkM = "FireworkM",
+    Umbrella = "Umbrella",
+    PartyPopper = "PartyPopper",
+    Insect = "Insect",
+    Feather = "Feather",
+    SnowCrystal = "SnowCrystal",
+    Fish = "Fish",
+    DiveFish = "DiveFish",
+    Fossil = "Fossil",
+    Gyroid = "Gyroid",
+    Music = "Music",
+    Fruit = "Fruit",
+    FlowerSeed = "FlowerSeed",
+    Turnip = "Turnip",
+    ShellDrift = "ShellDrift",
+    Trash = "Trash",
+    Mushroom = "Mushroom",
+    Flower = "Flower",
+    Ore = "Ore",
+    Medicine = "Medicine",
+    LostQuest = "LostQuest",
+    LostQuestDust = "LostQuestDust",
+    Candy = "Candy",
+    Picture = "Picture",
+    Sculpture = "Sculpture",
+    HousePost = "HousePost",
+    EasterEgg = "EasterEgg",
+    TopsDefault = "TopsDefault",
+    BottomsDefault = "BottomsDefault",
+    None = "None",
+    Bag = "Bag",
+    JohnnyQuest = "JohnnyQuest",
+    JohnnyQuestDust = "JohnnyQuestDust",
+    ChangeStick = "ChangeStick",
+    GroundMaker = "GroundMaker",
+    CliffMaker = "CliffMaker",
+    Ladder = "Ladder",
+    Dishes = "Dishes",
+    Honeycomb = "Honeycomb",
+    Tree = "Tree",
+    TreeSeedling = "TreeSeedling",
+    Bush = "Bush",
+    BushSeedling = "BushSeedling",
+    Vegetable = "Vegetable",
+    VegeSeedling = "VegeSeedling",
+    FlowerBud = "FlowerBud",
+    TurnipExpired = "TurnipExpired",
+    CraftMaterial = "CraftMaterial",
+    CraftRemake = "CraftRemake",
+    Rug = "Rug",
+    FossilUnknown = "FossilUnknown",
+    PitFallSeed = "PitFallSeed",
+    TreasureQuest = "TreasureQuest",
+    TreasureQuestDust = "TreasureQuestDust",
+    MyDesignTexture = "MyDesignTexture",
+    ShellFish = "ShellFish",
+    XmasDeco = "XmasDeco",
+    PictureFake = "PictureFake",
+    SculptureFake = "SculptureFake",
+    Weed = "Weed",
+    DummyRecipe = "DummyRecipe",
+    Helmet = "Helmet",
+    DoorDeco = "DoorDeco",
+    Fence = "Fence",
+    HousingKit = "HousingKit",
+    BdayCupcake = "BdayCupcake",
+    VegeTree = "VegeTree",
+    PinataStick = "PinataStick",
+    SequenceOnly = "SequenceOnly",
+    NpcOutfit = "NpcOutfit",
+    RiverMaker = "RiverMaker",
+    DummyFtr = "DummyFtr",
+    QuestWrapping = "QuestWrapping",
+    Giftbox = "Giftbox",
+    MyDesignObject = "MyDesignObject",
+    DummyWrapping = "DummyWrapping",
+    DummyPresentbox = "DummyPresentbox",
+    FishBait = "FishBait",
+    Bromide = "Bromide",
+    DummyCardboard = "DummyCardboard",
+    YutaroWisp = "YutaroWisp",
+    WoodenStickTool = "WoodenStickTool",
+    FierworkHand = "FierworkHand",
+    StickLight = "StickLight",
+    Uchiwa = "Uchiwa",
+    Windmill = "Windmill",
+    BlowBubble = "BlowBubble",
+    Partyhorn = "Partyhorn",
+    Ocarina = "Ocarina",
+    Panflute = "Panflute",
+    Tambourine = "Tambourine",
+    Balloon = "Balloon",
+    RoomWall = "RoomWall",
+    RoomFloor = "RoomFloor",
+    SmartPhone = "SmartPhone",
+    SlopeItem = "SlopeItem",
+    BridgeItem = "BridgeItem",
+    EventObjFtr = "EventObjFtr",
+    NnpcRoomMarker = "NnpcRoomMarker",
+    MessageBottle = "MessageBottle",
+    DIYRecipe = "DIYRecipe",
+    MusicMiss = "MusicMiss",
+    HousingKitRcoQuest = "HousingKitRcoQuest",
+    MilePlaneTicket = "MilePlaneTicket",
+    Sakurapetal = "Sakurapetal",
+    TailorTicket = "TailorTicket",
+    StarPiece = "StarPiece",
+    PlayerDemoOutfit = "PlayerDemoOutfit",
+    HousingKitBirdge = "HousingKitBirdge",
+    AutumnLeaf = "AutumnLeaf",
+    WrappingPaper = "WrappingPaper",
+    PhotoStudioList = "PhotoStudioList",
+    CraftPhoneCase = "CraftPhoneCase",
+    LicenseItem = "LicenseItem",
+    RugMyDesign = "RugMyDesign",
+    DummyDIYRecipe = "DummyDIYRecipe",
+    DummyHowtoBook = "DummyHowtoBook",
+    RollanTicket = "RollanTicket",
+    Poster = "Poster",
+    FishToy = "FishToy",
+    InsectToy = "InsectToy",
+    LoveCrystal = "LoveCrystal",
+    Vine = "Vine",
+    SettingLadder = "SettingLadder",
+    SincerityTowel = "SincerityTowel",
+    FtrWall = "FtrWall",
+    OneRoomBox = "OneRoomBox",
+    SouvenirChocolate = "SouvenirChocolate",
+    PirateQuest = "PirateQuest",
+    HandheldPennant = "HandheldPennant",
+    ShopTorso = "ShopTorso",
+    Counter = "Counter",
+    Pillar = "Pillar",
+    HarvestDish = "HarvestDish",
+    QuestChristmasPresentbox = "QuestChristmasPresentbox",
+    BigbagPresent = "BigbagPresent",
+    JuiceFuzzyapple = "JuiceFuzzyapple",
+    SoySet = "SoySet",
+    Megaphone = "Megaphone",
+    RainbowFeather = "RainbowFeather",
+    MaracasCarnival = "MaracasCarnival",
+    Otoshidama = "Otoshidama",
+    DummyWrappingOtoshidama = "DummyWrappingOtoshidama",
+    GardenEditList = "GardenEditList",
+    FlowerShower = "FlowerShower",
+    GyroidScrap = "GyroidScrap",
+    CookingMaterial = "CookingMaterial",
+    Drink = "Drink",
+    CommonFabricRug = "CommonFabricRug",
+    CommonFabricObject = "CommonFabricObject",
+    CommonFabricTexture = "CommonFabricTexture",
+    SubToolGeneric = "SubToolGeneric",
+    SubToolRemakeable = "SubToolRemakeable",
+    SubToolEat = "SubToolEat",
+    SubToolEatDrop = "SubToolEatDrop",
+    SubToolEatRemakeable = "SubToolEatRemakeable",
+    StickLightColorful = "StickLightColorful",
+    Lantern = "Lantern",
+    Basket = "Basket",
+    HandBag = "HandBag",
+    Icecandy = "Icecandy",
+    Candyfloss = "Candyfloss",
+    Tapioca = "Tapioca",
+    SubToolSensu = "SubToolSensu",
+    SubToolCan = "SubToolCan",
+    SubToolIcecream = "SubToolIcecream",
+    SubToolIcesoft = "SubToolIcesoft",
+    SubToolDonut = "SubToolDonut",
+    WeedLight = "WeedLight"
+}
+enum CatalogItemCatalogType {
+    Sale = "Sale",
+    NotForSale = "NotForSale",
+    NotSee = "NotSee"
+}
+enum CatalogItemSize {
+    Size_0_5x0_5 = "0.5x0.5",
+    Size_0_5x1 = "0.5x1",
+    Size_1x0_5 = "1x0.5",
+    Size_1x1 = "1x1",
+    Size_1x1_5 = "1x1.5",
+    Size_1x2 = "1x2",
+    Size_1_5x1_5 = "1.5x1.5",
+    Size_2x0_5 = "2x0.5",
+    Size_2x1 = "2x1",
+    Size_2x1_5 = "2x1.5",
+    Size_2x2 = "2x2",
+    Size_3x0_5 = "3x0.5",
+    Size_3x1 = "3x1",
+    Size_3x2 = "3x2",
+    Size_3x3 = "3x3",
+    Size_4x3 = "4x3",
+    Size_4x4 = "4x4",
+    Size_5x4 = "5x4",
+    Size_5x5 = "5x5"
+}
+enum CatalogItemUiCategory {
+    None = "None",
+    Floor = "Floor",
+    Upper = "Upper",
+    Wall = "Wall",
+    Ceiling = "Ceiling",
+    Unnecessary = "Unnecessary",
+    RoomWall = "RoomWall",
+    RoomFloor = "RoomFloor",
+    Ceiling_Rug = "Ceiling_Rug",
+    Food = "Food",
+    Desert = "Desert",
+    Clothes = "Clothes",
+    Creature = "Creature",
+    Tool = "Tool",
+    Others = "Others"
+}
+enum CatalogItemSmallGenre {
+    None = "None",
+    Bed = "Bed",
+    Chair = "Chair",
+    Table = "Table",
+    Lamp = "Lamp",
+    Bathroom = "Bathroom",
+    FacilityGoods = "FacilityGoods",
+    MusicalInstrument = "MusicalInstrument",
+    PlantItem = "PlantItem",
+    Kitchen = "Kitchen",
+    EntertainmentAppliances = "EntertainmentAppliances",
+    AirConditioning = "AirConditioning",
+    HobbyGoods = "HobbyGoods",
+    Shelf = "Shelf",
+    EventGoods = "EventGoods",
+    NationalGoods = "NationalGoods",
+    Art = "Art",
+    WallHanging = "WallHanging",
+    WorkBench = "WorkBench",
+    OutdoorGoods = "OutdoorGoods",
+    GardeningGoods = "GardeningGoods",
+    ScreenArch = "ScreenArch",
+    FloorIndoor = "FloorIndoor",
+    FloorOutdoor = "FloorOutdoor",
+    WallNormal = "WallNormal",
+    WallSpecial = "WallSpecial",
+    RugRound = "RugRound",
+    RugQuadrilateral = "RugQuadrilateral",
+    RugSpecial = "RugSpecial",
+    Bromide = "Bromide",
+    Poster = "Poster",
+    Tree = "Tree",
+    Bush = "Bush",
+    Flower = "Flower",
+    WeedStone = "WeedStone",
+    Vegetable = "Vegetable",
+    Cap = "Cap",
+    Accessory = "Accessory",
+    Tops = "Tops",
+    OnePiece = "OnePiece",
+    Bottoms = "Bottoms",
+    Socks = "Socks",
+    Shoes = "Shoes",
+    Bag = "Bag",
+    Insect = "Insect",
+    Fish = "Fish",
+    DiveFish = "DiveFish",
+    BuildingMaterial = "BuildingMaterial",
+    Tool = "Tool",
+    Plants = "Plants",
+    Fossil = "Fossil",
+    Music = "Music",
+    Others = "Others",
+    Umbrella = "Umbrella",
+    MarineSuit = "MarineSuit",
+    DishFood = "DishFood",
+    DishDrink = "DishDrink",
+    CeilingEtc = "CeilingEtc",
+    CeilingLamp = "CeilingLamp",
+    Haniwa = "Haniwa"
+}
+enum CatalogItemColor {
+    None = "None",
+    Red = "Red",
+    Green = "Green",
+    Blue = "Blue",
+    Yellow = "Yellow",
+    Orange = "Orange",
+    Pink = "Pink",
+    Purple = "Purple",
+    LightBlue = "LightBlue",
+    Beige = "Beige",
+    Brown = "Brown",
+    Gray = "Gray",
+    White = "White",
+    Black = "Black",
+    Colorful = "Colorful"
+}
+enum CatalogItemFashionTheme {
+    Daily = "daily",
+    Fairyland = "fairyland",
+    Fomal = "fomal",
+    Horror = "horror",
+    Outdoor = "outdoor",
+    Party = "party",
+    Relax = "relax",
+    Sport = "sport",
+    Stage = "stage",
+    Vacation = "vacation",
+    Work = "work"
+}
+enum CatalogItemEventCountryCode {
+    None = "None",
+    America = "America",
+    Mexico = "Mexico",
+    Brazil = "Brazil",
+    China = "China",
+    Korea = "Korea",
+    Japan = "Japan",
+    Russia = "Russia",
+    France = "France",
+    Spain = "Spain",
+    Italy = "Italy",
+    Germany = "Germany",
+    Asia = "Asia",
+    Europe = "Europe",
+    EachCountry = "EachCountry",
+    World = "World",
+    Northern = "Northern",
+    Southern = "Southern",
+    GreaterChina = "GreaterChina",
+    Taiwan = "Taiwan"
+}

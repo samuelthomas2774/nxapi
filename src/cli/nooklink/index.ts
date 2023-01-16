@@ -7,4 +7,5 @@ export * as dumpNewspapers from './dump-newspapers.js';
 export * as keyboard from './keyboard.js';
 export * as reactions from './reactions.js';
 export * as postReaction from './post-reaction.js';
+export * as dumpCatalog from './dump-catalog.js';
 export * as userToken from './user-token.js';

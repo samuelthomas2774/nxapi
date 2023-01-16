@@ -4,7 +4,7 @@ import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import CoralApi from './coral.js';
-import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
+import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile, Catalog } from './nooklink-types.js';
 import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:nooklink');
@@ -305,6 +305,12 @@ export class NooklinkUserApi {
 
     async reaction(reaction: Reaction) {
         return this.postMessage(reaction.label, MessageType.EMOTICON);
+    }
+
+    async getCatalog() {
+        const year = new Date().getFullYear();
+
+        return this.fetch<Catalog>('/sd/v1/catalog_items?language=' + this.language + '&current_year=' + year);
     }
 
     async getToken(client: NooklinkApi): Promise<PartialNooklinkUserAuthData> {
