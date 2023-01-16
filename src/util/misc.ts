@@ -34,7 +34,7 @@ export function timeoutSignal(ms = 60 * 1000) {
 
     const timeout = setTimeout(() => {
         const err = new Error('Timeout');
-        Object.assign(err, TemporaryErrorSymbol, true);
+        Object.defineProperty(err, TemporaryErrorSymbol, {value: true});
         controller.abort(err);
     }, ms);
 
