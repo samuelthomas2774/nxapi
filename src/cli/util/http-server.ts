@@ -1,10 +1,13 @@
 import createDebug from 'debug';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ErrorResponse } from '../../api/util.js';
+import { temporary_http_errors, temporary_system_errors } from '../../util/errors.js';
 
 const debug = createDebug('cli:util:http-server');
 
 export class HttpServer {
+    retry_after = 60;
+
     protected createApiRequestHandler(callback: (req: Request, res: Response) => Promise<{} | void>, auth = false) {
         return async (req: Request, res: Response) => {
             try {
@@ -42,13 +45,17 @@ export class HttpServer {
         return JSON.stringify(data, null, space);
     }
 
-    protected handleRequestError(req: Request, res: Response, err: unknown) {
+    protected handleRequestError(req: Request, res: Response, err: unknown, retry_after = this.retry_after) {
         debug('Error in request %s %s', req.method, req.url, err);
 
         if (err instanceof ErrorResponse) {
-            const retry_after = err.response.headers.get('Retry-After');
+            const response_retry_after = err.response.headers.get('Retry-After');
 
-            if (retry_after && /^\d+$/.test(retry_after)) {
+            if (response_retry_after && /^\d+$/.test(response_retry_after)) {
+                res.setHeader('Retry-After', response_retry_after);
+            }
+
+            if (temporary_http_errors.includes(err.response.status) && !response_retry_after) {
                 res.setHeader('Retry-After', retry_after);
             }
         }
@@ -56,8 +63,8 @@ export class HttpServer {
         if (err && typeof err === 'object' && 'type' in err && 'code' in err && (err as any).type === 'system') {
             const code: string = (err as any).code;
 
-            if (code === 'ETIMEDOUT' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
-                res.setHeader('Retry-After', '60');
+            if (code in temporary_system_errors) {
+                res.setHeader('Retry-After', retry_after);
             }
         }
 
