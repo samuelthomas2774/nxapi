@@ -265,7 +265,9 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
                 friend.vsMode.id === 'VnNNb2RlLTUx' ?
                     monitor.anarchy_schedule?.bankaraMatchSettings?.find(s => s.mode === BankaraMatchMode.OPEN) :
                 null :
-            friend.vsMode.mode === 'FEST' ? monitor.fest_schedule?.festMatchSetting :
+            friend.vsMode.mode === 'FEST' ?
+                friend.vsMode.id === 'VnNNb2RlLTg=' ? null :
+                monitor.fest_schedule?.festMatchSetting :
             friend.vsMode.mode === 'LEAGUE' ? monitor.league_schedule?.leagueMatchSetting :
             friend.vsMode.mode === 'X_MATCH' ? monitor.x_schedule?.xMatchSetting :
             null;
@@ -277,24 +279,38 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             (friend.vsMode.mode !== 'FEST' && setting ? ' - ' + setting.vsRule.name : '') +
             (friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
 
+        if (friend.vsMode.id === 'VnNNb2RlLTg=' && fest) {
+            const tricolour_stage_image = new URL(fest.tricolorStage.image.url);
+            const match = tricolour_stage_image.pathname.match(/^\/resources\/prod\/(.+)$/);
+            const proxy_stage_image =
+                tricolour_stage_image.host === 'splatoon3.ink' ? tricolour_stage_image.href :
+                match ? 'https://splatoon3.ink/assets/splatnet/' + match[1] :
+                null;
+
+            if (proxy_stage_image) {
+                activity.largeImageKey = proxy_stage_image;
+                activity.largeImageText = fest.tricolorStage.name +
+                    ' | ' + product;
+            }
+        }
+
         if (setting) {
             // In the second half the player may be in a Tricolour battle if either:
             // the player is on the defending team and joins Splatfest Battle (Open) or
             // the player is on the attacking team and joins Tricolour Battle
             // const possibly_tricolour = fest?.state === FestState.SECOND_HALF && (
-            //     (friend.vsMode?.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
-            //     (friend.vsMode?.id === 'VnNNb2RlLTg=')
+            //     (friend.vsMode.id === 'VnNNb2RlLTY=' && fest_team?.role === FestTeamRole.DEFENSE) ||
+            //     (friend.vsMode.id === 'VnNNb2RlLTg=')
             // );
-            const possibly_tricolour = friend.vsMode?.id === 'VnNNb2RlLTg=';
 
             activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
                 a: setting.vsStages[0].id,
                 b: setting.vsStages[1].id,
-                ...(possibly_tricolour ? {t: fest?.tricolorStage.id} : {}),
+                // ...(possibly_tricolour ? {t: fest?.tricolorStage.id} : {}),
                 v: '2022092400',
             }).toString();
             activity.largeImageText = setting.vsStages.map(s => s.name).join('/') +
-                (possibly_tricolour ? '/' + fest?.tricolorStage.name : '') +
+                // (possibly_tricolour ? '/' + fest?.tricolorStage.name : '') +
                 ' | ' + product;
         }
 
