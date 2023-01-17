@@ -7,8 +7,9 @@ import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
 import Loop, { LoopResult } from '../util/loop.js';
-import { getTitleIdFromEcUrl, hrduration, TemporaryErrorSymbol } from '../util/misc.js';
+import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
 import { CoralUser } from './users.js';
+import { handleError } from '../util/errors.js';
 
 const debug = createDebug('nxapi:nso:notify');
 const debugFriends = createDebug('nxapi:nso:notify:friends');
@@ -180,35 +181,6 @@ export class ZncNotifications extends Loop {
 
     async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
         return handleError(err, this);
-    }
-}
-
-export async function handleError(
-    err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException,
-    loop: Loop,
-): Promise<LoopResult> {
-    if (TemporaryErrorSymbol in err && err[TemporaryErrorSymbol]) {
-        debug('Temporary error, waiting %ds before retrying', loop.update_interval, err);
-
-        return LoopResult.OK;
-    } else if ('code' in err && (err as any).type === 'system' && err.code === 'ETIMEDOUT') {
-        debug('Request timed out, waiting %ds before retrying', loop.update_interval, err);
-
-        return LoopResult.OK;
-    } else if ('code' in err && (err as any).type === 'system' && err.code === 'ENOTFOUND') {
-        debug('Request error, waiting %ds before retrying', loop.update_interval, err);
-
-        return LoopResult.OK;
-    } else if ('code' in err && (err as any).type === 'system' && err.code === 'EAI_AGAIN') {
-        debug('Request error - name resolution failed, waiting %ds before retrying', loop.update_interval, err);
-
-        return LoopResult.OK;
-    } else if ('code' in err && (err as any).type === 'system' && err.code === 'ECONNRESET') {
-        debug('Request error - connection reset, waiting %ds before retrying', loop.update_interval, err);
-
-        return LoopResult.OK;
-    } else {
-        throw err;
     }
 }
 

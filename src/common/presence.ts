@@ -3,7 +3,7 @@ import EventSource from 'eventsource';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
-import { EmbeddedSplatNet2Monitor, handleError, ZncNotifications } from './notify.js';
+import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
@@ -12,6 +12,7 @@ import { getTitleIdFromEcUrl } from '../index.js';
 import { parseLinkHeader } from '../util/http.js';
 import { getUserAgent } from '../util/useragent.js';
 import { TemporaryErrorSymbol } from '../util/misc.js';
+import { handleError } from '../util/errors.js';
 
 const debug = createDebug('nxapi:nso:presence');
 const debugEventStream = createDebug('nxapi:nso:presence:sse');
