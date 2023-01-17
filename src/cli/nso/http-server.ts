@@ -693,7 +693,7 @@ class Server extends HttpServer {
 
                     throw err;
                 }
-            }, promises, this.cached_friendcode_data);
+            }, promises, this.cached_friendcode_data, this.friendcode_update_interval);
         } finally {
             if (!promises.size) this.friendcode_data_promise.delete(id);
         }
