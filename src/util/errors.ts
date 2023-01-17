@@ -16,6 +16,13 @@ export const temporary_http_errors = [
     502, // Bad Gateway
     503, // Service Unavailable
     504, // Gateway Timeout
+
+    // Non-standard Cloudflare status codes
+    521, // Web Server Is Down
+    522, // Connection Timed Out
+    523, // Origin Is Unreachable
+    524, // A Timeout Occurred
+    530, // Unknown (1xxx error)
 ];
 
 export async function handleError(
