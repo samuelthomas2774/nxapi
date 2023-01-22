@@ -23,6 +23,9 @@ export const temporary_http_errors = [
     523, // Origin Is Unreachable
     524, // A Timeout Occurred
     530, // Unknown (1xxx error)
+    
+    // Other non-standard errors
+    599, // Custom (GraphQL)
 ];
 
 export async function handleError(
