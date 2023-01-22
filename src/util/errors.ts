@@ -1,4 +1,5 @@
 import createDebug from 'debug';
+import { AbortError } from 'node-fetch';
 import Loop, { LoopResult } from './loop.js';
 import { CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
@@ -31,6 +32,10 @@ export async function handleError(
 ): Promise<LoopResult> {
     if (TemporaryErrorSymbol in err && err[TemporaryErrorSymbol]) {
         debug('Temporary error, waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof AbortError) {
+        debug('Request aborted (timeout?), waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;
     } else if ('code' in err && (err as any).type === 'system' && err.code && err.code in temporary_system_errors) {
