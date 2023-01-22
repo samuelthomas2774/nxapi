@@ -1,9 +1,11 @@
 import process from 'node:process';
 import { createRequire } from 'node:module';
+import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
+import { dir } from '../util/product.js';
 
 const debug = createDebug('cli:app');
 
@@ -25,7 +27,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 
     execFileSync(electron, [
-        'dist/app/app-entry.cjs',
+        path.resolve(dir, 'dist', 'app', 'app-entry.cjs'),
     ], {
         stdio: 'inherit',
         env: {
