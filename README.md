@@ -10,13 +10,14 @@ JavaScript library and command line and Electron app for accessing the Nintendo 
 - Command line and Electron app interfaces
 - Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
 - Automated login to the Nintendo Switch Online app API
-    - This uses the imink API by default.
+    - This uses the [api.imink.app](https://github.com/imink-app/f-API) or
+        [nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) API by default.
     - Alternatively a custom server can be used.
     - A custom server using a rooted Android device/emulator is included.
 - Get Nintendo Switch account information, friends list and game-specific services
-- Show Discord Rich Presence using your own or a friend's Nintendo Switch presence
-    - Show your account's friend code (or a custom friend code)
-    - Fetch presence from a custom URL
+- Show Discord Rich Presence using your Nintendo Switch presence
+    - Fetch presence using a secondary account or from a custom URL.
+    - Show your account's friend code (or a custom friend code).
     - All titles are supported using a default Nintendo Switch app. A limited number of titles have their own
         Discord apps (meaning they appear under your name with the title's name instead of "Nintendo Switch")
         or other custom Discord features. [See here for Discord title overrides](src/discord/titles) or
@@ -32,14 +33,12 @@ JavaScript library and command line and Electron app for accessing the Nintendo 
     ![Screenshot showing a presence notification](resources/notification.png)
 - [Electron app] Open game-specific services
     - Including NookLink, which doesn't work in web browsers as it requires custom JavaScript APIs.
-- Nintendo Switch Online app API proxy server
+- Nintendo Switch Online app API proxy server and presence server
     - This allows a single account to fetch presence for multiple users.
     - Data will be cached for a short time to reduce the number of requests to Nintendo's server.
     - This automatically handles authentication when given a Nintendo Account session token. This makes it much
         easier to access the API from a browser, in scripts or in other software.
-- Download all personalised SplatNet 2 data, including battle and Salmon Run results
-    - This supports monitoring the authenticated user's presence and only checking for new data when playing
-        Splatoon 2 online.
+- Download all personalised SplatNet 2 and SplatNet 3 data, including battle and Salmon Run results
 - Download island newspapers from and send messages and reactions using NookLink
 - Download all Nintendo Switch Parental Controls usage records
 
@@ -49,15 +48,16 @@ The API library and types are exported for use in JavaScript/TypeScript software
 
 nxapi includes an Electron app, which can be downloaded [here](https://github.com/samuelthomas2774/nxapi/releases). The app can be used to:
 
-- Login to a Nintendo Account, both for the Nintendo Switch Online app and Parental Controls app.
+- Login to a Nintendo Account, both for the Nintendo Switch Online app and Parental Controls app
     - This will open the Nintendo Account login page in the app, just like signing into Nintendo's own apps.
+    - The Nintendo Account authorisation page can be opened in a browser by holding <kbd>Shift</kbd> while pressing add account.
     - Accounts are shared with the nxapi command line interface.
-- Share Nintendo Switch presence to Discord.
+- Share Nintendo Switch presence to Discord
     - Using a custom presence URL or a friend's presence is supported.
     - Using the authenticated user's presence is not supported, as this is no longer available from the API ([#1](https://github.com/samuelthomas2774/nxapi/issues/1)).
-- Showing notifications for friend presences.
+- Showing notifications for friend presences
     - Multiple users can be selected.
-- Access game-specific services.
+- Access game-specific services
     - These will be opened in the app.
 
 ![Screenshot of the app](resources/app.png)
@@ -83,7 +83,7 @@ No.
 
 The only requirement to use this is that your Nintendo Account is linked to a Network Service Account, i.e. you've linked your Nintendo Account to a Nintendo Switch console at some point. It doesn't matter if your account is no longer linked to any console.
 
-You will need to have had an online membership (free trial is ok) to use any game-specific services if you want to access those. SplatNet 2 can be used without an active membership, but NookLink and Smash World both require an active membership just to open them.
+You will need to have an online membership (free trial is ok) to use any game-specific services if you want to access those. SplatNet 2 can be used without an active membership, but NookLink and Smash World both require an active membership just to open them.
 
 For Parental Controls data, you don't need to have linked your account to a console. You will need to use Nintendo's app to add a console to your account though, as this isn't supported in nxapi and the Parental Controls API is a bit useless without doing this.
 
@@ -95,11 +95,11 @@ No.
 
 It's extremely unlikely:
 
-- Other projects (e.g. splatnet2statink, splatoon2.ink) have used the same reverse engineered APIs for a long time (pretty much since they've existed) and no one has ever been banned for using them. splatnet2statink in monitoring mode updates every 5 minutes by default - monitoring commands (Discord presence, friend notifications and SplatNet 2 monitoring) in nxapi only update slightly more frequently (every 1 minute), so there's not much higher risk than using splatnet2statink.
+- Other projects (e.g. splatnet2statink, splatoon2.ink) have used the same reverse engineered APIs for a long time (pretty much since they've existed) and no one has ever been banned for using them. splatnet2statink in monitoring mode updates every 5 minutes by default - monitoring commands (Discord presence, friend notifications and SplatNet 2/SplatNet 3 monitoring) in nxapi only update slightly more frequently (every 1 minute), so there's not much higher risk than using splatnet2statink.
 - Unlike console bans, account bans would prevent you from accessing digital content or online services you've paid for. (If your console was banned you'd still be able to use it and you could just buy another one to access your account.)
 - Nintendo can't stop you watching their app's network activity, which is all the reverse engineering required to develop this.
 
-For Discord Rich Presence, you can create an additional account, add your main account as a friend and use the `--friend-nsaid` option to avoid automating your main account. Once set up, you can remove the additional account from any console. You can also set up an API proxy server (with a HTTPS reverse proxy), authenticate using a separate account, and set up API proxy authentication tokens to allow up to 300 users (max. Nintendo Switch friends) to set up Discord Rich Presence (or, get their Nintendo Switch presence in a simple HTTP request to use for anything else) without any additional requests to Nintendo.
+A secondary account is required for Discord Rich Presence; you don't need to sign in to your main account.
 
 #### Why is a token sent to one/two different non-Nintendo servers?
 
@@ -156,9 +156,9 @@ npx rollup --config
 # nxapi app or node bin/nxapi.js app to run the app
 
 # Build Docker image
-docker build . --tag gitlab.fancy.org.uk:5005/samuel/nxapi
+docker build . --tag registry.fancy.org.uk/samuel/nxapi
 # # Run in Docker
-# docker run -it --rm -v ./data:/data gitlab.fancy.org.uk:5005/samuel/nxapi ...
+# docker run -it --rm -v ./data:/data registry.fancy.org.uk/samuel/nxapi ...
 ```
 
 ### Usage
@@ -273,7 +273,7 @@ See [docs/lib](docs/lib/index.md) and [src/exports](src/exports).
 
 ### Coral client authentication
 
-The [imink API](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) is used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to this API to generate some data that is required to authenticate the app. This API runs the Nintendo Switch Online app on an Android device to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
+[api.imink.app](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) or [nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) is used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to this API to generate some data that is required to authenticate the app. This API runs the Nintendo Switch Online app on an Android device to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
 
 Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
 
@@ -313,10 +313,11 @@ The reason Nintendo added this is probably to try and stop people automating acc
     - https://github.com/Quark064/NSO-Discord-Integration
     - https://github.com/AAGaming00/acnhrp - doesn't use Coral, instead attempts to send a message in Animal Crossing: New Horizons every 10 seconds to check if the user is playing that game online
 - Other projects using Coral/web services
+    - (Due to frequent breaking changes to Nintendo's API many of these do not work. In particular anything not updated since [23/08/2022](https://github.com/samuelthomas2774/nxapi/discussions/10#discussioncomment-3464443) will not be able to authenticate to Nintendo's API.)
     - https://github.com/frozenpandaman/splatnet2statink
     - https://github.com/subnode/LoungeDesktop
     - https://github.com/dqn/gonso
     - https://github.com/clovervidia/splatnet-datagrabber
     - https://github.com/mizuyoukanao/ACNH_Chat_Client
     - https://github.com/dqn/acnh
-    - ... plus many more - [search GitHub for https://elifessler.com/s2s/api/gen2](https://github.com/search?q=https%3A%2F%2Felifessler.com%2Fs2s%2Fapi%2Fgen2&type=code)
+    - ... plus many more - [search GitHub for znc.srv.nintendo.net](https://github.com/search?q=znc.srv.nintendo.net&type=code)
