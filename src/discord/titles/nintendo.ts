@@ -1148,4 +1148,20 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
+
+    {
+        // Fire Emblem Engage
+        id: '0100a6301214e000',
+        client: '1037891927430922391',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Kirby's Return to Dream Land Deluxe
+        id: '01006b601380e000',
+        client: '1037892083748446278',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 ];
