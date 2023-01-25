@@ -109,10 +109,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.warn('Monitoring for new data');
 
     if (vs) {
-        const latest_id = vs.battles.data.latestBattleHistories.historyGroups.nodes[0].historyDetails.nodes[0].id;
+        const latest_id = vs.battles.data.latestBattleHistories.historyGroups.nodes[0]?.historyDetails.nodes[0]?.id;
 
         // If we already had the latest battle result, fetch it again now to match the behavour of Nintendo's app
-        if (!vs.downloaded.includes(latest_id)) {
+        if (latest_id && !vs.downloaded.includes(latest_id)) {
             const id_str = Buffer.from(latest_id, 'base64').toString() || latest_id;
             const match = id_str.match(/^VsHistoryDetail-(u-[0-9a-z]{20}):([A-Z]+):((\d{8,}T\d{6})_([0-9a-f-]{36}))$/);
             const id = match ? match[1] + '-' + match[3] : id_str;
@@ -124,10 +124,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     }
 
     if (coop) {
-        const latest_id = coop.results.data.coopResult.historyGroups.nodes[0].historyDetails.nodes[0].id;
+        const latest_id = coop.results.data.coopResult.historyGroups.nodes[0]?.historyDetails.nodes[0]?.id;
 
         // If we already had the latest coop result, fetch it again now to match the behavour of Nintendo's app
-        if (!coop.downloaded.includes(latest_id)) {
+        if (latest_id && !coop.downloaded.includes(latest_id)) {
             const id_str = Buffer.from(latest_id, 'base64').toString() || latest_id;
             const match = id_str.match(/^CoopHistoryDetail-(u-[0-9a-z]{20}):((\d{8,}T\d{6})_([0-9a-f-]{36}))$/);
             const id = match ? match[1] + '-' + match[2] : id_str;
@@ -187,28 +187,51 @@ async function update(
     let updated_coop = false;
 
     if (vs) {
-        const latest_id = vs.battles.data.latestBattleHistories.historyGroups.nodes[0].historyDetails.nodes[0].id;
+        const latest_id = vs.battles.data.latestBattleHistories.historyGroups.nodes[0]?.historyDetails.nodes[0]?.id;
 
-        const pager = await splatnet.getBattleHistoryDetailPagerRefetch(latest_id);
+        if (latest_id) {
+            const pager = await splatnet.getBattleHistoryDetailPagerRefetch(latest_id);
 
-        if (pager.data.vsHistoryDetail?.nextHistoryDetail) {
-            // New battle results available
-            debug('New battle result', pager.data.vsHistoryDetail.nextHistoryDetail);
-            vs = await dumpResults(splatnet, directory, vs.battles.data);
-            updated_vs = true;
+            if (pager.data.vsHistoryDetail.nextHistoryDetail) {
+                // New battle results available
+                debug('New battle result', pager.data.vsHistoryDetail.nextHistoryDetail);
+                vs = await dumpResults(splatnet, directory, vs.battles.data);
+                updated_vs = true;
+            }
+        } else {
+            const latest_refetch = await splatnet.getLatestBattleHistoriesRefetch();
+            const latest_id = latest_refetch.data
+                .latestBattleHistories.historyGroups.nodes[0]?.historyDetails.nodes[0]?.id;
+
+            if (latest_id) {
+                debug('New battle result');
+                vs = await dumpResults(splatnet, directory, vs.battles.data, latest_refetch);
+                updated_vs = true;
+            }
         }
     }
 
     if (coop) {
-        const latest_id = coop.results.data.coopResult.historyGroups.nodes[0].historyDetails.nodes[0].id;
+        const latest_id = coop.results.data.coopResult.historyGroups.nodes[0]?.historyDetails.nodes[0]?.id;
 
-        const pager = await splatnet.getCoopHistoryDetailRefetch(latest_id);
+        if (latest_id) {
+            const pager = await splatnet.getCoopHistoryDetailRefetch(latest_id);
 
-        if (pager.data.node?.nextHistoryDetail) {
-            // New coop results available
-            debug('New coop result', pager.data.node.nextHistoryDetail);
-            coop = await dumpCoopResults(splatnet, directory, coop.results.data);
-            updated_coop = true;
+            if (pager.data.node.nextHistoryDetail) {
+                // New coop results available
+                debug('New coop result', pager.data.node.nextHistoryDetail);
+                coop = await dumpCoopResults(splatnet, directory, coop.results.data);
+                updated_coop = true;
+            }
+        } else {
+            const refetch = await splatnet.getCoopHistoryRefetch();
+            const latest_id = refetch.data.coopResult.historyGroups.nodes[0]?.historyDetails.nodes[0]?.id;
+
+            if (latest_id) {
+                debug('New coop result');
+                coop = await dumpCoopResults(splatnet, directory, coop.results.data, refetch);
+                updated_coop = true;
+            }
         }
     }
 

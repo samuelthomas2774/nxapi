@@ -2,12 +2,12 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import createDebug from 'debug';
 import mkdirp from 'mkdirp';
-import { BankaraBattleHistoriesRefetchResult, CoopHistoryResult, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesResult, PrivateBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchResult, RequestId, XBattleHistoriesRefetchResult } from 'splatnet3-types/splatnet3';
+import { BankaraBattleHistoriesRefetchResult, CoopHistoryResult, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesResult, PrivateBattleHistoriesRefetchResult, RefetchableCoopHistory_CoopResultResult, RegularBattleHistoriesRefetchResult, RequestId, XBattleHistoriesRefetchResult } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';
-import SplatNet3Api, { RequestIdSymbol } from '../../api/splatnet3.js';
+import SplatNet3Api, { PersistedQueryResult, RequestIdSymbol } from '../../api/splatnet3.js';
 import { ResponseSymbol } from '../../api/util.js';
 import { dumpCatalogRecords, dumpHistoryRecords } from './dump-records.js';
 
@@ -81,14 +81,15 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
 export async function dumpResults(
     splatnet: SplatNet3Api, directory: string,
-    refresh: LatestBattleHistoriesResult | boolean = false
+    refresh: LatestBattleHistoriesResult | boolean = false,
+    latest_refetch?: PersistedQueryResult<LatestBattleHistoriesRefetchResult<true>>,
 ) {
     debug('Fetching battle results');
     console.warn('Fetching battle results');
 
     const [player, battles, battles_regular, battles_anarchy, battles_xmatch, battles_private] = await Promise.all([
         refresh ? null : splatnet.getBattleHistoryCurrentPlayer(),
-        refresh ? splatnet.getLatestBattleHistoriesRefetch() : splatnet.getLatestBattleHistories(),
+        refresh ? latest_refetch ?? splatnet.getLatestBattleHistoriesRefetch() : splatnet.getLatestBattleHistories(),
         refresh ? splatnet.getRegularBattleHistoriesRefetch() : splatnet.getRegularBattleHistories(),
         refresh ? splatnet.getBankaraBattleHistoriesRefetch() : splatnet.getBankaraBattleHistories(),
         refresh ? splatnet.getXBattleHistoriesRefetch() : splatnet.getXBattleHistories(),
@@ -239,13 +240,14 @@ export async function dumpResults(
 
 export async function dumpCoopResults(
     splatnet: SplatNet3Api, directory: string,
-    refresh: CoopHistoryResult | boolean = false
+    refresh: CoopHistoryResult | boolean = false,
+    refetch?: PersistedQueryResult<RefetchableCoopHistory_CoopResultResult>,
 ) {
     debug('Fetching coop results');
     console.warn('Fetching coop results');
 
     const results = refresh ?
-        await splatnet.getCoopHistoryRefetch() :
+        refetch ?? await splatnet.getCoopHistoryRefetch() :
         await splatnet.getCoopHistory();
 
     const filename = 'splatnet3-coop-summary-' + Date.now() + '.json';
