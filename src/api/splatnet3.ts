@@ -51,6 +51,16 @@ export interface PersistedQueryResultData {
     [VariablesSymbol]: {};
 }
 
+export type NotNullPersistedQueryResult<
+    T extends PersistedQueryResult<unknown> | unknown,
+    K extends T extends PersistedQueryResult<infer Result> ? keyof Result : keyof T,
+> =
+    T extends PersistedQueryResult<infer Result> ? PersistedQueryResult<{
+        [FieldName in keyof Result]: FieldName extends K ? Exclude<Result[FieldName], null> : Result[FieldName];
+    }> : PersistedQueryResult<{
+        [FieldName in keyof T]: FieldName extends K ? Exclude<T[FieldName], null> : T[FieldName];
+    }>;
+
 enum MapQueriesMode {
     /** NXAPI_SPLATNET3_UPGRADE_QUERIES=0 - never upgrade persisted query IDs (not recommended) */
     NEVER,
@@ -353,7 +363,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
     }
 
     /** / -> /challenge -> /challenge/{id} -> pull-to-refresh */
@@ -366,7 +376,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
     }
 
     /** / -> /challenge -> /challenge/{id} -> /challenge/{id}/*s */
@@ -379,7 +389,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
     }
 
     /** / -> /challenge -> /challenge/{id} -> /challenge/{id}/* -> pull-to-refresh */
@@ -392,7 +402,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
     }
 
     /** / -> /challenge -> /challenge/{id} -> /challenge/{id}/* -> support */
@@ -426,7 +436,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
     }
 
     /** / -> /fest_record -> /fest_record/{id} -> pull-to-refresh */
@@ -439,7 +449,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
     }
 
     /** / -> /fest_record -> /fest_record/{id} - not closed -> /fest_record/voting_status/{id} */
@@ -452,7 +462,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
     }
 
     /** / -> /fest_record -> /fest_record/{id} - not closed -> /fest_record/voting_status/{id} -> pull-to-refresh */
@@ -465,7 +475,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
     }
 
     /** / -> /fest_record -> /fest_record/{id} - not closed -> /fest_record/voting_status/{id} - not voted in game */
@@ -485,7 +495,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
     }
 
     /**
@@ -504,7 +514,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] FestTeam not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'node'>;
     }
 
     //
@@ -609,7 +619,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Sale gear not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'saleGear'>;
     }
 
     /** / -> /gesotown -> /gesotown/{id} -> order */
@@ -646,7 +656,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] My outfit not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'myOutfit'>;
     }
 
     /** / -> /my_outfits -> /my_outfits/{id / create} */
@@ -709,7 +719,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Replay not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'replay'>;
     }
 
     /** / -> /replay -> enter code -> download */
@@ -810,7 +820,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Battle history not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'vsHistoryDetail'>;
     }
 
     /** / -> /history -> /history/detail/{id} -> pull-to-refresh */
@@ -823,7 +833,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Battle history not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'vsHistoryDetail'>;
     }
 
     /** / -> /history -> /history/detail/* -> latest */
@@ -869,7 +879,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Co-op history not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'coopHistoryDetail'>;
     }
 
     /** / -> /coop -> /coop/{id} -> pull-to-refresh */
@@ -882,7 +892,7 @@ export default class SplatNet3Api {
             throw new ErrorResponse('[splatnet3] Co-op history not found', result[ResponseSymbol], result);
         }
 
-        return result;
+        return result as NotNullPersistedQueryResult<typeof result, 'node'>;
     }
 
     /** / -> /coop -> /coop/* -> latest */

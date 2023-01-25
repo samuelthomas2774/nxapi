@@ -53,7 +53,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         throw new Error('Invalid Splatfest ID');
     }
 
-    const fest = (await splatnet.getFestDetail(fest_record.id)).data.fest!;
+    const fest = (await splatnet.getFestDetail(fest_record.id)).data.fest;
     const fest_votes = fest.state !== FestState.CLOSED ?
         (await splatnet.getFestVotingStatus(fest_record.id)).data.fest : null;
 
