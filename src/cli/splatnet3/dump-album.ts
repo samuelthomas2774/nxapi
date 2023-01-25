@@ -59,7 +59,7 @@ export async function dumpAlbumPhotos(
         await splatnet.getPhotoAlbum();
 
     if (typeof refresh !== 'object' ||
-        results.data.photoAlbum.items.nodes[0].id !== refresh.photoAlbum.items.nodes[0].id
+        results.data.photoAlbum.items.nodes[0]?.id !== refresh.photoAlbum.items.nodes[0]?.id
     ) {
         const filename = 'splatnet3-photoalbum-' + Date.now() + '.json';
         const file = path.join(directory, filename);
