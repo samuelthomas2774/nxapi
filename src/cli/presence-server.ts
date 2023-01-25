@@ -18,6 +18,7 @@ import SplatNet3Api from '../api/splatnet3.js';
 import { ErrorResponse } from '../api/util.js';
 import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
+import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
 
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
@@ -659,8 +660,8 @@ class Server extends HttpServer {
         if (vs_mode.mode === 'FEST') {
             return getSchedule(schedules.festSchedules)?.festMatchSetting;
         }
-        if (vs_mode.mode === 'LEAGUE') {
-            return getSchedule(schedules.leagueSchedules)?.leagueMatchSetting;
+        if (vs_mode.mode === 'LEAGUE' && 'leagueSchedules' in schedules) {
+            return getSchedule((schedules as StageScheduleQuery_730cd98).leagueSchedules)?.leagueMatchSetting;
         }
         if (vs_mode.mode === 'X_MATCH') {
             return getSchedule(schedules.xSchedules)?.xMatchSetting;

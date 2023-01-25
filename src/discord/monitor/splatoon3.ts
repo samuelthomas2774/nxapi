@@ -12,6 +12,7 @@ import { EmbeddedLoop, LoopResult } from '../../util/loop.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';
 import { DiscordPresenceContext, ErrorResult } from '../types.js';
 import { product } from '../../util/product.js';
+import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
 
 const debug = createDebug('nxapi:discord:splatnet3');
 
@@ -129,7 +130,8 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
 
         this.anarchy_schedule = this.getSchedule(this.cached_schedules?.data.bankaraSchedules.nodes ?? []);
         this.fest_schedule = this.getSchedule(this.cached_schedules?.data.festSchedules.nodes ?? []);
-        this.league_schedule = this.getSchedule(this.cached_schedules?.data.leagueSchedules.nodes ?? []);
+        this.league_schedule = this.cached_schedules?.data && 'leagueSchedules' in this.cached_schedules.data ?
+            this.getSchedule((this.cached_schedules.data as StageScheduleQuery_730cd98).leagueSchedules.nodes ?? []) : null;
         this.x_schedule = this.getSchedule(this.cached_schedules?.data.xSchedules.nodes ?? []);
         this.coop_regular_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.regularSchedules.nodes ?? []);
         this.coop_big_run_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.bigRunSchedules.nodes ?? []);
