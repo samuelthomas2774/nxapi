@@ -1,6 +1,9 @@
 import { EventEmitter } from 'node:events';
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ColorSchemeName, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { ColorSchemeName, I18nManager, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
+import { i18n } from 'i18next';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 import type { User as DiscordUser } from 'discord-rpc';
 import { ErrorResponse } from '../../api/util.js';
 import { DiscordPresence } from '../../discord/types.js';
@@ -9,16 +12,18 @@ import { NintendoAccountUser } from '../../api/na.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, DEFAULT_ACCENT_COLOUR } from './constants.js';
+import createI18n from '../i18n/index.js';
 
 export const WindowFocusedContext = React.createContext(false);
 
 export function Root(props: React.PropsWithChildren<{
-    title?: string;
+    title?: string | ((i18n: i18n) => string);
     titleUser?: User | SavedToken;
     style?: StyleProp<ViewStyle>;
     scrollable?: boolean;
     autoresize?: boolean;
     vibrancy?: boolean;
+    i18nNamespace?: string | string[];
 }>) {
     const colour_scheme = useColorScheme();
     const theme = colour_scheme === 'light' ? light : dark;
@@ -38,22 +43,45 @@ export function Root(props: React.PropsWithChildren<{
         };
     }, []);
 
-    useEffect(() => {
-        const user_na = props.titleUser?.user;
-        const user_nso = (props.titleUser && 'nso' in props.titleUser ? props.titleUser.nso : props.titleUser)?.nsoAccount.user;
-        const user_prefix =
-            user_na ? '[' + user_na.nickname +
-                (user_nso && user_nso.name !== user_na.nickname ? '/' + user_nso.name : '') +
-            '] ' : '';
+    const [i18n, i18n_error] = useAsync(useCallback(async () => {
+        const i18n = createI18n();
 
-        document.title = user_prefix + (props.title ?? 'Nintendo Switch Online');
-    }, [props.title, props.titleUser]);
+        // @ts-expect-error
+        window.i18n = i18n;
+
+        await i18n
+            .use(LanguageDetector as unknown as typeof import('i18next-browser-languagedetector').default)
+            .use(initReactI18next)
+            .init();
+
+        await i18n.loadNamespaces('app');
+        if (props.i18nNamespace) await i18n.loadNamespaces(props.i18nNamespace);
+
+        return i18n;
+    }, []));
+
+    if (i18n_error) throw i18n_error;
+
+    useEventListener(events, 'update-language', language => i18n?.changeLanguage(language), [i18n]);
+
+    // Force rerender when language changes so the window title is updated
+    const [language, setCurrentLanguage] = useState();
+    useEffect(() => {
+        i18n?.on('languageChanged', setCurrentLanguage);
+        return () => i18n?.off('languageChanged', setCurrentLanguage);
+    }, [i18n]);
+
+    useAsync(useCallback(async () => i18n?.loadNamespaces('app'), [i18n, language]));
+    useAsync(useCallback(async () => props.i18nNamespace && i18n?.loadNamespaces(props.i18nNamespace),
+        [i18n, props.i18nNamespace, language]));
 
     const [preventingFocus, setPreventFocus] = useState(true);
     const unlockFocus = useCallback(() => setPreventFocus(false), []);
     useLayoutEffect(() => setPreventFocus(props.autoresize ?? true), [props.autoresize]);
 
     const onLayout = useCallback(async (event: LayoutChangeEvent) => {
+        if (!event.nativeEvent.layout.height) return;
+
         await ipc.setWindowHeight(event.nativeEvent.layout.height);
         setPreventFocus(false);
     }, []);
@@ -61,6 +89,17 @@ export function Root(props: React.PropsWithChildren<{
     useEffect(() => {
         document.documentElement.style.overflowY = props.scrollable ? 'auto' : 'hidden';
     }, [props.scrollable]);
+
+    const title_user_prefix = useMemo(() => {
+        const user_na = props.titleUser?.user;
+        const user_nso = (props.titleUser && 'nso' in props.titleUser ? props.titleUser.nso : props.titleUser)?.nsoAccount.user;
+
+        return user_na ? '[' + user_na.nickname +
+            (user_nso && user_nso.name !== user_na.nickname ? '/' + user_nso.name : '') +
+        '] ' : '';
+    }, [props.titleUser]);
+
+    if (!i18n) return null;
 
     const content = <View style={[
         props.scrollable ? styles.appScrollable : styles.app,
@@ -83,10 +122,26 @@ export function Root(props: React.PropsWithChildren<{
     return <ColourSchemeContext.Provider value={colour_scheme}>
         <AccentColourContext.Provider value={accent_colour ?? DEFAULT_ACCENT_COLOUR}>
             <WindowFocusedContext.Provider value={window_focused}>
-                {content}
+                <I18nextProvider i18n={i18n}>
+                    <WindowTitle title={title_user_prefix + (
+                        typeof props.title === 'function' ? props.title.call(null, i18n) :
+                        props.title ?? i18n.t('app:default_title'))} />
+
+                    {content}
+                </I18nextProvider>
             </WindowFocusedContext.Provider>
         </AccentColourContext.Provider>
     </ColourSchemeContext.Provider>;
+}
+
+function WindowTitle(props: {
+    title: string;
+}) {
+    useEffect(() => {
+        document.title = props.title;
+    }, [props.title]);
+
+    return null;
 }
 
 const styles = StyleSheet.create({

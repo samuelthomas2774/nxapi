@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
 import createDebug from 'debug';
 import { User } from 'discord-rpc';
@@ -7,7 +7,7 @@ import { createWindow, getWindowConfiguration } from './windows.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItemOptions, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
-import { App, login_item_options } from './index.js';
+import { App } from './index.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import { hrduration } from '../../util/misc.js';
 import { DiscordPresence } from '../../discord/types.js';
@@ -25,6 +25,7 @@ const shown_modal_windows = new WeakSet<BrowserWindow>();
 export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     const store = appinstance.store;
     const storage = appinstance.store.storage;
+    const t = appinstance.i18n.getFixedT(null, 'menus');
 
     ipcMain.on('nxapi:browser:getwindowdata', e => e.returnValue = getWindowConfiguration(e.sender));
 
@@ -171,20 +172,23 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         (buildUserMenu(appinstance, user, nso, moon, BrowserWindow.fromWebContents(e.sender) ?? undefined)
             .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:add-user', e => (Menu.buildFromTemplate([
-        new MenuItem({label: 'Add Nintendo Switch Online account', click:
+        new MenuItem({label: t('add_account.add_account_coral')!, click:
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
                 askAddNsoAccount(storage, !event.shiftKey)}),
-        new MenuItem({label: 'Add Nintendo Switch Parental Controls account', click:
+        new MenuItem({label: t('add_account.add_account_moon')!, click:
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
                 askAddPctlAccount(storage, !event.shiftKey)}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
         new MenuItem({label: 'SW-' + fc.id, enabled: false}),
-        new MenuItem({label: 'Share', role: 'shareMenu', sharingItem: {texts: ['SW-' + fc.id]}}),
-        new MenuItem({label: 'Copy', click: () => clipboard.writeText('SW-' + fc.id)}),
+        new MenuItem({label: t('friend_code.share')!, role: 'shareMenu', sharingItem: {texts: ['SW-' + fc.id]}}),
+        new MenuItem({label: t('friend_code.copy')!, click: () => clipboard.writeText('SW-' + fc.id)}),
         new MenuItem({type: 'separator'}),
-        new MenuItem({label: fc.regenerable ? 'Regenerate using a Nintendo Switch console' :
-            'Can be regenerated at ' + new Date(fc.regenerableAt * 1000).toLocaleString('en-GB'), enabled: false}),
+        new MenuItem({label: fc.regenerable ? t('friend_code.friend_code_regenerable')! :
+            t('friend_code.friend_code_regenerable_at', {
+                date: new Date(fc.regenerableAt * 1000),
+                formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+            })!, enabled: false}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:friend', (e, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) =>
         (buildFriendMenu(appinstance, user, nso, friend)
@@ -210,41 +214,43 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     store.on('update-discord-user', (u: User) => sendToAllWindows('nxapi:discord:user', u));
 }
 
-function sendToAllWindows(channel: string, ...args: any[]) {
+export function sendToAllWindows(channel: string, ...args: any[]) {
     for (const window of BrowserWindow.getAllWindows()) {
         window.webContents.send(channel, ...args);
     }
 }
 
 function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean, window?: BrowserWindow) {
+    const t = app.i18n.getFixedT(null, 'menus', 'user');
     const dm = app.monitors.getActiveDiscordPresenceMonitor();
     const monitor = app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === user.id);
 
     return Menu.buildFromTemplate([
-        new MenuItem({label: 'Nintendo Account ID: ' + user.id, enabled: false}),
+        new MenuItem({label: t('na_id', {id: user.id})!, enabled: false}),
         ...(nso ? [
-            new MenuItem({label: 'Coral ID: ' + nso.id, enabled: false}),
-            new MenuItem({label: 'NSA ID: ' + nso.nsaId, enabled: false}),
+            new MenuItem({label: t('coral_id', {id: nso.id})!, enabled: false}),
+            new MenuItem({label: t('nsa_id', {id: nso.nsaId})!, enabled: false}),
             new MenuItem({type: 'separator'}),
             ...(monitor?.presence_user === nso.nsaId ? [
-                new MenuItem({label: 'Disable Discord presence',
+                new MenuItem({label: t('discord_disable')!,
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
             ] : monitor?.presence_user ? [
-                new MenuItem({label: 'Discord presence enabled for ' +
+                new MenuItem({label: t('discord_enabled_for', {name: 
                     monitor.user?.friends.result.friends.find(f => f.nsaId === monitor.presence_user)?.name ??
-                        monitor.presence_user,
+                        monitor.presence_user})!,
                     enabled: false}),
-                new MenuItem({label: 'Disable Discord presence',
+                new MenuItem({label: t('discord_disable')!,
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
             ] : dm?.presence_user === nso.nsaId ? [
-                new MenuItem({label: 'Discord presence enabled using ' +
+                new MenuItem({label: t('discord_enabled_via', {name:
                     dm.data.user.nickname +
-                    (dm.data.user.nickname!==  dm.data.nsoAccount.user.name ? '/' + dm.data.nsoAccount.user.name : ''),
+                    (dm.data.user.nickname !== dm.data.nsoAccount.user.name ?
+                        '/' + dm.data.nsoAccount.user.name : '')})!,
                     enabled: false}),
-                new MenuItem({label: 'Disable Discord presence',
+                new MenuItem({label: t('discord_disable')!,
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
             ] : [
-                new MenuItem({label: 'Enable Discord presence for this user...',
+                new MenuItem({label: t('discord_enable')!,
                     click: () => createWindow(WindowType.DISCORD_PRESENCE, {
                         friend_nsa_id: nso.nsaId,
                     }, {
@@ -261,13 +267,13 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                         maxHeight: 300,
                     })}),
             ]),
-            new MenuItem({label: 'Enable friend notifications', type: 'checkbox',
+            new MenuItem({label: t('friend_notifications_enable')!, type: 'checkbox',
                 checked: monitor?.friend_notifications,
                 click: () => app.menu?.setFriendNotificationsActive(user.id, !monitor?.friend_notifications)}),
-            new MenuItem({label: 'Update now', enabled: !!monitor,
+            new MenuItem({label: t('refresh')!, enabled: !!monitor,
                 click: () => monitor?.skipIntervalInCurrentLoop(true)}),
             new MenuItem({type: 'separator'}),
-            new MenuItem({label: 'Add friend',
+            new MenuItem({label: t('add_friend')!,
                 click: () => createWindow(WindowType.ADD_FRIEND, {
                     user: user.id,
                 }, {
@@ -285,11 +291,12 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                 })}),
         ] : []),
         new MenuItem({type: 'separator'}),
-        new MenuItem({label: 'Use the nxapi command to remove this user', enabled: false}),
+        new MenuItem({label: t('remove_help')!, enabled: false}),
     ]);
 }
 
 function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) {
+    const t = app.i18n.getFixedT(null, 'menus', 'friend');
     const discord_presence_source = app.monitors.getDiscordPresenceSource();
     const discord_presence_active = !!discord_presence_source && 'na_id' in discord_presence_source &&
         discord_presence_source.na_id === user.id && discord_presence_source.friend_nsa_id === friend.nsaId;
@@ -297,34 +304,54 @@ function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser, 
     return Menu.buildFromTemplate([
         ...(!friend.presence.updatedAt ? [
         ] : friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING ? [
-            new MenuItem({label: 'Online', enabled: false}),
+            new MenuItem({label: t('presence_online')!, enabled: false}),
             ...('name' in friend.presence.game ? [
                 new MenuItem({label: friend.presence.game.name, click: () =>
                     shell.openExternal((friend.presence.game as Game).shopUri)}),
                 ...(friend.presence.game.sysDescription ? [
                     new MenuItem({label: friend.presence.game.sysDescription, enabled: false}),
                 ] : []),
-                new MenuItem({label: 'First played: ' + new Date(friend.presence.game.firstPlayedAt * 1000).toLocaleString('en-GB'), enabled: false}),
-                new MenuItem({label: 'Play time: ' + hrduration(friend.presence.game.totalPlayTime), enabled: false}),
+                new MenuItem({label: t('game_first_played', {
+                    date: new Date(friend.presence.game.firstPlayedAt * 1000),
+                    formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                })!, enabled: false}),
+                new MenuItem({label: t('game_play_time', {
+                    time: hrduration(friend.presence.game.totalPlayTime),
+                })!, enabled: false}),
             ] : []),
-            new MenuItem({label: 'Updated: ' + new Date(friend.presence.updatedAt * 1000).toLocaleString('en-GB'), enabled: false}),
+            new MenuItem({label: t('presence_updated', {
+                date: new Date(friend.presence.updatedAt * 1000),
+                formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+            })!, enabled: false}),
             new MenuItem({type: 'separator'}),
         ] : friend.presence.state === PresenceState.INACTIVE ? [
-            new MenuItem({label: 'Offline (console online)', enabled: false}),
+            new MenuItem({label: t('presence_inactive')!, enabled: false}),
             ...(friend.presence.logoutAt ? [
-                new MenuItem({label: 'Logout time: ' + new Date(friend.presence.logoutAt * 1000).toLocaleString('en-GB'), enabled: false}),
+                new MenuItem({label: t('presence_logout_time', {
+                    date: new Date(friend.presence.logoutAt * 1000),
+                    formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                })!, enabled: false}),
             ] : []),
-            new MenuItem({label: 'Updated: ' + new Date(friend.presence.updatedAt * 1000).toLocaleString('en-GB'), enabled: false}),
+            new MenuItem({label: t('presence_updated', {
+                date: new Date(friend.presence.updatedAt * 1000),
+                formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+            })!, enabled: false}),
             new MenuItem({type: 'separator'}),
         ] : [
             new MenuItem({label: 'Offline', enabled: false}),
             ...(friend.presence.logoutAt ? [
-                new MenuItem({label: 'Logout time: ' + new Date(friend.presence.logoutAt * 1000).toLocaleString('en-GB'), enabled: false}),
+                new MenuItem({label: t('presence_logout_time', {
+                    date: new Date(friend.presence.logoutAt * 1000),
+                    formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                })!, enabled: false}),
             ] : []),
-            new MenuItem({label: 'Updated: ' + new Date(friend.presence.updatedAt * 1000).toLocaleString('en-GB'), enabled: false}),
+            new MenuItem({label: t('presence_updated', {
+                date: new Date(friend.presence.updatedAt * 1000),
+                formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+            })!, enabled: false}),
             new MenuItem({type: 'separator'}),
         ]),
-        new MenuItem({label: 'Enable Discord Presence', type: 'checkbox', checked: discord_presence_active, click: () =>
+        new MenuItem({label: t('discord_presence_enable')!, type: 'checkbox', checked: discord_presence_active, click: () =>
             app.monitors.setDiscordPresenceSource(discord_presence_active ? null :
                 {na_id: user.id, friend_nsa_id: friend.nsaId})}),
     ]);

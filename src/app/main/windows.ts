@@ -1,22 +1,12 @@
-import { app, BrowserWindow, BrowserWindowConstructorOptions, Menu, nativeTheme, session, WebContents } from './electron.js';
+import { BrowserWindow, BrowserWindowConstructorOptions, nativeTheme, session, WebContents } from './electron.js';
 import * as path from 'node:path';
 import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';
 import { bundlepath } from './util.js';
-import { app_menu, createWindowMenu } from './app-menu.js';
+import { createWindowMenu, setWindowMenu } from './app-menu.js';
 import { WebService } from '../../api/coral-types.js';
 
 const windows = new WeakMap<WebContents, WindowConfiguration>();
-const menus = new WeakMap<BrowserWindow, Menu>();
-
-app.on('browser-window-focus', (event, window) => {
-    Menu.setApplicationMenu(menus.get(window) ?? app_menu);
-});
-app.on('browser-window-blur', (event, window) => {
-    if (!BrowserWindow.getFocusedWindow()) {
-        Menu.setApplicationMenu(app_menu);
-    }
-});
 
 export function createWindow<T extends WindowType>(
     type: T, props: WindowConfiguration<T>['props'],
@@ -43,7 +33,7 @@ export function createWindow<T extends WindowType>(
     };
 
     windows.set(window.webContents, data);
-    menus.set(window, createWindowMenu(window));
+    setWindowMenu(window, createWindowMenu(window));
 
     window.loadFile(path.join(bundlepath, 'index.html'));
     if (dev) window.webContents.openDevTools();
@@ -84,7 +74,7 @@ export function createWebServiceWindow(nsa_id: string, webservice: WebService, t
         },
     });
 
-    menus.set(window, createWindowMenu(window));
+    setWindowMenu(window, createWindowMenu(window));
 
     window.loadURL('about:blank');
     if (dev) window.webContents.openDevTools();

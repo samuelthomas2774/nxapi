@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { useColourScheme, User } from '../util.js';
 import { WebService } from '../../../api/coral-types.js';
@@ -12,9 +13,11 @@ export default function WebServices(props: {
     loading?: boolean;
     error?: Error;
 }) {
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'webservices_section' });
+
     if (!props.webservices.length) return null;
 
-    return <Section title="Game-specific services" loading={props.loading} error={props.error}>
+    return <Section title={t('title')} loading={props.loading} error={props.error}>
         <ScrollView horizontal>
             <View style={styles.content}>
                 {props.webservices.map(g => <WebService key={g.id} webservice={g} token={props.user.nsotoken} />)}

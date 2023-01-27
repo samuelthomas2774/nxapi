@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { Image, ImageURISource, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { RequestState, useActiveDiscordPresence, useActiveDiscordUser, useColourScheme, useDiscordPresenceSource, User } from '../util.js';
 import DiscordPresenceSource from './discord.js';
@@ -13,6 +14,7 @@ export default function Sidebar(props: {
     children?: React.ReactNode;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'sidebar' });
 
     const [discord_presence_source, discord_presence_source_state] = useDiscordPresenceSource();
     const presence = useActiveDiscordPresence();
@@ -40,13 +42,13 @@ export default function Sidebar(props: {
                 </View> : null}
 
                 {props.users ? <TouchableOpacity onPress={() => ipc.showAddUserMenu()} style={styles.addUser}>
-                    <Text style={theme.text}>Add user</Text>
+                    <Text style={theme.text}>{t('add_user')}</Text>
                 </TouchableOpacity> : null}
 
                 {discord_presence_source_state === RequestState.LOADED && !discord_presence_source ? <TouchableOpacity
                     onPress={() => ipc.showDiscordModal()} style={styles.discordSetup}
                 >
-                    <Text style={theme.text}>Set up Discord Rich Presence</Text>
+                    <Text style={theme.text}>{t('discord_setup')}</Text>
                 </TouchableOpacity> : null}
 
                 {props.children}

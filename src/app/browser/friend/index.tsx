@@ -1,9 +1,10 @@
 /// <reference path="../react-native-web.d.ts" />
 
 import React, { useCallback, useEffect } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CheckBox } from 'react-native-web';
-import { Game, Presence, PresencePermissions, PresenceState } from '../../../api/coral-types.js';
+import { Friend, Game, Presence, PresencePermissions, PresenceState } from '../../../api/coral-types.js';
 import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
@@ -15,10 +16,7 @@ export interface FriendProps {
     friend: string;
 }
 
-export default function Friend(props: FriendProps) {
-    const colour_scheme = useColorScheme();
-    const theme = colour_scheme === 'light' ? light : dark;
-
+export default function FriendWindow(props: FriendProps) {
     const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
     useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
 
@@ -50,6 +48,7 @@ export default function Friend(props: FriendProps) {
     if (!user || !friend || discord_presence_source_state !== RequestState.LOADED) {
         return <Root title={friend?.name} titleUser={user ?? undefined}
             autoresize={!!user && discord_presence_source_state === RequestState.LOADED}
+            i18nNamespace="friend_window"
         >
             <View style={styles.loading}>
                 <ActivityIndicator size="large" color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
@@ -63,75 +62,114 @@ export default function Friend(props: FriendProps) {
     const can_see_user_presence = user.nsoAccount.user.permissions.presence === PresencePermissions.FRIENDS ||
         (user.nsoAccount.user.permissions.presence === PresencePermissions.FAVORITE_FRIENDS && friend.isFavoriteFriend);
 
-    return <Root title={friend.name} titleUser={user} autoresize>
-        <View style={styles.main}>
-            <View style={styles.friend}>
-                <Image source={{uri: friend.imageUri, width: 130, height: 130}} style={styles.friendImage} />
-                <Text style={[styles.friendName, theme.text]}>{friend.name}</Text>
+    return <Root title={friend.name} titleUser={user} autoresize i18nNamespace="friend_window">
+        <Friend
+            friend={friend} canSeeUserPresence={can_see_user_presence}
+            showDiscordPresenceSetup={discord_presence_active || !!friend.presence.updatedAt || false}
+            discordPresenceActive={discord_presence_active ?? false}
+            setDiscordPresenceActive={active => ipc.setDiscordPresenceSource(active ?
+                {na_id: user.user.id, friend_nsa_id: friend.nsaId} : null)} />
+    </Root>;
+}
 
-                {friend.presence.updatedAt ?
-                    <FriendPresence presence={friend.presence} /> :
-                    <Text style={[styles.noPresence, theme.text]}>You don't have access to this user's presence, or they have never been online.</Text>}
+function Friend(props: {
+    friend: Friend;
+    canSeeUserPresence?: boolean;
+    showDiscordPresenceSetup?: boolean;
+    discordPresenceActive?: boolean;
+    setDiscordPresenceActive?: (active: boolean) => void;
+}) {
+    const theme = useColourScheme() === 'light' ? light : dark;
+    const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('friend_window');
+
+    const friend = props.friend;
+
+    return <View style={styles.main}>
+        <View style={styles.friend}>
+            <Image source={{uri: friend.imageUri, width: 130, height: 130}} style={styles.friendImage} />
+            <Text style={[styles.friendName, theme.text]}>{friend.name}</Text>
+
+            {friend.presence.updatedAt ?
+                <FriendPresence presence={friend.presence} /> :
+                <Text style={[styles.noPresence, theme.text]}>{t('no_presence')}</Text>}
+        </View>
+
+        <View style={styles.right}>
+            <View style={styles.detail}>
+                {(friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING) &&
+                    'name' in friend.presence.game ? <FriendPresenceGame game={friend.presence.game} /> : null}
+
+                <Text style={[styles.friendNsaId, theme.text]}>
+                    {t('nsa_id')}: <Text style={styles.friendNsaIdValue}>{friend.nsaId}</Text>
+                </Text>
+                <Text style={[styles.friendCoralId, theme.text]}>{friend.isServiceUser ? <>
+                    {t('coral_id')}: <Text style={styles.friendCoralIdValue}>{friend.id}</Text>
+                </> : t('no_coral_user')}</Text>
+
+                <Text style={[styles.friendCreatedAt, theme.text]}>
+                    {t('friends_since', {
+                        date: new Date(friend.friendCreatedAt * 1000),
+                        formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                    })}
+                </Text>
+                {friend.presence.updatedAt ? <Text style={[styles.presenceUpdatedAt, theme.text]}>
+                    {t('presence_updated_at', {
+                        date: new Date(friend.presence.updatedAt * 1000),
+                        formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                    })}
+                </Text> : null}
+                {!(friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING) &&
+                    friend.presence.logoutAt ? <Text style={[styles.presenceUpdatedAt, theme.text]}>
+                        {t('presence_logout_at', {
+                            date: new Date(friend.presence.logoutAt * 1000),
+                            formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                        })}
+                    </Text> : null}
+                <Text style={[styles.canSeeUserPresence, theme.text]}>
+                    {t(props.canSeeUserPresence ? 'presence_sharing' : 'presence_not_sharing')}
+                </Text>
             </View>
 
-            <View style={styles.right}>
-                <View style={styles.detail}>
-                    {(friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING) &&
-                        'name' in friend.presence.game ? <FriendPresenceGame game={friend.presence.game} /> : null}
-
-                    <Text style={[styles.friendNsaId, theme.text]}>NSA ID: <Text style={styles.friendNsaIdValue}>{friend.nsaId}</Text></Text>
-                    <Text style={[styles.friendCoralId, theme.text]}>{friend.isServiceUser ? <>
-                        Coral user ID: <Text style={styles.friendCoralIdValue}>{friend.id}</Text>
-                    </> : 'Never used Nintendo Switch Online app'}</Text>
-
-                    <Text style={[styles.friendCreatedAt, theme.text]}>Friends since {new Date(friend.friendCreatedAt * 1000).toLocaleString('en-GB')}</Text>
-                    {friend.presence.updatedAt ? <Text style={[styles.presenceUpdatedAt, theme.text]}>Presence updated at {new Date(friend.presence.updatedAt * 1000).toLocaleString('en-GB')}</Text> : null}
-                    {!(friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING) &&
-                        friend.presence.logoutAt ? <Text style={[styles.presenceUpdatedAt, theme.text]}>Last online at {new Date(friend.presence.logoutAt * 1000).toLocaleString('en-GB')}</Text> : null}
-                    <Text style={[styles.canSeeUserPresence, theme.text]}>This user {can_see_user_presence ? 'can' : 'can not'} see your presence.</Text>
-                </View>
-
-                <View style={styles.buttons}>
-                    {discord_presence_active || friend.presence.updatedAt ? <View style={styles.discord}>
-                        <CheckBox
-                            value={discord_presence_active ?? false}
-                            onValueChange={v => ipc.setDiscordPresenceSource(v ?
-                                {na_id: user.user.id, friend_nsa_id: friend.nsaId} : null)}
-                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
-                            style={styles.discordCheckbox}
-                        />
-                        <TouchableOpacity onPress={() => ipc.setDiscordPresenceSource(!discord_presence_active ?
-                            {na_id: user.user.id, friend_nsa_id: friend.nsaId} : null)}>
-                            <Text style={theme.text}>Share presence to Discord</Text>
-                        </TouchableOpacity>
-                    </View> : null}
-
-                    <Button title="Close"
-                        onPress={() => window.close()}
+            <View style={styles.buttons}>
+                {props.showDiscordPresenceSetup ? <View style={styles.discord}>
+                    <CheckBox
+                        value={props.discordPresenceActive ?? false}
+                        onValueChange={v => props.setDiscordPresenceActive?.(!!v)}
                         color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
-                        primary autoFocus />
-                </View>
+                        style={styles.discordCheckbox}
+                    />
+                    <TouchableOpacity onPress={() => props.setDiscordPresenceActive?.(!props.discordPresenceActive)}>
+                        <Text style={theme.text}>{t('discord_presence')}</Text>
+                    </TouchableOpacity>
+                </View> : null}
+
+                <Button title={t('close')}
+                    onPress={() => window.close()}
+                    color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                    primary autoFocus />
             </View>
         </View>
-    </Root>;
+    </View>;
 }
 
 function FriendPresence(props: {
     presence: Presence;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+    const { t, i18n } = useTranslation('friend_window');
 
     const logout = props.presence.logoutAt ? new Date(props.presence.logoutAt * 1000) : null;
     const since_logout = useTimeSince(logout ?? new Date(0));
     const game = 'name' in props.presence.game ? props.presence.game : null;
 
-    if (props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) {
-        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>Playing {game?.name}</Text>;
+    if ((props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) && game) {
+        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>{t('presence_playing', {game: game.name})}</Text>;
     }
 
     return <View>
-        <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>Offline</Text>
-        {logout ? <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>Last seen {since_logout}</Text> : null}
+        <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>{t('presence_offline')}</Text>
+        {logout ? <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>{t('presence_last_seen', {since_logout})}</Text> : null}
     </View>;
 }
 
@@ -140,6 +178,7 @@ function FriendPresenceGame(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('friend_window');
 
     const openShop = useCallback(() => {
         ipc.openExternalUrl(props.game.shopUri);
@@ -154,12 +193,21 @@ function FriendPresenceGame(props: {
         <View style={styles.gameDetail}>
             <Text style={[styles.gameName, theme.text]}>{props.game.name}</Text>
             {props.game.sysDescription ? <Text style={[styles.gameActivity, theme.text]}>{props.game.sysDescription}</Text> : null}
-            <Text style={[styles.gameTotalPlayTime, theme.text]}>Played for {hrduration(props.game.totalPlayTime)}</Text>
-            <Text style={[styles.gameFirstPlayed, theme.text]}>First played {first_played?.toLocaleString('en-GB') ?? 'now'}</Text>
-            {titleid ? <Text style={[styles.gameTitleId, theme.text]}>Title ID: <Text style={styles.gameTitleIdValue}>{titleid}</Text></Text> : null}
+            <Text style={[styles.gameTotalPlayTime, theme.text]}>
+                {t('game_played_for', {duration: hrduration(props.game.totalPlayTime)})}
+            </Text>
+            <Text style={[styles.gameFirstPlayed, theme.text]}>
+                {first_played ? t('game_first_played', {
+                    date: first_played,
+                    formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
+                }) : t('game_first_played_now')}
+            </Text>
+            {titleid ? <Text style={[styles.gameTitleId, theme.text]}>
+                {t('game_title_id')}: <Text style={styles.gameTitleIdValue}>{titleid}</Text>
+            </Text> : null}
 
             <View style={styles.gameShopButton}>
-                <Button title="Nintendo eShop" onPress={openShop} color={'#' + accent_colour} />
+                <Button title={t('game_shop')} onPress={openShop} color={'#' + accent_colour} />
             </View>
         </View>
     </View>;

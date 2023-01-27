@@ -36,13 +36,18 @@ export default class MenuApp {
             this.updateMenu();
         });
         this.updateMenu();
+
+        app.i18n.on('languageChanged', language => this.updateMenu());
     }
 
     async updateMenu() {
+        await this.app.i18n.loadNamespaces('menu_app');
+        const t = this.app.i18n.getFixedT(null, 'menu_app');
+
         const menu = new Menu();
 
         const ids = await this.app.store.storage.getItem('NintendoAccountIds') as string[] | undefined;
-        menu.append(new MenuItem({label: 'Nintendo Switch Online', enabled: false}));
+        menu.append(new MenuItem({label: t('coral_heading')!, enabled: false}));
 
         const discord_presence_monitor = this.getActiveDiscordPresenceMonitor();
 
@@ -62,26 +67,26 @@ export default class MenuApp {
             const item = new MenuItem({
                 label: data.nsoAccount.user.name,
                 submenu: [
-                    {label: 'Nintendo Account ID: ' + data.user.id, enabled: false},
-                    {label: 'Coral ID: ' + data.nsoAccount.user.id, enabled: false},
-                    {label: 'NSA ID: ' + data.nsoAccount.user.nsaId, enabled: false},
+                    {label: t('na_id', {id: data.user.id})!, enabled: false},
+                    {label: t('coral_id', {id: data.nsoAccount.user.id})!, enabled: false},
+                    {label: t('nsa_id', {id: data.nsoAccount.user.nsaId})!, enabled: false},
                     {type: 'separator'},
-                    {label: 'Enable Discord Presence', type: 'checkbox', checked: discord_presence_active,
+                    {label: t('discord_presence_enable')!, type: 'checkbox', checked: discord_presence_active,
                         enabled: discord_presence_active,
                         click: () => this.setActiveDiscordPresenceUser(discord_presence_active ? null : data.user.id)},
-                    {label: 'Enable notifications for this user\'s presence', type: 'checkbox',
+                    {label: t('user_notifications_enable')!, type: 'checkbox',
                         checked: monitor?.user_notifications,
                         enabled: !!monitor?.user_notifications,
                         click: () => this.setUserNotificationsActive(data.user.id, !monitor?.user_notifications)},
-                    {label: 'Enable notifications for friends of this user\'s presence', type: 'checkbox',
+                    {label: t('friend_notifications_enable')!, type: 'checkbox',
                         checked: monitor?.friend_notifications,
                         click: () => this.setFriendNotificationsActive(data.user.id, !monitor?.friend_notifications)},
-                    {label: 'Update now', enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop(true)},
+                    {label: t('refresh')!, enabled: !!monitor, click: () => monitor?.skipIntervalInCurrentLoop(true)},
                     {type: 'separator'},
-                    {label: 'Add friend', click: () => this.showAddFriendWindow(data.user.id)},
+                    {label: t('add_friend')!, click: () => this.showAddFriendWindow(data.user.id)},
                     ...(webservices.length ? [
                         {type: 'separator'},
-                        {label: 'Web services', enabled: false},
+                        {label: t('web_services')!, enabled: false},
                         ...webservices as any,
                     ] : []),
                 ],
@@ -90,9 +95,9 @@ export default class MenuApp {
             menu.append(item);
         }
 
-        menu.append(new MenuItem({label: 'Add account', click: this.addNsoAccount}));
+        menu.append(new MenuItem({label: t('add_account')!, click: this.addNsoAccount}));
         menu.append(new MenuItem({type: 'separator'}));
-        menu.append(new MenuItem({label: 'Nintendo Switch Parental Controls', enabled: false}));
+        menu.append(new MenuItem({label: t('moon_heading')!, enabled: false}));
 
         for (const id of ids ?? []) {
             const token = await this.app.store.storage.getItem('NintendoAccountToken-pctl.' + id) as string | undefined;
@@ -103,23 +108,23 @@ export default class MenuApp {
             const item = new MenuItem({
                 label: data.user.nickname,
                 submenu: [
-                    {label: 'Nintendo Account ID: ' + data.user.id, enabled: false},
+                    {label: t('na_id', {id: data.user.id})!, enabled: false},
                 ],
             });
 
             menu.append(item);
         }
 
-        menu.append(new MenuItem({label: 'Add account', click: this.addPctlAccount}));
+        menu.append(new MenuItem({label: t('add_account')!, click: this.addPctlAccount}));
 
         menu.append(new MenuItem({type: 'separator'}));
-        menu.append(new MenuItem({label: 'Show main window', click: () => this.app.showMainWindow()}));
-        menu.append(new MenuItem({label: 'Preferences', click: () => this.app.showPreferencesWindow()}));
+        menu.append(new MenuItem({label: t('show_main_window')!, click: () => this.app.showMainWindow()}));
+        menu.append(new MenuItem({label: t('preferences')!, click: () => this.app.showPreferencesWindow()}));
         if (dev) menu.append(new MenuItem({label: 'Dump notifications state', click: () => {
             debug('Accounts', this.app.monitors.notifications.accounts);
             debug('Friends', this.app.monitors.notifications.onlinefriends);
         }}));
-        menu.append(new MenuItem({label: 'Quit', click: () => app.quit()}));
+        menu.append(new MenuItem({label: t('quit')!, click: () => app.quit()}));
 
         this.tray.setContextMenu(menu);
     }

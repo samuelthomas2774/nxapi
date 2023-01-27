@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Buffer } from 'node:buffer';
 import fetch from 'node-fetch';
 import { dir } from '../../util/product.js';
-import { Store } from './index.js';
+import { App } from './index.js';
 import { SavedToken } from '../../common/auth/coral.js';
 
 export const bundlepath = path.resolve(dir, 'dist', 'app', 'bundle');
@@ -26,10 +26,10 @@ export async function tryGetNativeImageFromUrl(url: URL | string, useragent?: st
     return undefined;
 }
 
-export async function askUserForUri(store: Store, uri: string, prompt: string): Promise<[string, SavedToken] | null> {
+export async function askUserForUri(app: App, uri: string, prompt: string): Promise<[string, SavedToken] | null> {
     const menu = new Menu();
 
-    const ids = await store.storage.getItem('NintendoAccountIds') as string[] | undefined;
+    const ids = await app.store.storage.getItem('NintendoAccountIds') as string[] | undefined;
     menu.append(new MenuItem({label: prompt, enabled: false}));
     menu.append(new MenuItem({label: uri, enabled: false}));
     menu.append(new MenuItem({type: 'separator'}));
@@ -37,9 +37,9 @@ export async function askUserForUri(store: Store, uri: string, prompt: string): 
     let selected_user: [string, SavedToken] | null = null;
 
     const items = await Promise.all(ids?.map(async id => {
-        const token = await store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
+        const token = await app.store.storage.getItem('NintendoAccountToken.' + id) as string | undefined;
         if (!token) return;
-        const data = await store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
+        const data = await app.store.storage.getItem('NsoToken.' + token) as SavedToken | undefined;
         if (!data) return;
 
         return new MenuItem({
@@ -55,7 +55,7 @@ export async function askUserForUri(store: Store, uri: string, prompt: string): 
 
     for (const item of items) if (item) menu.append(item);
     menu.append(new MenuItem({type: 'separator'}));
-    menu.append(new MenuItem({label: 'Cancel', click: (i, w) => menu.closePopup(w)}));
+    menu.append(new MenuItem({label: app.i18n.t('handle_uri:cancel')!, click: (i, w) => menu.closePopup(w)}));
 
     const window = new BrowserWindow({show: false});
     // Add a delay to prevent the menu being closed immediately

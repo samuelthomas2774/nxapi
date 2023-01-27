@@ -1,20 +1,29 @@
-import React, { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableHighlight, TouchableOpacity, useColorScheme, View } from 'react-native';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { CheckBox, Picker } from 'react-native-web';
 import { DiscordPresencePlayTime } from '../../../discord/types.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, HIGHLIGHT_COLOUR_DARK, HIGHLIGHT_COLOUR_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
-import { getAccounts, RequestState, Root, useAsync, useDiscordPresenceSource, useEventListener } from '../util.js';
+import { getAccounts, RequestState, Root, useAccentColour, useAsync, useColourScheme, useDiscordPresenceSource, useEventListener } from '../util.js';
 
 export interface PreferencesProps {}
 
-export default function Preferences(props: PreferencesProps) {
-    const colour_scheme = useColorScheme();
-    const theme = colour_scheme === 'light' ? light : dark;
+export default function PreferencesWindow(props: PreferencesProps) {
+    return <Root
+        title={i18n => i18n.t('preferences_window:title')} scrollable autoresize
+        i18nNamespace="preferences_window"
+    >
+        <Preferences />
+    </Root>;
+}
 
-    const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
-    useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
+function _Preferences(props: {
+}) {
+    const theme = useColourScheme() === 'light' ? light : dark;
+    const accent_colour = useAccentColour();
+    const { t, i18n, ready } = useTranslation('preferences_window');
 
     const [users, ,, forceRefreshAccounts] = useAsync(useCallback(() => getAccounts(), [ipc]));
     useEventListener(events, 'update-nintendo-accounts', forceRefreshAccounts, []);
@@ -94,12 +103,13 @@ export default function Preferences(props: PreferencesProps) {
     if (!users ||
         !login_item ||
         !has_ever_loaded_discord_options ||
-        discord_presence_source_state !== RequestState.LOADED
+        discord_presence_source_state !== RequestState.LOADED ||
+        !ready
     ) {
         return null;
     }
 
-    const discord_user_picker = [<Picker.Item key="*" label="First discovered" value="*" />];
+    const discord_user_picker = [<Picker.Item key="*" label={t('discord.user_any')!} value="*" />];
 
     if (discord_options?.user && !discord_users?.find(u => u.id === discord_options.user)) {
         discord_user_picker.push(<Picker.Item key={discord_options?.user} label={discord_options.user}
@@ -110,174 +120,169 @@ export default function Preferences(props: PreferencesProps) {
             value={user.id} />);
     }
 
-    return <Root title="Preferences" scrollable autoresize>
-        <View style={styles.main}>
-            {/* <Text style={theme.text}>Preferences</Text> */}
+    return <View style={styles.main}>
+        {/* <Text style={theme.text}>Preferences</Text> */}
 
-            {login_item.supported || login_item.startup_enabled ? <View style={styles.section}>
-                <View style={styles.sectionLeft}>
-                    <Text style={[styles.label, theme.text]}>Startup</Text>
+        {login_item.supported || login_item.startup_enabled ? <View style={styles.section}>
+            <View style={styles.sectionLeft}>
+                <Text style={[styles.label, theme.text]}>{t('startup.heading')}</Text>
+            </View>
+            <View style={styles.sectionRight}>
+                <View style={styles.checkboxContainer}>
+                    <CheckBox
+                        value={login_item.startup_enabled}
+                        onValueChange={setOpenAtLogin}
+                        disabled={!login_item.supported}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                        style={styles.checkbox}
+                    />
+                    <TouchableOpacity disabled={!login_item.supported} style={styles.checkboxLabel} onPress={() => setOpenAtLogin(!login_item.startup_enabled)}>
+                        <Text style={[styles.checkboxLabelText, theme.text]}>{t('startup.login')}</Text>
+                    </TouchableOpacity>
                 </View>
-                <View style={styles.sectionRight}>
-                    {/* <Text style={theme.text}>Launch at startup menu here</Text>
-                    <Text style={theme.text}>{JSON.stringify(login_item, null, 4)}</Text> */}
 
+                <View
+                    style={[styles.checkboxContainer, !login_item.startup_enabled ? styles.disabled : null]}
+                >
+                    <CheckBox
+                        value={login_item.startup_hidden}
+                        onValueChange={setOpenAsHidden}
+                        disabled={!login_item.startup_enabled}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                        style={styles.checkbox}
+                    />
+                    <TouchableOpacity disabled={!login_item.startup_enabled} style={styles.checkboxLabel}
+                        onPress={() => setOpenAsHidden(!login_item.startup_hidden)}
+                    >
+                        <Text style={[styles.checkboxLabelText, theme.text]}>{t('startup.background')}</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View> : null}
+
+        {/* <View style={styles.section}>
+            <View style={styles.sectionLeft}>
+                <Text style={[styles.label, theme.text]}>Sleep</Text>
+            </View>
+            <View style={styles.sectionRight}>
+                <Text style={theme.text}>Prevent sleep menu here</Text>
+            </View>
+        </View> */}
+
+        <View style={styles.section}>
+            <View style={styles.sectionLeft}>
+                <Text style={[styles.label, theme.text]}>{t('discord.heading')}</Text>
+            </View>
+            <View style={styles.sectionRight}>
+                <Text style={theme.text}>{t(discord_presence_source ? 'discord.enabled' : 'discord.disabled')}</Text>
+
+                <View style={styles.button}>
+                    <Button title={t('discord.setup')}
+                        onPress={() => ipc.showDiscordModal({show_preferences_button: false})}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+                </View>
+
+                <Text style={[styles.header, theme.text]}>{t('discord.user')}</Text>
+
+                <Picker<string> selectedValue={discord_options?.user ?? '*'} onValueChange={setDiscordUser}
+                    style={[styles.picker, theme.picker]}
+                    enabled={discord_options_state !== RequestState.LOADING &&
+                        discord_users_state !== RequestState.LOADING}
+                >{...discord_user_picker}</Picker>
+
+                <Text style={[styles.header, theme.text]}>{t('discord.friend_code')}</Text>
+                <Text style={[styles.help, theme.text]}>{t('discord.friend_code_help')}</Text>
+
+                {is_discord_friend_code_self ? <View style={styles.friendCodeCheckbox}>
                     <View style={styles.checkboxContainer}>
                         <CheckBox
-                            value={login_item.startup_enabled}
-                            onValueChange={setOpenAtLogin}
-                            disabled={!login_item.supported}
+                            value={!!discord_options?.friend_code}
+                            onValueChange={v => setDiscordFriendCode(v ? discord_friend_code_self : undefined)}
                             color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
                             style={styles.checkbox}
                         />
-                        <TouchableOpacity disabled={!login_item.supported} style={styles.checkboxLabel} onPress={() => setOpenAtLogin(!login_item.startup_enabled)}>
-                            <Text style={[styles.checkboxLabelText, theme.text]}>Open at login</Text>
+                        <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordFriendCode(discord_options?.friend_code ? undefined : discord_friend_code_self)}>
+                            <Text style={theme.text}>{t('discord.friend_code_self')}</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <View
-                        style={[styles.checkboxContainer, !login_item.startup_enabled ? styles.disabled : null]}
-                    >
-                        <CheckBox
-                            value={login_item.startup_hidden}
-                            onValueChange={setOpenAsHidden}
-                            disabled={!login_item.startup_enabled}
-                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
-                            style={styles.checkbox}
-                        />
-                        <TouchableOpacity disabled={!login_item.startup_enabled} style={styles.checkboxLabel}
-                            onPress={() => setOpenAsHidden(!login_item.startup_hidden)}
-                        >
-                            <Text style={[styles.checkboxLabelText, theme.text]}>Open in background</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity style={styles.textLinkTouchable} onPress={() => setIsDiscordFriendCodeSelf(false)}>
+                        <Text style={[styles.textLink, theme.text, {color: '#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}]}>
+                            {t('discord.friend_code_custom')}
+                        </Text>
+                    </TouchableOpacity>
+                </View> : <View style={styles.friendCodeInput}>
+                    <TextInput value={discord_friend_code} onChangeText={setDiscordFriendCode}
+                        placeholder="0000-0000-0000"
+                        style={[styles.textInput, theme.textInput]} />
+                </View>}
+
+                <View style={[styles.checkboxContainer, styles.checkboxContainerMargin]}>
+                    <CheckBox
+                        value={discord_options?.show_console_online ?? false}
+                        onValueChange={setDiscordShowConsoleOnline}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                        style={styles.checkbox}
+                    />
+                    <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordShowConsoleOnline(!discord_options?.show_console_online)}>
+                        <Text style={[styles.checkboxLabelText, theme.text]}>{t('discord.inactive_presence')}</Text>
+                    </TouchableOpacity>
                 </View>
-            </View> : null}
+                <Text style={[styles.help, theme.text]}>{t('discord.inactive_presence_help')}</Text>
 
-            {/* <View style={styles.section}>
-                <View style={styles.sectionLeft}>
-                    <Text style={[styles.label, theme.text]}>Sleep</Text>
-                </View>
-                <View style={styles.sectionRight}>
-                    <Text style={theme.text}>Prevent sleep menu here</Text>
-                </View>
-            </View> */}
+                <Text style={[styles.header, theme.text]}>{t('discord.play_time')}</Text>
 
-            <View style={styles.section}>
-                <View style={styles.sectionLeft}>
-                    <Text style={[styles.label, theme.text]}>Discord Rich Presence</Text>
-                </View>
-                <View style={styles.sectionRight}>
-                    <Text style={theme.text}>Discord Rich Presence is {discord_presence_source ? 'en' : 'dis'}abled.</Text>
-
-                    <View style={styles.button}>
-                        <Button title="Discord Rich Presence setup"
-                            onPress={() => ipc.showDiscordModal({show_preferences_button: false})}
-                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
-                    </View>
-
-                    <Text style={[styles.header, theme.text]}>Discord user</Text>
-
-                    <Picker<string> selectedValue={discord_options?.user ?? '*'} onValueChange={setDiscordUser}
-                        style={[styles.picker, theme.picker]}
-                        enabled={discord_options_state !== RequestState.LOADING &&
-                            discord_users_state !== RequestState.LOADING}
-                    >{...discord_user_picker}</Picker>
-
-                    <Text style={[styles.header, theme.text]}>Friend code</Text>
-                    <Text style={[styles.help, theme.text]}>Adding your friend code will also show your Nintendo Switch user icon in Discord.</Text>
-
-                    {is_discord_friend_code_self ? <View style={styles.friendCodeCheckbox}>
-                        <View style={styles.checkboxContainer}>
-                            <CheckBox
-                                value={!!discord_options?.friend_code}
-                                onValueChange={v => setDiscordFriendCode(v ? discord_friend_code_self : undefined)}
-                                color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
-                                style={styles.checkbox}
-                            />
-                            <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordFriendCode(discord_options?.friend_code ? undefined : discord_friend_code_self)}>
-                                <Text style={theme.text}>Share my friend code</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <TouchableOpacity style={styles.textLinkTouchable} onPress={() => setIsDiscordFriendCodeSelf(false)}>
-                            <Text style={[styles.textLink, theme.text, {color: '#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}]}>
-                                Set custom friend code
-                            </Text>
-                        </TouchableOpacity>
-                    </View> : <View style={styles.friendCodeInput}>
-                        <TextInput value={discord_friend_code} onChangeText={setDiscordFriendCode}
-                            placeholder="0000-0000-0000"
-                            style={[styles.textInput, theme.textInput]} />
-                    </View>}
-
-                    {/* <View style={styles.header} /> */}
-
-                    <View style={[styles.checkboxContainer, styles.checkboxContainerMargin]}>
-                        <CheckBox
-                            value={discord_options?.show_console_online ?? false}
-                            onValueChange={setDiscordShowConsoleOnline}
-                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
-                            style={styles.checkbox}
-                        />
-                        <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordShowConsoleOnline(!discord_options?.show_console_online)}>
-                            <Text style={[styles.checkboxLabelText, theme.text]}>Show inactive presence</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={[styles.help, theme.text]}>Shows "Not playing" when a console linked to your account is online, but you are not selected in a game.</Text>
-
-                    <Text style={[styles.header, theme.text]}>Play time</Text>
-
-                    <Picker<string>
-                        selectedValue={'' + (discord_options?.show_play_time ??
-                            DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE)}
-                        onValueChange={v => setDiscordShowPlayTime(parseInt(v))}
-                        style={[styles.picker, theme.picker]}
-                        enabled={discord_options_state !== RequestState.LOADING}
-                    >
-                        <Picker.Item key={DiscordPresencePlayTime.HIDDEN} value={DiscordPresencePlayTime.HIDDEN}
-                            label="Never show play time" />
-                        <Picker.Item key={DiscordPresencePlayTime.NINTENDO} value={DiscordPresencePlayTime.NINTENDO}
-                            label="Show play time as it appears on a Nintendo Switch console" />
-                        <Picker.Item key={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME} value={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME}
-                            label="Show approximate play time (nearest 5 hours)" />
-                        <Picker.Item key={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE}
-                            label="Show approximate play time (nearest 5 hours) with first played date" />
-                        <Picker.Item key={DiscordPresencePlayTime.HOUR_PLAY_TIME} value={DiscordPresencePlayTime.HOUR_PLAY_TIME}
-                            label="Show approximate play time (nearest hour)" />
-                        <Picker.Item key={DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE}
-                            label="Show approximate play time (nearest hour) with first played date" />
-                        <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME}
-                            label="Show exact play time" />
-                        <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE}
-                            label="Show exact play time with first played date" />
-                    </Picker>
-                </View>
-            </View>
-
-            <View style={styles.section}>
-                <View style={styles.sectionLeft}>
-                    <Text style={[styles.label, theme.text]}>SplatNet 3</Text>
-                </View>
-                <View style={styles.sectionRight}>
-                    <View style={[styles.checkboxContainer]}>
-                        <CheckBox
-                            value={discord_options?.monitors?.enable_splatnet3_monitoring ?? false}
-                            onValueChange={setDiscordEnableSplatNet3Monitor}
-                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
-                            style={styles.checkbox}
-                        />
-                        <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordEnableSplatNet3Monitor(!discord_options?.monitors?.enable_splatnet3_monitoring)}>
-                            <Text style={[styles.checkboxLabelText, theme.text]}>Enable enhanced Discord Rich Presence for Splatoon 3</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={[styles.help, theme.text]}>Uses SplatNet 3 to retrieve additional presence information while playing Splatoon 3. You must be using a secondary Nintendo Account that is friends with your main account to fetch your presence, and the secondary account must be able to access SplatNet 3.</Text>
-                    <Text style={[styles.help, theme.text]}>When using a presence URL that returns Splatoon 3 data additional presence information will be shown regardless of this setting.</Text>
-                </View>
+                <Picker<string>
+                    selectedValue={'' + (discord_options?.show_play_time ??
+                        DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE)}
+                    onValueChange={v => setDiscordShowPlayTime(parseInt(v))}
+                    style={[styles.picker, theme.picker]}
+                    enabled={discord_options_state !== RequestState.LOADING}
+                >
+                    <Picker.Item key={DiscordPresencePlayTime.HIDDEN} value={DiscordPresencePlayTime.HIDDEN}
+                        label={t('discord.play_time_hidden')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.NINTENDO} value={DiscordPresencePlayTime.NINTENDO}
+                        label={t('discord.play_time_nintendo')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME} value={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME}
+                        label={t('discord.play_time_approximate_play_time')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME_SINCE}
+                        label={t('discord.play_time_approximate_play_time_since')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.HOUR_PLAY_TIME} value={DiscordPresencePlayTime.HOUR_PLAY_TIME}
+                        label={t('discord.play_time_hour_play_time')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.HOUR_PLAY_TIME_SINCE}
+                        label={t('discord.play_time_hour_play_time_since')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME}
+                        label={t('discord.play_time_detailed_play_time')!} />
+                    <Picker.Item key={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE} value={DiscordPresencePlayTime.DETAILED_PLAY_TIME_SINCE}
+                        label={t('discord.play_time_detailed_play_time_since')!} />
+                </Picker>
             </View>
         </View>
-    </Root>;
+
+        <View style={styles.section}>
+            <View style={styles.sectionLeft}>
+                <Text style={[styles.label, theme.text]}>{t('splatnet3.heading')}</Text>
+            </View>
+            <View style={styles.sectionRight}>
+                <View style={[styles.checkboxContainer]}>
+                    <CheckBox
+                        value={discord_options?.monitors?.enable_splatnet3_monitoring ?? false}
+                        onValueChange={setDiscordEnableSplatNet3Monitor}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                        style={styles.checkbox}
+                    />
+                    <TouchableOpacity style={styles.checkboxLabel} onPress={() => setDiscordEnableSplatNet3Monitor(!discord_options?.monitors?.enable_splatnet3_monitoring)}>
+                        <Text style={[styles.checkboxLabelText, theme.text]}>{t('splatnet3.discord')}</Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={[styles.help, theme.text]}>{t('splatnet3.discord_help_1')}</Text>
+                <Text style={[styles.help, theme.text]}>{t('splatnet3.discord_help_2')}</Text>
+            </View>
+        </View>
+    </View>;
 }
+
+const Preferences = React.memo(_Preferences);
 
 const styles = StyleSheet.create({
     loading: {

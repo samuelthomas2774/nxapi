@@ -1,67 +1,79 @@
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, HIGHLIGHT_COLOUR_DARK, HIGHLIGHT_COLOUR_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
-import { Root, useEventListener } from '../util.js';
+import { Root, useAccentColour, useColourScheme, useEventListener } from '../util.js';
 
 export interface AddAccountManualPromptProps {
     authoriseurl: string;
     client_id: string;
 }
 
-export default function AddAccountManualPrompt(props: AddAccountManualPromptProps) {
-    const colour_scheme = useColorScheme();
-    const theme = colour_scheme === 'light' ? light : dark;
-
-    const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
-    useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
-
+export default function AddAccountManualPromptWindow(props: AddAccountManualPromptProps) {
     useEventListener(events, 'window:refresh', () => true, []);
+
+    const save = useCallback((callback_url: string) => {
+        location.href = callback_url;
+    }, []);
+
+    return <Root
+        title={i18n => i18n.t('addaccountmanual_window:title')} scrollable autoresize
+        i18nNamespace="addaccountmanual_window"
+    >
+        <AddAccountManualPrompt {...props} save={save} />
+    </Root>
+}
+
+function AddAccountManualPrompt(props: AddAccountManualPromptProps & {
+    save?: (callback_url: string) => void;
+}) {
+    const theme = useColourScheme() === 'light' ? light : dark;
+    const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('addaccountmanual_window');
 
     const [callback_url, setCallbackUrl] = useState('');
     const callback_url_valid = callback_url.startsWith('npf' + props.client_id + '://auth');
 
     const save = useCallback(() => {
         if (callback_url_valid) {
-            location.href = callback_url;
+            props.save?.call(null, callback_url);
         }
-    }, [callback_url, callback_url_valid]);
+    }, [props.save, callback_url, callback_url_valid]);
 
-    return <Root title="Add account" scrollable autoresize>
-        <View style={styles.main}>
-            <Text style={theme.text}>1. Login to your Nintendo Account</Text>
-            <Text style={[styles.help, theme.text]}>Do not select an account yet.</Text>
+    return <View style={styles.main}>
+        <Text style={theme.text}>{t('authorise_heading')}</Text>
+        <Text style={[styles.help, theme.text]}>{t('authorise_help')}</Text>
 
-            <View style={styles.buttonSingle}>
-                <Button title="Open Nintendo Account authorisation"
-                    onPress={() => ipc.openExternalUrl(props.authoriseurl)}
+        <View style={styles.buttonSingle}>
+            <Button title={t('authorise_open')}
+                onPress={() => ipc.openExternalUrl(props.authoriseurl)}
+                color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+        </View>
+
+        <Text style={[styles.header, theme.text]}>{t('response_heading')}</Text>
+        <Text style={[styles.help, theme.text]}>{t('response_help_1', {url: 'npf{props.client_id}://auth'})}</Text>
+        <Text style={[styles.help, theme.text]}>{t('response_help_2')}</Text>
+
+        <TextInput value={callback_url} onChangeText={setCallbackUrl}
+            placeholder={'npf' + props.client_id + '://auth#...'}
+            style={[styles.textInput, theme.textInput]} />
+
+        <View style={styles.buttons}>
+            <View style={styles.button}>
+                <Button title={t('cancel')}
+                    onPress={() => window.close()}
                     color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
             </View>
-
-            <Text style={[styles.header, theme.text]}>2. Enter the callback link</Text>
-            <Text style={[styles.help, theme.text]}>On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf{props.client_id}://auth".</Text>
-            <Text style={[styles.help, theme.text]}>If you are adding a child account linked to your account, click "Select this person" next to their account to sign in as the child account, then with only the child account showing right click "Select this person" and copy the link.</Text>
-
-            <TextInput value={callback_url} onChangeText={setCallbackUrl}
-                placeholder={'npf' + props.client_id + '://auth#...'}
-                style={[styles.textInput, theme.textInput]} />
-
-            <View style={styles.buttons}>
-                <View style={styles.button}>
-                    <Button title="Cancel"
-                        onPress={() => window.close()}
-                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
-                </View>
-                {callback_url_valid ? <View style={styles.button}>
-                    <Button title="Add account"
-                        onPress={save}
-                        primary
-                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
-                </View> : null}
-            </View>
+            {callback_url_valid ? <View style={styles.button}>
+                <Button title={t('save')}
+                    onPress={save}
+                    primary
+                    color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+            </View> : null}
         </View>
-    </Root>;
+    </View>;
 }
 
 const styles = StyleSheet.create({

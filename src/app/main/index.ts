@@ -1,9 +1,10 @@
-import { app, BrowserWindow, dialog, ipcMain, LoginItemSettingsOptions } from './electron.js';
+import { app, BrowserWindow, dialog, ipcMain, LoginItemSettingsOptions, Menu } from './electron.js';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import * as persist from 'node-persist';
+import { i18n } from 'i18next';
 import { init as initGlobals } from '../../common/globals.js';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
@@ -13,13 +14,14 @@ import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType }
 import { initStorage, paths } from '../../util/storage.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
 import Users, { CoralUser } from '../../common/users.js';
-import { setupIpc } from './ipc.js';
+import { sendToAllWindows, setupIpc } from './ipc.js';
 import { dev, dir, git, release, version } from '../../util/product.js';
 import { addUserAgent } from '../../util/useragent.js';
 import { askUserForUri } from './util.js';
-import { setAppInstance } from './app-menu.js';
+import { setAppInstance, updateMenuLanguage } from './app-menu.js';
 import { handleAuthUri } from './na-auth.js';
 import { CREDITS_NOTICE, GITLAB_URL, LICENCE_NOTICE } from '../../common/constants.js';
+import createI18n from '../i18n/index.js';
 
 const debug = createDebug('app:main');
 
@@ -58,7 +60,7 @@ export class App {
     readonly updater = new Updater();
     menu: MenuApp | null = null;
 
-    constructor(storage: persist.LocalStorage) {
+    constructor(storage: persist.LocalStorage, readonly i18n: i18n) {
         this.store = new Store(this, storage);
         this.monitors = new PresenceMonitorManager(this);
     }
@@ -115,6 +117,42 @@ export class App {
 
         return this.preferences_window = window;
     }
+
+    static async createI18n() {
+        const i18n = createI18n();
+
+        const language = this.detectSystemLanguage();
+        debug('Initialising i18n with language %s', language);
+
+        await i18n.init({lng: language ?? undefined});
+        await i18n.loadNamespaces(['app', 'app_menu', 'menus', 'handle_uri']);
+
+        return i18n;
+    }
+
+    static detectSystemLanguage() {
+        const languages = app.getPreferredSystemLanguages().map(l => l.toLowerCase());
+        const supported = Object.keys(languages).map(l => l.toLowerCase());
+
+        for (const language of languages) {
+            if (supported.some(l => language.startsWith(l)  || l.startsWith(language))) return language;
+        }
+
+        return null;
+    }
+}
+
+function setAboutPanelOptions(i18n?: i18n) {
+    app.setAboutPanelOptions({
+        applicationName: 'nxapi-app',
+        applicationVersion: process.platform === 'darwin' ? version : version +
+            (!release ? '-' + (git?.revision.substr(0, 8) ?? '?') : ''),
+        version: git?.revision.substr(0, 8) ?? '?',
+        authors: ['Samuel Elliott'],
+        website: GITLAB_URL,
+        credits: i18n?.t('app:credits') ?? CREDITS_NOTICE,
+        copyright: i18n?.t('app:licence') ?? LICENCE_NOTICE,
+    });
 }
 
 export async function init() {
@@ -128,27 +166,22 @@ export async function init() {
     initGlobals();
     addUserAgent('nxapi-app (Chromium ' + process.versions.chrome + '; Electron ' + process.versions.electron + ')');
 
-    app.setAboutPanelOptions({
-        applicationName: 'nxapi-app',
-        applicationVersion: process.platform === 'darwin' ? version : version +
-            (!release ? '-' + (git?.revision.substr(0, 8) ?? '?') : ''),
-        version: git?.revision.substr(0, 8) ?? '?',
-        authors: ['Samuel Elliott'],
-        website: GITLAB_URL,
-        credits: CREDITS_NOTICE,
-        copyright: LICENCE_NOTICE,
-    });
+    setAboutPanelOptions();
+    app.configureHostResolver({enableBuiltInResolver: false});
 
-    const storage = await initStorage(process.env.NXAPI_DATA_PATH ?? paths.data);
-    const appinstance = new App(storage);
+    const [storage, i18n] = await Promise.all([
+        initStorage(process.env.NXAPI_DATA_PATH ?? paths.data),
+        App.createI18n(),
+    ]);
 
+    const appinstance = new App(storage, i18n);
     // @ts-expect-error
     globalThis.app = appinstance;
 
+    setAboutPanelOptions(i18n);
     setAppInstance(appinstance);
+    updateMenuLanguage(i18n);
     setupIpc(appinstance, ipcMain);
-
-    app.configureHostResolver({enableBuiltInResolver: false});
 
     if (process.platform === 'win32') {
         app.setAppUserModelId('uk.org.fancy.nxapi.app');
@@ -158,6 +191,14 @@ export async function init() {
 
     const menu = new MenuApp(appinstance);
     appinstance.menu = menu;
+
+    i18n.on('languageChanged', language => {
+        debug('Language changed', language);
+
+        sendToAllWindows('nxapi:app:update-language', language);
+        i18n.loadNamespaces('app').then(() => setAboutPanelOptions(i18n));
+        i18n.loadNamespaces('app_menu').then(() => updateMenuLanguage(i18n));
+    });
 
     app.on('second-instance', (event, command_line, working_directory, additional_data) => {
         debug('Second instance', command_line, working_directory, additional_data);
@@ -220,26 +261,26 @@ function tryHandleUrl(app: App, url: string) {
     }
 
     if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)?game\/(\d+)\/?($|\?|\#)/i)) {
-        handleOpenWebServiceUri(app.store, url);
+        handleOpenWebServiceUri(app, url);
         return true;
     }
 
     if (url.match(/^com\.nintendo\.znca:\/\/(znca\/)?friendcode\/(\d{4}-\d{4}-\d{4})\/([A-Za-z0-9]{10})($|\?|\#)/i)) {
-        handleOpenFriendCodeUri(app.store, url);
+        handleOpenFriendCodeUri(app, url);
         return true;
     }
 
     return false;
 }
 
-export async function handleOpenFriendCodeUri(store: Store, uri: string) {
+export async function handleOpenFriendCodeUri(app: App, uri: string) {
     const match = uri.match(/^com\.nintendo\.znca:\/\/(znca\/)friendcode\/(\d{4}-\d{4}-\d{4})\/([A-Za-z0-9]{10})($|\?|\#)/i);
     if (!match) return;
 
     const friendcode = match[2];
     const hash = match[3];
 
-    const selected_user = await askUserForUri(store, uri, 'Select a user to add friends');
+    const selected_user = await askUserForUri(app, uri, app.i18n.t('handle_uri:friend_code_select'));
     if (!selected_user) return;
 
     createWindow(WindowType.ADD_FRIEND, {

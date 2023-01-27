@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAccentColour, useAsync, useColourScheme, useEventListener, User } from '../util.js';
 import Friends from './friends.js';
@@ -9,7 +10,6 @@ import Section from './section.js';
 import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import SetupDiscordPresence from './discord-setup.js';
 import { Button } from '../components/index.js';
-import { hrlist } from '../../../util/misc.js';
 
 export default function Main(props: {
     user: User;
@@ -17,6 +17,7 @@ export default function Main(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'main_section' });
 
     const [announcements, announcements_error, announcements_state] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getCoralAnnouncements(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
@@ -58,18 +59,17 @@ export default function Main(props: {
 
         if (friends_error || webservices_error || active_event_error) {
             const errors = [];
-            if (friends_error) errors.push('friends');
-            if (webservices_error) errors.push('game-specific services');
-            if (active_event_error) errors.push('voice chat');
-            const errors_text = hrlist(errors);
+            if (friends_error) errors.push(t('error.message_friends'));
+            if (webservices_error) errors.push(t('error.message_webservices'));
+            if (active_event_error) errors.push(t('error.message_event'));
 
             return <View style={styles.error}>
-                <Text style={[styles.errorHeader, theme.text]}>Error loading data</Text>
-                <Text style={[styles.errorMessage, theme.text]}>An error occured while loading {errors_text} data.</Text>
+                <Text style={[styles.errorHeader, theme.text]}>{t('error.title')}</Text>
+                <Text style={[styles.errorMessage, theme.text]}>{t('error.message', {errors})}</Text>
                 <View style={styles.errorActions}>
-                    <Button title="Retry" onPress={refresh} color={'#' + accent_colour} primary />
+                    <Button title={t('error.retry')} onPress={refresh} color={'#' + accent_colour} primary />
                     <TouchableOpacity onPress={showErrorDetails} style={styles.errorViewDetailsTouchable}>
-                        <Text style={theme.text}>View details</Text>
+                        <Text style={theme.text}>{t('error.view_details')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>;
@@ -92,14 +92,15 @@ export default function Main(props: {
 function MoonOnlyUser() {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'main_section.moon_only_user' });
 
-    return <Section title="Nintendo Switch Online">
+    return <Section title={t('title')}>
         <View style={styles.moonOnlyUser}>
-            <Text style={[styles.moonOnlyUserText, theme.text]}>This user is signed in to the Nintendo Switch Parental Controls app, but not the Nintendo Switch Online app.</Text>
-            <Text style={[styles.moonOnlyUserText, theme.text]}>Login to the Nintendo Switch Online app to view details here, or use the nxapi command to access Parental Controls data.</Text>
+            <Text style={[styles.moonOnlyUserText, theme.text]}>{t('desc_1')}</Text>
+            <Text style={[styles.moonOnlyUserText, theme.text]}>{t('desc_2')}</Text>
 
             <View style={styles.moonOnlyUserButton}>
-                <Button title="Login" onPress={() => ipc.addCoralAccount()} color={'#' + accent_colour} primary />
+                <Button title={t('login')} onPress={() => ipc.addCoralAccount()} color={'#' + accent_colour} primary />
             </View>
         </View>
     </Section>;

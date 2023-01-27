@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { useAccentColour, useColourScheme, User, useTimeSince } from '../util.js';
 import { Friend, Presence, PresenceState } from '../../../api/coral-types.js';
@@ -15,6 +16,7 @@ export default function Friends(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'friends_section' });
 
     const showAddFriendModal = useCallback(() => {
         ipc.showAddFriendModal({user: props.user.user.id});
@@ -34,18 +36,18 @@ export default function Friends(props: {
         onContextMenu={onFriendCodeContextMenu}
     >SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
 
-    return <Section title="Friends" loading={props.loading} error={props.error} headerButtons={header_buttons}>
+    return <Section title={t('title')} loading={props.loading} error={props.error} headerButtons={header_buttons}>
         {props.friends.length ? <ScrollView horizontal>
             <View style={styles.content}>
                 {props.friends.map(f => <Friend key={f.nsaId} friend={f} user={props.user} />)}
             </View>
         </ScrollView> : <View style={styles.noFriends}>
-            <Text style={[styles.noFriendsText, theme.text]}>Add friends using a Nintendo Switch console.</Text>
-            <Text style={[styles.noFriendsText, styles.noFriendsFriendCodeText, theme.text]}>Your friend code: {fc}</Text>
+            <Text style={[styles.noFriendsText, theme.text]}>{t('no_friends')}</Text>
+            <Text style={[styles.noFriendsText, styles.noFriendsFriendCodeText, theme.text]}>{t('friend_code')}: {fc}</Text>
         </View>}
 
         {props.friends.length ? <View style={styles.footer}>
-            <Text style={[styles.friendCode, theme.text]}>Your friend code: {fc}</Text>
+            <Text style={[styles.friendCode, theme.text]}>{t('friend_code')}: {fc}</Text>
         </View> : null}
     </Section>;
 }
@@ -94,15 +96,16 @@ function FriendPresence(props: {
     presence: Presence;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'friends_section' });
 
     const logout = props.presence.logoutAt ? new Date(props.presence.logoutAt * 1000) : null;
     const since_logout = useTimeSince(logout ?? new Date(0), true);
 
     if (props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) {
-        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>Playing</Text>;
+        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>{t('presence_playing')}</Text>;
     }
 
-    return <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>{logout ? since_logout : 'Offline'}</Text>;
+    return <Text style={[styles.presenceText, styles.presenceTextOffline, theme.text]}>{logout ? since_logout : t('presence_offline')}</Text>;
 }
 
 const styles = StyleSheet.create({

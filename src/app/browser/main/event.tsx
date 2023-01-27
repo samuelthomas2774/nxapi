@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { useAccentColour, useColourScheme, User } from '../util.js';
 import { ActiveEvent } from '../../../api/coral-types.js';
@@ -15,27 +16,29 @@ export default function Event(props: {
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'event_section' });
 
     const event_members = props.event.members.filter(m => m.isPlaying).length;
     const voip_members = props.event.members.filter(m => m.isJoinedVoip).length;
 
-    return <Section title="Voice chat" loading={props.loading} error={props.error}>
+    return <Section title={t('title')} loading={props.loading} error={props.error}>
         <View style={styles.content}>
             <Image source={{uri: props.event.imageUri, width: 100, height: 100}} style={styles.image} />
 
             <View style={styles.detail}>
                 <Text style={[styles.eventName, theme.text]}>{props.event.name}</Text>
                 <Text style={[styles.eventMembers, theme.text]}>
-                    {event_members} in game, {voip_members} in voice chat
-                    {props.event.members.length > 1 ? ' of ' + props.event.members.length + ' members' : ''}
+                    {props.event.members.length > 1 ?
+                        t('members_with_total', {event: event_members, voip: voip_members, total: props.event.members.length}) :
+                        t('members', {event: event_members, voip: voip_members})}
                 </Text>
 
                 <Text style={[styles.eventInstruction, theme.text]}>
-                    Use the Nintendo Switch Online app on iOS or Android to {voip_members ? 'join' : 'start'} voice chat.
+                    {t(voip_members ? 'app_join' : 'app_start')}
                 </Text>
 
                 {props.event.shareUri ? <View style={styles.shareButton}>
-                    <Button title="Share" onPress={() => ipc.share({urls: [props.event.shareUri]})}
+                    <Button title={t('share')} onPress={() => ipc.share({urls: [props.event.shareUri]})}
                         color={'#' + accent_colour} />
                 </View> : null}
             </View>

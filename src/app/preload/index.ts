@@ -89,6 +89,7 @@ const ipc = {
 
 export type NxapiElectronIpc = typeof ipc;
 
+ipcRenderer.on('nxapi:app:update-language', (e, l: string) => events.emit('update-language', l));
 ipcRenderer.on('nxapi:window:refresh', () => events.emit('window:refresh') || location.reload());
 ipcRenderer.on('nxapi:accounts:shouldrefresh', () => events.emit('update-nintendo-accounts'));
 ipcRenderer.on('nxapi:discord:shouldrefresh', () => events.emit('update-discord-presence-source'));

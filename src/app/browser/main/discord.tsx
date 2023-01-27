@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Trans, useTranslation } from 'react-i18next';
 import { User } from 'discord-rpc';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAsync, useEventListener } from '../util.js';
 import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral } from '../../common/types.js';
 import { DiscordPresence } from '../../../discord/types.js';
 import { DISCORD_COLOUR, TEXT_COLOUR_DARK } from '../constants.js';
+import { NintendoSwitchUser } from '../components/index.js';
 
 export default function DiscordPresenceSource(props: {
     source: DiscordPresenceSource | null;
@@ -35,6 +37,8 @@ function renderDiscordPresenceSource(source: DiscordPresenceSource | null) {
 function DiscordPresenceSourceCoral(props: {
     source: DiscordPresenceSourceCoral;
 }) {
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'sidebar' });
+
     const [token] = useAsync(useCallback(() =>
         ipc.getNintendoAccountCoralToken(props.source.na_id), [ipc, props.source.na_id]));
     const [friends, , friends_state, forceRefreshFriends] = useAsync(useCallback(() => token ?
@@ -51,11 +55,11 @@ function DiscordPresenceSourceCoral(props: {
 
     return <View style={styles.discordSource}>
         {friend ? <Text style={styles.discordSourceText}>
-            Discord Rich Presence active:{' '}
-            <Image source={{uri: friend.imageUri, width: 16, height: 16}} style={styles.discordNsoUserImage} />{' '}
-            {friend.name}
+            <Trans i18nKey="main_window:sidebar.discord_active_friend">
+                <NintendoSwitchUser friend={friend} />
+            </Trans>
         </Text> : <Text style={styles.discordSourceText}>
-            Discord Rich Presence active
+            {t('discord_active')}
         </Text>}
     </View>;
 }
@@ -63,17 +67,21 @@ function DiscordPresenceSourceCoral(props: {
 function DiscordPresenceSourceUrl(props: {
     source: DiscordPresenceSourceUrl;
 }) {
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'sidebar' });
+
     return <View style={styles.discordSource}>
         <Text style={styles.discordSourceText} numberOfLines={3} ellipsizeMode="tail">
-            Discord Rich Presence active:{' '}
+            {t('discord_active')}:{' '}
             <Text style={styles.discordSourceUrlValue}>{props.source.url}</Text>
         </Text>
     </View>;
 }
 
 function DiscordPresenceInactive() {
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'sidebar' });
+
     return <View style={styles.discordSource}>
-        <Text style={styles.discordSourceText}>Discord Rich Presence not active</Text>
+        <Text style={styles.discordSourceText}>{t('discord_not_active')}</Text>
     </View>;
 }
 
@@ -81,6 +89,8 @@ function DiscordPresence(props: {
     presence: DiscordPresence;
     user: User;
 }) {
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'sidebar' });
+
     const large_image_url = props.presence.activity.largeImageKey?.match(/^\d{16}$/) ?
         'https://cdn.discordapp.com/app-assets/' + props.presence.id + '/' +
             props.presence.activity.largeImageKey + '.png' :
@@ -90,7 +100,7 @@ function DiscordPresence(props: {
     return <>
         <View style={styles.discordPresence}>
             <Image source={{uri: large_image_url, width: 18, height: 18}} style={styles.discordPresenceImage} />
-            <Text style={styles.discordPresenceText} numberOfLines={1} ellipsizeMode="tail">Playing</Text>
+            <Text style={styles.discordPresenceText} numberOfLines={1} ellipsizeMode="tail">{t('discord_playing')}</Text>
         </View>
 
         <View style={styles.discordUser}>
@@ -114,10 +124,6 @@ const styles = StyleSheet.create({
     },
     discordSourceText: {
         color: TEXT_COLOUR_DARK,
-    },
-    discordNsoUserImage: {
-        borderRadius: 8,
-        textAlignVertical: -3,
     },
     discordSourceUrlValue: {
         fontFamily: 'monospace',

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, NativeSyntheticEvent, StyleSheet, Text, TextInput, TextInputChangeEventData, TextInputKeyPressEventData, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Image, NativeSyntheticEvent, StyleSheet, Text, TextInput, TextInputChangeEventData, TextInputKeyPressEventData, TouchableOpacity, View } from 'react-native';
 import { Friend, FriendCodeUser } from '../../../api/coral-types.js';
+import { SavedToken } from '../../../common/auth/coral.js';
 import Warning from '../components/icons/warning.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, HIGHLIGHT_COLOUR_DARK, HIGHLIGHT_COLOUR_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
-import ipc, { events } from '../ipc.js';
-import { RequestState, Root, useAsync, useEventListener } from '../util.js';
+import ipc from '../ipc.js';
+import { RequestState, Root, useAccentColour, useAsync, useColourScheme } from '../util.js';
 
 export interface AddFriendProps {
     user: string;
@@ -27,12 +29,8 @@ type SendFriendRequestStateArray =
 const FRIEND_CODE = /^\d{4}-\d{4}-\d{4}$/;
 const FRIEND_CODE_URL = /^(?!https\:\/\/lounge\.nintendo\.com\/|com\.nintendo\.znca\:\/\/znca\/)friendcode\/(\d{4}-\d{4}-\d{4})\//;
 
-export default function AddFriend(props: AddFriendProps) {
-    const colour_scheme = useColorScheme();
-    const theme = colour_scheme === 'light' ? light : dark;
-
-    const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
-    useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
+export default function AddFriendWindow(props: AddFriendProps) {
+    const accent_colour = useAccentColour();
 
     const [token] = useAsync(useCallback(() => ipc.getNintendoAccountCoralToken(props.user), [ipc, props.user]));
     const [user] = useAsync(useCallback(() => token ?
@@ -42,21 +40,6 @@ export default function AddFriend(props: AddFriendProps) {
     const is_valid_friendcode = FRIEND_CODE.test(friendcode);
     const show_friendcode_field = !props.friendcode || !FRIEND_CODE.test(props.friendcode);
 
-    const onChangeFriendCode = useCallback((event: NativeSyntheticEvent<TextInputChangeEventData>) => {
-        let match;
-        if (match = event.nativeEvent.text.match(FRIEND_CODE_URL)) {
-            setFriendCode(match[1]);
-        } else {
-            const friendcode = event.nativeEvent.text
-                .replace(/[^0-9]/g, '')
-                .replace(/^([0-9]{4})/g, '$1-')
-                .replace(/^([0-9]{4}-[0-9]{4})/g, '$1-')
-                .substr(0, 14);
-
-            setFriendCode(friendcode);
-        }
-    }, []);
-
     const [target_user, lookup_error, lookup_state] = useAsync(useCallback(() => token && is_valid_friendcode ?
         ipc.getNsoUserByFriendCode(token, friendcode) : Promise.resolve(null),
         [ipc, token, friendcode, is_valid_friendcode]));
@@ -65,25 +48,85 @@ export default function AddFriend(props: AddFriendProps) {
         ipc.getNsoFriends(token) : Promise.resolve(null), [ipc, token]));
     const friend = friends?.find(f => f.nsaId === target_user?.nsaId);
 
+    useEffect(() => {
+        const handler = (event: KeyboardEvent) => event.key === 'Escape' && window.close();
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
+    if (!user || !token || (!show_friendcode_field && lookup_state === RequestState.LOADING)) {
+        return <Root
+            title={i18n => i18n.t('addfriend_window.title')} titleUser={user ?? undefined} autoresize={!!user}
+            i18nNamespace="addfriend_window"
+        >
+            <View style={styles.loading}>
+                <ActivityIndicator size="large" color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+            </View>
+        </Root>;
+    }
+
+    return <Root
+        title={i18n => i18n.t('addfriend_window.title')} titleUser={user} autoresize
+        i18nNamespace="addfriend_window"
+    >
+        <AddFriend
+            user={user} token={token}
+            friendcode={friendcode} setFriendCode={show_friendcode_field ? setFriendCode : undefined}
+            lookupState={lookup_state} lookupUser={target_user} lookupError={lookup_error}
+            friendsState={friends_state} lookupFriend={friend}
+        />
+    </Root>;
+}
+
+function AddFriend(props: {
+    user: SavedToken;
+    token: string;
+    friendcode: string;
+    setFriendCode?: (friendcode: string) => void;
+    lookupState: RequestState;
+    lookupUser: FriendCodeUser | null;
+    lookupError: Error | null;
+    friendsState: RequestState;
+    lookupFriend?: Friend;
+}) {
+    const theme = useColourScheme() === 'light' ? light : dark;
+    const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('addfriend_window');
+
+    const onChangeFriendCode = useCallback((event: NativeSyntheticEvent<TextInputChangeEventData>) => {
+        let match;
+        if (match = event.nativeEvent.text.match(FRIEND_CODE_URL)) {
+            props.setFriendCode?.(match[1]);
+        } else {
+            const friendcode = event.nativeEvent.text
+                .replace(/[^0-9]/g, '')
+                .replace(/^([0-9]{4})/g, '$1-')
+                .replace(/^([0-9]{4}-[0-9]{4})/g, '$1-')
+                .substr(0, 14);
+
+            props.setFriendCode?.(friendcode);
+        }
+    }, []);
+
     const showLookupErrorDetails = useCallback(() => {
-        alert(lookup_error);
-    }, [lookup_error]);
+        alert(props.lookupError);
+    }, [props.lookupError]);
 
     const [send_state, setSendFriendRequestState] = useState<SendFriendRequestStateArray>([SendFriendRequestState.NOT_LOADING]);
 
     const sendFriendRequest = useCallback(async () => {
         if (send_state[0] === SendFriendRequestState.SENDING) return;
-        if (!token || !target_user) return;
-        setSendFriendRequestState([SendFriendRequestState.SENDING, target_user, friendcode]);
+        if (!props.lookupUser) return;
+        setSendFriendRequestState([SendFriendRequestState.SENDING, props.lookupUser, props.friendcode]);
 
         try {
-            const {result, friend} = await ipc.addNsoFriend(token, target_user.nsaId);
+            const {result, friend} = await ipc.addNsoFriend(props.token, props.lookupUser.nsaId);
 
-            setSendFriendRequestState([SendFriendRequestState.SENT, target_user, friendcode, friend]);
+            setSendFriendRequestState([SendFriendRequestState.SENT, props.lookupUser, props.friendcode, friend]);
         } catch (err) {
-            setSendFriendRequestState([SendFriendRequestState.ERROR, target_user, friendcode, err as Error]);
+            setSendFriendRequestState([SendFriendRequestState.ERROR, props.lookupUser, props.friendcode, err as Error]);
         }
-    }, [token, target_user, friendcode, send_state]);
+    }, [props.token, props.lookupUser, props.friendcode, send_state]);
 
     const showSendFriendRequestErrorDetails = useCallback(() => {
         if (send_state[0] !== SendFriendRequestState.ERROR) return;
@@ -93,100 +136,86 @@ export default function AddFriend(props: AddFriendProps) {
     const onFriendCodeKeyPress = useCallback((event: NativeSyntheticEvent<TextInputKeyPressEventData>) =>
         event.nativeEvent.key === 'Escape' && window.close(), []);
 
-    useEffect(() => {
-        const handler = (event: KeyboardEvent) => event.key === 'Escape' && window.close();
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+    return <View style={styles.main}>
+        {props.setFriendCode ? <>
+            <Text style={theme.text}>{t('title')}</Text>
 
-    if (!user || (!show_friendcode_field && lookup_state === RequestState.LOADING)) {
-        return <Root title="Add friend" titleUser={user ?? undefined} autoresize={!!user}>
-            <View style={styles.loading}>
-                <ActivityIndicator size="large" color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+            <Text style={[styles.help, theme.text]}>{t('help')}</Text>
+
+            <View style={styles.friendCodeInputContainer}>
+                <TextInput value={props.friendcode} onChange={onChangeFriendCode}
+                    onKeyPress={onFriendCodeKeyPress}
+                    placeholder="0000-0000-0000"
+                    style={[styles.textInput, styles.friendCodeInput, theme.textInput]} />
+
+                {props.lookupState === RequestState.LOADING ?
+                    <ActivityIndicator style={styles.activityIndicator} size={20} color={'#' + accent_colour} /> :
+                    props.lookupError ? <TouchableOpacity onPress={showLookupErrorDetails} style={styles.iconTouchable}>
+                        <Text style={[styles.icon, {color: '#' + accent_colour}]}><Warning /></Text>
+                    </TouchableOpacity> : null}
             </View>
-        </Root>;
-    }
+        </> : props.lookupError ? <TouchableOpacity onPress={showLookupErrorDetails}>
+            <Text style={[styles.lookupErrorNoFriendCodeField, theme.text]}>
+                <Text style={[styles.lookupErrorIcon, {color: '#' + accent_colour}]}><Warning /></Text>
+                {t('lookup_error', {message: props.lookupError.name + ' ' + props.lookupError.message})}
+            </Text>
+        </TouchableOpacity> : null}
 
-    return <Root title="Add friend" titleUser={user} scrollable autoresize>
-        <View style={styles.main}>
-            {show_friendcode_field ? <>
-                <Text style={theme.text}>Add friend</Text>
+        {props.lookupUser ? <View style={[
+            styles.targetUser,
+            !props.setFriendCode ? styles.targetUserNoFriendCodeField : null,
+            theme.targetUser,
+        ]}>
+            <Image source={{uri: props.lookupUser.imageUri, width: 100, height: 100}} style={styles.targetUserImage} />
 
-                <Text style={[styles.help, theme.text]}>Type or paste a friend code or friend code URL to send a friend request.</Text>
+            <View style={styles.targetUserDetail}>
+                <Text style={[styles.targetUserName, theme.text]}>{props.lookupUser.name}</Text>
 
-                <View style={styles.friendCodeInputContainer}>
-                    <TextInput value={friendcode} onChange={onChangeFriendCode}
-                        onKeyPress={onFriendCodeKeyPress}
-                        placeholder="0000-0000-0000"
-                        style={[styles.textInput, styles.friendCodeInput, theme.textInput]} />
-
-                    {lookup_state === RequestState.LOADING ?
-                        <ActivityIndicator style={styles.activityIndicator} size={20} color={'#' + accent_colour} /> :
-                        lookup_error ? <TouchableOpacity onPress={showLookupErrorDetails} style={styles.iconTouchable}>
-                            <Text style={[styles.icon, {color: '#' + accent_colour}]}><Warning /></Text>
-                        </TouchableOpacity> : null}
-                </View>
-            </> : lookup_error ? <TouchableOpacity onPress={showLookupErrorDetails}>
-                <Text style={[styles.lookupErrorNoFriendCodeField, theme.text]}>
-                    <Text style={[styles.lookupErrorIcon, {color: '#' + accent_colour}]}><Warning /></Text>
-                    Error looking up friend code: {lookup_error.name} {lookup_error.message}
+                <Text style={[styles.targetUserNsaId, theme.text]}>
+                    {t('nsa_id')}: <Text style={styles.targetUserNsaIdValue}>{props.lookupUser.nsaId}</Text>
                 </Text>
-            </TouchableOpacity> : null}
+                <Text style={[styles.targetUserCoralId, theme.text]}>{props.lookupUser.id ? <>
+                    {t('coral_id')}: <Text style={styles.targetUserCoralIdValue}>{props.lookupUser.id}</Text>
+                </> : t('no_coral_user')}</Text>
 
-            {target_user ? <View style={[
-                styles.targetUser,
-                !show_friendcode_field ? styles.targetUserNoFriendCodeField : null,
-                theme.targetUser,
-            ]}>
-                <Image source={{uri: target_user.imageUri, width: 100, height: 100}} style={styles.targetUserImage} />
-
-                <View style={styles.targetUserDetail}>
-                    <Text style={[styles.targetUserName, theme.text]}>{target_user.name}</Text>
-
-                    <Text style={[styles.targetUserNsaId, theme.text]}>NSA ID: <Text style={styles.targetUserNsaIdValue}>{target_user.nsaId}</Text></Text>
-                    <Text style={[styles.targetUserCoralId, theme.text]}>{target_user.id ? <>
-                        Coral user ID: <Text style={styles.targetUserCoralIdValue}>{target_user.id}</Text>
-                    </> : 'Never used Nintendo Switch Online app'}</Text>
-
-                    {send_state[0] === SendFriendRequestState.SENT && send_state[3] ?
-                        <Text style={[styles.friendRequestState, theme.text]}>You are now friends with this user.</Text> :
-                    send_state[0] === SendFriendRequestState.SENT ?
-                        <Text style={[styles.friendRequestState, theme.text]}>Friend request sent. {target_user.name} can accept your friend request using a Nintendo Switch console, or by sending you a friend request using the Nintendo Switch Online app or nxapi.</Text> :
-                    send_state[0] === SendFriendRequestState.SENDING ?
+                {send_state[0] === SendFriendRequestState.SENT && send_state[3] ?
+                    <Text style={[styles.friendRequestState, theme.text]}>{t('send_added')}</Text> :
+                send_state[0] === SendFriendRequestState.SENT ?
+                    <Text style={[styles.friendRequestState, theme.text]}>{t('send_sent', {user: props.lookupUser.name})}</Text> :
+                send_state[0] === SendFriendRequestState.SENDING ?
+                    <Text style={[styles.friendRequestState, theme.text]}>
+                        <ActivityIndicator style={styles.friendRequestActivityIndicator} color={'#' + accent_colour} />
+                        {t('send_sending')}
+                    </Text> :
+                send_state[0] === SendFriendRequestState.ERROR ?
+                    <TouchableOpacity onPress={showSendFriendRequestErrorDetails}>
                         <Text style={[styles.friendRequestState, theme.text]}>
-                            <ActivityIndicator style={styles.friendRequestActivityIndicator} color={'#' + accent_colour} />
-                            Sending friend request...
-                        </Text> :
-                    send_state[0] === SendFriendRequestState.ERROR ?
-                        <TouchableOpacity onPress={showSendFriendRequestErrorDetails}>
-                            <Text style={[styles.friendRequestState, theme.text]}>
-                                <Text style={[styles.friendRequestStateIcon, {color: '#' + accent_colour}]}><Warning /></Text>
-                                Error sending friend request: {send_state[3].name} {send_state[3].message}
-                            </Text>
-                        </TouchableOpacity> :
-                    friend ?
-                        <Text style={[styles.friendRequestState, theme.text]}>You are already friends with this user.</Text> : null}
-                </View>
-            </View> : null}
-
-            <View style={styles.buttons}>
-                <View style={styles.button}>
-                    <Button title="Close"
-                        onPress={() => window.close()}
-                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
-                </View>
-
-                {lookup_state === RequestState.LOADED && target_user &&
-                    friends_state === RequestState.LOADED && !friend &&
-                    target_user?.nsaId !== user.nsoAccount.user.nsaId ? <View style={styles.button}>
-                    <Button title="Send friend request"
-                        onPress={sendFriendRequest}
-                        primary
-                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
-                </View> : null}
+                            <Text style={[styles.friendRequestStateIcon, {color: '#' + accent_colour}]}><Warning /></Text>
+                            {t('send_error', {message: send_state[3].name + ' ' + send_state[3].message})}
+                        </Text>
+                    </TouchableOpacity> :
+                props.lookupFriend ?
+                    <Text style={[styles.friendRequestState, theme.text]}>{t('already_friends')}</Text> : null}
             </View>
+        </View> : null}
+
+        <View style={styles.buttons}>
+            <View style={styles.button}>
+                <Button title={t('close')}
+                    onPress={() => window.close()}
+                    color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+            </View>
+
+            {props.lookupState === RequestState.LOADED && props.lookupUser &&
+                props.friendsState === RequestState.LOADED && !props.lookupFriend &&
+                props.lookupUser?.nsaId !== props.user.nsoAccount.user.nsaId ? <View style={styles.button}>
+                <Button title={t('send')}
+                    onPress={sendFriendRequest}
+                    primary
+                    color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
+            </View> : null}
         </View>
-    </Root>;
+    </View>;
 }
 
 const styles = StyleSheet.create({

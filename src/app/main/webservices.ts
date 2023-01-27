@@ -8,7 +8,7 @@ import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage,
 import fetch from 'node-fetch';
 import CoralApi from '../../api/coral.js';
 import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
-import { Store } from './index.js';
+import { App, Store } from './index.js';
 import type { DownloadImagesRequest, NativeShareRequest, NativeShareUrlRequest, QrCodeReaderCameraOptions, QrCodeReaderCheckinOptions, QrCodeReaderCheckinResult, QrCodeReaderPhotoLibraryOptions, SendMessageOptions } from '../preload-webservice/znca-js-api.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { createWebServiceWindow } from './windows.js';
@@ -170,29 +170,31 @@ function isWebServiceUrlAllowed(webservice: WebService, url: string | URL) {
     return false;
 }
 
-export async function handleOpenWebServiceUri(store: Store, uri: string) {
+export async function handleOpenWebServiceUri(app: App, uri: string) {
     const match = uri.match(/^com\.nintendo\.znca:\/\/(znca\/)game\/(\d+)\/?($|\?|\#)/i);
     if (!match) return;
 
     const webservice_id = parseInt(match[2]);
 
-    const selected_user = await askUserForWebServiceUri(store, uri);
+    const selected_user = await askUserForWebServiceUri(app, uri);
     if (!selected_user) return;
 
-    const {nso, data, webservices} = await store.users.get(selected_user[0]);
+    const {nso, data, webservices} = await app.store.users.get(selected_user[0]);
 
     const webservice = webservices.result.find(w => w.id === webservice_id);
     if (!webservice) {
-        dialog.showErrorBox('Invalid web service', 'The URL did not reference an existing web service.\n\n' +
+        dialog.showErrorBox(app.i18n.t('handle_uri:web_service_invalid_title'),
+            app.i18n.t('handle_uri:web_service_invalid_detail') +
+            '\n\n' +
             uri);
         return;
     }
 
-    return openWebService(store, selected_user[0], nso, data, webservice, new URL(uri).search.substr(1));
+    return openWebService(app.store, selected_user[0], nso, data, webservice, new URL(uri).search.substr(1));
 }
 
-function askUserForWebServiceUri(store: Store, uri: string) {
-    return askUserForUri(store, uri, 'Select a user to open this web service');
+function askUserForWebServiceUri(app: App, uri: string) {
+    return askUserForUri(app, uri, app.i18n.t('handle_uri:web_service_select'));
 }
 
 export interface WebServiceData {

@@ -1,5 +1,6 @@
 import { dialog, Notification } from './electron.js';
 import createDebug from 'debug';
+import { i18n } from 'i18next';
 import { CurrentUser, Friend, Game, CoralErrorResponse } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
@@ -16,11 +17,13 @@ const debug = createDebug('app:main:monitor');
 
 export class PresenceMonitorManager {
     monitors: (EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor)[] = [];
-    notifications = new ElectronNotificationManager();
+    notifications: NotificationManager;
 
     constructor(
         public app: App
-    ) {}
+    ) {
+        this.notifications = new ElectronNotificationManager(app.i18n);
+    }
 
     async start(id: string, callback?: (monitor: EmbeddedPresenceMonitor, firstRun: boolean) => Promise<void> | void) {
         debug('Starting monitor', id);
@@ -363,7 +366,6 @@ export class PresenceMonitorManager {
 }
 
 export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
-    notifications = new ElectronNotificationManager();
     onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
@@ -422,7 +424,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 }
 
 export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
-    notifications = new ElectronNotificationManager();
+    notifications: NotificationManager | null = null;
     onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
@@ -481,13 +483,21 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
 }
 
 export class ElectronNotificationManager extends NotificationManager {
+    t: ReturnType<i18n['getFixedT']>;
+
+    constructor(i18n: i18n) {
+        super();
+
+        this.t = i18n.getFixedT(null, 'notifications');
+    }
+
     async onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as Game;
 
         new Notification({
             title: friend.name,
-            body: 'Playing ' + currenttitle.name +
-                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+            body: this.t('playing', {name: currenttitle.name +
+                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : '')})!,
             icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
@@ -495,7 +505,7 @@ export class ElectronNotificationManager extends NotificationManager {
     async onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
         new Notification({
             title: friend.name,
-            body: 'Offline',
+            body: this.t('offline')!,
             icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
@@ -505,8 +515,8 @@ export class ElectronNotificationManager extends NotificationManager {
 
         new Notification({
             title: friend.name,
-            body: 'Playing ' + currenttitle.name +
-                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+            body: this.t('playing', {name: currenttitle.name +
+                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : '')})!,
             icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
@@ -516,8 +526,8 @@ export class ElectronNotificationManager extends NotificationManager {
 
         new Notification({
             title: friend.name,
-            body: 'Playing ' + currenttitle.name +
-                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
+            body: this.t('playing', {name: currenttitle.name +
+                (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : '')})!,
             icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }

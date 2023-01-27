@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { CheckBox } from 'react-native-web';
+import { Translation, useTranslation } from 'react-i18next';
 import ipc, { events } from '../ipc.js';
 import { AccentColourContext, getAccounts, Root, useAsync, useEventListener } from '../util.js';
 import Sidebar from './sidebar.js';
@@ -35,6 +36,7 @@ export default function App(props: AppProps) {
         titleUser={selectedUser}
         vibrancy={props.vibrancy}
         style={[styles.app, !props.vibrancy ? theme.appNoVibrancy : null]}
+        i18nNamespace="main_window"
     >
         <Sidebar users={users} selectedUser={selectedUserId} onSelectUser={setSelectedUserId}
             insetTitleBarControls={props.insetTitleBarControls}
@@ -49,7 +51,9 @@ export default function App(props: AppProps) {
                     />
                 )} />
                 <TouchableOpacity onPress={() => setAutoRefresh(auto_refresh ? undefined : 30 * 1000)}>
-                    <Text style={theme.text}>Enable auto refresh</Text>
+                    <Translation keyPrefix="main_window:sidebar">{
+                        t => <Text style={theme.text}>{t('enable_auto_refresh')}</Text>
+                    }</Translation>
                 </TouchableOpacity>
             </View>
         </Sidebar>
