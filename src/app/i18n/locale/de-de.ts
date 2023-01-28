@@ -220,7 +220,7 @@ export const preferences_window = {
 };
 
 export const friend_window = {
-    no_presence: 'Du hast keinen Zugriff auf die Presence von diesem User oder es war nie online.',
+    no_presence: 'Du hast keinen Zugriff auf die Presence von diesem User oder er war nie online.',
 
     nsa_id: 'NSA ID',
     coral_id: 'Coral user ID',
@@ -248,24 +248,24 @@ export const friend_window = {
 };
 
 export const addfriend_window = {
-    title: 'Add friend',
-    help: 'Type or paste a friend code or friend code URL to send a friend request.',
+    title: 'Freund hinzufügen',
+    help: 'Gebe oder füge einen Freundescode oder eine Freundescode-URL ein, um eine Freundschaftsanfrage zu senden.',
 
-    lookup_error: 'Error looking up friend code: {{message}}',
+    lookup_error: 'Fehler beim Aufrufen des Freundescodes aufgetreten: {{message}}',
 
     nsa_id: 'NSA ID',
     coral_id: 'Coral user ID',
-    no_coral_user: 'Never used the Nintendo Switch Online app',
+    no_coral_user: 'Hat nie die Nintendo Switch Online App genutzt',
 
-    send_added: 'You are now friends with this user.',
-    send_sent: 'Friend request sent. {{user}} can accept your friend request using a Nintendo Switch console, or by sending you a friend request using the Nintendo Switch Online app or nxapi.',
-    send_sending: 'Sending friend request...',
-    send_error: 'Error sending friend request: {{message}}',
+    send_added: 'Du bist nun mit diesem User befreundet.',
+    send_sent: 'Freundschaftsanfrage gesendet. {{user}} kann deine Freundschaftsanfrage über die Nintendo Switch Konsole annehmen oder dir eine Freundschaftsanfrage über die Nintendo Switch Online App oder nxapi senden.',
+    send_sending: 'Sende Freundschaftsanfrage...',
+    send_error: 'Fehler beim Senden der Freundschaftsanfrage aufgetreten: {{message}}',
 
-    already_friends: 'You are already friends with this user.',
+    already_friends: 'Du bist bereits mit diesem User befreundet',
 
-    close: 'Close',
-    send: 'Send friend request',
+    close: 'Schließen',
+    send: 'Anfrage senden',
 };
 
 export const discordsetup_window = {
