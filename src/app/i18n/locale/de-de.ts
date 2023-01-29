@@ -198,7 +198,7 @@ export const preferences_window = {
         friend_code_custom: 'Eigenen Freundescode festlegen',
 
         inactive_presence: 'Zeige inaktive Aktivität',
-        inactive_presence_help: 'Zeigt "Spielt nicht" wenn eine verbundene Konsole online ist, du aber nicht spielst.',
+        inactive_presence_help: 'Zeigt "Spielt nicht", wenn eine verbundene Konsole online ist, du aber nicht spielst.',
 
         play_time: 'Spielzeit',
         play_time_hidden: 'Spielzeit niemals anzeigen',
