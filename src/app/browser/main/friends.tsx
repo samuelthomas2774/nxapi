@@ -24,10 +24,7 @@ export default function Friends(props: {
     }, [props.user.user.id]);
 
     const header_buttons = <TouchableOpacity onPress={showAddFriendModal} style={styles.iconTouchable}>
-        <Text style={[styles.icon, {color: '#' + accent_colour}]} accessibilityLabel={t('add')!}
-            // @ts-expect-error react-native-web
-            title={t('add')!}
-        ><AddOutline /></Text>
+        <Text style={[styles.icon, {color: '#' + accent_colour}]}><AddOutline title={t('add')!} /></Text>
     </TouchableOpacity>;
 
     return <Section title={t('title')} loading={props.loading} error={props.error} headerButtons={header_buttons}>

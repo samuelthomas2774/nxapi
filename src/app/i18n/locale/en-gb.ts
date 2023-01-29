@@ -128,6 +128,8 @@ export const main_window = {
             desc_2: 'Login to the Nintendo Switch Online app to view details here, or use the nxapi command to access Parental Controls data.',
             login: 'Login',
         },
+
+        section_error: 'Error updating data',
     },
 
     discord_section: {
