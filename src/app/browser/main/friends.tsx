@@ -30,16 +30,6 @@ export default function Friends(props: {
         ><AddOutline /></Text>
     </TouchableOpacity>;
 
-    const onFriendCodeContextMenu = useCallback(() => {
-        ipc.showFriendCodeMenu(props.user.nso!.nsoAccount.user.links.friendCode);
-    }, [ipc, props.user.nso?.nsoAccount.user.links.friendCode]);
-
-    const fc = <Text
-        style={styles.friendCodeValue}
-        // @ts-expect-error react-native-web
-        onContextMenu={onFriendCodeContextMenu}
-    >SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
-
     return <Section title={t('title')} loading={props.loading} error={props.error} headerButtons={header_buttons}>
         {props.friends.length ? <ScrollView horizontal>
             <View style={styles.content}>

@@ -145,6 +145,8 @@ export class App {
 }
 
 function setAboutPanelOptions(i18n?: i18n) {
+    const language = i18n ? languages[i18n.resolvedLanguage as keyof typeof languages] : undefined;
+
     app.setAboutPanelOptions({
         applicationName: 'nxapi-app',
         applicationVersion: process.platform === 'darwin' ? version : version +
@@ -152,7 +154,10 @@ function setAboutPanelOptions(i18n?: i18n) {
         version: git?.revision.substr(0, 8) ?? '?',
         authors: ['Samuel Elliott'],
         website: GITLAB_URL,
-        credits: i18n?.t('app:credits') ?? CREDITS_NOTICE,
+        credits: (i18n?.t('app:credits') ?? CREDITS_NOTICE) +
+            (language?.authors.length ? '\n\n' + i18n!.t('app:translation_credits', {
+                language: language.name, authors: language.authors.map(a => a[0]),
+            }) : ''),
         copyright: i18n?.t('app:licence') ?? LICENCE_NOTICE,
     });
 }

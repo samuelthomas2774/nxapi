@@ -5,6 +5,7 @@ export const app = {
 
     licence: LICENCE_NOTICE,
     credits: CREDITS_NOTICE,
+    translation_credits: '{{language}} translation by {{authors, list}}.',
 };
 
 export const app_menu = {
