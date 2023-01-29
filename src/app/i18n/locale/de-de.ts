@@ -115,7 +115,7 @@ export const main_window = {
             title: 'Fehler beim Laden der Daten',
             message: 'Ein Fehler ist beim Laden der {{errors, list}} Daten aufgetreten.',
             message_friends: 'freunde',
-            message_webservices: 'spiel-spezifische services',
+            message_webservices: 'spielspezifische services',
             message_event: 'sprachchat',
             retry: 'Erneut versuchen',
             view_details: 'Details anschauen',
@@ -134,10 +134,10 @@ export const main_window = {
 
         setup_with_existing_user: 'Benutze einer dieser Account, um die Discord Rich Presence einzurichten: <0></0>.',
         add_user: 'Füge einen Nintendo Switch Online Account mit diesem User als Freund hinzu, um die Discord Rich Presence einzurichten.',
-        active_self: 'Die Presence wird mit diesem User auf Discord geteilt.',
-        active_friend: '<0></0>\'s Presence wird mit diesem Account auf Discord geteilt.',
-        active_unknown: 'Die Presence eines unbekannten Users wird mit Discord geteilt.',
-        active_via: 'Die Presence wird mit diesem User auf Discord über <0></0> geteilt.',
+        active_self: 'Die Aktivität wird mit diesem User auf Discord geteilt.',
+        active_friend: '<0></0>\'s Aktivität wird mit diesem Account auf Discord geteilt.',
+        active_unknown: 'Die Aktivität eines unbekannten Users wird mit Discord geteilt.',
+        active_via: 'Die Aktivität wird mit diesem User auf Discord über <0></0> geteilt.',
 
         setup: 'Einrichten',
         disable: 'Deaktivieren',
@@ -154,7 +154,7 @@ export const main_window = {
     },
 
     webservices_section: {
-        title: 'Spiel-spezifische Services',
+        title: 'Spielspezifische Services',
     },
 
     event_section: {
@@ -197,7 +197,7 @@ export const preferences_window = {
         friend_code_self: 'Teile meinen Freundescode',
         friend_code_custom: 'Eigenen Freundescode festlegen',
 
-        inactive_presence: 'Zeige inaktive Presence',
+        inactive_presence: 'Zeige inaktive Aktivität',
         inactive_presence_help: 'Zeigt "Spielt nicht" wenn eine verbundene Konsole online ist, du aber nicht spielst.',
 
         play_time: 'Spielzeit',
@@ -227,7 +227,7 @@ export const friend_window = {
     no_coral_user: 'Hat nie die Nintendo Switch Online App genutzt',
 
     friends_since: 'Freunde seit: {{date, datetime}}',
-    presence_updated_at: 'Presence aktualisiert: {{date, datetime}}',
+    presence_updated_at: 'Aktivität aktualisiert: {{date, datetime}}',
     presence_logout_at: 'Zuletzt online: {{date, datetime}}',
 
     presence_sharing: 'Dieser User kann deine Aktivität sehen.',
@@ -272,12 +272,12 @@ export const discordsetup_window = {
     title: 'Discord Rich Presence Setup',
 
     mode_heading: '1. Wähle den Modus aus',
-    mode_coral_friend: 'Wähle einen User, der mit dir befreundet ist, aus',
-    mode_url: 'Gebe eine URL ein, die deine Aktivitätsdaten zurück gibt.',
+    mode_coral_friend: 'Wähle einen User, der mit dir befreundet ist, aus.',
+    mode_url: 'Gebe eine URL ein, die deine Aktivitäten zurückgibt.',
     mode_none: 'Deaktivieren',
 
     coral_user_heading: '2. Wähle den User aus',
-    coral_user_help: 'Der User muss mit dir befreundet sein, um die Presence zu teilen.',
+    coral_user_help: 'Der User muss mit dir befreundet sein, um die Aktivität zu teilen.',
     coral_friend_heading: '3. Wähle einen Freund aus',
     coral_friend_help: 'Das ist der User, den du teilen möchtest.',
 
