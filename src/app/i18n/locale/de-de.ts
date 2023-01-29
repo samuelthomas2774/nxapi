@@ -282,7 +282,7 @@ export const discordsetup_window = {
     coral_friend_help: 'Das ist der User, den du teilen möchtest.',
 
     url_heading: '2. Gebe eine Presence-URL ein',
-    url_help: 'Der Link muss eine HTTPS-URL ein, die ein JSON Objekt mit einem User, Freund oder [] zurückgibt. Diese Funktion ist für nxapi's znc API Proxy vorgesehen.',
+    url_help: 'Der Link muss eine HTTPS-URL ein, die ein JSON Objekt mit einem User, Freund oder [] zurückgibt. Diese Funktion ist für nxapi\'s znc API Proxy vorgesehen.',
 
     preferences_heading: 'Konfiguriere zusätzliche Optionen für die Discord Rich Presence',
     preferences: 'Einstellungen',
