@@ -28,6 +28,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     const t = appinstance.i18n.getFixedT(null, 'menus');
 
     ipcMain.on('nxapi:browser:getwindowdata', e => e.returnValue = getWindowConfiguration(e.sender));
+    ipcMain.on('nxapi:app:language', e => e.returnValue = appinstance.i18n.resolvedLanguage ?? appinstance.i18n.language);
 
     let accent_colour = systemPreferences.getAccentColor?.() || undefined;
 

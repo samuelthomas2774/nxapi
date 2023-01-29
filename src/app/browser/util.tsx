@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } fro
 import { ColorSchemeName, I18nManager, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
 import { i18n } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import type { User as DiscordUser } from 'discord-rpc';
 import { ErrorResponse } from '../../api/util.js';
 import { DiscordPresence } from '../../discord/types.js';
@@ -49,10 +48,11 @@ export function Root(props: React.PropsWithChildren<{
         // @ts-expect-error
         window.i18n = i18n;
 
-        await i18n
-            .use(LanguageDetector as unknown as typeof import('i18next-browser-languagedetector').default)
-            .use(initReactI18next)
-            .init();
+        i18n.use(initReactI18next);
+
+        await i18n.init({
+            lng: ipc.getLanguage(),
+        });
 
         await i18n.loadNamespaces('app');
         if (props.i18nNamespace) await i18n.loadNamespaces(props.i18nNamespace);

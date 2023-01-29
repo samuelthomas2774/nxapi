@@ -82,6 +82,7 @@ const ipc = {
     registerEventListener: (event: string, listener: (args: any[]) => void) => events.on(event, listener),
     removeEventListener: (event: string, listener: (args: any[]) => void) => events.removeListener(event, listener),
 
+    getLanguage: () => language,
     getAccentColour: () => accent_colour,
 
     platform: process.platform,
@@ -89,15 +90,20 @@ const ipc = {
 
 export type NxapiElectronIpc = typeof ipc;
 
-ipcRenderer.on('nxapi:app:update-language', (e, l: string) => events.emit('update-language', l));
 ipcRenderer.on('nxapi:window:refresh', () => events.emit('window:refresh') || location.reload());
 ipcRenderer.on('nxapi:accounts:shouldrefresh', () => events.emit('update-nintendo-accounts'));
 ipcRenderer.on('nxapi:discord:shouldrefresh', () => events.emit('update-discord-presence-source'));
 ipcRenderer.on('nxapi:discord:presence', (e, p: DiscordPresence) => events.emit('update-discord-presence', p));
 ipcRenderer.on('nxapi:discord:user', (e, u: User) => events.emit('update-discord-user', u));
 
+let language: string | undefined = invSync('app:language');
+ipcRenderer.on('nxapi:app:update-language', (event, l: string) => {
+    language = l;
+    events.emit('update-language', l);
+});
+
 let accent_colour: string | undefined = invSync('systemPreferences:accent-colour');
-ipcRenderer.on('nxapi:systemPreferences:accent-colour', (event, c) => {
+ipcRenderer.on('nxapi:systemPreferences:accent-colour', (event, c: string) => {
     accent_colour = c;
     events.emit('systemPreferences:accent-colour', c);
 });
