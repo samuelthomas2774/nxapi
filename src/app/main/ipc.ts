@@ -316,9 +316,12 @@ function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser, 
                     date: new Date(friend.presence.game.firstPlayedAt * 1000),
                     formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
                 })!, enabled: false}),
-                new MenuItem({label: t('game_play_time', {
-                    time: hrduration(friend.presence.game.totalPlayTime),
-                })!, enabled: false}),
+                new MenuItem({label: friend.presence.game.totalPlayTime >= 60 ?
+                    friend.presence.game.totalPlayTime % 60 ?
+                        t('game_play_time_hm', {hours: Math.floor(friend.presence.game.totalPlayTime / 60),
+                            minutes: friend.presence.game.totalPlayTime % 60})! :
+                        t('game_play_time_h', {hours: friend.presence.game.totalPlayTime / 60})! :
+                    t('game_play_time_m', {minutes: friend.presence.game.totalPlayTime})!, enabled: false}),
             ] : []),
             new MenuItem({label: t('presence_updated', {
                 date: new Date(friend.presence.updatedAt * 1000),

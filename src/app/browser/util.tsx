@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ColorSchemeName, I18nManager, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
-import { i18n } from 'i18next';
+import { ColorSchemeName, LayoutChangeEvent, Platform, StyleProp, StyleSheet, useColorScheme, View, ViewStyle } from 'react-native';
+import { i18n, TFunction } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import type { User as DiscordUser } from 'discord-rpc';
 import { ErrorResponse } from '../../api/util.js';
@@ -305,10 +305,10 @@ export function useActiveDiscordUser() {
     return user;
 }
 
-export function useTimeSince(time: Date, short = false) {
+export function useTimeSince(time: Date, short = false, t?: TFunction) {
     const [now, setNow] = useState(Date.now());
 
-    const [since, update_in] = getTimeSince(time, now, short ? short_time_since_intervals : time_since_intervals);
+    const [since, update_in] = getTimeSince(time, now, short ? short_time_since_intervals : time_since_intervals, t);
     const update_at = Date.now() + update_in;
 
     useEffect(() => {
@@ -323,24 +323,28 @@ interface TimeSinceInterval {
     interval: number;
     max: number;
     string: (count: number) => string;
+    key?: string;
 }
 
 const time_since_intervals: TimeSinceInterval[] = [
-    {interval: 1000, max: 10, string: () => 'just now'},
-    {interval: 1000, max: 60, string: c => c + ' second' + (c === 1 ? '' : 's') + ' ago'},
-    {interval: 60 * 1000, max: 60, string: c => c + ' minute' + (c === 1 ? '' : 's') + ' ago'},
-    {interval: 60 * 60 * 1000, max: 24, string: c => c + ' hour' + (c === 1 ? '' : 's') + ' ago'},
-    {interval: 24 * 60 * 60 * 1000, max: Infinity, string: c => c + ' day' + (c === 1 ? '' : 's') + ' ago'},
+    {interval: 1000, max: 10, string: () => 'just now', key: 'default.now'},
+    {interval: 1000, max: 60, string: c => c + ' second' + (c === 1 ? '' : 's') + ' ago', key: 'default.seconds'},
+    {interval: 60 * 1000, max: 60, string: c => c + ' minute' + (c === 1 ? '' : 's') + ' ago', key: 'default.minutes'},
+    {interval: 60 * 60 * 1000, max: 24, string: c => c + ' hour' + (c === 1 ? '' : 's') + ' ago', key: 'default.hours'},
+    {interval: 24 * 60 * 60 * 1000, max: Infinity, string: c => c + ' day' + (c === 1 ? '' : 's') + ' ago', key: 'default.days'},
 ];
 const short_time_since_intervals: TimeSinceInterval[] = [
-    {interval: 1000, max: 10, string: () => 'Just now'},
-    {interval: 1000, max: 60, string: c => c + ' sec' + (c === 1 ? '' : 's')},
-    {interval: 60 * 1000, max: 60, string: c => c + ' min' + (c === 1 ? '' : 's')},
-    {interval: 60 * 60 * 1000, max: 24, string: c => c + ' hr' + (c === 1 ? '' : 's')},
-    {interval: 24 * 60 * 60 * 1000, max: Infinity, string: c => c + ' day' + (c === 1 ? '' : 's')},
+    {interval: 1000, max: 10, string: () => 'Just now', key: 'default.now'},
+    {interval: 1000, max: 60, string: c => c + ' sec' + (c === 1 ? '' : 's'), key: 'short.seconds'},
+    {interval: 60 * 1000, max: 60, string: c => c + ' min' + (c === 1 ? '' : 's'), key: 'short.minutes'},
+    {interval: 60 * 60 * 1000, max: 24, string: c => c + ' hr' + (c === 1 ? '' : 's'), key: 'short.hours'},
+    {interval: 24 * 60 * 60 * 1000, max: Infinity, string: c => c + ' day' + (c === 1 ? '' : 's'), key: 'short.days'},
 ];
 
-function getTimeSince(time: Date | number, now = Date.now(), intervals = time_since_intervals): [string, number] {
+function getTimeSince(
+    time: Date | number, now = Date.now(),
+    intervals = time_since_intervals, t?: TFunction,
+): [string, number] {
     if (time instanceof Date) time = time.getTime();
 
     const elapsed = Math.max(0, now - time);
@@ -349,7 +353,10 @@ function getTimeSince(time: Date | number, now = Date.now(), intervals = time_si
     for (const i of intervals) {
         if (elapsed < i.max * i.interval || last === i) {
             const count = Math.floor(elapsed / i.interval);
-            return [i.string.call(null, count), i.interval - (elapsed - (count * i.interval))];
+            return [
+                (t && i.key ? t(i.key, {count, defaultValue: ''}) : '') || i.string.call(null, count),
+                i.interval - (elapsed - (count * i.interval)),
+            ];
         }
     }
 

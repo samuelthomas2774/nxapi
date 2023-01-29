@@ -98,7 +98,7 @@ function FriendPresence(props: {
     const { t, i18n } = useTranslation('main_window', { keyPrefix: 'friends_section' });
 
     const logout = props.presence.logoutAt ? new Date(props.presence.logoutAt * 1000) : null;
-    const since_logout = useTimeSince(logout ?? new Date(0), true);
+    const since_logout = useTimeSince(logout ?? new Date(0), true, i18n.getFixedT(null, 'time_since'));
 
     if (props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) {
         return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>{t('presence_playing')}</Text>;
