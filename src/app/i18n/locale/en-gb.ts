@@ -145,9 +145,10 @@ export const main_window = {
 
     friends_section: {
         title: 'Friends',
+        add: 'Add',
 
         no_friends: 'Add friends using a Nintendo Switch console.',
-        friend_code: 'Your friend code',
+        friend_code: 'Your friend code: <0></0>',
 
         presence_playing: 'Playing',
         presence_offline: 'Offline',
