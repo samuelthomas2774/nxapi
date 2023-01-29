@@ -203,12 +203,12 @@ export const preferences_window = {
         play_time: 'Spielzeit',
         play_time_hidden: 'Spielzeit niemals anzeigen',
         play_time_nintendo: 'Zeige Spielzeit wie sie auf der Nintendo Switch Konsole angezeigt wird',
-        play_time_approximate_play_time: 'Zeige ungefähre Spielzeit an (nächste 5 Stunden)',
-        play_time_approximate_play_time_since: 'Zeige ungefähre Spielzeit (nächste 5 Stunden) mit erstem Startdatum',
-        play_time_hour_play_time: 'Zeige ungefähre Spielzeit (nächste Stunde)',
-        play_time_hour_play_time_since: 'Zeige ungefähre Spielzeit (nächste Stunde) mit erstem Startdatum',
-        play_time_detailed_play_time: 'Zeige exakte Spielzeit',
-        play_time_detailed_play_time_since: 'Zeige exakte Spielzeit mit erstem Startdatum',
+        play_time_approximate_play_time: 'Zeige ungefähre Spielzeit (nächste 5 Stunden) an',
+        play_time_approximate_play_time_since: 'Zeige ungefähre Spielzeit (nächste 5 Stunden) mit erstem Startdatum an',
+        play_time_hour_play_time: 'Zeige ungefähre Spielzeit (nächste Stunde) an',
+        play_time_hour_play_time_since: 'Zeige ungefähre Spielzeit (nächste Stunde) mit erstem Startdatum an',
+        play_time_detailed_play_time: 'Zeige exakte Spielzeit an',
+        play_time_detailed_play_time_since: 'Zeige exakte Spielzeit mit erstem Startdatum an',
     },
 
     splatnet3: {
