@@ -5,6 +5,7 @@ const debug = createDebug('app:i18n');
 
 export const languages = {
     'en-GB': [() => import('./locale/en-gb.js'), 'English'] as const,
+    'de-DE': [() => import('./locale/de-de.js'), 'Deutsch'] as const,
 };
 
 type Namespace = keyof typeof import('./locale/en-gb.js');
