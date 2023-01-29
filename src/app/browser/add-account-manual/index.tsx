@@ -53,7 +53,7 @@ function AddAccountManualPrompt(props: AddAccountManualPromptProps & {
         </View>
 
         <Text style={[styles.header, theme.text]}>{t('response_heading')}</Text>
-        <Text style={[styles.help, theme.text]}>{t('response_help_1', {url: 'npf{props.client_id}://auth'})}</Text>
+        <Text style={[styles.help, theme.text]}>{t('response_help_1', {url: `npf${props.client_id}://auth`})}</Text>
         <Text style={[styles.help, theme.text]}>{t('response_help_2')}</Text>
 
         <TextInput value={callback_url} onChangeText={setCallbackUrl}
