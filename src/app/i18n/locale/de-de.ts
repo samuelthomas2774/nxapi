@@ -29,7 +29,7 @@ export const menu_app = {
     add_friend: 'Freund hinzufügen',
     web_services: 'Web-Services',
 
-    moon_heading: 'Nintendo Switch Parental Controls',
+    moon_heading: 'Nintendo Switch Altersbeschränkungen',
 
     add_account: 'Account hinzufügen',
 
@@ -187,9 +187,9 @@ export const preferences_window = {
         heading: 'Discord Rich Presence',
         enabled: 'Discord Rich Presence ist aktiviert.',
         disabled: 'Discord Rich Presence ist deaktiviert.',
-        setup: 'Discord Rich Presence setup',
+        setup: 'Discord Rich Presence Setup',
 
-        user: 'Discord user',
+        user: 'Discord User',
         user_any: 'Zuerst gesehen',
 
         friend_code: 'Freundescode',
@@ -213,14 +213,14 @@ export const preferences_window = {
 
     splatnet3: {
         heading: 'SplatNet 3',
-        discord: 'Aktiviere erweiterte Discord Rich Presence für Splatoon 3',
+        discord: 'Aktiviere die erweiterte Discord Rich Presence für Splatoon 3',
         discord_help_1: 'Benutzt SplatNet 3, um zusätzliche Informationen anzuzeigen, während du Splatoon 3 spielst. Du musst einen zweiten Nintendo Switch Account hinzufügen, welcher mit deinem Hauptaccount befreundet ist und Zugriff auf SplatNet 3 hat.',
         discord_help_2: 'Wenn du eine Presence URL benutzt, werden die zusätzlichen Informationen angezeigt, ohne diese Einstellung zu berücksichtigen.',
     },
 };
 
 export const friend_window = {
-    no_presence: 'Du hast keinen Zugriff auf die Presence von diesem User oder er war nie online.',
+    no_presence: 'Du hast keinen Zugriff auf die Aktivität von diesem User oder er war nie online.',
 
     nsa_id: 'NSA ID',
     coral_id: 'Coral user ID',
@@ -230,10 +230,10 @@ export const friend_window = {
     presence_updated_at: 'Presence aktualisiert: {{date, datetime}}',
     presence_logout_at: 'Zuletzt online: {{date, datetime}}',
 
-    presence_sharing: 'Dieser User kann deine Presence sehen.',
-    presence_not_sharing: 'Dieser User kann deine Presence nicht sehen.',
+    presence_sharing: 'Dieser User kann deine Aktivität sehen.',
+    presence_not_sharing: 'Dieser User kann deine Aktivität nicht sehen.',
 
-    discord_presence: 'Presence auf Discord teilen',
+    discord_presence: 'Aktivität auf Discord teilen',
     close: 'Schließen',
 
     presence_playing: 'Spielt {{game}}',
@@ -241,7 +241,7 @@ export const friend_window = {
     presence_last_seen: 'Zuletzt gesehen: {{since_logout}}',
 
     game_played_for: 'Gespielt für {{duration}}',
-    game_first_played: 'Zuerst gespielt {{date, datetime}}',
+    game_first_played: 'Zuerst gespielt am {{date, datetime}}',
     game_first_played_now: 'Zuerst gespielt jetzt',
     game_title_id: 'Titel ID',
     game_shop: 'Nintendo eShop',
@@ -269,39 +269,39 @@ export const addfriend_window = {
 };
 
 export const discordsetup_window = {
-    title: 'Discord Rich Presence setup',
+    title: 'Discord Rich Presence Setup',
 
-    mode_heading: '1. Select mode',
-    mode_coral_friend: 'Select a user that is friends with the user you want to share',
-    mode_url: 'Enter a URL that returns the presence data you want to share',
-    mode_none: 'Disable',
+    mode_heading: '1. Wähle den Modus aus',
+    mode_coral_friend: 'Wähle einen User, der mit dir befreundet ist, aus',
+    mode_url: 'Gebe eine URL ein, die deine Aktivitätsdaten zurück gibt.',
+    mode_none: 'Deaktivieren',
 
-    coral_user_heading: '2. Select user',
-    coral_user_help: 'This user must be friends with the user you want to share.',
-    coral_friend_heading: '3. Select friend',
-    coral_friend_help: 'This is the user you want to share.',
+    coral_user_heading: '2. Wähle den User aus',
+    coral_user_help: 'Der User muss mit dir befreundet sein, um die Presence zu teilen.',
+    coral_friend_heading: '3. Wähle einen Freund aus',
+    coral_friend_help: 'Das ist der User, den du teilen möchtest.',
 
-    url_heading: '2. Enter presence URL',
-    url_help: 'This must be a HTTPS URL that returns a JSON object with either a user, friend or presence key. This is intended to be used with nxapi\'s znc API proxy.',
+    url_heading: '2. Gebe eine Presence-URL ein',
+    url_help: 'Der Link muss eine HTTPS-URL ein, die ein JSON Objekt mit einem User, Freund oder [] zurückgibt. Diese Funktion ist für nxapi's znc API Proxy vorgesehen.',
 
-    preferences_heading: 'Configure additional options for Discord Rich Presence',
-    preferences: 'Preferences',
+    preferences_heading: 'Konfiguriere zusätzliche Optionen für die Discord Rich Presence',
+    preferences: 'Einstellungen',
 
-    cancel: 'Cancel',
-    save: 'Save',
+    cancel: 'Abbrechen',
+    save: 'Speichern',
 };
 
 export const addaccountmanual_window = {
-    title: 'Add account',
+    title: 'Account hinzufügen',
 
-    authorise_heading: '1. Login to your Nintendo Account',
-    authorise_help: 'Do not select an account yet.',
-    authorise_open: 'Open Nintendo Account authorisation',
+    authorise_heading: '1. Logge dich in deinen Nintendo Account ein.',
+    authorise_help: 'Wähle noch keinen Account aus.',
+    authorise_open: 'Öffne die Nintendo Account Authorisierung',
 
-    response_heading: '2. Enter the callback link',
-    response_help_1: 'On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "{{url}}".',
-    response_help_2: 'If you are adding a child account linked to your account, click "Select this person" next to their account to sign in as the child account, then with only the child account showing right click "Select this person" and copy the link.',
+    response_heading: '2. Gebe den Weiterleitungslink ein',
+    response_help_1: 'Rechtsklick auf der "Externen Account verlinken" Seite, Rechtsklick auf "Diese Person auswählen" und den Link kopieren. Der Link sollte mit "{{url}}". beginnen',
+    response_help_2: 'Wenn du einen Kinder-Account, welcher mit deinem Account verlinkt ist, hinzufügen möchtest, klicke auf \"Diese Person auswählen\". Wenn dann nur der Kinder-Account angezeigt wird, Rechtsklick auf \"Diese Person auswählen\" und den Link kopieren.',
 
-    cancel: 'Cancel',
-    save: 'Add account',
+    cancel: 'Abbrechen',
+    save: 'Account hinzufügen',
 };
