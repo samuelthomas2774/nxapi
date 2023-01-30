@@ -95,7 +95,7 @@ export const handle_uri = {
     friend_code_select: 'Wähle einen User aus, um Freunde hinzuzufügen',
     web_service_select: 'Wähle einen User aus, um diesen Service zu öffnen',
     web_service_invalid_title: 'Unbekannter Titel',
-    web_service_invalid_detail: 'Die angegebene URL verwies nicht auf einen existierenden Web Service.',
+    web_service_invalid_detail: 'Die angegebene URL verwies nicht auf einen existierenden Web-Service.',
     cancel: 'Abbrechen',
 };
 
