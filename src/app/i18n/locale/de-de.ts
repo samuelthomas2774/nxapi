@@ -95,7 +95,7 @@ export const handle_uri = {
     friend_code_select: 'Wähle einen User aus, um Freunde hinzuzufügen',
     web_service_select: 'Wähle einen User aus, um diesen Service zu öffnen',
     web_service_invalid_title: 'Unbekannter Titel',
-    web_service_invalid_detail: 'The URL did not reference an existing web service.',
+    web_service_invalid_detail: 'Die angegebene URL verwies nicht auf einen existierenden Web Service.',
     cancel: 'Abbrechen',
 };
 
@@ -317,7 +317,7 @@ export const discordsetup_window = {
 
     mode_heading: '1. Wähle den Modus aus',
     mode_coral_friend: 'Wähle einen User, der mit dir befreundet ist, aus.',
-    mode_url: 'Gebe eine URL ein, die deine Aktivitäten zurückgibt.',
+    mode_url: 'Gebe eine URL ein, die deine Aktivität zurückgibt.',
     mode_none: 'Deaktivieren',
 
     coral_user_heading: '2. Wähle den User aus',
@@ -326,7 +326,7 @@ export const discordsetup_window = {
     coral_friend_help: 'Das ist der User, den du teilen möchtest.',
 
     url_heading: '2. Gebe eine Presence-URL ein',
-    url_help: 'Der Link muss eine HTTPS-URL ein, die ein JSON Objekt mit einem User, Freund oder [] zurückgibt. Diese Funktion ist für nxapi\'s znc API Proxy vorgesehen.',
+    url_help: 'Der Link muss eine HTTPS-URL sein, die ein JSON-Objekt mit einem User, Freund oder Aktivitätsschlüssel zurückgibt. Diese Funktion ist für nxapi\'s znc API Proxy vorgesehen.',
 
     preferences_heading: 'Konfiguriere zusätzliche Optionen für die Discord Rich Presence',
     preferences: 'Einstellungen',
