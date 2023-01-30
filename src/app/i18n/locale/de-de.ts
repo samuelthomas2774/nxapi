@@ -5,6 +5,7 @@ export const app = {
 
     licence: LICENCE_NOTICE,
     credits: CREDITS_NOTICE,
+    translation_credits: '{{language}} Übersetzungen von {{authors, list}}.',
 };
 
 export const app_menu = {
@@ -14,7 +15,7 @@ export const app_menu = {
     learn_more_github: 'Mehr erfahren (GitHub)',
     search_issues: 'Probleme untersuchen',
 
-    refresh: 'Refresh',
+    refresh: 'Aktualisieren',
 };
 
 export const menu_app = {
@@ -68,8 +69,16 @@ export const menus = {
     friend: {
         presence_online: 'Online',
         game_first_played: 'Zuerst gespielt: {{date, datetime}}',
-        game_play_time: 'Spielzeit: {{time, datetime}}',
-        presence_inactive: 'Offline (console online)',
+        
+        game_play_time_h: 'Spielzeit: $t(friend.hours, {"count": {{hours}}})',
+        game_play_time_hm: 'Spielzeit: $t(friend.hours, {"count": {{hours}}}), $t(friend.minutes, {"count": {{minutes}}})',
+        game_play_time_m: 'Spielzeit: $t(friend.minutes, {"count": {{minutes}}})',
+        hours_one: '{{count}} Stunde',
+        hours_other: '{{count}} Stunden',
+        minutes_one: '{{count}} Minute',
+        minutes_other: '{{count}} Minuten',
+
+        presence_inactive: 'Offline (Konsole online)',
         presence_offline: 'Offline',
         presence_updated: 'Aktualisiert: {{date, datetime}}',
         presence_logout_time: 'Ausgeloggt: {{date, datetime}}',
@@ -88,6 +97,32 @@ export const handle_uri = {
     web_service_invalid_title: 'Unbekannter Titel',
     web_service_invalid_detail: 'The URL did not reference an existing web service.',
     cancel: 'Abbrechen',
+};
+
+export const time_since = {
+    default: {
+        now: 'Jetzt gerade',
+        seconds_one: 'Vor {{count}} Sekunde',
+        seconds_other: 'Vor {{count}} Sekunden',
+        minutes_one: 'Vor {{count}} Minute',
+        minutes_other: 'Vor {{count}} Minuten',
+        hours_one: 'Vor {{count}} Stunde',
+        hours_other: 'Vor {{count}} Stunden',
+        days_one: 'Vor {{count}} Tag',
+        days_other: 'Vor {{count}} Tagen',
+    },
+
+    short: {
+        now: 'Jetzt gerade',
+        seconds_one: '{{count}}Sek',
+        seconds_other: '{{count}}Sek',
+        minutes_one: '{{count}}Min',
+        minutes_other: '{{count}}Min',
+        hours_one: '{{count}}Std',
+        hours_other: '{{count}}Std',
+        days_one: '{{count}}Tg',
+        days_other: '{{count}}Tg',
+    },
 };
 
 export const main_window = {
@@ -127,6 +162,8 @@ export const main_window = {
             desc_2: 'Logge dich mit der Nintendo Switch Online App ein, um Details einzusehen oder benutze den nxapi Befehl, um auf Altersbeschränkungen zuzugreifen.',
             login: 'Login',
         },
+
+        section_error: 'Fehler beim Aktualisieren der Daten',
     },
 
     discord_section: {
@@ -147,7 +184,7 @@ export const main_window = {
         title: 'Freunde',
 
         no_friends: 'Füge Freunde mit deiner Nintendo Switch Konsole hinzu.',
-        friend_code: 'Dein Freundescode',
+        friend_code: 'Dein Freundescode: <0></0>',
 
         presence_playing: 'Spielt',
         presence_offline: 'Offline',
@@ -240,7 +277,14 @@ export const friend_window = {
     presence_offline: 'Offline',
     presence_last_seen: 'Zuletzt gesehen: {{since_logout}}',
 
-    game_played_for: 'Gespielt für {{duration}}',
+    game_played_for_h: 'Gespielt für $t(hours, {"count": {{hours}}})',
+    game_played_for_hm: 'Gespielt für $t(hours, {"count": {{hours}}}), $t(minutes, {"count": {{minutes}}})',
+    game_played_for_m: 'Gespielt für $t(minutes, {"count": {{minutes}}})',
+    hours_one: '{{count}} Stunde',
+    hours_other: '{{count}} Stunden',
+    minutes_one: '{{count}} Minute',
+    minutes_other: '{{count}} Minuten',
+
     game_first_played: 'Zuerst gespielt am {{date, datetime}}',
     game_first_played_now: 'Zuerst gespielt jetzt',
     game_title_id: 'Titel ID',
