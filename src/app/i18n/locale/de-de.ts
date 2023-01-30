@@ -30,7 +30,7 @@ export const menu_app = {
     add_friend: 'Freund hinzufügen',
     web_services: 'Web-Services',
 
-    moon_heading: 'Nintendo Switch Altersbeschränkungen',
+    moon_heading: 'Nintendo Switch-Altersbeschränkungen',
 
     add_account: 'Account hinzufügen',
 
@@ -101,7 +101,7 @@ export const handle_uri = {
 
 export const time_since = {
     default: {
-        now: 'Jetzt gerade',
+        now: 'jetzt',
         seconds_one: 'Vor {{count}} Sekunde',
         seconds_other: 'Vor {{count}} Sekunden',
         minutes_one: 'Vor {{count}} Minute',
@@ -113,15 +113,15 @@ export const time_since = {
     },
 
     short: {
-        now: 'Jetzt gerade',
-        seconds_one: '{{count}}Sek',
-        seconds_other: '{{count}}Sek',
-        minutes_one: '{{count}}Min',
-        minutes_other: '{{count}}Min',
-        hours_one: '{{count}}Std',
-        hours_other: '{{count}}Std',
-        days_one: '{{count}}Tg',
-        days_other: '{{count}}Tg',
+        now: 'jetzt',
+        seconds_one: '{{count}} Sek',
+        seconds_other: '{{count}} Sek',
+        minutes_one: '{{count}} Min',
+        minutes_other: '{{count}} Min',
+        hours_one: '{{count}} Std',
+        hours_other: '{{count}} Std',
+        days_one: '{{count}} Tg',
+        days_other: '{{count}} Tg',
     },
 };
 
