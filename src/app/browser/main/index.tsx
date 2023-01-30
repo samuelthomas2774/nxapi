@@ -36,7 +36,7 @@ export default function App(props: AppProps) {
         titleUser={selectedUser}
         vibrancy={props.vibrancy}
         style={[styles.app, !props.vibrancy ? theme.appNoVibrancy : null]}
-        i18nNamespace="main_window"
+        i18nNamespace={['main_window', 'time_since']}
     >
         <Sidebar users={users} selectedUser={selectedUserId} onSelectUser={setSelectedUserId}
             insetTitleBarControls={props.insetTitleBarControls}

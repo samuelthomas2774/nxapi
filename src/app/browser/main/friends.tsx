@@ -1,12 +1,13 @@
 import React, { useCallback } from 'react';
 import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { useAccentColour, useColourScheme, User, useTimeSince } from '../util.js';
 import { Friend, Presence, PresenceState } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section, { HEADER_SIZE } from './section.js';
 import AddOutline from '../components/icons/add-outline.js';
+import { FriendCode } from '../components/index.js';
 
 export default function Friends(props: {
     user: User;
@@ -23,18 +24,8 @@ export default function Friends(props: {
     }, [props.user.user.id]);
 
     const header_buttons = <TouchableOpacity onPress={showAddFriendModal} style={styles.iconTouchable}>
-        <Text style={[styles.icon, {color: '#' + accent_colour}]}><AddOutline /></Text>
+        <Text style={[styles.icon, {color: '#' + accent_colour}]}><AddOutline title={t('add')!} /></Text>
     </TouchableOpacity>;
-
-    const onFriendCodeContextMenu = useCallback(() => {
-        ipc.showFriendCodeMenu(props.user.nso!.nsoAccount.user.links.friendCode);
-    }, [ipc, props.user.nso?.nsoAccount.user.links.friendCode]);
-
-    const fc = <Text
-        style={styles.friendCodeValue}
-        // @ts-expect-error react-native-web
-        onContextMenu={onFriendCodeContextMenu}
-    >SW-{props.user.nso!.nsoAccount.user.links.friendCode.id}</Text>;
 
     return <Section title={t('title')} loading={props.loading} error={props.error} headerButtons={header_buttons}>
         {props.friends.length ? <ScrollView horizontal>
@@ -43,11 +34,19 @@ export default function Friends(props: {
             </View>
         </ScrollView> : <View style={styles.noFriends}>
             <Text style={[styles.noFriendsText, theme.text]}>{t('no_friends')}</Text>
-            <Text style={[styles.noFriendsText, styles.noFriendsFriendCodeText, theme.text]}>{t('friend_code')}: {fc}</Text>
+            <Text style={[styles.noFriendsText, styles.noFriendsFriendCodeText, theme.text]}>
+                <Trans i18nKey="main_window:friends_section.friend_code">
+                    <FriendCode friendcode={props.user.nso!.nsoAccount.user.links.friendCode} />
+                </Trans>
+            </Text>
         </View>}
 
         {props.friends.length ? <View style={styles.footer}>
-            <Text style={[styles.friendCode, theme.text]}>{t('friend_code')}: {fc}</Text>
+            <Text style={[styles.friendCode, theme.text]}>
+                <Trans i18nKey="main_window:friends_section.friend_code">
+                    <FriendCode friendcode={props.user.nso!.nsoAccount.user.links.friendCode} />
+                </Trans>
+            </Text>
         </View> : null}
     </Section>;
 }
@@ -99,7 +98,7 @@ function FriendPresence(props: {
     const { t, i18n } = useTranslation('main_window', { keyPrefix: 'friends_section' });
 
     const logout = props.presence.logoutAt ? new Date(props.presence.logoutAt * 1000) : null;
-    const since_logout = useTimeSince(logout ?? new Date(0), true);
+    const since_logout = useTimeSince(logout ?? new Date(0), true, i18n.getFixedT(null, 'time_since'));
 
     if (props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) {
         return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>{t('presence_playing')}</Text>;
@@ -123,10 +122,6 @@ const styles = StyleSheet.create({
     friendCode: {
         fontSize: 12,
         opacity: 0.7,
-    },
-    friendCodeValue: {
-        // @ts-expect-error
-        userSelect: 'all',
     },
     content: {
         paddingBottom: 16,

@@ -3,12 +3,35 @@ import { BackendModule, CallbackError, createInstance, ReadCallback } from 'i18n
 
 const debug = createDebug('app:i18n');
 
+import './locale/en-gb.js';
+
 export const languages = {
-    'en-GB': [() => import('./locale/en-gb.js'), 'English'] as const,
-    'de-DE': [() => import('./locale/de-de.js'), 'Deutsch'] as const,
+    'en-GB': {
+        name: 'English',
+        app: () => import('./locale/en-gb.js'),
+        authors: [
+            ['Samuel Elliott', 'https://gitlab.fancy.org.uk/samuel', 'https://github.com/samuelthomas2774'],
+        ],
+    },
 };
 
-type Namespace = keyof typeof import('./locale/en-gb.js');
+const namespaces = {
+    app: 'app',
+    app_menu: 'app',
+    menu_app: 'app',
+    menus: 'app',
+    notifications: 'app',
+    handle_uri: 'app',
+
+    main_window: 'app',
+    preferences_window: 'app',
+    friend_window: 'app',
+    addfriend_window: 'app',
+    discordsetup_window: 'app',
+    addaccountmanual_window: 'app',
+} as const;
+
+type Namespace = keyof typeof namespaces;
 
 export default function createI18n() {
     const i18n = createInstance({
@@ -41,7 +64,7 @@ const LanguageBackend: BackendModule = {
     ) => {
         debug('Loading %s translations for %s', namespace, language);
 
-        importLocale(language).then(resources => {
+        importLocale(language, namespaces[namespace]).then(resources => {
             callback(null, resources[namespace as keyof typeof resources]);
         }, (error: CallbackError) => {
             callback(error, null);
@@ -50,8 +73,11 @@ const LanguageBackend: BackendModule = {
     init: null as any,
 };
 
-async function importLocale(language: keyof typeof languages) {
+async function importLocale(
+    language: keyof typeof languages,
+    chunk: typeof namespaces[keyof typeof namespaces] = 'app',
+) {
     if (!(language in languages)) throw new Error('Unknown language ' + language);
 
-    return languages[language][0]();
+    return languages[language][chunk]();
 }

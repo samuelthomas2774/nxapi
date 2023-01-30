@@ -5,6 +5,7 @@ export const app = {
 
     licence: LICENCE_NOTICE,
     credits: CREDITS_NOTICE,
+    translation_credits: '{{language}} translation by {{authors, list}}.',
 };
 
 export const app_menu = {
@@ -68,7 +69,15 @@ export const menus = {
     friend: {
         presence_online: 'Online',
         game_first_played: 'First played: {{date, datetime}}',
-        game_play_time: 'Play time: {{time, datetime}}',
+
+        game_play_time_h: 'Play time: $t(friend.hours, {"count": {{hours}}})',
+        game_play_time_hm: 'Play time: $t(friend.hours, {"count": {{hours}}}), $t(friend.minutes, {"count": {{minutes}}})',
+        game_play_time_m: 'Play time: $t(friend.minutes, {"count": {{minutes}}})',
+        hours_one: '{{count}} hour',
+        hours_other: '{{count}} hours',
+        minutes_one: '{{count}} minute',
+        minutes_other: '{{count}} minutes',
+
         presence_inactive: 'Offline (console online)',
         presence_offline: 'Offline',
         presence_updated: 'Updated: {{date, datetime}}',
@@ -88,6 +97,32 @@ export const handle_uri = {
     web_service_invalid_title: 'Invalid web service',
     web_service_invalid_detail: 'The URL did not reference an existing web service.',
     cancel: 'Cancel',
+};
+
+export const time_since = {
+    default: {
+        now: 'just now',
+        seconds_one: '{{count}} second ago',
+        seconds_other: '{{count}} seconds ago',
+        minutes_one: '{{count}} minute ago',
+        minutes_other: '{{count}} minutes ago',
+        hours_one: '{{count}} hour ago',
+        hours_other: '{{count}} hours ago',
+        days_one: '{{count}} day ago',
+        days_other: '{{count}} days ago',
+    },
+
+    short: {
+        now: 'Just now',
+        seconds_one: '{{count}} sec',
+        seconds_other: '{{count}} secs',
+        minutes_one: '{{count}} min',
+        minutes_other: '{{count}} mins',
+        hours_one: '{{count}} hr',
+        hours_other: '{{count}} hrs',
+        days_one: '{{count}} day',
+        days_other: '{{count}} days',
+    },
 };
 
 export const main_window = {
@@ -127,6 +162,8 @@ export const main_window = {
             desc_2: 'Login to the Nintendo Switch Online app to view details here, or use the nxapi command to access Parental Controls data.',
             login: 'Login',
         },
+
+        section_error: 'Error updating data',
     },
 
     discord_section: {
@@ -145,9 +182,10 @@ export const main_window = {
 
     friends_section: {
         title: 'Friends',
+        add: 'Add',
 
         no_friends: 'Add friends using a Nintendo Switch console.',
-        friend_code: 'Your friend code',
+        friend_code: 'Your friend code: <0></0>',
 
         presence_playing: 'Playing',
         presence_offline: 'Offline',
@@ -240,7 +278,14 @@ export const friend_window = {
     presence_offline: 'Offline',
     presence_last_seen: 'Last seen {{since_logout}}',
 
-    game_played_for: 'Played for {{duration}}',
+    game_played_for_h: 'Played for $t(hours, {"count": {{hours}}})',
+    game_played_for_hm: 'Played for $t(hours, {"count": {{hours}}}), $t(minutes, {"count": {{minutes}}})',
+    game_played_for_m: 'Played for $t(minutes, {"count": {{minutes}}})',
+    hours_one: '{{count}} hour',
+    hours_other: '{{count}} hours',
+    minutes_one: '{{count}} minute',
+    minutes_other: '{{count}} minutes',
+
     game_first_played: 'First played {{date, datetime}}',
     game_first_played_now: 'First played now',
     game_title_id: 'Title ID',

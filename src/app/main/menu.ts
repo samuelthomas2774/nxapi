@@ -14,6 +14,7 @@ import { createWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
 import CoralApi from '../../api/coral.js';
 import { CachedWebServicesList } from '../../common/users.js';
+import { languages } from '../i18n/index.js';
 
 const debug = createDebug('app:main:menu');
 
@@ -120,6 +121,14 @@ export default class MenuApp {
         menu.append(new MenuItem({type: 'separator'}));
         menu.append(new MenuItem({label: t('show_main_window')!, click: () => this.app.showMainWindow()}));
         menu.append(new MenuItem({label: t('preferences')!, click: () => this.app.showPreferencesWindow()}));
+        if (dev) menu.append(new MenuItem({label: 'Language', submenu: Menu.buildFromTemplate([
+            ...this.app.i18n.options.supportedLngs || ['cimode'],
+        ].map(l => new MenuItem({
+            label: languages[l as keyof typeof languages]?.name ?? l,
+            type: 'checkbox',
+            checked: (this.app.i18n.resolvedLanguage ?? this.app.i18n.language).toLowerCase() === l.toLowerCase(),
+            click: () => this.app.i18n.changeLanguage(l),
+        })))}));
         if (dev) menu.append(new MenuItem({label: 'Dump notifications state', click: () => {
             debug('Accounts', this.app.monitors.notifications.accounts);
             debug('Friends', this.app.monitors.notifications.onlinefriends);

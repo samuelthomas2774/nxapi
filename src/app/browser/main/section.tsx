@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAccentColour, useColourScheme } from '../util.js';
+import { useTranslation } from 'react-i18next';
 import { BORDER_COLOUR_LIGHT, BORDER_COLOUR_SECONDARY_DARK, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc from '../ipc.js';
 import Warning from '../components/icons/warning.js';
@@ -13,6 +14,7 @@ export default function Section(props: React.PropsWithChildren<{
 }>) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();
+    const { t, i18n } = useTranslation('main_window', { keyPrefix: 'main_section' });
 
     const showErrorDetails = useCallback(() => {
         alert(props.error);
@@ -24,7 +26,7 @@ export default function Section(props: React.PropsWithChildren<{
             {props.loading ? <ActivityIndicator style={styles.activityIndicator} size={HEADER_SIZE}
                 color={'#' + accent_colour} /> :
                 props.error ? <TouchableOpacity onPress={showErrorDetails} style={styles.iconTouchable}>
-                    <Text style={[styles.icon, {color: '#' + accent_colour}]}><Warning /></Text>
+                    <Text style={[styles.icon, {color: '#' + accent_colour}]}><Warning title={t('section_error')!} /></Text>
                 </TouchableOpacity> : null}
             {props.headerButtons}
         </View>

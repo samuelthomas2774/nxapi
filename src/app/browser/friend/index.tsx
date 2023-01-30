@@ -48,7 +48,7 @@ export default function FriendWindow(props: FriendProps) {
     if (!user || !friend || discord_presence_source_state !== RequestState.LOADED) {
         return <Root title={friend?.name} titleUser={user ?? undefined}
             autoresize={!!user && discord_presence_source_state === RequestState.LOADED}
-            i18nNamespace="friend_window"
+            i18nNamespace={['friend_window', 'time_since']}
         >
             <View style={styles.loading}>
                 <ActivityIndicator size="large" color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)} />
@@ -62,7 +62,7 @@ export default function FriendWindow(props: FriendProps) {
     const can_see_user_presence = user.nsoAccount.user.permissions.presence === PresencePermissions.FRIENDS ||
         (user.nsoAccount.user.permissions.presence === PresencePermissions.FAVORITE_FRIENDS && friend.isFavoriteFriend);
 
-    return <Root title={friend.name} titleUser={user} autoresize i18nNamespace="friend_window">
+    return <Root title={friend.name} titleUser={user} autoresize i18nNamespace={['friend_window', 'time_since']}>
         <Friend
             friend={friend} canSeeUserPresence={can_see_user_presence}
             showDiscordPresenceSetup={discord_presence_active || !!friend.presence.updatedAt || false}
@@ -160,7 +160,7 @@ function FriendPresence(props: {
     const { t, i18n } = useTranslation('friend_window');
 
     const logout = props.presence.logoutAt ? new Date(props.presence.logoutAt * 1000) : null;
-    const since_logout = useTimeSince(logout ?? new Date(0));
+    const since_logout = useTimeSince(logout ?? new Date(0), false, i18n.getFixedT(null, 'time_since'));
     const game = 'name' in props.presence.game ? props.presence.game : null;
 
     if ((props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) && game) {
@@ -194,7 +194,12 @@ function FriendPresenceGame(props: {
             <Text style={[styles.gameName, theme.text]}>{props.game.name}</Text>
             {props.game.sysDescription ? <Text style={[styles.gameActivity, theme.text]}>{props.game.sysDescription}</Text> : null}
             <Text style={[styles.gameTotalPlayTime, theme.text]}>
-                {t('game_played_for', {duration: hrduration(props.game.totalPlayTime)})}
+                {props.game.totalPlayTime >= 60 ?
+                    props.game.totalPlayTime % 60 ?
+                        t('game_played_for_hm', {hours: Math.floor(props.game.totalPlayTime / 60),
+                            minutes: props.game.totalPlayTime % 60}) :
+                        t('game_played_for_h', {hours: props.game.totalPlayTime / 60}) :
+                    t('game_played_for_m', {minutes: props.game.totalPlayTime})}
             </Text>
             <Text style={[styles.gameFirstPlayed, theme.text]}>
                 {first_played ? t('game_first_played', {
