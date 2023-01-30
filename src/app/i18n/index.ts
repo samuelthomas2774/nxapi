@@ -19,7 +19,7 @@ export const languages = {
         authors: [
             ['Inkception', 'https://github.com/Inkception'],
         ],
-    }
+    },
 };
 
 const namespaces = {
