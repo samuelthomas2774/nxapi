@@ -138,6 +138,18 @@ export const titles: Title[] = [
         client: '950907272438104064',
         largeImageText: 'SEGA Mega Drive',
     },
+    {
+        // Game Boy - Nintendo Switch Online
+        id: '0100c62011050000',
+        client: '950907272438104064',
+        largeImageText: 'Game Boy',
+    },
+    {
+        // Game Boy Advance - Nintendo Switch Online
+        id: '010012f017576000',
+        client: '950907272438104064',
+        largeImageText: 'Game Boy Advance',
+    },
 
     {
         // Animal Crossing: New Horizons
