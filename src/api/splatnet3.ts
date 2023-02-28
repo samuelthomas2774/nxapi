@@ -85,6 +85,7 @@ export default class SplatNet3Api {
         public version: string,
         public map_queries: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>,
         readonly map_queries_mode: MapQueriesMode,
+        readonly na_country: string,
         public language: string,
         public useragent: string,
     ) {}
@@ -244,12 +245,16 @@ export default class SplatNet3Api {
 
     /** / */
     async getHome() {
-        return this.persistedQuery(RequestId.HomeQuery, {});
+        return this.persistedQuery(RequestId.HomeQuery, {
+            naCountry: this.na_country,
+        });
     }
 
     /** / -> /setting */
     async getSettings() {
-        return this.persistedQuery(RequestId.SettingQuery, {});
+        return this.persistedQuery(RequestId.SettingQuery, {
+            naCountry: this.na_country,
+        });
     }
 
     /** / -> /photo_album */
@@ -693,6 +698,14 @@ export default class SplatNet3Api {
         });
     }
 
+    /** / -> /my_outfits [-> /my_outfits/{id}] -> share */
+    async shareOutfit(index: number, timezone_offset_minutes = 0) {
+        return this.persistedQuery(RequestId.ShareMyOutfitQuery, {
+            myOutfitIndex: index,
+            timezoneOffset: timezone_offset_minutes, // (new Date()).getTimezoneOffset()
+        });
+    }
+
     //
     // Replays
     //
@@ -933,6 +946,7 @@ export default class SplatNet3Api {
             data.version,
             data.queries ?? {},
             getMapPersistedQueriesModeFromEnvironment(),
+            data.country,
             data.bullet_token.lang,
             data.useragent,
         );
@@ -944,6 +958,7 @@ export default class SplatNet3Api {
             data.version,
             data.queries ?? {},
             getMapPersistedQueriesModeFromEnvironment(),
+            data.country ?? 'GB',
             data.language,
             SPLATNET3_WEBSERVICE_USERAGENT,
         );
@@ -1081,6 +1096,7 @@ export interface SplatNet3CliTokenData {
     bullet_token: string;
     expires_at: number;
     language: string;
+    country: string;
     version: string;
     queries?: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>;
 }
