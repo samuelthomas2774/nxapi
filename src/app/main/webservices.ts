@@ -68,6 +68,8 @@ export default async function openWebService(
 
         if (!isWebServiceUrlAllowed(webservice, url)) {
             debug('Web service attempted to navigate to a URL not allowed by it\'s `whiteList`', webservice, url);
+            debug('open', url);
+            shell.openExternal(url);
             event.preventDefault();
         }
     });
