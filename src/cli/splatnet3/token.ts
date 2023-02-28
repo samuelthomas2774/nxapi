@@ -40,6 +40,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             bullet_token: data.bullet_token.bulletToken,
             expires_at: data.expires_at,
             language: data.bullet_token.lang,
+            country: data.country,
             version: data.version,
             queries: data.queries,
         };
