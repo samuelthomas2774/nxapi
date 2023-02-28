@@ -2,8 +2,8 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
+import { Module } from 'module';
 
-import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
 import alias from '@rollup/plugin-alias';
 import replace from '@rollup/plugin-replace';
@@ -43,7 +43,7 @@ const release = process.env.NODE_ENV === 'production' ? process.env.CI_COMMIT_TA
  * @type {import('@rollup/plugin-replace').RollupReplaceOptions}
  */
 const replace_options = {
-    include: ['src/util/product.ts'],
+    include: ['dist/util/product.js'],
     values: {
         'globalThis.__NXAPI_BUNDLE_PKG__': JSON.stringify(pkg),
         'globalThis.__NXAPI_BUNDLE_GIT__': JSON.stringify(git),
@@ -58,14 +58,14 @@ const replace_options = {
  * @type {import('rollup').RollupOptions['watch']}
  */
 const watch = {
-    include: 'src/**',
+    include: 'dist/**',
 };
 
 /**
  * @type {import('rollup').RollupOptions}
  */
 const main = {
-    input: ['src/cli-entry.ts', 'src/app/main/index.ts'],
+    input: ['dist/cli-entry.js', 'dist/app/main/index.js'],
     output: {
         dir: 'dist/bundle',
         format: 'es',
@@ -79,19 +79,17 @@ const main = {
     },
     plugins: [
         replace(replace_options),
-        typescript({
-            outDir: 'dist/bundle/ts',
-            noEmit: true,
-            declaration: false,
-        }),
         commonjs({
-            // the ".ts" extension is required
-            extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
             // events and stream modify module.exports
             requireReturnsDefault: 'preferred',
         }),
         json(),
+        alias({
+            entries: [
+                ...Module.builtinModules.map(m => ({find: m, replacement: 'node:' + m})),
+            ],
+        }),
         nodeResolve({
             exportConditions: ['node'],
             browser: false,
@@ -110,29 +108,26 @@ const main = {
  * @type {import('rollup').RollupOptions}
  */
 const app_entry = {
-    input: 'src/app/app-entry.cts',
+    input: 'dist/app/app-entry.cjs',
     output: {
         file: 'dist/bundle/app-entry.cjs',
         format: 'iife',
         inlineDynamicImports: true,
         sourcemap: true,
+        globals: {
+            'electron': 'require("electron")',
+        },
     },
     plugins: [
         replace(replace_options),
         replace({
-            include: ['src/app/app-entry.cts'],
+            include: ['dist/app/app-entry.cjs'],
             values: {
                 '__NXAPI_BUNDLE_APP_MAIN__': JSON.stringify('./app-main-bundle.js'),
             },
             preventAssignment: true,
         }),
-        typescript({
-            noEmit: true,
-            declaration: false,
-        }),
         commonjs({
-            // the ".ts" extension is required
-            extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
             // events and stream modify module.exports
             requireReturnsDefault: 'preferred',
@@ -146,7 +141,8 @@ const app_entry = {
     ],
     external: [
         'electron',
-        path.resolve(__dirname, 'src/app/app-main-bundle.js'),
+        path.resolve(__dirname, 'dist/app/app-main-bundle.js'),
+        path.resolve(__dirname, 'dist/app/main/index.js'),
     ],
     watch,
 };
@@ -155,7 +151,7 @@ const app_entry = {
  * @type {import('rollup').RollupOptions}
  */
 const app_preload = {
-    input: 'src/app/preload/index.ts',
+    input: 'dist/app/preload/index.js',
     output: {
         file: 'dist/app/bundle/preload.cjs',
         format: 'cjs',
@@ -163,13 +159,7 @@ const app_preload = {
     },
     plugins: [
         replace(replace_options),
-        typescript({
-            noEmit: true,
-            declaration: false,
-        }),
         commonjs({
-            // the ".ts" extension is required
-            extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
         }),
         nodeResolve({
@@ -187,20 +177,14 @@ const app_preload = {
  * @type {import('rollup').RollupOptions}
  */
 const app_preload_webservice = {
-    input: 'src/app/preload-webservice/index.ts',
+    input: 'dist/app/preload-webservice/index.js',
     output: {
         file: 'dist/app/bundle/preload-webservice.cjs',
         format: 'cjs',
     },
     plugins: [
         replace(replace_options),
-        typescript({
-            noEmit: true,
-            declaration: false,
-        }),
         commonjs({
-            // the ".ts" extension is required
-            extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
         }),
         nodeResolve({
@@ -218,7 +202,7 @@ const app_preload_webservice = {
  * @type {import('rollup').RollupOptions}
  */
 const app_browser = {
-    input: 'src/app/browser/index.ts',
+    input: 'dist/app/browser/index.js',
     output: {
         dir: 'dist/app/bundle',
         format: 'es',
@@ -238,14 +222,7 @@ const app_browser = {
             title: 'nxapi',
         }),
         replace(replace_options),
-        typescript({
-            outDir: 'dist/app/bundle/ts',
-            noEmit: true,
-            declaration: false,
-        }),
         commonjs({
-            // the ".ts" extension is required
-            extensions: ['.js', '.jsx', '.ts', '.tsx'],
             esmExternals: true,
         }),
         nodePolyfill(),
@@ -255,6 +232,7 @@ const app_browser = {
                 // used when resolving react-native-web. For some reason this causes both versions
                 // to be included in the bundle, so here we explicitly use the CommonJS build.
                 {find: 'react-native', replacement: path.resolve(__dirname, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
+                {find: 'react-native-web', replacement: path.resolve(__dirname, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
 
                 // rollup-plugin-polyfill-node doesn't support node: module identifiers
                 {find: /^node:(.+)/, replacement: '$1'},
@@ -268,10 +246,12 @@ const app_browser = {
     watch,
 };
 
+const skip = process.env.BUNDLE_SKIP?.split(',') ?? [];
+
 export default [
-    main,
-    app_entry,
-    app_preload,
-    app_preload_webservice,
-    app_browser,
-];
+    !skip?.includes('main') && main,
+    !skip?.includes('app-entry') && app_entry,
+    !skip?.includes('app-preload') && app_preload,
+    !skip?.includes('app-preload-webservice') && app_preload_webservice,
+    !skip?.includes('app-browser') && app_browser,
+].filter(c => c);
