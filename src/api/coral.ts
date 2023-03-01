@@ -210,7 +210,11 @@ export default class CoralApi {
     async getWebServiceToken(id: number, /** @internal */ _attempt = 0): Promise<Result<WebServiceToken>> {
         await this._renewToken;
 
-        const data = await f(this.token, HashMethod.WEB_SERVICE, this.useragent ?? getAdditionalUserAgents());
+        const data = await f(this.token, HashMethod.WEB_SERVICE, {
+            platform: ZNCA_PLATFORM,
+            version: this.znca_version,
+            useragent: this.useragent ?? getAdditionalUserAgents(),
+        });
 
         const req: WebServiceTokenParameter = {
             id,
@@ -242,8 +246,11 @@ export default class CoralApi {
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
-        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL,
-            this.useragent ?? getAdditionalUserAgents());
+        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
+            platform: ZNCA_PLATFORM,
+            version: this.znca_version,
+            useragent: this.useragent ?? getAdditionalUserAgents(),
+        });
 
         const req: AccountTokenParameter = {
             naBirthday: user.birthday,
@@ -301,7 +308,11 @@ export default class CoralApi {
         // Nintendo Account user data
         const user = await getNintendoAccountUser(nintendoAccountToken);
 
-        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, useragent);
+        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
+            platform: ZNCA_PLATFORM,
+            version: config.znca_version,
+            useragent,
+        });
 
         debug('Getting Nintendo Switch Online app token');
 

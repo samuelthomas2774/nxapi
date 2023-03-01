@@ -1,5 +1,5 @@
 import process from 'node:process';
-import fetch from 'node-fetch';
+import fetch, { Headers } from 'node-fetch';
 import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
 import { defineResponse, ErrorResponse } from './util.js';
@@ -239,10 +239,11 @@ export class ZncaApiImink extends ZncaApi {
 export async function genf(
     url: string, hash_method: HashMethod,
     token: string, timestamp?: number, request_id?: string,
-    useragent?: string
+    app?: {platform?: string; version?: string;}, useragent?: string
 ) {
     debugZncaApi('Getting f parameter', {
         url, hash_method, token, timestamp, request_id,
+        znca_platform: app?.platform, znca_version: app?.version,
     });
 
     const req: AndroidZncaFRequest = {
@@ -252,13 +253,17 @@ export async function genf(
         request_id,
     };
 
+    const headers = new Headers({
+        'Content-Type': 'application/json',
+        'User-Agent': getUserAgent(useragent),
+    });
+    if (app?.platform) headers.append('X-znca-Platform', app.platform);
+    if (app?.version) headers.append('X-znca-Version', app.version);
+
     const [signal, cancel] = timeoutSignal();
     const response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': getUserAgent(useragent),
-        },
+        headers,
         body: JSON.stringify(req),
         signal,
     }).finally(cancel);
@@ -296,14 +301,14 @@ export interface AndroidZncaFError {
 }
 
 export class ZncaApiNxapi extends ZncaApi {
-    constructor(readonly url: string, useragent?: string) {
+    constructor(readonly url: string, readonly app?: {platform?: string; version?: string;}, useragent?: string) {
         super(useragent);
     }
 
     async genf(token: string, hash_method: HashMethod) {
         const request_id = uuidgen();
 
-        const result = await genf(this.url + '/f', hash_method, token, undefined, request_id, this.useragent);
+        const result = await genf(this.url + '/f', hash_method, token, undefined, request_id, this.app, this.useragent);
 
         return {
             provider: 'nxapi' as const,
@@ -316,10 +321,13 @@ export class ZncaApiNxapi extends ZncaApi {
     }
 }
 
-export async function f(token: string, hash_method: HashMethod | `${HashMethod}`, useragent?: string): Promise<FResult> {
+export async function f(token: string, hash_method: HashMethod | `${HashMethod}`, options?: ZncaApiOptions): Promise<FResult>;
+export async function f(token: string, hash_method: HashMethod | `${HashMethod}`, useragent?: string): Promise<FResult>;
+export async function f(token: string, hash_method: HashMethod | `${HashMethod}`, options?: ZncaApiOptions | string): Promise<FResult> {
+    if (typeof options === 'string') options = {useragent: options};
     if (typeof hash_method === 'string') hash_method = parseInt(hash_method);
 
-    const provider = getPreferredZncaApiFromEnvironment(useragent) ?? await getDefaultZncaApi(useragent);
+    const provider = getPreferredZncaApiFromEnvironment(options) ?? await getDefaultZncaApi(options);
 
     return provider.genf(token, hash_method);
 }
@@ -344,37 +352,51 @@ export type FResult = {
     result: AndroidZncaFResponse;
 });
 
-export function getPreferredZncaApiFromEnvironment(useragent?: string): ZncaApi | null {
+interface ZncaApiOptions {
+    useragent?: string;
+    platform?: string;
+    version?: string;
+}
+
+export function getPreferredZncaApiFromEnvironment(options?: ZncaApiOptions): ZncaApi | null;
+export function getPreferredZncaApiFromEnvironment(useragent?: string): ZncaApi | null;
+export function getPreferredZncaApiFromEnvironment(options?: ZncaApiOptions | string): ZncaApi | null {
+    if (typeof options === 'string') options = {useragent: options};
+
     if (process.env.NXAPI_ZNCA_API) {
         if (process.env.NXAPI_ZNCA_API === 'flapg') {
-            return new ZncaApiFlapg(useragent);
+            return new ZncaApiFlapg(options?.useragent);
         }
         if (process.env.NXAPI_ZNCA_API === 'imink') {
-            return new ZncaApiImink(useragent);
+            return new ZncaApiImink(options?.useragent);
         }
 
         throw new Error('Unknown znca API provider');
     }
 
     if (process.env.ZNCA_API_URL) {
-        return new ZncaApiNxapi(process.env.ZNCA_API_URL, useragent);
+        return new ZncaApiNxapi(process.env.ZNCA_API_URL, options, options?.useragent);
     }
 
     return null;
 }
 
-export async function getDefaultZncaApi(useragent?: string) {
+export async function getDefaultZncaApi(options?: ZncaApiOptions): Promise<ZncaApi>;
+export async function getDefaultZncaApi(useragent?: string): Promise<ZncaApi>;
+export async function getDefaultZncaApi(options?: ZncaApiOptions | string) {
+    if (typeof options === 'string') options = {useragent: options};
+
     const { default: { coral_auth: { default: provider } } } = await import('../common/remote-config.js');
 
     if (provider === 'flapg') {
-        return new ZncaApiFlapg(useragent);
+        return new ZncaApiFlapg(options?.useragent);
     }
     if (provider === 'imink') {
-        return new ZncaApiImink(useragent);
+        return new ZncaApiImink(options?.useragent);
     }
 
     if (provider[0] === 'nxapi') {
-        return new ZncaApiNxapi(provider[1], useragent);
+        return new ZncaApiNxapi(provider[1], options, options?.useragent);
     }
 
     throw new Error('Invalid znca API provider');
