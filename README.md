@@ -254,13 +254,19 @@ When using nxapi as a TypeScript/JavaScript library, the `addUserAgent` function
 import { addUserAgent } from 'nxapi';
 
 addUserAgent('your-script/1.0.0 (+https://github.com/...)');
+```
 
-// This could also be read from a package.json file
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
-import { readFile } from 'node:fs/promises':
-const pkg = JSON.parse(await readFile(resolve(fileURLToPath(import.meta.url), '..', 'package.json'), 'utf-8'));
-addUserAgent(pkg.name + '/' + pkg.version + ' (+' + pkg.repository.url + ')');
+The `addUserAgentFromPackageJson` function can be used to add data from a package.json file.
+
+```ts
+import { addUserAgentFromPackageJson } from 'nxapi';
+
+await addUserAgentFromPackageJson(new URL('../package.json', import.meta.url));
+await addUserAgentFromPackageJson(path.resolve(fileURLToString(import.meta.url), '..', 'package.json'));
+// adds "test-package/0.1.0 (+https://github.com/ghost/example.git)"
+
+await addUserAgentFromPackageJson(new URL('../package.json', import.meta.url), 'additional information');
+// adds "test-package/0.1.0 (+https://github.com/ghost/example.git; additional information)"
 ```
 
 ### Usage as a TypeScript/JavaScript library

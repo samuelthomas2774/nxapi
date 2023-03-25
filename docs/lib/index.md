@@ -151,6 +151,10 @@ try {
 
 This function is used to set the user agent string to use for non-Nintendo API requests. Any project using nxapi (including as a dependency of another project) must call this function with an appropriate user agent string segment. See [user agent strings](../../README.md#user-agent-strings).
 
+#### `addUserAgentFromPackageJson`
+
+This function is used to set the user agent string to use for non-Nintendo API requests using data from a package.json file. A string, URL object or the package.json data can be provided, as well as optional additional data. If a string/URL is provided this will return a Promise that will be resolved once the user agent is updated. See [user agent strings](../../README.md#user-agent-strings).
+
 #### `version`
 
 nxapi's version number.
