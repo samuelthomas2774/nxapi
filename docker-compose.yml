@@ -40,7 +40,7 @@ services:
 
   presence-server:
     build: .
-    command: presence-server --listen \[::]:80 --splatnet3
+    command: presence-server --listen \[::]:80 --splatnet3 --splatnet3-fest-votes
     restart: unless-stopped
     profiles:
       - presence-server
@@ -60,7 +60,7 @@ services:
 
   presence-splatnet3-proxy:
     build: .
-    command: presence-server --listen \[::]:80 --splatnet3 --splatnet3-proxy
+    command: presence-server --listen \[::]:80 --splatnet3 --splatnet3-proxy --splatnet3-record-fest-votes
     restart: unless-stopped
     profiles:
       - presence-server

@@ -1,10 +1,13 @@
 import * as net from 'node:net';
 import * as os from 'node:os';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import createDebug from 'debug';
 import express, { Request, Response } from 'express';
 import fetch from 'node-fetch';
 import * as persist from 'node-persist';
-import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
+import mkdirp from 'mkdirp';
+import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -14,8 +17,8 @@ import { product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
-import SplatNet3Api from '../api/splatnet3.js';
-import { ErrorResponse } from '../api/util.js';
+import SplatNet3Api, { PersistedQueryResult, RequestIdSymbol } from '../api/splatnet3.js';
+import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
 import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
@@ -45,6 +48,21 @@ interface TitleResult {
     image_url: string;
     url: string;
     since: string;
+}
+
+interface FestVotingStatusRecord {
+    result: Exclude<DetailVotingStatusResult['fest'], null>;
+    query: KnownRequestId;
+    app_version: string;
+    be_version: string | null;
+
+    friends: {
+        result: FriendListResult['friends'];
+        query: KnownRequestId;
+        be_version: string | null;
+    };
+
+    fest: StageScheduleResult['currentFest'] | DetailFestRecordDetailResult['fest'] | null;
 }
 
 export const command = 'presence-server';
@@ -78,6 +96,14 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'SplatNet 3 proxy URL',
         type: 'string',
         default: process.env.NXAPI_PRESENCE_SERVER_SPLATNET3_PROXY_URL,
+    }).option('splatnet3-fest-votes', {
+        describe: 'Record Splatoon 3 fest vote history',
+        type: 'boolean',
+        default: false,
+    }).option('splatnet3-record-fest-votes', {
+        describe: 'Record Splatoon 3 fest vote history',
+        type: 'boolean',
+        default: false,
     }).option('update-interval', {
         describe: 'Max. update interval in seconds',
         type: 'number',
@@ -116,6 +142,11 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const server = new Server(storage, coral_users, splatnet3_users, user_naids);
     server.allow_all_users = argv.allowAllUsers;
     server.enable_splatnet3_proxy = argv.splatnet3Proxy;
+    server.record_fest_votes = argv.splatnet3FestVotes || argv.splatnet3RecordFestVotes ? {
+        path: path.join(argv.dataPath, 'presence-server'),
+        read: argv.splatnet3FestVotes,
+        write: argv.splatnet3RecordFestVotes,
+    } : null;
     server.update_interval = argv.updateInterval * 1000;
     const app = server.app;
 
@@ -127,11 +158,58 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             console.log('Listening on %s, port %d', address.address, address.port);
         });
     }
+
+    if (argv.splatnet3RecordFestVotes) {
+        const update_interval_fest_voting_status_record = 60 * 60 * 1000; // 60 minutes
+
+        const recordFestVotes = async (is_force_early = false) => {
+            const users = await Promise.all(user_naids.map(id => server.getSplatNet3User(id)));
+
+            debug('Checking for new fest votes to record', is_force_early);
+
+            let fest_ending: StageScheduleResult['currentFest'] | DetailFestRecordDetailResult['fest'] | null = null;
+
+            for (const user of users) {
+                try {
+                    const fest = await user.getCurrentFest();
+
+                    if (is_force_early) user.updated.fest_vote_status = null;
+
+                    // Fetching current fest vote data will record any new data
+                    await user.getCurrentFestVotes();
+
+                    if (fest && (!fest_ending ||
+                        new Date(fest_ending.endTime).getTime() > new Date(fest.endTime).getTime()
+                    )) {
+                        fest_ending = fest;
+                    }
+                } catch (err) {
+                    debug('Error fetching current fest voting status for recording');
+                }
+            }
+
+            const time_until_fest_ends_ms = fest_ending ? new Date(fest_ending.endTime).getTime() - Date.now() : null;
+            const update_interval = time_until_fest_ends_ms && time_until_fest_ends_ms > 60 * 1000 ?
+                Math.min(time_until_fest_ends_ms - 60 * 1000, update_interval_fest_voting_status_record) :
+                update_interval_fest_voting_status_record;
+
+            setTimeout(() => recordFestVotes(update_interval !== update_interval_fest_voting_status_record),
+                update_interval);
+        };
+
+        recordFestVotes();
+    }
 }
 
 abstract class SplatNet3User {
     created_at = Date.now();
     expires_at = Infinity;
+
+    record_fest_votes: {
+        path: string;
+        read: boolean;
+        write: boolean;
+    } | null = null;
 
     schedules: GraphQLSuccessResponse<StageScheduleResult> | null = null;
     fest_records: GraphQLSuccessResponse<FestRecordResult> | null = null;
@@ -225,13 +303,33 @@ abstract class SplatNet3User {
 
     async getCurrentFestVotes(): Promise<DetailVotingStatusResult['fest'] | null> {
         await this.update('fest_vote_status', async () => {
-            this.fest_vote_status = await this.getCurrentFestVotingStatusData();
+            const fest_vote_status = await this.getCurrentFestVotingStatusData();
+
+            if (fest_vote_status) this.tryRecordFestVotes(fest_vote_status);
+
+            this.fest_vote_status = fest_vote_status;
         }, this.update_interval_fest_voting_status ?? this.update_interval);
 
         return this.fest_vote_status?.data.fest ?? null;
     }
 
     abstract getCurrentFestVotingStatusData(): Promise<GraphQLSuccessResponse<DetailVotingStatusResult> | null>;
+
+    async tryRecordFestVotes(fest_vote_status: GraphQLSuccessResponse<DetailVotingStatusResult>) {
+        if (this.record_fest_votes?.write && fest_vote_status.data.fest &&
+            JSON.stringify(fest_vote_status?.data) !== JSON.stringify(this.fest_vote_status?.data)
+        ) {
+            try {
+                await this.recordFestVotes(fest_vote_status as PersistedQueryResult<DetailVotingStatusResult>);
+            } catch (err) {
+                debug('Error recording updated fest vote data', fest_vote_status.data.fest.id, err);
+            }
+        }
+    }
+
+    async recordFestVotes(fest_vote_status: PersistedQueryResult<DetailVotingStatusResult>) {
+        throw new Error('Cannot record fest vote status when using SplatNet 3 API proxy');
+    }
 }
 
 class SplatNet3ApiUser extends SplatNet3User {
@@ -287,6 +385,37 @@ class SplatNet3ApiUser extends SplatNet3User {
         return this.fest_vote_status?.data.fest?.id === id ?
             await this.splatnet.getFestVotingStatusRefetch(id) :
             await this.splatnet.getFestVotingStatus(id);
+    }
+
+    async recordFestVotes(result: PersistedQueryResult<DetailVotingStatusResult>) {
+        if (!result.data.fest) return;
+
+        const id_str = Buffer.from(result.data.fest.id, 'base64').toString() || result.data.fest.id;
+        const match = id_str.match(/^Fest-([A-Z]{2}):(([A-Z]+)-(\d+))$/);
+        const id = match ? match[1] + '-' + match[2] : id_str;
+
+        debug('Recording updated fest vote data', id);
+
+        await this.getFriends();
+        const friends = this.friends as PersistedQueryResult<FriendListResult>;
+
+        const record: FestVotingStatusRecord = {
+            result: result.data.fest,
+            query: result[RequestIdSymbol],
+            app_version: this.splatnet.version,
+            be_version: result[ResponseSymbol].headers.get('x-be-version'),
+
+            friends: {
+                result: friends.data.friends,
+                query: friends[RequestIdSymbol],
+                be_version: friends[ResponseSymbol].headers.get('x-be-version'),
+            },
+
+            fest: await this.getCurrentFest(),
+        };
+
+        await mkdirp(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id));
+        await fs.writeFile(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id, Date.now() + '.json'), JSON.stringify(record, null, 4) + '\n');
     }
 
     static async create(storage: persist.LocalStorage, token: string, znc_proxy_url?: string) {
@@ -364,6 +493,12 @@ class Server extends HttpServer {
     allow_all_users = false;
     enable_splatnet3_proxy = false;
 
+    record_fest_votes: {
+        path: string;
+        read: boolean;
+        write: boolean;
+    } | null = null;
+
     update_interval = 30 * 1000;
     /** Interval coral friends data should be updated if the requested user isn't friends with the authenticated user */
     update_interval_unknown_friends = 10 * 60 * 1000; // 10 minutes
@@ -400,6 +535,8 @@ class Server extends HttpServer {
             this.handleAllUsersRequest(req, res)));
         app.get('/api/presence/:user', this.createApiRequestHandler((req, res) =>
             this.handlePresenceRequest(req, res, req.params.user)));
+        app.get('/api/presence/:user/splatoon3-fest-votes', this.createApiRequestHandler((req, res) =>
+            this.handleUserFestVotingStatusHistoryRequest(req, res, req.params.user)));
         app.get('/api/presence/:user/events', this.createApiRequestHandler((req, res) =>
             this.handlePresenceStreamRequest(req, res, req.params.user)));
 
@@ -431,6 +568,25 @@ class Server extends HttpServer {
         return JSON.stringify(data, replacer, space);
     }
 
+    async getCoralUser(naid: string) {
+        const token = await this.storage.getItem('NintendoAccountToken.' + naid);
+        const user = await this.coral_users.get(token);
+        user.update_interval = this.update_interval;
+        return user;
+    }
+
+    async getSplatNet3User(naid: string) {
+        const token = await this.storage.getItem('NintendoAccountToken.' + naid);
+        return this.getSplatNet3UserBySessionToken(token);
+    }
+
+    async getSplatNet3UserBySessionToken(token: string) {
+        const user = await this.splatnet3_users!.get(token);
+        user.record_fest_votes = this.record_fest_votes;
+        user.update_interval = this.update_interval;
+        return user;
+    }
+
     async handleAllUsersRequest(req: Request, res: Response) {
         if (!this.allow_all_users) {
             throw new ResponseError(403, 'forbidden');
@@ -440,12 +596,7 @@ class Server extends HttpServer {
 
         const result: AllUsersResult[] = [];
 
-        const users = await Promise.all(this.user_ids.map(async id => {
-            const token = await this.storage.getItem('NintendoAccountToken.' + id);
-            const user = await this.coral_users.get(token);
-            user.update_interval = this.update_interval;
-            return user;
-        }));
+        const users = await Promise.all(this.user_ids.map(id => this.getCoralUser(id)));
 
         for (const user of users) {
             const friends = await user.getFriends();
@@ -471,12 +622,7 @@ class Server extends HttpServer {
         }
 
         if (this.splatnet3_users && include_splatnet3) {
-            const users = await Promise.all(this.user_ids.map(async id => {
-                const token = await this.storage.getItem('NintendoAccountToken.' + id);
-                const user = await this.splatnet3_users!.get(token);
-                user.update_interval = this.update_interval;
-                return user;
-            }));
+            const users = await Promise.all(this.user_ids.map(id => this.getSplatNet3User(id)));
 
             for (const user of users) {
                 const friends = await user.getFriends();
@@ -579,9 +725,7 @@ class Server extends HttpServer {
         };
 
         if (this.splatnet3_users && include_splatnet3) {
-            const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);
-            const user = await this.splatnet3_users!.get(token);
-            user.update_interval = this.update_interval;
+            const user = await this.getSplatNet3User(user_naid);
 
             await this.handleSplatoon3Presence(friend, user, response);
         }
@@ -634,36 +778,11 @@ class Server extends HttpServer {
         if (fest_vote_status) {
             const fest = await user.getCurrentFest();
 
-            for (const team of fest_vote_status.teams) {
-                const schedule_or_detail_team = fest?.teams.find(t => t.id === team.id);
-                if (!schedule_or_detail_team || !team.votes || !team.preVotes) continue;
+            const fest_team = this.getFestTeamVotingStatus(fest_vote_status, fest, friend);
 
-                for (const player of team.votes.nodes) {
-                    if (player.userIcon.url !== friend.userIcon.url) continue;
-
-                    response.splatoon3_fest_team = {
-                        ...createFestScheduleTeam(schedule_or_detail_team, FestVoteState.VOTED),
-                        ...createFestVoteTeam(team, FestVoteState.VOTED),
-                    };
-                    break;
-                }
-
-                if (response.splatoon3_fest_team) break;
-
-                for (const player of team.preVotes.nodes) {
-                    if (player.userIcon.url !== friend.userIcon.url) continue;
-
-                    response.splatoon3_fest_team = {
-                        ...createFestScheduleTeam(schedule_or_detail_team, FestVoteState.PRE_VOTED),
-                        ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
-                    };
-                    break;
-                }
-
-                if (response.splatoon3_fest_team) break;
-            }
-
-            if (!response.splatoon3_fest_team && fest_vote_status.undecidedVotes) {
+            if (fest_team) {
+                response.splatoon3_fest_team = fest_team;
+            } else if (fest_vote_status.undecidedVotes) {
                 response.splatoon3_fest_team = null;
             }
         }
@@ -700,6 +819,37 @@ class Server extends HttpServer {
         }
     }
 
+    getFestTeamVotingStatus(
+        fest_vote_status: Exclude<DetailVotingStatusResult['fest'], null>,
+        fest: StageScheduleResult['currentFest'] | DetailFestRecordDetailResult['fest'] | null,
+        friend: Friend_friendList,
+    ) {
+        for (const team of fest_vote_status.teams) {
+            const schedule_or_detail_team = fest?.teams.find(t => t.id === team.id);
+            if (!schedule_or_detail_team || !team.votes || !team.preVotes) continue;
+
+            for (const player of team.votes.nodes) {
+                if (player.userIcon.url !== friend.userIcon.url) continue;
+
+                return {
+                    ...createFestScheduleTeam(schedule_or_detail_team, FestVoteState.VOTED),
+                    ...createFestVoteTeam(team, FestVoteState.VOTED),
+                };
+            }
+
+            for (const player of team.preVotes.nodes) {
+                if (player.userIcon.url !== friend.userIcon.url) continue;
+
+                return {
+                    ...createFestScheduleTeam(schedule_or_detail_team, FestVoteState.PRE_VOTED),
+                    ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
+                };
+            }
+        }
+
+        return null;
+    }
+
     getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pick<VsMode, 'id' | 'mode'>) {
         if (vs_mode.mode === 'REGULAR') {
             return getSchedule(schedules.regularSchedules)?.regularMatchSetting;
@@ -723,6 +873,94 @@ class Server extends HttpServer {
             return getSchedule(schedules.xSchedules)?.xMatchSetting;
         }
         return null;
+    }
+
+    async handleUserFestVotingStatusHistoryRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        if (!this.record_fest_votes?.read) throw new ResponseError(404, 'not_found', 'Not recording fest voting status history');
+
+        await this.handlePresenceRequest(req, res, presence_user_nsaid, true);
+
+        const TimestampSymbol = Symbol('Timestamp');
+        const response: {
+            result: {
+                id: string;
+                fest_id: string;
+                fest_team_id: string;
+                fest_team: FestTeam_votingStatus;
+                updated_at: string;
+                [TimestampSymbol]: number;
+            }[];
+        } = {
+            result: [],
+        };
+
+        const latest = new Map<string, [timestamp: Date, data: FestTeam_votingStatus]>();
+        const all = req.query['include-all'] === '1';
+
+        for await (const dirent of await fs.opendir(this.record_fest_votes.path)) {
+            if (!dirent.isDirectory() || !dirent.name.startsWith('splatnet3-fest-votes-')) continue;
+
+            const id = dirent.name.substr(21);
+            const fest_votes_dir = path.join(this.record_fest_votes.path, dirent.name);
+
+            for await (const dirent of await fs.opendir(fest_votes_dir)) {
+                const match = dirent.name.match(/^(\d+)\.json$/);
+                if (!dirent.isFile() || !match) continue;
+
+                const timestamp = new Date(parseInt(match[1]));
+                const is_latest = (latest.get(id)?.[0].getTime() ?? 0) <= timestamp.getTime();
+
+                if (!all && !is_latest) continue;
+
+                try {
+                    const data: FestVotingStatusRecord =
+                        JSON.parse(await fs.readFile(path.join(fest_votes_dir, dirent.name), 'utf-8'));
+
+                    const friend = data.friends.result.nodes.find(f => Buffer.from(f.id, 'base64').toString()
+                        .match(/^Friend-([0-9a-f]{16})$/)?.[1] === presence_user_nsaid);
+                    if (!friend) continue;
+
+                    const fest_team = this.getFestTeamVotingStatus(data.result, data.fest, friend);
+                    if (!fest_team) continue;
+
+                    const fest_id = data.fest ?
+                        Buffer.from(data.fest.id, 'base64').toString()
+                            .match(/^Fest-([A-Z]{2}):(([A-Z]+)-(\d+))$/)?.[2] || data.fest.id :
+                        null;
+                    if (!fest_id) continue;
+
+                    const fest_team_id =
+                        Buffer.from(fest_team.id, 'base64').toString()
+                            .match(/^FestTeam-([A-Z]{2}):((([A-Z]+)-(\d+)):([A-Za-z]+))$/)?.[2] || fest_team.id;
+
+                    if (is_latest) latest.set(id, [timestamp, fest_team]);
+
+                    if (!all) {
+                        let index;
+                        while ((index = response.result.findIndex(r => r.id === id)) >= 0) {
+                            response.result.splice(index, 1);
+                        }
+                    }
+
+                    response.result.push({
+                        id,
+                        fest_id,
+                        fest_team_id,
+                        fest_team,
+                        updated_at: timestamp.toISOString(),
+                        [TimestampSymbol]: timestamp.getTime(),
+                    });
+                } catch (err) {
+                    debug('Error reading fest voting status records', id, match[1]);
+                }
+            }
+        }
+
+        if (!response.result.length) throw new ResponseError(404, 'not_found', 'No fest voting status history for this user');
+
+        response.result.sort((a, b) => b[TimestampSymbol] - a[TimestampSymbol]);
+
+        return response;
     }
 
     presence_streams = new Set<EventStreamResponse>();
@@ -828,8 +1066,7 @@ class Server extends HttpServer {
             req.headers.authorization.substr(3) : null;
         if (!token) throw new ResponseError(401, 'unauthorised');
 
-        const user = await this.splatnet3_users!.get(token);
-        user.update_interval = this.update_interval;
+        const user = await this.getSplatNet3UserBySessionToken(token);
 
         await user.getFriends();
         return {result: user.friends};
@@ -842,8 +1079,7 @@ class Server extends HttpServer {
             req.headers.authorization.substr(3) : null;
         if (!token) throw new ResponseError(401, 'unauthorised');
 
-        const user = await this.splatnet3_users!.get(token);
-        user.update_interval = this.update_interval;
+        const user = await this.getSplatNet3UserBySessionToken(token);
 
         await user.getSchedules();
         return {result: user.schedules!};
@@ -856,8 +1092,7 @@ class Server extends HttpServer {
             req.headers.authorization.substr(3) : null;
         if (!token) throw new ResponseError(401, 'unauthorised');
 
-        const user = await this.splatnet3_users!.get(token);
-        user.update_interval = this.update_interval;
+        const user = await this.getSplatNet3UserBySessionToken(token);
 
         await user.getCurrentFest();
         return {result: user.current_fest};
@@ -870,8 +1105,7 @@ class Server extends HttpServer {
             req.headers.authorization.substr(3) : null;
         if (!token) throw new ResponseError(401, 'unauthorised');
 
-        const user = await this.splatnet3_users!.get(token);
-        user.update_interval = this.update_interval;
+        const user = await this.getSplatNet3UserBySessionToken(token);
 
         await user.getCurrentFestVotes();
         return {result: user.fest_vote_status};
