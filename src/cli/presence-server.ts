@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import express, { Request, Response } from 'express';
 import fetch from 'node-fetch';
 import * as persist from 'node-persist';
-import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopSetting_schedule, DetailVotingStatusResult, FestMatchSetting_schedule, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -134,6 +134,8 @@ abstract class SplatNet3User {
     expires_at = Infinity;
 
     schedules: GraphQLSuccessResponse<StageScheduleResult> | null = null;
+    fest_records: GraphQLSuccessResponse<FestRecordResult> | null = null;
+    current_fest: StageScheduleResult['currentFest'] | DetailFestRecordDetailResult['fest'] | null = null;
     fest_vote_status: GraphQLSuccessResponse<DetailVotingStatusResult> | null = null;
 
     promise = new Map<string, Promise<void>>();
@@ -141,6 +143,8 @@ abstract class SplatNet3User {
     updated = {
         friends: Date.now(),
         schedules: null as number | null,
+        fest_records: null as number | null,
+        current_fest: null as number | null,
         fest_vote_status: null as number | null,
     };
     update_interval = 10 * 1000; // 10 seconds
@@ -199,6 +203,26 @@ abstract class SplatNet3User {
 
     abstract getSchedulesData(): Promise<GraphQLSuccessResponse<StageScheduleResult>>;
 
+    async getCurrentFest(): Promise<StageScheduleResult['currentFest'] | DetailFestRecordDetailResult['fest'] | null> {
+        let update_interval = this.update_interval_schedules;
+
+        if (this.schedules && this.schedules.data.currentFest) {
+            const tricolour_open = new Date(this.schedules.data.currentFest.midtermTime).getTime() <= Date.now();
+            const should_refresh_fest = tricolour_open &&
+                ![FestState.SECOND_HALF, FestState.CLOSED].includes(this.schedules.data.currentFest.state as FestState);
+
+            if (should_refresh_fest) update_interval = this.update_interval;
+        }
+
+        await this.update('current_fest', async () => {
+            this.current_fest = await this.getCurrentFestData();
+        }, update_interval);
+
+        return this.current_fest;
+    }
+
+    abstract getCurrentFestData(): Promise<StageScheduleResult['currentFest'] | DetailFestRecordDetailResult['fest'] | null>;
+
     async getCurrentFestVotes(): Promise<DetailVotingStatusResult['fest'] | null> {
         await this.update('fest_vote_status', async () => {
             this.fest_vote_status = await this.getCurrentFestVotingStatusData();
@@ -227,10 +251,36 @@ class SplatNet3ApiUser extends SplatNet3User {
         return this.splatnet.getSchedules();
     }
 
-    async getCurrentFestVotingStatusData() {
+    async getCurrentFestData() {
         const schedules = await this.getSchedules();
-        return !schedules.currentFest || new Date(schedules.currentFest.endTime).getTime() <= Date.now() ? null :
-            await this.getFestVotingStatusData(schedules.currentFest.id);
+
+        if (schedules.currentFest) {
+            return new Date(schedules.currentFest.endTime).getTime() <= Date.now() ? null : schedules.currentFest;
+        }
+
+        await this.update('fest_records', async () => {
+            this.fest_records = await this.splatnet.getFestRecords();
+        }, this.update_interval_schedules);
+
+        const current_or_upcoming_fest = this.fest_records!.data.festRecords.nodes.find(fest =>
+            new Date(fest.endTime).getTime() >= Date.now());
+        if (!current_or_upcoming_fest) return null;
+
+        const fest_detail = await this.getFestDetailData(current_or_upcoming_fest.id);
+
+        return fest_detail.data.fest;
+    }
+
+    async getFestDetailData(id: string) {
+        return this.current_fest?.id === id ?
+            await this.splatnet.getFestDetailRefetch(id) :
+            await this.splatnet.getFestDetail(id);
+    }
+
+    async getCurrentFestVotingStatusData() {
+        const fest = await this.getCurrentFest();
+        return !fest || new Date(fest.endTime).getTime() <= Date.now() ? null :
+            await this.getFestVotingStatusData(fest.id);
     }
 
     async getFestVotingStatusData(id: string) {
@@ -274,6 +324,10 @@ class SplatNet3ProxyUser extends SplatNet3User {
 
     async getSchedulesData() {
         return this.fetch('/schedules');
+    }
+
+    async getCurrentFestData() {
+        return this.fetch('/fest/current');
     }
 
     async getCurrentFestVotingStatusData() {
@@ -367,6 +421,8 @@ class Server extends HttpServer {
             this.handleSplatNet3ProxyFriends(req, res)));
         app.get('/api/splatnet3-presence/schedules', this.createApiRequestHandler((req, res) =>
             this.handleSplatNet3ProxySchedules(req, res)));
+        app.get('/api/splatnet3-presence/fest/current', this.createApiRequestHandler((req, res) =>
+            this.handleSplatNet3ProxyCurrentFest(req, res)));
         app.get('/api/splatnet3-presence/fest/current/voting-status', this.createApiRequestHandler((req, res) =>
             this.handleSplatNet3ProxyCurrentFestVotingStatus(req, res)));
     }
@@ -546,7 +602,7 @@ class Server extends HttpServer {
             name: game.name,
             image_url: game.imageUri,
             url: 'https://fancy.org.uk/api/nxapi/title/' + encodeURIComponent(id) + '/redirect?source=' +
-                encodeURIComponent('nxapi-' + version + '-presenceserver-' + req.headers.host),
+                encodeURIComponent('nxapi-' + version + '-presenceserver/' + req.headers.host),
             since: new Date(Math.min(Date.now(), friend.presence.updatedAt * 1000)).toISOString(),
         } : null;
 
@@ -576,17 +632,17 @@ class Server extends HttpServer {
         response.splatoon3 = friend;
 
         if (fest_vote_status) {
-            const schedules = await user.getSchedules();
+            const fest = await user.getCurrentFest();
 
             for (const team of fest_vote_status.teams) {
-                const schedule_team = schedules.currentFest?.teams.find(t => t.id === team.id);
-                if (!schedule_team || !team.votes || !team.preVotes) continue; // Shouldn't ever happen
+                const schedule_or_detail_team = fest?.teams.find(t => t.id === team.id);
+                if (!schedule_or_detail_team || !team.votes || !team.preVotes) continue;
 
                 for (const player of team.votes.nodes) {
                     if (player.userIcon.url !== friend.userIcon.url) continue;
 
                     response.splatoon3_fest_team = {
-                        ...createFestScheduleTeam(schedule_team, FestVoteState.VOTED),
+                        ...createFestScheduleTeam(schedule_or_detail_team, FestVoteState.VOTED),
                         ...createFestVoteTeam(team, FestVoteState.VOTED),
                     };
                     break;
@@ -598,7 +654,7 @@ class Server extends HttpServer {
                     if (player.userIcon.url !== friend.userIcon.url) continue;
 
                     response.splatoon3_fest_team = {
-                        ...createFestScheduleTeam(schedule_team, FestVoteState.PRE_VOTED),
+                        ...createFestScheduleTeam(schedule_or_detail_team, FestVoteState.PRE_VOTED),
                         ...createFestVoteTeam(team, FestVoteState.PRE_VOTED),
                     };
                     break;
@@ -791,6 +847,20 @@ class Server extends HttpServer {
 
         await user.getSchedules();
         return {result: user.schedules!};
+    }
+
+    async handleSplatNet3ProxyCurrentFest(req: Request, res: Response) {
+        if (!this.enable_splatnet3_proxy) throw new ResponseError(403, 'forbidden');
+
+        const token = req.headers.authorization?.substr(0, 3) === 'na ' ?
+            req.headers.authorization.substr(3) : null;
+        if (!token) throw new ResponseError(401, 'unauthorised');
+
+        const user = await this.splatnet3_users!.get(token);
+        user.update_interval = this.update_interval;
+
+        await user.getCurrentFest();
+        return {result: user.current_fest};
     }
 
     async handleSplatNet3ProxyCurrentFestVotingStatus(req: Request, res: Response) {
