@@ -881,6 +881,8 @@ class Server extends HttpServer {
         await this.handlePresenceRequest(req, res, presence_user_nsaid, true);
 
         const TimestampSymbol = Symbol('Timestamp');
+        const VoteKeySymbol = Symbol('VoteKey');
+
         const response: {
             result: {
                 id: string;
@@ -889,6 +891,7 @@ class Server extends HttpServer {
                 fest_team: FestTeam_votingStatus;
                 updated_at: string;
                 [TimestampSymbol]: number;
+                [VoteKeySymbol]: string;
             }[];
         } = {
             result: [],
@@ -949,16 +952,24 @@ class Server extends HttpServer {
                         fest_team,
                         updated_at: timestamp.toISOString(),
                         [TimestampSymbol]: timestamp.getTime(),
+                        [VoteKeySymbol]: fest_id + '/' + fest_team_id + '/' + fest_team.myVoteState,
                     });
                 } catch (err) {
-                    debug('Error reading fest voting status records', id, match[1]);
+                    debug('Error reading fest voting status records', id, match[1], err);
                 }
             }
         }
 
         if (!response.result.length) throw new ResponseError(404, 'not_found', 'No fest voting status history for this user');
 
-        response.result.sort((a, b) => b[TimestampSymbol] - a[TimestampSymbol]);
+        response.result.sort((a, b) => a[TimestampSymbol] - b[TimestampSymbol]);
+
+        response.result = response.result.filter((result, index, results) => {
+            const prev_result = results[index - 1];
+            return !prev_result || result[VoteKeySymbol] !== prev_result[VoteKeySymbol];
+        });
+
+        response.result.reverse();
 
         return response;
     }
