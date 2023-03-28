@@ -117,6 +117,8 @@ export function builder(yargs: Argv<ParentArguments>) {
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
+const ResourceUrlMapSymbol = Symbol('ResourceUrls');
+
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     addCliFeatureUserAgent('presence-server');
 
@@ -139,7 +141,14 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             SplatNet3ApiUser.create(storage, token, argv.zncProxyUrl);
     }) : null;
 
-    const server = new Server(storage, coral_users, splatnet3_users, user_naids);
+    const image_proxy_path = {
+        baas: path.join(argv.dataPath, 'presence-server-resources', 'baas'),
+        atum: path.join(argv.dataPath, 'presence-server-resources', 'atum'),
+        splatnet3: path.join(argv.dataPath, 'presence-server-resources', 'splatnet3'),
+    };
+
+    const server = new Server(storage, coral_users, splatnet3_users, user_naids, image_proxy_path);
+
     server.allow_all_users = argv.allowAllUsers;
     server.enable_splatnet3_proxy = argv.splatnet3Proxy;
     server.record_fest_votes = argv.splatnet3FestVotes || argv.splatnet3RecordFestVotes ? {
@@ -148,6 +157,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         write: argv.splatnet3RecordFestVotes,
     } : null;
     server.update_interval = argv.updateInterval * 1000;
+
     const app = server.app;
 
     for (const address of argv.listen) {
@@ -499,6 +509,10 @@ class Server extends HttpServer {
         write: boolean;
     } | null = null;
 
+    readonly image_proxy_path_baas: string | null = null;
+    readonly image_proxy_path_atum: string | null = null;
+    readonly image_proxy_path_splatnet3: string | null = null;
+
     update_interval = 30 * 1000;
     /** Interval coral friends data should be updated if the requested user isn't friends with the authenticated user */
     update_interval_unknown_friends = 10 * 60 * 1000; // 10 minutes
@@ -506,12 +520,14 @@ class Server extends HttpServer {
     app: express.Express;
 
     titles = new Map</** NSA ID */ string, [TitleResult | null, /** updated */ number]>();
+    readonly promise_image = new Map<string, Promise<string>>();
 
     constructor(
         readonly storage: persist.LocalStorage,
         readonly coral_users: Users<CoralUser>,
         readonly splatnet3_users: Users<SplatNet3User> | null,
         readonly user_ids: string[],
+        image_proxy_path?: {baas?: string; atum?: string; splatnet3?: string;},
     ) {
         super();
 
@@ -540,6 +556,15 @@ class Server extends HttpServer {
         app.get('/api/presence/:user/events', this.createApiRequestHandler((req, res) =>
             this.handlePresenceStreamRequest(req, res, req.params.user)));
 
+        if (image_proxy_path?.baas) {
+            this.image_proxy_path_baas = image_proxy_path.baas;
+            app.use('/api/presence/resources/baas', express.static(this.image_proxy_path_baas, {redirect: false}));
+        }
+        if (image_proxy_path?.atum) {
+            this.image_proxy_path_atum = image_proxy_path.atum;
+            app.use('/api/presence/resources/atum', express.static(this.image_proxy_path_atum, {redirect: false}));
+        }
+
         app.use('/api/splatnet3-presence', (req, res, next) => {
             console.log('[%s] [splatnet3 proxy] %s %s HTTP/%s from %s, port %d%s, %s',
                 new Date(), req.method, req.url, req.httpVersion,
@@ -562,10 +587,29 @@ class Server extends HttpServer {
             this.handleSplatNet3ProxyCurrentFest(req, res)));
         app.get('/api/splatnet3-presence/fest/current/voting-status', this.createApiRequestHandler((req, res) =>
             this.handleSplatNet3ProxyCurrentFestVotingStatus(req, res)));
+
+        app.use('/api/splatnet3', (req, res, next) => {
+            console.log('[%s] [splatnet3] %s %s HTTP/%s from %s, port %d%s, %s',
+                new Date(), req.method, req.url, req.httpVersion,
+                req.socket.remoteAddress, req.socket.remotePort,
+                req.headers['x-forwarded-for'] ? ' (' + req.headers['x-forwarded-for'] + ')' : '',
+                req.headers['user-agent']);
+
+            res.setHeader('Server', product + ' presence-server splatnet3-proxy');
+            res.setHeader('X-Server', product + ' presence-server splatnet3-proxy');
+            res.setHeader('X-Served-By', os.hostname());
+
+            next();
+        });
+
+        if (image_proxy_path?.splatnet3) {
+            this.image_proxy_path_splatnet3 = image_proxy_path.splatnet3;
+            app.use('/api/splatnet3/resources', express.static(this.image_proxy_path_splatnet3, {redirect: false}));
+        }
     }
 
     protected encodeJsonForResponse(data: unknown, space?: number) {
-        return JSON.stringify(data, replacer, space);
+        return JSON.stringify(data, (key: string, value: unknown) => replacer(key, value, data), space);
     }
 
     async getCoralUser(naid: string) {
@@ -675,7 +719,9 @@ class Server extends HttpServer {
 
         result.sort((a, b) => b.presence.updatedAt - a.presence.updatedAt);
 
-        return {result};
+        const images = await this.downloadImages(result, this.getResourceBaseUrls(req));
+
+        return {result, [ResourceUrlMapSymbol]: images};
     }
 
     async handlePresenceRequest(req: Request, res: Response | null, presence_user_nsaid: string, is_stream = false) {
@@ -730,7 +776,9 @@ class Server extends HttpServer {
             await this.handleSplatoon3Presence(friend, user, response);
         }
 
-        return response;
+        const images = await this.downloadImages(response, this.getResourceBaseUrls(req));
+
+        return {...response, [ResourceUrlMapSymbol]: images};
     }
 
     getTitleResult(friend: Friend, updated: number, req: Request) {
@@ -876,9 +924,13 @@ class Server extends HttpServer {
     }
 
     async handleUserFestVotingStatusHistoryRequest(req: Request, res: Response, presence_user_nsaid: string) {
-        if (!this.record_fest_votes?.read) throw new ResponseError(404, 'not_found', 'Not recording fest voting status history');
+        if (!this.record_fest_votes?.read) {
+            throw new ResponseError(404, 'not_found', 'Not recording fest voting status history');
+        }
 
-        await this.handlePresenceRequest(req, res, presence_user_nsaid, true);
+        // Attempt to fetch the user's current presence to make sure they are
+        // still friends with the presence server user
+        await this.handlePresenceRequest(req, null, presence_user_nsaid);
 
         const TimestampSymbol = Symbol('Timestamp');
         const VoteKeySymbol = Symbol('VoteKey');
@@ -971,7 +1023,9 @@ class Server extends HttpServer {
 
         response.result.reverse();
 
-        return response;
+        const images = await this.downloadImages(response.result, this.getResourceBaseUrls(req));
+
+        return {...response, [ResourceUrlMapSymbol]: images};
     }
 
     presence_streams = new Set<EventStreamResponse>();
@@ -1009,6 +1063,7 @@ class Server extends HttpServer {
         for (const [key, value] of Object.entries(result) as
             [keyof typeof result, typeof result[keyof typeof result]][]
         ) {
+            if (typeof key !== 'string') continue;
             stream.sendEvent(key, value);
         }
 
@@ -1026,8 +1081,8 @@ class Server extends HttpServer {
                 for (const [key, value] of Object.entries(result) as
                     [keyof typeof result, typeof result[keyof typeof result]][]
                 ) {
+                    if (typeof key !== 'string') continue;
                     if (JSON.stringify(value) === JSON.stringify(last_result[key])) continue;
-
                     stream.sendEvent(key, value);
                 }
 
@@ -1121,6 +1176,101 @@ class Server extends HttpServer {
         await user.getCurrentFestVotes();
         return {result: user.fest_vote_status};
     }
+
+    async downloadImages(data: unknown, base_url: {
+        baas: string | null;
+        atum: string | null;
+        splatnet3: string | null;
+    }): Promise<Record<string, string>> {
+        const image_urls: [url: string, dir: string, base_url: string][] = [];
+
+        // Use JSON.stringify to iterate over everything in the response
+        JSON.stringify(data, (key: string, value: unknown) => {
+            if (this.image_proxy_path_baas && base_url.baas) {
+                if (typeof value === 'string' &&
+                    value.startsWith('https://cdn-image-e0d67c509fb203858ebcb2fe3f88c2aa.baas.nintendo.com/')
+                ) {
+                    image_urls.push([value, this.image_proxy_path_baas, base_url.baas]);
+                }
+            }
+
+            if (this.image_proxy_path_atum && base_url.atum) {
+                if (typeof value === 'string' &&
+                    value.startsWith('https://atum-img-lp1.cdn.nintendo.net/')
+                ) {
+                    image_urls.push([value, this.image_proxy_path_atum, base_url.atum]);
+                }
+            }
+
+            if (this.image_proxy_path_splatnet3 && base_url.splatnet3) {
+                if (typeof value === 'object' && value && 'url' in value && typeof value.url === 'string') {
+                    if (value.url.toLowerCase().startsWith('https://api.lp1.av5ja.srv.nintendo.net/')) {
+                        image_urls.push([value.url, this.image_proxy_path_splatnet3, base_url.splatnet3]);
+                    }
+                }
+            }
+
+            return value;
+        });
+
+        const url_map: Record<string, string> = {};
+
+        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
+            url_map[url] = new URL(await this.downloadImage(url, dir), base_url).toString();
+        }));
+
+        return url_map;
+    }
+
+    getResourceBaseUrls(req: Request) {
+        const base_url = process.env.BASE_URL ??
+            (req.headers['x-forwarded-proto'] === 'https' ? 'https://' : 'http://') +
+            req.headers.host;
+
+        return {
+            baas: this.image_proxy_path_baas ? base_url + '/api/presence/resources/baas/' : null,
+            atum: this.image_proxy_path_atum ? base_url + '/api/presence/resources/atum/' : null,
+            splatnet3: this.image_proxy_path_splatnet3 ? base_url + '/api/splatnet3/resources/' : null,
+        };
+    }
+
+    downloadImage(url: string, dir: string) {
+        const pathname = new URL(url).pathname;
+        const name = pathname.substr(1).toLowerCase()
+            .replace(/^resources\//g, '')
+            .replace(/(\/|^)\.\.(\/|$)/g, '$1...$2') +
+            (path.extname(pathname) ? '' : '.jpeg');
+
+        const promise = this.promise_image.get(dir + '/' + name) ?? Promise.resolve().then(async () => {
+            try {
+                await fs.stat(path.join(dir, name));
+                return name;
+            } catch (err) {}
+
+            debug('Fetching image %s', name);
+            const response = await fetch(url);
+            const data = new Uint8Array(await response.arrayBuffer());
+
+            if (!response.ok) throw new ErrorResponse('Unable to download resource ' + name, response, data.toString());
+
+            await mkdirp(path.dirname(path.join(dir, name)));
+            await fs.writeFile(path.join(dir, name), data);
+
+            debug('Downloaded image %s', name);
+
+            return name;
+        }).then(result => {
+            this.promise_image.delete(dir + '/' + name);
+            return result;
+        }).catch(err => {
+            this.promise_image.delete(dir + '/' + name);
+            throw err;
+        });
+
+        this.promise_image.set(dir + '/' + name, promise);
+
+        return promise;
+    }
 }
 
 function createScheduleFest(
@@ -1149,7 +1299,7 @@ function createFestVoteTeam(
         id: team.id,
         teamName: team.teamName,
         image: {
-            url: getSplatoon3inkUrl(team.image.url),
+            url: team.image.url,
         },
         color: team.color,
         votes: {nodes: []},
@@ -1157,11 +1307,19 @@ function createFestVoteTeam(
     };
 }
 
-function replacer(key: string, value: any) {
-    if ((key === 'image' || key.endsWith('Image')) && value && typeof value === 'object' && 'url' in value) {
+function replacer(key: string, value: any, data: unknown) {
+    const url_map = data && typeof data === 'object' && ResourceUrlMapSymbol in data &&
+        data[ResourceUrlMapSymbol] && typeof data[ResourceUrlMapSymbol] === 'object' ?
+            data[ResourceUrlMapSymbol] as Partial<Record<string, string>> : null;
+
+    if (typeof value === 'string') {
+        return url_map?.[value] ?? value;
+    }
+
+    if (typeof value === 'object' && value && 'url' in value && typeof value.url === 'string') {
         return {
             ...value,
-            url: getSplatoon3inkUrl(value.url),
+            url: url_map?.[value.url] ?? value.url,
         };
     }
 

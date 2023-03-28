@@ -98,7 +98,7 @@ export class ResponseError extends Error {
 }
 
 export class EventStreamResponse {
-    json_replacer: ((key: string, value: unknown) => any) | null = null;
+    json_replacer: ((key: string, value: unknown, data: unknown) => any) | null = null;
 
     private static id = 0;
     readonly id = EventStreamResponse.id++;
@@ -123,7 +123,8 @@ export class EventStreamResponse {
 
     sendEvent(event: string | null, ...data: unknown[]) {
         if (event) this.res.write('event: ' + event + '\n');
-        for (const d of data) this.res.write('data: ' + JSON.stringify(d, this.json_replacer ?? undefined) + '\n');
+        for (const d of data) this.res.write('data: ' + JSON.stringify(d,
+            this.json_replacer ? (k, v) => this.json_replacer?.call(null, k, v, d) : undefined) + '\n');
         this.res.write('\n');
     }
 }
