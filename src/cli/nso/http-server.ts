@@ -755,10 +755,7 @@ class Server extends HttpServer {
                 this.resetAuthTimeout(na_session_token, () => user.data.user.id);
             }
         } catch (err) {
-            stream.sendEvent('error', {
-                error: (err as Error).name,
-                error_message: (err as Error).message,
-            });
+            stream.sendErrorEvent(err);
         }
     }
 }

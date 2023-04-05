@@ -1095,8 +1095,9 @@ class Server extends HttpServer {
 
                     if (retry_after && /^\d+$/.test(retry_after)) {
                         stream.sendEvent(null, 'debug: timestamp ' + new Date().toISOString(), {
-                            error: err,
+                            error: 'unknown_error',
                             error_message: (err as Error).message,
+                            ...err,
                         });
 
                         await new Promise(rs => setTimeout(rs, parseInt(retry_after) * 1000));
@@ -1105,17 +1106,7 @@ class Server extends HttpServer {
                     }
                 }
 
-                if (err instanceof ResponseError) {
-                    stream.sendEvent('error', {
-                        error: err.code,
-                        error_message: err.message,
-                    });
-                } else {
-                    stream.sendEvent('error', {
-                        error: err,
-                        error_message: (err as Error).message,
-                    });
-                }
+                stream.sendErrorEvent(err);
 
                 debug('Error in event stream %d', stream.id, err);
 
