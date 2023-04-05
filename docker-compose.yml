@@ -47,11 +47,11 @@ services:
     labels:
       traefik.enable: true
       traefik.http.routers.nxapi-presence.entrypoints: websecure
-      traefik.http.routers.nxapi-presence.rule: Host(`${TRAEFIK_HOST:-nxapi.ta.fancy.org.uk}`) && (Path(`/api/presence`) || PathPrefix(`/api/presence/`))
+      traefik.http.routers.nxapi-presence.rule: Host(`${TRAEFIK_HOST:-nxapi.ta.fancy.org.uk}`) && (Path(`/api/presence`) || PathPrefix(`/api/presence/`) || PathPrefix(`/api/splatnet3/resources/`))
       traefik.http.routers.nxapi-presence.tls: true
       traefik.http.services.nxapi-presence.loadbalancer.server.port: 80
     environment:
-      DEBUG: '*,-express:*'
+      DEBUG: '*,-express:*,-send'
       ZNC_PROXY_URL: http://znc-proxy/api/znc
       NXAPI_PRESENCE_SERVER_USER: ${NXAPI_PRESENCE_SERVER_USER:-}
       NXAPI_PRESENCE_SERVER_SPLATNET3_PROXY_URL: http://presence-splatnet3-proxy/api/splatnet3-presence

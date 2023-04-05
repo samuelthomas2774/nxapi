@@ -1064,7 +1064,7 @@ class Server extends HttpServer {
             [keyof typeof result, typeof result[keyof typeof result]][]
         ) {
             if (typeof key !== 'string') continue;
-            stream.sendEvent(key, value);
+            stream.sendEvent(key, {...value, [ResourceUrlMapSymbol]: result[ResourceUrlMapSymbol]});
         }
 
         await new Promise(rs => setTimeout(rs, this.update_interval));
@@ -1083,7 +1083,7 @@ class Server extends HttpServer {
                 ) {
                     if (typeof key !== 'string') continue;
                     if (JSON.stringify(value) === JSON.stringify(last_result[key])) continue;
-                    stream.sendEvent(key, value);
+                    stream.sendEvent(key, {...value, [ResourceUrlMapSymbol]: result[ResourceUrlMapSymbol]});
                 }
 
                 last_result = result;
