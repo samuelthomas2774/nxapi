@@ -7,7 +7,7 @@ import express, { Request, Response } from 'express';
 import fetch from 'node-fetch';
 import * as persist from 'node-persist';
 import mkdirp from 'mkdirp';
-import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
@@ -858,8 +858,9 @@ class Server extends HttpServer {
             friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
         ) {
             const schedules = await user.getSchedules();
-            const coop_schedules = friend.coopRule === 'BIG_RUN' ?
-                schedules.coopGroupingSchedule.bigRunSchedules :
+            const coop_schedules =
+                friend.coopRule === CoopRule.BIG_RUN ? schedules.coopGroupingSchedule.bigRunSchedules :
+                friend.coopRule === CoopRule.TEAM_CONTEST ? schedules.coopGroupingSchedule.teamContestSchedules :
                 schedules.coopGroupingSchedule.regularSchedules;
             const coop_setting = getSchedule(coop_schedules)?.setting;
 
