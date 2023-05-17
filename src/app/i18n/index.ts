@@ -13,6 +13,13 @@ export const languages = {
             ['Samuel Elliott', 'https://gitlab.fancy.org.uk/samuel', 'https://github.com/samuelthomas2774'],
         ],
     },
+    'ja-JP': {
+        name: 'Japanese',
+        app: () => import('./locale/ja-jp.js'),
+        authors: [
+            ['hilot06', 'https://github.com/hilot06']
+        ]
+    }
 };
 
 const namespaces = {
