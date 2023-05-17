@@ -173,7 +173,7 @@ export const main_window = {
         add_user: 'このユーザーのNintendo Switch Onlineアカウントをフレンドとして追加し、Discord Rich Presenceを設定します。',
         active_self: 'このユーザーの情報をDiscordで表示',
         active_friend: '<0></0>の情報をこのアカウントを使ってDiscordで表示',
-        active_unknown: 'An unknown user\'s presence is being shared to Discord using this account.',
+        active_unknown: '不明なユーザーの情報が、このアカウントを使ってDiscordで表示されます。',
         active_via: 'このユーザーの情報は<0></0>を使ってDiscordで表示されます。',
 
         setup: 'セットアップ',
@@ -261,7 +261,7 @@ export const friend_window = {
     no_presence: 'このユーザーのプレイ情報を表示する権限がないか、このユーザーがオンラインになったことがありません。',
 
     nsa_id: 'NSA ID',
-    coral_id: 'Coral user ID',
+    coral_id: 'CoralユーザーID',
     no_coral_user: 'Nintendo Switch Onlineアプリ未使用',
 
     friends_since: 'フレンドになった日: {{date, datetime}}',
@@ -276,7 +276,7 @@ export const friend_window = {
 
     presence_playing: '{{game}}をプレイ中',
     presence_offline: 'オフライン',
-    presence_last_seen: 'Last seen {{since_logout}}',
+    presence_last_seen: '最終ログイン: {{since_logout}}',
 
     game_played_for_h: '$t(hours, {"count": {{hours}}}) 経過',
     game_played_for_hm: '$t(hours, {"count": {{hours}}}), $t(minutes, {"count": {{minutes}}}) 経過',
