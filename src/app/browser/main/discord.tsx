@@ -114,7 +114,7 @@ function DiscordPresence(props: {
                 {props.user.username}<Text style={styles.discordUserDiscriminator}>#{props.user.discriminator}</Text>
             </Text>
         </View> : <View style={styles.discordUser}>
-            <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">Not connected to Discord</Text>
+            <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">{t('discord_not_connected')}</Text>
         </View>}
     </View>;
 }

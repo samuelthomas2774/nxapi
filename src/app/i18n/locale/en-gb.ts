@@ -131,6 +131,7 @@ export const main_window = {
         discord_active_friend: 'Discord Rich Presence active: <0></0>',
         discord_not_active: 'Discord Rich Presence not active',
         discord_playing: 'Playing',
+        discord_not_connected: 'Not connected to Discord',
 
         add_user: 'Add user',
         discord_setup: 'Set up Discord Rich Presence',
