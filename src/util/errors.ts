@@ -12,6 +12,7 @@ export const temporary_system_errors = {
     'ENOTFOUND': null,
     'EAI_AGAIN': 'name resolution failed',
     'ECONNRESET': 'connection reset',
+    'ENETUNREACH': 'network unreachable',
 };
 export const temporary_http_errors = [
     502, // Bad Gateway

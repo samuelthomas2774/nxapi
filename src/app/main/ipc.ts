@@ -155,8 +155,12 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         const users: User[] = [];
 
         for (const client of await getDiscordRpcClients()) {
-            await client.connect(defaultTitle.client);
-            if (client.user && !users.find(u => u.id === client.user!.id)) users.push(client.user);
+            try {
+                await client.connect(defaultTitle.client);
+                if (client.user && !users.find(u => u.id === client.user!.id)) users.push(client.user);
+            } finally {
+                await client.destroy();
+            }
         }
 
         return users;

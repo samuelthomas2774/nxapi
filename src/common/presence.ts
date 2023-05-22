@@ -79,8 +79,9 @@ class ZncDiscordPresenceClient {
 
             if (this.m.presence_enabled && this.m.discord_preconnect) {
                 if (this.rpc) {
-                    debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
+                    if (this.title) debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
                     this.setActivity(this.rpc.id);
+                    this.title = null;
                 } else {
                     debugDiscord('No presence but Discord preconnect enabled - connecting');
                     const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
@@ -235,7 +236,8 @@ class ZncDiscordPresenceClient {
         if (!this.rpc) {
             this.connect(client_id, this.m.discord_client_filter);
         } else {
-            this.rpc.client.setActivity(typeof activity === 'string' ? undefined : activity.activity);
+            if (typeof activity === 'string') this.rpc.client.clearActivity();
+            else this.rpc.client.setActivity(activity.activity);
         }
     }
 
