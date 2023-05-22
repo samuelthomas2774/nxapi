@@ -14,8 +14,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Platform': 'Android',
-            'X-ProductVersion': '2.0.0',
+            'Accept': 'application/json',
             'User-Agent': 'NASDKAPI; Android',
         },
         body: new URLSearchParams({
