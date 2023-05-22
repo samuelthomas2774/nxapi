@@ -570,14 +570,14 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
-    // {
-    //     // Pokémon Mystery Dungeon: Rescue Team DX Demo
-    //     id: '', // TODO
-    //     client: '966387876520685668',
-    //     largeImageText: 'Demo',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Pokémon Mystery Dungeon: Rescue Team DX Demo
+        id: '010040800fb54000',
+        client: '966387876520685668',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Super Mario Party
@@ -666,14 +666,14 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
-    // {
-    //     // Cadence of Hyrule - Crypt of the NecroDancer Featuring The Legend of Zelda Demo
-    //     id: '', // TODO
-    //     client: '966441763973763162',
-    //     largeImageText: 'Demo',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Cadence of Hyrule - Crypt of the NecroDancer Featuring The Legend of Zelda Demo
+        id: '010065700ee06000',
+        client: '966441763973763162',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Dragon Quest XI S: Echoes of an Elusive Age - Definitive Edition
@@ -682,14 +682,14 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
-    // {
-    //     // Dragon Quest XI S: Echoes of an Elusive Age - Definitive Edition Demo
-    //     id: '', // TODO
-    //     client: '966441876267864084',
-    //     largeImageText: 'Demo',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Dragon Quest XI S: Echoes of an Elusive Age - Definitive Edition [Demo version]
+        id: '010026800ea0a000',
+        client: '966441876267864084',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Super Kirby Clash
@@ -826,14 +826,14 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
-    // {
-    //     // Hyrule Warriors: Age of Calamity Demo
-    //     id: '', // TODO
-    //     client: '966479236762325013',
-    //     largeImageText: 'Demo',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Hyrule Warriors: Age of Calamity - Demo Version
+        id: '0100a2c01320e000',
+        client: '966479236762325013',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Fitness Boxing 2: Rhythm & Exercise
@@ -1173,6 +1173,48 @@ export const titles: Title[] = [
         // Kirby's Return to Dream Land Deluxe
         id: '01006b601380e000',
         client: '1037892083748446278',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Bayonetta Origins: Cereza and the Lost Demon
+        id: '0100cf5010fec000',
+        client: '1107032391496761375',
+        titleName: 'Bayonetta Origins: Cereza and the Lost Demon',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Bayonetta Origins: Cereza and the Lost Demon Demo
+        id: '010002801a3fa000',
+        client: '1107032391496761375',
+        largeImageText: 'Bayonetta Origins: Cereza and the Lost Demon Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // The Legend of Zelda: Tears of the Kingdom
+        id: '0100f2c0115b6000',
+        client: '1107033191912579183',
+        largeImageText: 'The Legend of Zelda: Tears of the Kingdom',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    // {
+    //     // Pikmin 4
+    //     id: '',
+    //     client: '1107033455755264010',
+    //     showPlayingOnline: true,
+    //     showActiveEvent: true,
+    // },
+
+    {
+        // Metroid Prime Remastered
+        id: '010012101468c000',
+        client: '1107120929953284150',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
