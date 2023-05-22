@@ -42,6 +42,7 @@ export class PresenceMonitorManager {
         i.presence_user = null;
         i.user_notifications = false;
         i.friend_notifications = false;
+        i.discord_preconnect = true;
 
         i.discord.onUpdateActivity = (presence: DiscordPresence | null) => {
             this.app.store.emit('update-discord-presence', presence ? {...presence, config: undefined} : null);
@@ -88,6 +89,7 @@ export class PresenceMonitorManager {
         const i = new EmbeddedProxyPresenceMonitor(presence_url);
 
         i.notifications = this.notifications;
+        i.discord_preconnect = true;
 
         i.discord.onUpdateActivity = (presence: DiscordPresence | null) => {
             this.app.store.emit('update-discord-presence', presence ? {...presence, config: undefined} : null);

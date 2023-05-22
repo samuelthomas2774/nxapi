@@ -17,7 +17,7 @@ export default function DiscordPresenceSource(props: {
     return <TouchableOpacity onPress={() => ipc.showDiscordModal()}>
         <View style={[styles.discord, !props.source ? styles.discordInactive : null]}>
             {renderDiscordPresenceSource(props.source)}
-            {props.presence && props.user ? <DiscordPresence presence={props.presence} user={props.user} /> : null}
+            {props.presence || props.user ? <DiscordPresence presence={props.presence} user={props.user} /> : null}
         </View>
     </TouchableOpacity>;
 }
@@ -78,26 +78,35 @@ function DiscordPresenceInactive() {
 }
 
 function DiscordPresence(props: {
-    presence: DiscordPresence;
-    user: User;
+    presence: DiscordPresence | null;
+    user: User | null;
 }) {
-    const large_image_url = props.presence.activity.largeImageKey?.match(/^\d{16}$/) ?
+    const large_image_url = props.presence ? props.presence.activity.largeImageKey?.match(/^\d{16}$/) ?
         'https://cdn.discordapp.com/app-assets/' + props.presence.id + '/' +
             props.presence.activity.largeImageKey + '.png' :
-        props.presence.activity.largeImageKey;
-    const user_image_url = 'https://cdn.discordapp.com/avatars/' + props.user.id + '/' + props.user.avatar + '.png';
+        props.presence.activity.largeImageKey : undefined;
 
-    return <>
-        <View style={styles.discordPresence}>
+    const user_image_url = props.user ?
+        props.user.avatar ? 'https://cdn.discordapp.com/avatars/' + props.user.id + '/' + props.user.avatar + '.png' :
+        !props.user.discriminator || props.user.discriminator === '0' ?
+            'https://cdn.discordapp.com/embed/avatars/' + ((parseInt(props.user.id) >> 22) % 5) + '.png' :
+        'https://cdn.discordapp.com/embed/avatars/' + (parseInt(props.user.discriminator) % 5) + '.png' : undefined;
+
+    return <View style={styles.discordPresenceContainer}>
+        {props.presence ? <View style={styles.discordPresence}>
             <Image source={{uri: large_image_url, width: 18, height: 18}} style={styles.discordPresenceImage} />
             <Text style={styles.discordPresenceText} numberOfLines={1} ellipsizeMode="tail">Playing</Text>
-        </View>
+        </View> : null}
 
-        <View style={styles.discordUser}>
+        {props.user ? <View style={styles.discordUser}>
             <Image source={{uri: user_image_url, width: 18, height: 18}} style={styles.discordUserImage} />
-            <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">{props.user.username}#{props.user.discriminator}</Text>
-        </View>
-    </>;
+            <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">
+                {props.user.username}<Text style={styles.discordUserDiscriminator}>#{props.user.discriminator}</Text>
+            </Text>
+        </View> : <View style={styles.discordUser}>
+            <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">Not connected to Discord</Text>
+        </View>}
+    </View>;
 }
 
 const styles = StyleSheet.create({
@@ -125,8 +134,12 @@ const styles = StyleSheet.create({
         userSelect: 'all',
     },
 
+    discordPresenceContainer: {
+        marginTop: 2,
+    },
+
     discordPresence: {
-        marginTop: 12,
+        marginTop: 10,
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -149,5 +162,8 @@ const styles = StyleSheet.create({
     },
     discordUserText: {
         color: TEXT_COLOUR_DARK,
+    },
+    discordUserDiscriminator: {
+        opacity: 0.7,
     },
 });
