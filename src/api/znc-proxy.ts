@@ -12,10 +12,12 @@ const debug = createDebug('nxapi:api:znc-proxy');
 
 export default class ZncProxyApi implements CoralApi {
     // Not used by ZncProxyApi
-    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<CoralAuthData | void>) | null = null;
+    onTokenExpired: ((data?: CoralErrorResponse, res?: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
+    /** @internal */
+    _token_expired = false;
     /** @internal */
     na_id = '';
     /** @internal */

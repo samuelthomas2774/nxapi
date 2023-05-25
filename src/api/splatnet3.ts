@@ -74,9 +74,10 @@ enum MapQueriesMode {
 
 export default class SplatNet3Api {
     onTokenShouldRenew: ((remaining: number, res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
-    onTokenExpired: ((res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
+    onTokenExpired: ((res?: Response) => Promise<SplatNet3AuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    protected _token_expired = false;
 
     graphql_strict = process.env.NXAPI_SPLATNET3_STRICT !== '0';
 
@@ -93,8 +94,18 @@ export default class SplatNet3Api {
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string | FormData, headers?: object,
         /** @internal */ _log?: string,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
+        if (this._token_expired && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken) {
             await this._renewToken;
         }
@@ -121,6 +132,7 @@ export default class SplatNet3Api {
             response.status, version);
 
         if (response.status === 401 && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             // _renewToken will be awaited when calling fetch
             this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, response).then(data => {
                 if (data) this.setTokenWithSavedToken(data);
@@ -933,6 +945,7 @@ export default class SplatNet3Api {
         this.version = data.version;
         this.language = data.bullet_token.lang;
         this.useragent = data.useragent;
+        this._token_expired = false;
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {

@@ -76,7 +76,7 @@ function createTokenExpiredHandler(
     storage: persist.LocalStorage, token: string, moon: MoonApi,
     renew_token_data: {existingToken: SavedMoonToken}, ratelimit = true
 ) {
-    return (data: MoonError, response: Response) => {
+    return (data?: MoonError, response?: Response) => {
         debug('Token expired', renew_token_data.existingToken.user.id, data);
         return renewToken(storage, token, moon, renew_token_data, ratelimit);
     };

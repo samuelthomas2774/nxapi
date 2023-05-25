@@ -17,9 +17,10 @@ const NOOKLINK_URL = NOOKLINK_WEBSERVICE_URL + '/api';
 const BLANCO_VERSION = '2.1.1';
 
 export default class NooklinkApi {
-    onTokenExpired: ((data: WebServiceError, res: Response) => Promise<NooklinkAuthData | void>) | null = null;
+    onTokenExpired: ((data?: WebServiceError, res?: Response) => Promise<NooklinkAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    protected _token_expired = false;
 
     protected constructor(
         public gtoken: string,
@@ -30,8 +31,18 @@ export default class NooklinkApi {
     async fetch<T extends object>(
         url: string, method = 'GET', body?: string | FormData, headers?: object,
         /** @internal */ _autoRenewToken = true,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
+        if (this._token_expired && _autoRenewToken && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -57,6 +68,7 @@ export default class NooklinkApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status === 401 && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             const data = await response.json() as WebServiceError;
 
             // _renewToken will be awaited when calling fetch
@@ -109,6 +121,7 @@ export default class NooklinkApi {
 
     private setTokenWithSavedToken(data: NooklinkAuthData) {
         this.gtoken = data.gtoken;
+        this._token_expired = false;
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
@@ -195,9 +208,10 @@ export default class NooklinkApi {
 }
 
 export class NooklinkUserApi {
-    onTokenExpired: ((data: WebServiceError, res: Response) => Promise<NooklinkUserAuthData | PartialNooklinkUserAuthData | void>) | null = null;
+    onTokenExpired: ((data?: WebServiceError, res?: Response) => Promise<NooklinkUserAuthData | PartialNooklinkUserAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    protected _token_expired = false;
 
     protected constructor(
         public user_id: string,
@@ -211,8 +225,18 @@ export class NooklinkUserApi {
     async fetch<T extends object>(
         url: string, method = 'GET', body?: string | FormData, headers?: object,
         /** @internal */ _autoRenewToken = true,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
+        if (this._token_expired && _autoRenewToken && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -239,6 +263,7 @@ export class NooklinkUserApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status === 401 && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             const data = await response.json() as WebServiceError;
 
             // _renewToken will be awaited when calling fetch
@@ -327,6 +352,7 @@ export class NooklinkUserApi {
         this.user_id = data.user_id;
         this.auth_token = data.token.token;
         this.gtoken = data.gtoken;
+        this._token_expired = false;
     }
 
     /** @internal */

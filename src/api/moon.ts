@@ -16,9 +16,10 @@ const ZNMA_USER_AGENT = 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; b
     '; ANDROID 26)';
 
 export default class MoonApi {
-    onTokenExpired: ((data: MoonError, res: Response) => Promise<MoonAuthData | PartialMoonAuthData | void>) | null = null;
+    onTokenExpired: ((data?: MoonError, res?: Response) => Promise<MoonAuthData | PartialMoonAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    protected _token_expired = false;
 
     protected constructor(
         public token: string,
@@ -31,8 +32,18 @@ export default class MoonApi {
     async fetch<T extends object>(
         url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _autoRenewToken = true,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
+        if (this._token_expired && _autoRenewToken && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -62,6 +73,7 @@ export default class MoonApi {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status === 401 && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             const data = await response.json() as MoonError;
 
             // _renewToken will be awaited when calling fetch
@@ -123,6 +135,7 @@ export default class MoonApi {
     private setTokenWithSavedToken(data: MoonAuthData | PartialMoonAuthData) {
         this.token = data.nintendoAccountToken.access_token!;
         if ('user' in data) this.naId = data.user.id;
+        this._token_expired = false;
     }
 
     static async createWithSessionToken(token: string) {

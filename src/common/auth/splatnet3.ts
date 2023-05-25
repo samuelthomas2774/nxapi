@@ -79,7 +79,7 @@ function createTokenExpiredHandler(
     data: {existingToken: SavedBulletToken; znc_proxy_url?: string},
     ratelimit = true
 ) {
-    return (response: Response) => {
+    return (response?: Response) => {
         debug('Token expired, renewing');
         return renewToken(storage, token, splatnet, data, ratelimit);
     };

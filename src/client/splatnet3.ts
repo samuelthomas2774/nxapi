@@ -148,7 +148,7 @@ function createTokenExpiredHandler(
     data: {coral: Coral; auth_data: SavedToken; znc_proxy_url?: string},
     ratelimit = true
 ) {
-    return (response: Response) => {
+    return (response?: Response) => {
         debug('Token expired, renewing');
         return renewToken(session, splatnet, data, ratelimit);
     };

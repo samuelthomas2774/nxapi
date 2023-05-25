@@ -99,7 +99,7 @@ function createTokenExpiredHandler(
     storage: persist.LocalStorage, token: string, nso: CoralApi,
     renew_token_data: {existingToken: SavedToken}, ratelimit = true
 ) {
-    return (data: CoralErrorResponse, response: Response) => {
+    return (data?: CoralErrorResponse, response?: Response) => {
         debug('Token expired', renew_token_data.existingToken.user.id, data);
         return renewToken(storage, token, nso, renew_token_data, ratelimit);
     };

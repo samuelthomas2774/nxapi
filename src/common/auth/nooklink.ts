@@ -79,7 +79,7 @@ function createTokenExpiredHandler(
     renew_token_data: {existingToken: SavedToken; znc_proxy_url?: string},
     ratelimit = true
 ) {
-    return (data: WebServiceError, response: Response) => {
+    return (data?: WebServiceError, response?: Response) => {
         debug('Token expired, renewing', data);
         return renewToken(storage, token, nooklink, renew_token_data, ratelimit);
     };
@@ -196,7 +196,7 @@ function createUserTokenExpiredHandler(
     renew_token_data: {existingToken: SavedUserToken; znc_proxy_url?: string; nooklink: NooklinkApi | null},
     ratelimit = true
 ) {
-    return (data: WebServiceError, response: Response) => {
+    return (data?: WebServiceError, response?: Response) => {
         debug('Token expired', nooklinkuser.user_id, data);
         return renewUserToken(storage, token, nooklinkuser, renew_token_data);
     };

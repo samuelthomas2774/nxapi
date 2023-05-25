@@ -25,6 +25,8 @@ export const updateIksmSessionLastUsed: {
 } = {};
 
 export default class SplatNet2Api {
+    protected _session_expired = false;
+
     protected constructor(
         public iksm_session: string,
         public unique_id: string,
@@ -32,6 +34,10 @@ export default class SplatNet2Api {
     ) {}
 
     async fetch<T extends object>(url: string, method = 'GET', body?: string | FormData, headers?: object) {
+        if (this._session_expired) {
+            throw new Error('Session expired');
+        }
+
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(SPLATNET2_URL + url, {
             method,
@@ -51,6 +57,10 @@ export default class SplatNet2Api {
         }).finally(cancel);
 
         debug('fetch %s %s, response %s', method, url, response.status);
+
+        if (response.status === 401) {
+            this._session_expired = true;
+        }
 
         if (response.status !== 200) {
             throw new ErrorResponse('[splatnet2] Non-200 status code', response, await response.text());

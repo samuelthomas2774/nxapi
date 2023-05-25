@@ -41,9 +41,11 @@ export interface ResultData<T> {
 }
 
 export default class CoralApi {
-    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<CoralAuthData | void>) | null = null;
+    onTokenExpired: ((data?: CoralErrorResponse, res?: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    /** @internal */
+    _token_expired = false;
 
     protected constructor(
         public token: string,
@@ -57,8 +59,18 @@ export default class CoralApi {
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _autoRenewToken = true,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<Result<T>> {
+        if (this._token_expired && _autoRenewToken && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -86,6 +98,7 @@ export default class CoralApi {
         const data = await response.json() as CoralResponse<T>;
 
         if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             // _renewToken will be awaited when calling fetch
             this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
                 if (data) this.setTokenWithSavedToken(data);
@@ -286,6 +299,7 @@ export default class CoralApi {
         this.token = data.credential.accessToken;
         this.coral_user_id = '' + data.nsoAccount.user.id;
         if ('user' in data) this.na_id = data.user.id;
+        this._token_expired = false;
     }
 
     static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
