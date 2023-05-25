@@ -16,6 +16,10 @@ export default class ZncProxyApi implements CoralApi {
     /** @internal */
     _renewToken: Promise<void> | null = null;
 
+    /** @internal */
+    na_id = '';
+    /** @internal */
+    coral_user_id = '';
     readonly znca_version = '';
     readonly znca_useragent = '';
 

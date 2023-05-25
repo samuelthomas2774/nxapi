@@ -48,6 +48,8 @@ export default class CoralApi {
     protected constructor(
         public token: string,
         public useragent: string | null = getAdditionalUserAgents(),
+        public coral_user_id: string,
+        public na_id: string,
         readonly znca_version = ZNCA_VERSION,
         readonly znca_useragent = ZNCA_USER_AGENT,
     ) {}
@@ -214,6 +216,7 @@ export default class CoralApi {
             platform: ZNCA_PLATFORM,
             version: this.znca_version,
             useragent: this.useragent ?? getAdditionalUserAgents(),
+            user: {na_id: this.na_id, coral_user_id: this.coral_user_id},
         });
 
         const req: WebServiceTokenParameter = {
@@ -250,6 +253,7 @@ export default class CoralApi {
             platform: ZNCA_PLATFORM,
             version: this.znca_version,
             useragent: this.useragent ?? getAdditionalUserAgents(),
+            user: {na_id: user.id, coral_user_id: this.coral_user_id},
         });
 
         const req: AccountTokenParameter = {
@@ -280,6 +284,8 @@ export default class CoralApi {
     /** @private */
     setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
         this.token = data.credential.accessToken;
+        this.coral_user_id = '' + data.nsoAccount.user.id;
+        if ('user' in data) this.na_id = data.user.id;
     }
 
     static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
@@ -299,6 +305,8 @@ export default class CoralApi {
         return new this(
             data.credential.accessToken,
             useragent,
+            '' + data.nsoAccount.user.id,
+            data.user.id,
             data.znca_version,
             data.znca_useragent,
         );
@@ -320,7 +328,7 @@ export default class CoralApi {
     static async loginWithNintendoAccountToken(
         nintendoAccountToken: NintendoAccountToken,
         user: NintendoAccountUser,
-        useragent = getAdditionalUserAgents()
+        useragent = getAdditionalUserAgents(),
     ) {
         const { default: { coral: config } } = await import('../common/remote-config.js');
 
@@ -331,6 +339,7 @@ export default class CoralApi {
             platform: ZNCA_PLATFORM,
             version: config.znca_version,
             useragent,
+            user: {na_id: user.id},
         });
 
         debug('Getting Nintendo Switch Online app token');
