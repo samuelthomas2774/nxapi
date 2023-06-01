@@ -99,6 +99,41 @@ export const handle_uri = {
     cancel: 'Abbrechen',
 };
 
+export const na_auth = {
+    window: {
+        title: 'Nintendo Account',
+    },
+
+    znca_api_use: {
+        title: 'Verwendung einer Drittanbieter-API',
+
+        // This should be translated in other languages
+        text: ZNCA_API_USE_TEXT,
+
+        ok: 'OK',
+        cancel: 'Abbrechen',
+        more_information: 'Weitere Informationen',
+    },
+
+    notification_coral: {
+        title: 'Nintendo Switch Online',
+        body_existing: 'Bereits als {{name}} (Nintendo Account {{na_name}} / {{na_username}}) eingeloggt',
+        body_authenticated: 'Authentifiziert als {{name}} (Nintendo Account {{na_name}} / {{na_username}})',
+        body_reauthenticated: 'Erneut als {{name}} (Nintendo Account {{na_name}} / {{na_username}}) authentifiziert',
+    },
+
+    notification_moon: {
+        title: 'Nintendo Switch Parental Controls',
+        body_existing: 'Bereits als {{na_name}} ({{na_username}}) eingeloggt',
+        body_authenticated: 'Authentifiziert als {{na_name}} ({{na_username}})',
+        body_reauthenticated: 'Erneut als {{na_name}} ({{na_username}}) authentifiziert',
+    },
+
+    error: {
+        title: 'Fehler beim Hinzufügen des Accounts',
+    },
+};
+
 export const time_since = {
     default: {
         now: 'jetzt',
@@ -131,6 +166,7 @@ export const main_window = {
         discord_active_friend: 'Discord Rich Presence aktiv: <0></0>',
         discord_not_active: 'Discord Rich Presence nicht aktiv',
         discord_playing: 'Spielt',
+        discord_not_connected: 'Nicht mit Discord verbunden',
 
         add_user: 'User hinzufügen',
         discord_setup: 'Discord Rich Presence einrichten',
