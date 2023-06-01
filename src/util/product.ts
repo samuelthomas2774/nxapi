@@ -12,6 +12,12 @@ import createDebug from 'debug';
 
 const debug = createDebug('nxapi:util:product');
 
+interface RevisionInfo {
+    revision: string;
+    branch: string | null;
+    changed_files: string[];
+}
+
 //
 // Embedded package/version info injected during Rollup build
 //
@@ -19,11 +25,7 @@ const debug = createDebug('nxapi:util:product');
 /** @internal */
 declare global {
     var __NXAPI_BUNDLE_PKG__: any | undefined;
-    var __NXAPI_BUNDLE_GIT__: {
-        revision: string;
-        branch: string | null;
-        changed_files: string[];
-    } | null | undefined;
+    var __NXAPI_BUNDLE_GIT__: RevisionInfo | null | undefined;
     var __NXAPI_BUNDLE_RELEASE__: string | null | undefined;
     var __NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__: any | undefined;
 }
@@ -53,7 +55,7 @@ export const docker: string | true | null = pkg.__nxapi_docker ?? await (async (
     }
 })();
 
-export const git = typeof embedded_git !== 'undefined' ? embedded_git : pkg.__nxapi_git ?? await (async () => {
+export const git: RevisionInfo | null = typeof embedded_git !== 'undefined' ? embedded_git : pkg.__nxapi_git as RevisionInfo | null | undefined ?? await (async () => {
     try {
         await fs.stat(path.join(dir, '.git'));
     } catch (err) {
