@@ -69,13 +69,26 @@ function applyFormatters(args: [formatter: string, ...args: unknown[]], self = d
     return args;
 }
 
+const censor_fields = [
+    'token',
+    // NA OIDC
+    'access_token', 'id_token',
+    // Coral
+    'accessToken', 'supportId',
+    // Moon
+    'serialNumber', 'notificationToken',
+];
+const censor_regexp = new RegExp('^(\\s*(' + censor_fields.join('|') + '): \')(([^\']{10})[^\']{20,}([^\']{10})|[^\']{1,39})(\'( \})*,?)$', 'gm');
+
 function writeToFile(namespace: string, _args: [formatter: string, ...args: unknown[]], skip_new = false) {
     if (!log_file) return;
 
     const [formatter, ...args] = _args;
 
     const data = (new Date()).toISOString() + ' ' + namespace + ' ' +
-	    util.format(formatter, ...args).replace(/\u001B\[[0-9;]*m/g, '') + '\n';
+	    util.format(formatter, ...args)
+            .replace(/\u001B\[[0-9;]*m/g, '')
+            .replace(censor_regexp, '$1$4••••••••$5$6') + '\n';
     const buffer = (new TextEncoder()).encode(data);
 
     const [, stream, path, start, i] = log_file;
