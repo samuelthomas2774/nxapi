@@ -6,7 +6,7 @@ import * as persist from 'node-persist';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
-import { createWindow } from './windows.js';
+import { createModalWindow, createWindow } from './windows.js';
 import { setupIpc } from './ipc.js';
 import { askUserForUri } from './util.js';
 import { setAppInstance } from './app-menu.js';
@@ -99,17 +99,7 @@ export class App {
             return this.preferences_window;
         }
 
-        const window = createWindow(WindowType.PREFERENCES, {}, {
-            show: false,
-            maximizable: false,
-            minimizable: false,
-            width: 580,
-            height: 400,
-            minWidth: 580,
-            maxWidth: 580,
-            minHeight: 400,
-            maxHeight: 400,
-        });
+        const window = createModalWindow(WindowType.PREFERENCES, {});
 
         window.on('closed', () => this.preferences_window = null);
 
@@ -242,19 +232,9 @@ export async function handleOpenFriendCodeUri(store: Store, uri: string) {
     const selected_user = await askUserForUri(store, uri, 'Select a user to add friends');
     if (!selected_user) return;
 
-    createWindow(WindowType.ADD_FRIEND, {
+    createModalWindow(WindowType.ADD_FRIEND, {
         user: selected_user[1].user.id,
         friendcode,
-    }, {
-        // show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
     });
 }
 

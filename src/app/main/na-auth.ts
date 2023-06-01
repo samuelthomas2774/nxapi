@@ -3,7 +3,7 @@ import process from 'node:process';
 import * as crypto from 'node:crypto';
 import * as persist from 'node-persist';
 import { protocol_registration_options } from './index.js';
-import { createWindow } from './windows.js';
+import { createModalWindow, createWindow } from './windows.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { WindowType } from '../common/types.js';
 import { getNintendoAccountSessionToken, NintendoAccountAuthError, NintendoAccountSessionToken } from '../../api/na.js';
@@ -313,19 +313,9 @@ function askUserForRedirectUri(
     authoriseurl: string, client_id: string,
     handleAuthUrl: (url: URL) => void, rj: (reason: any) => void
 ) {
-    const window = createWindow(WindowType.ADD_ACCOUNT_MANUAL_PROMPT, {
+    const window = createModalWindow(WindowType.ADD_ACCOUNT_MANUAL_PROMPT, {
         authoriseurl,
         client_id,
-    }, {
-        show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
     });
 
     window.webContents.on('will-navigate', (event, url_string) => {

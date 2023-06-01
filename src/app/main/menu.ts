@@ -5,7 +5,7 @@ import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import openWebService, { WebServiceValidationError } from './webservices.js';
 import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
-import { createWindow } from './windows.js';
+import { createModalWindow, createWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
 import CoralApi from '../../api/coral.js';
 import { WebService } from '../../api/coral-types.js';
@@ -286,18 +286,8 @@ export default class MenuApp {
     }
 
     showAddFriendWindow(user: string) {
-        createWindow(WindowType.ADD_FRIEND, {
+        createModalWindow(WindowType.ADD_FRIEND, {
             user,
-        }, {
-            show: false,
-            maximizable: false,
-            minimizable: false,
-            width: 560,
-            height: 300,
-            minWidth: 450,
-            maxWidth: 700,
-            minHeight: 300,
-            maxHeight: 300,
         });
     }
 }

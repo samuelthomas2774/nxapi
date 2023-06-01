@@ -20,7 +20,7 @@ app.on('browser-window-blur', (event, window) => {
 
 export function createWindow<T extends WindowType>(
     type: T, props: WindowConfiguration<T>['props'],
-    options?: BrowserWindowConstructorOptions
+    options?: BrowserWindowConstructorOptions,
 ) {
     // Create the browser window
     const window = new BrowserWindow({
@@ -59,6 +59,62 @@ export function getWindowConfiguration(webcontents: WebContents): WindowConfigur
     }
 
     return data;
+}
+
+const modal_window_width = new WeakMap<BrowserWindow, number>();
+const modal_window_shown = new WeakSet<BrowserWindow>();
+
+export function createModalWindow<T extends WindowType>(
+    type: T, props: WindowConfiguration<T>['props'],
+    parent?: BrowserWindow | WebContents,
+    options?: BrowserWindowConstructorOptions,
+) {
+    if (parent && !(parent instanceof BrowserWindow)) {
+        parent = BrowserWindow.fromWebContents(parent) ?? undefined;
+    }
+
+    const window = createWindow(type, props, {
+        parent,
+        modal: !!parent,
+        show: false,
+        maximizable: false,
+        minimizable: false,
+        width: 560,
+        height: 300,
+        minWidth: 450,
+        maxWidth: 700,
+        minHeight: 300,
+        maxHeight: 300,
+
+        ...options,
+    });
+
+    if (process.platform === 'win32') {
+        // Use a fixed window width on Windows due to a bug getting/setting window size
+        window.setResizable(false);
+        modal_window_width.set(window, options?.width ?? 560);
+    }
+
+    return window;
+}
+
+export function setWindowHeight(window: BrowserWindow, height: number) {
+    const [curWidth, curHeight] = window.getSize();
+    const [curContentWidth, curContentHeight] = window.getContentSize();
+    const [minWidth, minHeight] = window.getMinimumSize();
+    const [maxWidth, maxHeight] = window.getMaximumSize();
+
+    if (height !== curContentHeight && curHeight === minHeight && curHeight === maxHeight) {
+        window.setMinimumSize(minWidth, height + (curHeight - curContentHeight));
+        window.setMaximumSize(maxWidth, height + (curHeight - curContentHeight));
+    }
+
+    window.setContentSize(modal_window_width.get(window) ?? curContentWidth, height);
+
+    if (!modal_window_shown.has(window)) {
+        window.show();
+        modal_window_shown.add(window);
+    }
 }
 
 const BACKGROUND_COLOUR_MAIN_LIGHT = process.platform === 'win32' ? '#ffffff' : '#ececec';
