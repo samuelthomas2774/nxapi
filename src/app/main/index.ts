@@ -115,7 +115,7 @@ export class App {
         debug('Initialising i18n with language %s', language);
 
         await i18n.init({lng: language ?? undefined});
-        await i18n.loadNamespaces(['app', 'app_menu', 'menus', 'handle_uri']);
+        await i18n.loadNamespaces(['app', 'app_menu', 'menus', 'handle_uri', 'na_auth']);
 
         return i18n;
     }

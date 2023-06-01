@@ -139,9 +139,9 @@ export default class MenuApp {
     }
 
     addNsoAccount = (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
-        askAddNsoAccount(this.app.store.storage, !event.shiftKey);
+        askAddNsoAccount(this.app, !event.shiftKey);
     addPctlAccount = (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
-        askAddPctlAccount(this.app.store.storage, !event.shiftKey);
+        askAddPctlAccount(this.app, !event.shiftKey);
 
     protected webservices = new Map</** language */ string, WebService[]>();
 

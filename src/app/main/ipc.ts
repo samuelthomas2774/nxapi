@@ -51,8 +51,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     }, 60 * 60 * 1000);
 
     ipcMain.handle('nxapi:accounts:list', () => storage.getItem('NintendoAccountIds'));
-    ipcMain.handle('nxapi:accounts:add-coral', () => askAddNsoAccount(store.storage).then(u => u?.data.user.id));
-    ipcMain.handle('nxapi:accounts:add-moon', () => askAddPctlAccount(store.storage).then(u => u?.data.user.id));
+    ipcMain.handle('nxapi:accounts:add-coral', () => askAddNsoAccount(appinstance).then(u => u?.data.user.id));
+    ipcMain.handle('nxapi:accounts:add-moon', () => askAddPctlAccount(appinstance).then(u => u?.data.user.id));
 
     ipcMain.handle('nxapi:coral:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
     ipcMain.handle('nxapi:coral:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
@@ -130,10 +130,10 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:menu:add-user', e => (Menu.buildFromTemplate([
         new MenuItem({label: t('add_account.add_account_coral')!, click:
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
-                askAddNsoAccount(storage, !event.shiftKey)}),
+                askAddNsoAccount(appinstance, !event.shiftKey)}),
         new MenuItem({label: t('add_account.add_account_moon')!, click:
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
-                askAddPctlAccount(storage, !event.shiftKey)}),
+                askAddPctlAccount(appinstance, !event.shiftKey)}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     ipcMain.handle('nxapi:menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
         new MenuItem({label: 'SW-' + fc.id, enabled: false}),
