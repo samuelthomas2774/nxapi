@@ -2,24 +2,24 @@ import { app, BrowserWindow, dialog, ipcMain, LoginItemSettingsOptions } from '.
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
-import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { init as initGlobals } from '../../common/globals.js';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createWindow } from './windows.js';
-import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
-import { initStorage, paths } from '../../util/storage.js';
-import { checkUpdates, UpdateCacheData } from '../../common/update.js';
-import Users, { CoralUser } from '../../common/users.js';
 import { setupIpc } from './ipc.js';
-import { dev, dir, git, release, version } from '../../util/product.js';
-import { addUserAgent } from '../../util/useragent.js';
 import { askUserForUri } from './util.js';
 import { setAppInstance } from './app-menu.js';
 import { handleAuthUri } from './na-auth.js';
+import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
+import { init as initGlobals } from '../../common/globals.js';
 import { CREDITS_NOTICE, GITLAB_URL, LICENCE_NOTICE } from '../../common/constants.js';
+import { checkUpdates, UpdateCacheData } from '../../common/update.js';
+import Users, { CoralUser } from '../../common/users.js';
+import createDebug from '../../util/debug.js';
+import { dev, dir, git, release, version } from '../../util/product.js';
+import { addUserAgent } from '../../util/useragent.js';
+import { initStorage, paths } from '../../util/storage.js';
 
 const debug = createDebug('app:main');
 

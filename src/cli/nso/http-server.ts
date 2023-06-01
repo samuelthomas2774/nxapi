@@ -1,24 +1,24 @@
 import * as net from 'node:net';
 import * as os from 'node:os';
-import createDebug from 'debug';
 import * as persist from 'node-persist';
 import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
-import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
-import CoralApi from '../../api/coral.js';
 import type { Arguments as ParentArguments } from '../nso.js';
+import CoralApi from '../../api/coral.js';
+import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
+import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
+import { ErrorResponse } from '../../api/util.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { SavedToken } from '../../common/auth/coral.js';
-import { NotificationManager, PresenceEvent, ZncNotifications } from '../../common/notify.js';
 import { product } from '../../util/product.js';
 import { parseListenAddress } from '../../util/net.js';
-import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 import { addCliFeatureUserAgent } from '../../util/useragent.js';
-import { ErrorResponse } from '../../api/util.js';
-import Users, { CoralUser } from '../../common/users.js';
 import { EventStreamResponse, HttpServer, ResponseError } from '../util/http-server.js';
+import { SavedToken } from '../../common/auth/coral.js';
+import { NotificationManager, PresenceEvent, ZncNotifications } from '../../common/notify.js';
+import Users, { CoralUser } from '../../common/users.js';
 
 declare global {
     namespace Express {

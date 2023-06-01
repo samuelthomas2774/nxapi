@@ -65,13 +65,14 @@ const watch = {
  * @type {import('rollup').RollupOptions}
  */
 const main = {
-    input: ['dist/cli-entry.js', 'dist/app/main/index.js'],
+    input: ['dist/cli-entry.js', 'dist/app/app-init.js', 'dist/app/main/index.js'],
     output: {
         dir: 'dist/bundle',
         format: 'es',
         sourcemap: true,
         entryFileNames: chunk => {
             if (chunk.name === 'cli-entry') return 'cli-bundle.js';
+            if (chunk.name === 'app-init') return 'app-init-bundle.js';
             if (chunk.name === 'index') return 'app-main-bundle.js';
             return 'entry-' + chunk.name + '.js';
         },
@@ -124,6 +125,7 @@ const app_entry = {
             include: ['dist/app/app-entry.cjs'],
             values: {
                 '__NXAPI_BUNDLE_APP_MAIN__': JSON.stringify('./app-main-bundle.js'),
+                '__NXAPI_BUNDLE_APP_INIT__': JSON.stringify('./app-init-bundle.js'),
             },
             preventAssignment: true,
         }),
@@ -142,6 +144,8 @@ const app_entry = {
     external: [
         'electron',
         path.resolve(__dirname, 'dist/app/app-main-bundle.js'),
+        path.resolve(__dirname, 'dist/app/app-init-bundle.js'),
+        path.resolve(__dirname, 'dist/app/app-init.js'),
         path.resolve(__dirname, 'dist/app/main/index.js'),
     ],
     watch,

@@ -3,6 +3,11 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs/promises';
 import * as util from 'node:util';
+import getPaths from 'env-paths';
+
+// This file is used by debug.ts
+// debug is only used before this module completes execution, so logging to a
+// file will not have been initialised then anyway
 import createDebug from 'debug';
 
 const debug = createDebug('nxapi:util:product');
@@ -79,3 +84,5 @@ export const dev = process.env.NODE_ENV !== 'production' &&
 export const product = 'nxapi ' + version +
     (!release && git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') :
         !release ? '-?' : '');
+
+export const paths = getPaths('nxapi');

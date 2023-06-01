@@ -1,9 +1,9 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import fetch from 'node-fetch';
-import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 import { paths } from '../util/storage.js';

@@ -1,5 +1,5 @@
 import process from 'node:process';
-import createDebug from 'debug';
+import createDebug from '../util/debug.js';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 

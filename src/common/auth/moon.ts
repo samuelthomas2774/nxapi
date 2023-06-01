@@ -1,8 +1,8 @@
-import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { Response } from 'node-fetch';
 import { MoonAuthData, ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import MoonApi from '../../api/moon.js';
 import { checkUseLimit, LIMIT_REQUESTS, SHOULD_LIMIT_USE } from './util.js';

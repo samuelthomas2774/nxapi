@@ -1,13 +1,13 @@
 import { dialog, Notification } from './electron.js';
-import createDebug from 'debug';
+import { App } from './index.js';
+import { tryGetNativeImageFromUrl } from './util.js';
+import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
 import { CurrentUser, Friend, Game, CoralErrorResponse } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
+import createDebug from '../../util/debug.js';
 import { LoopResult } from '../../util/loop.js';
-import { tryGetNativeImageFromUrl } from './util.js';
-import { App } from './index.js';
-import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
 import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';

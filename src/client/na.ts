@@ -1,4 +1,4 @@
-import createDebug from 'debug';
+import createDebug from '../util/debug.js';
 import { NintendoAccountSession } from './storage/index.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from '../api/na.js';
 

@@ -1,4 +1,4 @@
-import createDebug from 'debug';
+import createDebug from '../util/debug.js';
 import { LIMIT_PERIOD, LIMIT_REQUESTS } from '../common/auth/util.js';
 import { NintendoAccountSession } from './storage/index.js';
 

@@ -1,10 +1,10 @@
 import fetch, { Response } from 'node-fetch';
-import createDebug from 'debug';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralErrorResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
 import CoralApi, { CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents, getUserAgent } from '../util/useragent.js';
 

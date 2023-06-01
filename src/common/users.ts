@@ -1,6 +1,6 @@
 import * as crypto from 'node:crypto';
-import createDebug from 'debug';
 import * as persist from 'node-persist';
+import createDebug from '../util/debug.js';
 import CoralApi, { Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices } from '../api/coral-types.js';

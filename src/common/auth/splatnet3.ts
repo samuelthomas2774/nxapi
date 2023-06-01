@@ -1,9 +1,9 @@
-import createDebug from 'debug';
 import persist from 'node-persist';
 import { Response } from 'node-fetch';
 import { getToken, Login, SavedToken } from './coral.js';
 import SplatNet3Api, { SplatNet3AuthData } from '../../api/splatnet3.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import { ErrorResponse } from '../../api/util.js';

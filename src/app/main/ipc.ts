@@ -1,14 +1,15 @@
-import { app, BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
-import createDebug from 'debug';
 import { User } from 'discord-rpc';
 import openWebService, { QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
 import { createWindow, getWindowConfiguration } from './windows.js';
+import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
+import { App } from './index.js';
+import { EmbeddedPresenceMonitor } from './monitor.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItemOptions, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
-import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
-import { App, login_item_options } from './index.js';
 import { NintendoAccountUser } from '../../api/na.js';
+import createDebug from '../../util/debug.js';
 import { hrduration } from '../../util/misc.js';
 import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
@@ -16,7 +17,6 @@ import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
-import { EmbeddedPresenceMonitor } from './monitor.js';
 
 const debug = createDebug('app:main:ipc');
 

@@ -1,10 +1,10 @@
 import fetch, { Response } from 'node-fetch';
-import createDebug from 'debug';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import CoralApi from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:nooklink');

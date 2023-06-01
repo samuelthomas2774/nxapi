@@ -1,8 +1,8 @@
 import process from 'node:process';
-import createDebug from 'debug';
 import Yargs from 'yargs';
 import * as commands from './cli/index.js';
 import { checkUpdates } from './common/update.js';
+import createDebug from './util/debug.js';
 import { dev } from './util/product.js';
 import { paths } from './util/storage.js';
 import { YargsArguments } from './util/yargs.js';

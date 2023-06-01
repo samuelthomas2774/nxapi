@@ -1,11 +1,11 @@
 import fetch from 'node-fetch';
-import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
 import CoralApi from './coral.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, LeagueMatchRankings, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingRecords, XPowerRankingSummary } from './splatnet2-types.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { toSeasonId, Rule as XPowerRankingRule, Season } from './splatnet2-xrank.js';
 

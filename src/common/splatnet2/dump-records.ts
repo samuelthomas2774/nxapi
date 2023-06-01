@@ -2,10 +2,10 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
-import createDebug from 'debug';
 import fetch from 'node-fetch';
 import SplatNet2Api, { ShareColour } from '../../api/splatnet2.js';
 import { Challenge, NicknameAndIcon, Records, Stages } from '../../api/splatnet2-types.js';
+import createDebug from '../../util/debug.js';
 import { timeoutSignal } from '../../util/misc.js';
 
 const debug = createDebug('nxapi:splatnet2:dump-records');

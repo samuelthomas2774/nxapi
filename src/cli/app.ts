@@ -2,8 +2,8 @@ import process from 'node:process';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
+import createDebug from '../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { dir } from '../util/product.js';
 

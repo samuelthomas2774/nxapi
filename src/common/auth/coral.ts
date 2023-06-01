@@ -1,11 +1,11 @@
-import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { Response } from 'node-fetch';
-import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
-import { Jwt } from '../../util/jwt.js';
-import { CoralErrorResponse } from '../../api/coral-types.js';
 import CoralApi, { CoralAuthData, ZNCA_CLIENT_ID } from '../../api/coral.js';
+import { CoralErrorResponse } from '../../api/coral-types.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
+import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
+import createDebug from '../../util/debug.js';
+import { Jwt } from '../../util/jwt.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 
 const debug = createDebug('nxapi:auth:coral');

@@ -1,4 +1,3 @@
-import createDebug from 'debug';
 import persist from 'node-persist';
 import CoralApi from '../api/coral.js';
 import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralErrorResponse, GetActiveEventResult } from '../api/coral-types.js';
@@ -6,10 +5,11 @@ import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
+import createDebug from '../util/debug.js';
 import Loop, { LoopResult } from '../util/loop.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
-import { CoralUser } from './users.js';
 import { handleError } from '../util/errors.js';
+import { CoralUser } from './users.js';
 
 const debug = createDebug('nxapi:nso:notify');
 const debugFriends = createDebug('nxapi:nso:notify:friends');

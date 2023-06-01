@@ -1,10 +1,10 @@
-import createDebug from 'debug';
 import persist from 'node-persist';
 import { Response } from 'node-fetch';
 import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
 import { Users, WebServiceError } from '../../api/nooklink-types.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 

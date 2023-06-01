@@ -1,19 +1,19 @@
+import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from './electron.js';
 import * as path from 'node:path';
 import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import * as util from 'node:util';
-import createDebug from 'debug';
-import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from './electron.js';
 import fetch from 'node-fetch';
-import CoralApi from '../../api/coral.js';
-import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
 import { Store } from './index.js';
-import type { DownloadImagesRequest, NativeShareRequest, NativeShareUrlRequest, QrCodeReaderCameraOptions, QrCodeReaderCheckinOptions, QrCodeReaderCheckinResult, QrCodeReaderPhotoLibraryOptions, SendMessageOptions } from '../preload-webservice/znca-js-api.js';
-import { SavedToken } from '../../common/auth/coral.js';
 import { createWebServiceWindow } from './windows.js';
 import { askUserForUri } from './util.js';
+import type { DownloadImagesRequest, NativeShareRequest, NativeShareUrlRequest, QrCodeReaderCameraOptions, QrCodeReaderCheckinOptions, QrCodeReaderCheckinResult, QrCodeReaderPhotoLibraryOptions, SendMessageOptions } from '../preload-webservice/znca-js-api.js';
+import createDebug from '../../util/debug.js';
+import CoralApi from '../../api/coral.js';
+import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
 import { NintendoAccountUser } from '../../api/na.js';
+import { SavedToken } from '../../common/auth/coral.js';
 
 const debug = createDebug('app:main:webservices');
 

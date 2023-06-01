@@ -1,6 +1,6 @@
-import createDebug from 'debug';
 import { Response } from 'node-fetch';
 import { ConfigureAnalyticsResult, CurrentFestResult, DetailVotingStatusResult, FriendListResult, Friend_friendList, HomeResult, StageScheduleResult } from 'splatnet3-types/splatnet3';
+import createDebug from '../util/debug.js';
 import { ZNCA_CLIENT_ID } from '../api/coral.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
 import SplatNet3Api, { PersistedQueryResult, SplatNet3AuthData } from '../api/splatnet3.js';

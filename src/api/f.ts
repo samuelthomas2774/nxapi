@@ -1,8 +1,8 @@
 import process from 'node:process';
 import fetch, { Headers } from 'node-fetch';
-import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
 import { defineResponse, ErrorResponse } from './util.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 

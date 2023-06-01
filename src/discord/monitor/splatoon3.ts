@@ -1,18 +1,18 @@
-import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import { BankaraMatchMode, BankaraMatchSetting, CoopRule, CoopSchedule_schedule, CoopSetting_schedule, DetailVotingStatusResult, FestMatchSetting, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
+import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
 import { Game } from '../../api/coral-types.js';
 import SplatNet3Api from '../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../app/common/types.js';
 import { Arguments } from '../../cli/nso/presence.js';
 import { getBulletToken, SavedBulletToken } from '../../common/auth/splatnet3.js';
 import { ExternalMonitorPresenceInterface } from '../../common/presence.js';
+import createDebug from '../../util/debug.js';
 import { EmbeddedLoop, LoopResult } from '../../util/loop.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';
-import { DiscordPresenceContext, ErrorResult } from '../types.js';
 import { product } from '../../util/product.js';
-import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
+import { DiscordPresenceContext, ErrorResult } from '../types.js';
 
 const debug = createDebug('nxapi:discord:splatnet3');
 

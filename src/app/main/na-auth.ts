@@ -1,19 +1,20 @@
+import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
 import process from 'node:process';
 import * as crypto from 'node:crypto';
-import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
-import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
+import { protocol_registration_options } from './index.js';
+import { createWindow } from './windows.js';
+import { tryGetNativeImageFromUrl } from './util.js';
+import { WindowType } from '../common/types.js';
+import { getNintendoAccountSessionToken, NintendoAccountAuthError, NintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
-import { getToken, SavedToken } from '../../common/auth/coral.js';
-import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
+import { ErrorResponse } from '../../api/util.js';
+import { getToken } from '../../common/auth/coral.js';
+import { getPctlToken } from '../../common/auth/moon.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
-import { tryGetNativeImageFromUrl } from './util.js';
 import { ZNCA_API_USE_URL } from '../../common/constants.js';
-import { createWindow } from './windows.js';
-import { WindowType } from '../common/types.js';
-import { protocol_registration_options } from './index.js';
 
 const debug = createDebug('app:main:na-auth');
 

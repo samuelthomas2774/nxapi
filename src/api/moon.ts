@@ -1,8 +1,8 @@
 import fetch, { Response } from 'node-fetch';
-import createDebug from 'debug';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:moon');

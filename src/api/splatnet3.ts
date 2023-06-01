@@ -1,12 +1,12 @@
-import createDebug from 'debug';
 import fetch, { Response } from 'node-fetch';
 import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
-import { timeoutSignal } from '../util/misc.js';
 import { WebServiceToken } from './coral-types.js';
 import CoralApi from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { BulletToken } from './splatnet3-types.js';
 import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
+import createDebug from '../util/debug.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 const debugGraphQl = createDebug('nxapi:api:splatnet3:graphql');
