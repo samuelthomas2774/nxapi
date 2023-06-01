@@ -123,7 +123,7 @@ export const na_auth = {
     },
 
     notification_moon: {
-        title: 'Nintendo Switch Parental Controls',
+        title: 'Nintendo Switch-Altersbeschränkungen',
         body_existing: 'Bereits als {{na_name}} ({{na_username}}) eingeloggt',
         body_authenticated: 'Authentifiziert als {{na_name}} ({{na_username}})',
         body_reauthenticated: 'Erneut als {{na_name}} ({{na_username}}) authentifiziert',
