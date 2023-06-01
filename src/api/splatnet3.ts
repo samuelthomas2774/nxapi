@@ -873,7 +873,7 @@ export default class SplatNet3Api {
             PagerUpdateBattleHistoriesByVsModeVariables
         >(RequestId.PagerUpdateBattleHistoriesByVsModeQuery, {
             isBankara: false,
-            isLeague: false,
+            isEvent: false,
             isPrivate: false,
             isRegular: false,
             isXBattle: false,
