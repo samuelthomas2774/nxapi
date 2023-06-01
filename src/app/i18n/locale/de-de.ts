@@ -1,4 +1,4 @@
-import { CREDITS_NOTICE, LICENCE_NOTICE } from '../../../common/constants.js';
+import { CREDITS_NOTICE, LICENCE_NOTICE, ZNCA_API_USE_TEXT } from '../../../common/constants.js';
 
 export const app = {
     default_title: 'Nintendo Switch Online',
