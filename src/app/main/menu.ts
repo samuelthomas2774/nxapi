@@ -13,10 +13,12 @@ import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
 import { CachedWebServicesList } from '../../common/users.js';
 import createDebug from '../../util/debug.js';
-import { dev, dir } from '../../util/product.js';
+import { dev, dir, git } from '../../util/product.js';
 import { languages } from '../i18n/index.js';
 
 const debug = createDebug('app:main:menu');
+
+const show_force_language_menu = dev || git?.branch?.match(/^(i18n$|trans-)/);
 
 export default class MenuApp {
     tray: Tray;
@@ -121,7 +123,7 @@ export default class MenuApp {
         menu.append(new MenuItem({type: 'separator'}));
         menu.append(new MenuItem({label: t('show_main_window')!, click: () => this.app.showMainWindow()}));
         menu.append(new MenuItem({label: t('preferences')!, click: () => this.app.showPreferencesWindow()}));
-        if (dev) menu.append(new MenuItem({label: 'Language', submenu: Menu.buildFromTemplate([
+        if (show_force_language_menu) menu.append(new MenuItem({label: 'Language', submenu: Menu.buildFromTemplate([
             ...this.app.i18n.options.supportedLngs || ['cimode'],
         ].map(l => new MenuItem({
             label: languages[l as keyof typeof languages]?.name ?? l,
