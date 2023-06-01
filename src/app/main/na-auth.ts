@@ -1,19 +1,20 @@
+import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
 import process from 'node:process';
 import * as crypto from 'node:crypto';
-import createDebug from 'debug';
 import * as persist from 'node-persist';
-import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
-import { getNintendoAccountSessionToken, NintendoAccountSessionToken } from '../../api/na.js';
+import { protocol_registration_options } from './index.js';
+import { createModalWindow, createWindow } from './windows.js';
+import { tryGetNativeImageFromUrl } from './util.js';
+import { WindowType } from '../common/types.js';
+import { getNintendoAccountSessionToken, NintendoAccountAuthError, NintendoAccountSessionToken } from '../../api/na.js';
 import { ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { ZNMA_CLIENT_ID } from '../../api/moon.js';
-import { getToken, SavedToken } from '../../common/auth/coral.js';
-import { getPctlToken, SavedMoonToken } from '../../common/auth/moon.js';
+import { ErrorResponse } from '../../api/util.js';
+import { getToken } from '../../common/auth/coral.js';
+import { getPctlToken } from '../../common/auth/moon.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
-import { tryGetNativeImageFromUrl } from './util.js';
 import { ZNCA_API_USE_URL } from '../../common/constants.js';
-import { createWindow } from './windows.js';
-import { WindowType } from '../common/types.js';
-import { protocol_registration_options } from './index.js';
 
 const debug = createDebug('app:main:na-auth');
 
@@ -312,19 +313,9 @@ function askUserForRedirectUri(
     authoriseurl: string, client_id: string,
     handleAuthUrl: (url: URL) => void, rj: (reason: any) => void
 ) {
-    const window = createWindow(WindowType.ADD_ACCOUNT_MANUAL_PROMPT, {
+    const window = createModalWindow(WindowType.ADD_ACCOUNT_MANUAL_PROMPT, {
         authoriseurl,
         client_id,
-    }, {
-        show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
     });
 
     window.webContents.on('will-navigate', (event, url_string) => {
@@ -368,41 +359,67 @@ export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_br
         const nsotoken = await storage.getItem('NintendoAccountToken.' + jwt.payload.sub) as string | undefined;
 
         if (nsotoken) {
-            const data = await storage.getItem('NsoToken.' + nsotoken) as SavedToken | undefined;
+            debug('Already authenticated', jwt.payload);
 
-            debug('Already authenticated', data);
+            try {
+                const {nso, data} = await getToken(storage, nsotoken, process.env.ZNC_PROXY_URL, false);
 
-            new Notification({
-                title: 'Nintendo Switch Online',
-                body: 'Already signed in as ' + data?.nsoAccount.user.name + ' (' + data?.user.nickname + ')',
-                icon: await tryGetNativeImageFromUrl(data!.nsoAccount.user.imageUri),
-            }).show();
+                new Notification({
+                    title: 'Nintendo Switch Online',
+                    body: 'Already signed in as ' + data.nsoAccount.user.name + ' (Nintendo Account ' +
+                        data.user.nickname + ' / ' + data.user.screenName + ')',
+                    icon: await tryGetNativeImageFromUrl(data.nsoAccount.user.imageUri),
+                }).show();
 
-            return getToken(storage, nsotoken, process.env.ZNC_PROXY_URL, false);
+                return {nso, data};
+            } catch (err) {
+                if (err instanceof ErrorResponse && err.response.url.startsWith('https://accounts.nintendo.com/')) {
+                    const data: NintendoAccountAuthError = err.data;
+
+                    if (data.error === 'invalid_grant') {
+                        // The session token has expired/was revoked
+                        return authenticateCoralSessionToken(storage, code, verifier, true);
+                    }
+                }
+
+                throw err;
+            }
         }
 
         await checkZncaApiUseAllowed(storage, window);
 
-        const token = await getNintendoAccountSessionToken(code, verifier, ZNCA_CLIENT_ID);
-
-        debug('session token', token);
-
-        const {nso, data} = await getToken(storage, token.session_token, process.env.ZNC_PROXY_URL, false);
-
-        const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
-        users.add(data.user.id);
-        await storage.setItem('NintendoAccountIds', [...users]);
-
-        new Notification({
-            title: 'Nintendo Switch Online',
-            body: 'Authenticated as ' + data.nsoAccount.user.name + ' (NSO ' + data.user.nickname + ')',
-            icon: await tryGetNativeImageFromUrl(data.nsoAccount.user.imageUri),
-        }).show();
-
-        return {nso, data};
+        return authenticateCoralSessionToken(storage, code, verifier);
     } finally {
         window?.close();
     }
+}
+
+async function authenticateCoralSessionToken(
+    storage: persist.LocalStorage,
+    code: string, verifier: string,
+    reauthenticate = false,
+) {
+    const token = await getNintendoAccountSessionToken(code, verifier, ZNCA_CLIENT_ID);
+
+    debug('session token', token);
+
+    const {nso, data} = await getToken(storage, token.session_token, process.env.ZNC_PROXY_URL, false);
+
+    const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
+    users.add(data.user.id);
+    await storage.setItem('NintendoAccountIds', [...users]);
+
+    new Notification({
+        title: 'Nintendo Switch Online',
+        body: reauthenticate ?
+            'Reauthenticated to ' + data.nsoAccount.user.name + ' (Nintendo Account ' + data.user.nickname + ' / ' +
+                data.user.screenName + ')' :
+            'Authenticated as ' + data.nsoAccount.user.name + ' (Nintendo Account ' + data.user.nickname + ' / ' +
+                data.user.screenName + ')',
+        icon: await tryGetNativeImageFromUrl(data.nsoAccount.user.imageUri),
+    }).show();
+
+    return {nso, data};
 }
 
 export async function askAddNsoAccount(storage: persist.LocalStorage, iab = true) {
@@ -507,37 +524,61 @@ export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_b
         const moontoken = await storage.getItem('NintendoAccountToken-pctl.' + jwt.payload.sub) as string | undefined;
 
         if (moontoken) {
-            const data = await storage.getItem('MoonToken.' + moontoken) as SavedMoonToken | undefined;
+            debug('Already authenticated', jwt.payload);
 
-            debug('Already authenticated', data);
+            try {
+                const {moon, data} = await getPctlToken(storage, moontoken, false);
 
-            new Notification({
-                title: 'Nintendo Switch Parental Controls',
-                body: 'Already signed in as ' + data?.user.nickname,
-            }).show();
+                new Notification({
+                    title: 'Nintendo Switch Parental Controls',
+                    body: 'Already signed in as ' + data.user.nickname + ' (' + data.user.screenName + ')',
+                }).show();
 
-            return getPctlToken(storage, moontoken, false);
+                return {moon, data};
+            } catch (err) {
+                if (err instanceof ErrorResponse && err.response.url.startsWith('https://accounts.nintendo.com/')) {
+                    const data: NintendoAccountAuthError = err.data;
+
+                    if (data.error === 'invalid_grant') {
+                        // The session token has expired/was revoked
+                        return authenticateMoonSessionToken(storage, code, verifier, true);
+                    }
+                }
+
+                throw err;
+            }
         }
 
-        const token = await getNintendoAccountSessionToken(code, verifier, ZNMA_CLIENT_ID);
-
-        debug('session token', token);
-
-        const {moon, data} = await getPctlToken(storage, token.session_token, false);
-
-        const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
-        users.add(data.user.id);
-        await storage.setItem('NintendoAccountIds', [...users]);
-
-        new Notification({
-            title: 'Nintendo Switch Parental Controls',
-            body: 'Authenticated as ' + data.user.nickname,
-        }).show();
-
-        return {moon, data};
+        return authenticateMoonSessionToken(storage, code, verifier);
     } finally {
         window?.close();
     }
+}
+
+async function authenticateMoonSessionToken(
+    storage: persist.LocalStorage,
+    code: string, verifier: string,
+    reauthenticate = false,
+) {
+
+    const token = await getNintendoAccountSessionToken(code, verifier, ZNMA_CLIENT_ID);
+
+    debug('session token', token);
+
+    const {moon, data} = await getPctlToken(storage, token.session_token, false);
+
+    const users = new Set(await storage.getItem('NintendoAccountIds') ?? []);
+    users.add(data.user.id);
+    await storage.setItem('NintendoAccountIds', [...users]);
+
+    new Notification({
+        title: 'Nintendo Switch Parental Controls',
+        body: reauthenticate ?
+            'Reauthenticated to ' + data.user.nickname + ' (' + data.user.screenName + ')' :
+            'Authenticated as ' + data.user.nickname + ' (' + data.user.screenName + ')',
+    }).show();
+
+    return {moon, data};
 }
 
 export async function askAddPctlAccount(storage: persist.LocalStorage, iab = true) {

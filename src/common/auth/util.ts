@@ -1,5 +1,5 @@
-import createDebug from 'debug';
 import * as persist from 'node-persist';
+import createDebug from '../../util/debug.js';
 
 const debug = createDebug('nxapi:auth:util');
 

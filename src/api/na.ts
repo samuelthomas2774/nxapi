@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import createDebug from 'debug';
 import { defineResponse, ErrorResponse } from './util.js';
+import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 

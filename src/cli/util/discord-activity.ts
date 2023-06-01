@@ -1,11 +1,11 @@
 import process from 'node:process';
-import createDebug from 'debug';
 import fetch from 'node-fetch';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from '../util.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime } from '../../discord/types.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken, Login } from '../../common/auth/coral.js';

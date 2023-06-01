@@ -1,5 +1,5 @@
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 
 const debug = createDebug('cli:util:remote-config');

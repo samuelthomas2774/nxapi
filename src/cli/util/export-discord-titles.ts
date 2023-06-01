@@ -1,6 +1,6 @@
-import createDebug from 'debug';
 import fetch from 'node-fetch';
 import type { Arguments as ParentArguments } from '../util.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { titles as unsorted_titles } from '../../discord/titles.js';
 import { DiscordApplicationRpc, getDiscordApplicationRpc } from './discord-activity.js';

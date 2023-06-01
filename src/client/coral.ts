@@ -1,10 +1,10 @@
-import createDebug from 'debug';
 import { Response } from 'node-fetch';
 import CoralApi, { CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralErrorResponse } from '../api/coral-types.js';
+import ZncProxyApi from '../api/znc-proxy.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
 import { checkUseLimit } from './util.js';
-import ZncProxyApi from '../api/znc-proxy.js';
+import createDebug from '../util/debug.js';
 import { ArgumentsCamelCase } from '../util/yargs.js';
 import { initStorage } from '../util/storage.js';
 import NintendoAccountOIDC from './na.js';

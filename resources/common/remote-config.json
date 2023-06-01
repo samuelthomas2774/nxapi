@@ -1,7 +1,7 @@
 {
     "require_version": [],
     "coral": {
-        "znca_version": "2.5.0"
+        "znca_version": "2.5.1"
     },
     "coral_auth": {
         "default": "imink",
@@ -17,8 +17,8 @@
         "blanco_version": "2.1.1"
     },
     "coral_gws_splatnet3": {
-        "app_ver": "3.0.0-0742bda0",
-        "version": "3.0.0",
-        "revision": "0742bda0f28edfcda33ec743b8afc4a95700e27d"
+        "app_ver": "4.0.0-e2ee936d",
+        "version": "4.0.0",
+        "revision": "e2ee936dbecad1fd8582c2a35c2603c63767263f"
     }
 }

@@ -1,9 +1,10 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import fetch from 'node-fetch';
-import createDebug from 'debug';
 import mkdirp from 'mkdirp';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 import { paths } from '../util/storage.js';
@@ -32,6 +33,34 @@ async function loadRemoteConfig() {
     const config_cache_path = path.resolve(paths.cache, 'config.json');
 
     const url = process.env.NXAPI_CONFIG_URL ?? CONFIG_URL;
+    const url_parsed = new URL(url);
+
+    if (url_parsed.protocol === 'file:') {
+        const file = fileURLToPath(url_parsed);
+
+        const stats = await fs.stat(file);
+
+        const config: NxapiRemoteConfig = {
+            ...JSON.parse(await fs.readFile(file, 'utf-8')),
+            [SourceSymbol]: url_parsed.toString(),
+        };
+
+        const cache: RemoteConfigCacheData = {
+            created_at: stats.ctimeMs,
+            updated_at: stats.mtimeMs,
+            etag: null,
+            revalidated_at: Date.now(),
+            stale_at: null,
+            expires_at: Date.now(),
+            version,
+            revision: git?.revision ?? null,
+            url: url_parsed.toString(),
+            headers: {},
+            data: config,
+        };
+
+        return cache;
+    }
 
     let data: RemoteConfigCacheData | undefined = undefined;
     let must_revalidate = true;

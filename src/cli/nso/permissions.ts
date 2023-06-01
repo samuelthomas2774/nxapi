@@ -1,6 +1,6 @@
-import createDebug from 'debug';
 import { PresencePermissions } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from '../nso.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken, Login } from '../../common/auth/coral.js';

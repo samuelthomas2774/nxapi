@@ -1,7 +1,7 @@
 import * as path from 'node:path';
-import createDebug from 'debug';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
+import createDebug from '../util/debug.js';
 import { paths } from '../util/storage.js';
 
 let done = false;

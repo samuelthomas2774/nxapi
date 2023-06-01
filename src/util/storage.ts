@@ -1,12 +1,11 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import createDebug from 'debug';
 import persist from 'node-persist';
-import getPaths from 'env-paths';
+import createDebug from './debug.js';
 
 const debug = createDebug('nxapi:util:storage');
 
-export const paths = getPaths('nxapi');
+export { paths } from './product.js';
 
 export async function initStorage(dir: string) {
     const storage = persist.create({

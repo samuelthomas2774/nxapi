@@ -1,26 +1,23 @@
-import { BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, Settings, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import * as util from 'node:util';
-import createDebug from 'debug';
 import { User } from 'discord-rpc';
 import openWebService, { QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
-import { createWindow, getWindowConfiguration } from './windows.js';
-import { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItemOptions, WindowType } from '../common/types.js';
-import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
+import { createModalWindow, createWindow, getWindowConfiguration, setWindowHeight } from './windows.js';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
+import { EmbeddedPresenceMonitor } from './monitor.js';
+import { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItemOptions, WindowType } from '../common/types.js';
+import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { NintendoAccountUser } from '../../api/na.js';
-import { hrduration } from '../../util/misc.js';
+import createDebug from '../../util/debug.js';
 import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
-import { EmbeddedPresenceMonitor } from './monitor.js';
 
 const debug = createDebug('app:main:ipc');
-
-const shown_modal_windows = new WeakSet<BrowserWindow>();
 
 export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     const store = appinstance.store;
@@ -85,61 +82,15 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
 
     ipcMain.handle('nxapi:window:showpreferences', () => appinstance.showPreferencesWindow().id);
-    ipcMain.handle('nxapi:window:showfriend', (e, props: FriendProps) => createWindow(WindowType.FRIEND, props, {
-        parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
-        modal: true,
-        show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
-    }).id);
-    ipcMain.handle('nxapi:window:discord', (e, props: DiscordSetupProps) => createWindow(WindowType.DISCORD_PRESENCE, props, {
-        parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
-        modal: true,
-        show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
-    }).id);
-    ipcMain.handle('nxapi:window:addfriend', (e, props: AddFriendProps) => createWindow(WindowType.ADD_FRIEND, props, {
-        parent: BrowserWindow.fromWebContents(e.sender) ?? undefined,
-        modal: true,
-        show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
-    }).id);
+    ipcMain.handle('nxapi:window:showfriend', (e, props: FriendProps) =>
+        createModalWindow(WindowType.FRIEND, props, e.sender).id);
+    ipcMain.handle('nxapi:window:discord', (e, props: DiscordSetupProps) =>
+        createModalWindow(WindowType.DISCORD_PRESENCE, props).id);
+    ipcMain.handle('nxapi:window:addfriend', (e, props: AddFriendProps) =>
+        createModalWindow(WindowType.ADD_FRIEND, props, e.sender).id);
     ipcMain.handle('nxapi:window:setheight', (e, height: number) => {
         const window = BrowserWindow.fromWebContents(e.sender)!;
-        const [curWidth, curHeight] = window.getSize();
-        const [curContentWidth, curContentHeight] = window.getContentSize();
-        const [minWidth, minHeight] = window.getMinimumSize();
-        const [maxWidth, maxHeight] = window.getMaximumSize();
-        if (height !== curContentHeight && curHeight === minHeight && curHeight === maxHeight) {
-            window.setMinimumSize(minWidth, height + (curHeight - curContentHeight));
-            window.setMaximumSize(maxWidth, height + (curHeight - curContentHeight));
-        }
-        window.setContentSize(curContentWidth, height);
-
-        if (!shown_modal_windows.has(window)) {
-            window.show();
-            shown_modal_windows.add(window);
-        }
+        setWindowHeight(window, height);
     });
 
     ipcMain.handle('nxapi:discord:config', () => appinstance.monitors.getDiscordPresenceConfiguration());
@@ -256,21 +207,9 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
             ] : [
                 new MenuItem({label: t('discord_enable')!,
-                    click: () => createWindow(WindowType.DISCORD_PRESENCE, {
+                    click: () => createModalWindow(WindowType.DISCORD_PRESENCE, {
                         friend_nsa_id: nso.nsaId,
-                    }, {
-                        parent: window,
-                        modal: true,
-                        show: false,
-                        maximizable: false,
-                        minimizable: false,
-                        width: 560,
-                        height: 300,
-                        minWidth: 450,
-                        maxWidth: 700,
-                        minHeight: 300,
-                        maxHeight: 300,
-                    })}),
+                    }, window)}),
             ]),
             new MenuItem({label: t('friend_notifications_enable')!, type: 'checkbox',
                 checked: monitor?.friend_notifications,
@@ -279,21 +218,9 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                 click: () => monitor?.skipIntervalInCurrentLoop(true)}),
             new MenuItem({type: 'separator'}),
             new MenuItem({label: t('add_friend')!,
-                click: () => createWindow(WindowType.ADD_FRIEND, {
+                click: () => createModalWindow(WindowType.ADD_FRIEND, {
                     user: user.id,
-                }, {
-                    parent: window,
-                    modal: true,
-                    show: false,
-                    maximizable: false,
-                    minimizable: false,
-                    width: 560,
-                    height: 300,
-                    minWidth: 450,
-                    maxWidth: 700,
-                    minHeight: 300,
-                    maxHeight: 300,
-                })}),
+                }, window)}),
         ] : []),
         new MenuItem({type: 'separator'}),
         new MenuItem({label: t('remove_help')!, enabled: false}),

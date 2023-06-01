@@ -1,12 +1,11 @@
 import process from 'node:process';
 import fetch, { Headers } from 'node-fetch';
-import createDebug from 'debug';
 import { v4 as uuidgen } from 'uuid';
 import { defineResponse, ErrorResponse } from './util.js';
+import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 
-const debugS2s = createDebug('nxapi:api:s2s');
 const debugFlapg = createDebug('nxapi:api:flapg');
 const debugImink = createDebug('nxapi:api:imink');
 const debugZncaApi = createDebug('nxapi:api:znca-api');
@@ -16,7 +15,10 @@ export abstract class ZncaApi {
         public useragent?: string
     ) {}
 
-    abstract genf(token: string, hash_method: HashMethod): Promise<FResult>;
+    abstract genf(
+        token: string, hash_method: HashMethod,
+        user?: {na_id: string; coral_user_id?: string;},
+    ): Promise<FResult>;
 }
 
 export enum HashMethod {
@@ -27,49 +29,6 @@ export enum HashMethod {
 //
 // flapg
 //
-
-/** @deprecated The flapg API no longer requires client authentication */
-export async function getLoginHash(token: string, timestamp: string | number, useragent?: string) {
-    const { default: { coral_auth: { splatnet2statink: config } } } = await import('../common/remote-config.js');
-    if (!config) throw new Error('Remote configuration prevents splatnet2statink API use');
-
-    debugS2s('Getting login hash');
-
-    const [signal, cancel] = timeoutSignal();
-    const response = await fetch('https://elifessler.com/s2s/api/gen2', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': getUserAgent(useragent),
-        },
-        body: new URLSearchParams({
-            naIdToken: token,
-            timestamp: '' + timestamp,
-        }).toString(),
-        signal,
-    }).finally(cancel);
-
-    if (response.status !== 200) {
-        throw new ErrorResponse('[s2s] Non-200 status code', response, await response.text());
-    }
-
-    const data = await response.json() as LoginHashApiResponse | LoginHashApiError;
-
-    if ('error' in data) {
-        throw new ErrorResponse('[s2s] ' + data.error, response, data);
-    }
-
-    debugS2s('Got login hash "%s"', data.hash, data);
-
-    return data.hash;
-}
-
-export interface LoginHashApiResponse {
-    hash: string;
-}
-export interface LoginHashApiError {
-    error: string;
-}
 
 export async function flapg(
     hash_method: HashMethod, token: string,
@@ -131,11 +90,6 @@ export type FlapgApiResponse = IminkFResponse;
 export type FlapgApiError = IminkFError;
 
 export class ZncaApiFlapg extends ZncaApi {
-    /** @deprecated */
-    async getLoginHash(id_token: string, timestamp: string) {
-        return getLoginHash(id_token, timestamp, this.useragent);
-    }
-
     async genf(token: string, hash_method: HashMethod) {
         const request_id = uuidgen();
 
@@ -158,7 +112,8 @@ export class ZncaApiFlapg extends ZncaApi {
 export async function iminkf(
     hash_method: HashMethod, token: string,
     timestamp?: number, request_id?: string,
-    useragent?: string
+    user?: {na_id: string; coral_user_id?: string;},
+    useragent?: string,
 ) {
     const { default: { coral_auth: { imink: config } } } = await import('../common/remote-config.js');
     if (!config) throw new Error('Remote configuration prevents imink API use');
@@ -172,6 +127,7 @@ export async function iminkf(
         token,
         timestamp: typeof timestamp === 'number' ? '' + timestamp : undefined,
         request_id,
+        ...user,
     };
 
     const [signal, cancel] = timeoutSignal();
@@ -217,16 +173,17 @@ export interface IminkFError {
 }
 
 export class ZncaApiImink extends ZncaApi {
-    async genf(token: string, hash_method: HashMethod) {
+    async genf(token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string;}) {
         const request_id = uuidgen();
 
-        const result = await iminkf(hash_method, token, undefined, request_id, this.useragent);
+        const result = await iminkf(hash_method, token, undefined, request_id, user, this.useragent);
 
         return {
             provider: 'imink' as const,
             hash_method, token, request_id,
             timestamp: result.timestamp,
             f: result.f,
+            user,
             result,
         };
     }
@@ -239,10 +196,12 @@ export class ZncaApiImink extends ZncaApi {
 export async function genf(
     url: string, hash_method: HashMethod,
     token: string, timestamp?: number, request_id?: string,
-    app?: {platform?: string; version?: string;}, useragent?: string
+    user?: {na_id: string; coral_user_id?: string;},
+    app?: {platform?: string; version?: string;},
+    useragent?: string,
 ) {
     debugZncaApi('Getting f parameter', {
-        url, hash_method, token, timestamp, request_id,
+        url, hash_method, token, timestamp, request_id, user,
         znca_platform: app?.platform, znca_version: app?.version,
     });
 
@@ -251,6 +210,7 @@ export async function genf(
         token,
         timestamp,
         request_id,
+        ...user,
     };
 
     const headers = new Headers({
@@ -294,10 +254,15 @@ export interface AndroidZncaFResponse {
     f: string;
     timestamp?: number;
     request_id?: string;
+
+    warnings?: {error: string; error_message: string}[];
 }
 export interface AndroidZncaFError {
     error: string;
     error_message?: string;
+
+    errors?: {error: string; error_message: string}[];
+    warnings?: {error: string; error_message: string}[];
 }
 
 export class ZncaApiNxapi extends ZncaApi {
@@ -305,10 +270,11 @@ export class ZncaApiNxapi extends ZncaApi {
         super(useragent);
     }
 
-    async genf(token: string, hash_method: HashMethod) {
+    async genf(token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string}) {
         const request_id = uuidgen();
 
-        const result = await genf(this.url + '/f', hash_method, token, undefined, request_id, this.app, this.useragent);
+        const result = await genf(this.url + '/f', hash_method, token, undefined, request_id,
+            user, this.app, this.useragent);
 
         return {
             provider: 'nxapi' as const,
@@ -316,6 +282,7 @@ export class ZncaApiNxapi extends ZncaApi {
             hash_method, token, request_id,
             timestamp: result.timestamp!, // will be included as not sent in request
             f: result.f,
+            user,
             result,
         };
     }
@@ -329,7 +296,7 @@ export async function f(token: string, hash_method: HashMethod | `${HashMethod}`
 
     const provider = getPreferredZncaApiFromEnvironment(options) ?? await getDefaultZncaApi(options);
 
-    return provider.genf(token, hash_method);
+    return provider.genf(token, hash_method, options?.user);
 }
 
 export type FResult = {
@@ -339,6 +306,7 @@ export type FResult = {
     timestamp: number;
     request_id: string;
     f: string;
+    user?: {na_id: string; coral_user_id?: string;};
     result: unknown;
 } & ({
     provider: 'flapg';
@@ -356,6 +324,7 @@ interface ZncaApiOptions {
     useragent?: string;
     platform?: string;
     version?: string;
+    user?: {na_id: string; coral_user_id?: string;};
 }
 
 export function getPreferredZncaApiFromEnvironment(options?: ZncaApiOptions): ZncaApi | null;

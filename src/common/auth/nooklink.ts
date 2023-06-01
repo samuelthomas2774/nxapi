@@ -1,10 +1,10 @@
-import createDebug from 'debug';
 import persist from 'node-persist';
 import { Response } from 'node-fetch';
 import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
 import { Users, WebServiceError } from '../../api/nooklink-types.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 
@@ -79,7 +79,7 @@ function createTokenExpiredHandler(
     renew_token_data: {existingToken: SavedToken; znc_proxy_url?: string},
     ratelimit = true
 ) {
-    return (data: WebServiceError, response: Response) => {
+    return (data?: WebServiceError, response?: Response) => {
         debug('Token expired, renewing', data);
         return renewToken(storage, token, nooklink, renew_token_data, ratelimit);
     };
@@ -196,7 +196,7 @@ function createUserTokenExpiredHandler(
     renew_token_data: {existingToken: SavedUserToken; znc_proxy_url?: string; nooklink: NooklinkApi | null},
     ratelimit = true
 ) {
-    return (data: WebServiceError, response: Response) => {
+    return (data?: WebServiceError, response?: Response) => {
         debug('Token expired', nooklinkuser.user_id, data);
         return renewUserToken(storage, token, nooklinkuser, renew_token_data);
     };

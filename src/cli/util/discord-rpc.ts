@@ -1,7 +1,7 @@
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
 import { DiscordRpcClient, getAllIpcSockets } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 
 const debug = createDebug('cli:util:discord-rpc');

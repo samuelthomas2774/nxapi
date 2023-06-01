@@ -1,19 +1,19 @@
 import { app, dialog, Menu, Tray, nativeImage, MenuItem, BrowserWindow, KeyboardEvent } from './electron.js';
 import path from 'node:path';
 import * as util from 'node:util';
-import createDebug from 'debug';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
-import { WebService } from '../../api/coral-types.js';
 import openWebService, { WebServiceValidationError } from './webservices.js';
-import { SavedToken } from '../../common/auth/coral.js';
-import { SavedMoonToken } from '../../common/auth/moon.js';
-import { dev, dir } from '../../util/product.js';
 import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
-import { createWindow } from './windows.js';
+import { createModalWindow, createWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
 import CoralApi from '../../api/coral.js';
+import { WebService } from '../../api/coral-types.js';
+import { SavedToken } from '../../common/auth/coral.js';
+import { SavedMoonToken } from '../../common/auth/moon.js';
 import { CachedWebServicesList } from '../../common/users.js';
+import createDebug from '../../util/debug.js';
+import { dev, dir } from '../../util/product.js';
 import { languages } from '../i18n/index.js';
 
 const debug = createDebug('app:main:menu');
@@ -300,18 +300,8 @@ export default class MenuApp {
     }
 
     showAddFriendWindow(user: string) {
-        createWindow(WindowType.ADD_FRIEND, {
+        createModalWindow(WindowType.ADD_FRIEND, {
             user,
-        }, {
-            show: false,
-            maximizable: false,
-            minimizable: false,
-            width: 560,
-            height: 300,
-            minWidth: 450,
-            maxWidth: 700,
-            minHeight: 300,
-            maxHeight: 300,
         });
     }
 }

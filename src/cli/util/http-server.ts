@@ -1,6 +1,6 @@
-import createDebug from 'debug';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ErrorResponse } from '../../api/util.js';
+import createDebug from '../../util/debug.js';
 import { temporary_http_errors, temporary_system_errors } from '../../util/errors.js';
 
 const debug = createDebug('cli:util:http-server');

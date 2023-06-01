@@ -1,6 +1,5 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import createDebug from 'debug';
 import persist from 'node-persist';
 import mkdirp from 'mkdirp';
 import SplatNet2Api from '../../api/splatnet2.js';
@@ -9,6 +8,7 @@ import { Records, Stages, WebServiceError } from '../../api/splatnet2-types.js';
 import { dumpCoopResults, dumpResults } from './dump-results.js';
 import { dumpProfileImage, dumpRecords } from './dump-records.js';
 import { ErrorResponse } from '../../api/util.js';
+import createDebug from '../../util/debug.js';
 import Loop, { LoopResult } from '../../util/loop.js';
 
 const debug = createDebug('nxapi:splatnet2:monitor');

@@ -1,5 +1,5 @@
-import createDebug from 'debug';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { SavedToken as SavedNaToken } from '../na.js';
 

@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
+import createDebug from '../../util/debug.js';
 import { Argv } from '../../util/yargs.js';
 
 const debug = createDebug('cli:util:captureid');
