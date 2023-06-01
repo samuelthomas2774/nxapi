@@ -465,12 +465,13 @@ async function checkZncaApiUseAllowed(storage: persist.LocalStorage, window?: Br
 
 const ZNCA_API_USE_TEXT = `To access the Nintendo Switch Online app API, nxapi must send some data to third-party APIs. This is required to generate some data to make Nintendo think you\'re using the real Nintendo Switch Online app.
 
-By default, this uses the imink API, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
+By default, this uses nxapi-znca-api.fancy.org.uk or api.imink.app, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
 
 The data sent includes:
 
-- When authenticating to the Nintendo Switch Online app: a Nintendo Account ID token, containing your Nintendo Account ID and country, which is valid for 15 minutes
-- When authenticating to game-specific services: a Coral (Nintendo Switch Online app) ID token, containing your Coral user ID, Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours`;
+- Your Nintendo Account ID
+- When authenticating to the Nintendo Switch Online app: a Nintendo Account ID token, containing your Nintendo Account country, which is valid for 15 minutes
+- When authenticating to game-specific services: your Coral (Nintendo Switch Online app) user ID and a Coral ID token, containing your Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours`;
 
 async function askZncaApiUseAllowed(window?: BrowserWindow): Promise<boolean> {
     const options: MessageBoxOptions = {

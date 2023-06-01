@@ -18,5 +18,5 @@ This product is not affiliated with Nintendo, Discord and others. All product na
 `.trim();
 
 export const CREDITS_NOTICE = `
-This product uses services provided by Nintendo (https://nintendo.co.jp) and Jone Wang (https://imink.app).
+This product uses services provided by Nintendo (https://nintendo.co.jp), Samuel Elliott (https://gitlab.fancy.org.uk/samuel/nxapi-znca-api) and Jone Wang (https://imink.app).
 `.trim();
