@@ -24,9 +24,9 @@ export const languages = {
         name: 'Japanese',
         app: () => import('./locale/ja-jp.js'),
         authors: [
-            ['hilot06', 'https://github.com/hilot06']
-        ]
-    }
+            ['hilot06', 'https://github.com/hilot06'],
+        ],
+    },
 };
 
 const namespaces = {
