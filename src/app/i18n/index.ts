@@ -21,7 +21,7 @@ export const languages = {
         ],
     },
     'es-ES': {
-        name: 'Spanish',
+        name: 'Español',
         app: () => import('./locale/es-es.js'),
         authors: [
             ['sarayalth', 'https://github.com/sarayalth'],
