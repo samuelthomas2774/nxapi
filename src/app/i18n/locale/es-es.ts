@@ -48,7 +48,7 @@ export const menus = {
     friend_code: {
         share: 'Compartir',
         copy: 'Copiar',
-        friend_code_regenerable: 'Regenerar usando una consola Nintendo Switch',
+        friend_code_regenerable: 'Regenerar utilizando una consola Nintendo Switch',
         friend_code_regenerable_at: 'Se puede regenerar el {{date, datetime}}',
     },
 
@@ -58,7 +58,7 @@ export const menus = {
         nsa_id: 'NSA ID: {{id}}',
         discord_disable: 'Desactivar Discord Rich Presence',
         discord_enabled_for: 'Discord Rich Presence activado para {{name}}',
-        discord_enabled_via: 'Discord Rich Presence activado usando {{name}}',
+        discord_enabled_via: 'Discord Rich Presence activado utilizando {{name}}',
         discord_enable: 'Activar Discord Rich Presence para este usuario...',
         friend_notifications_enable: 'Activar notificaciones para amigos',
         refresh: 'Actualizar ahora',
@@ -215,9 +215,9 @@ export const main_window = {
         setup_with_existing_user: 'Utiliza una de estas cuentas para configurar Discord Rich Presence para este usuario: <0></0>.',
         add_user: 'Añade una cuenta de Nintendo Switch Online con este usuario como amigo para configurar Discord Rich Presence.',
         active_self: 'Compartiendo el estado de este usuario.',
-        active_friend: 'El estado de <0></0> se está compartiendo a Discord usando esta cuenta.',
-        active_unknown: 'El estado de un usuario desconocido se está compartiendo a Discord usando esta cuenta.',
-        active_via: 'El estado de este usuario se está compartiendo a Discord usando <0></0>.',
+        active_friend: 'El estado de <0></0> se está compartiendo a Discord utilizando esta cuenta.',
+        active_unknown: 'El estado de un usuario desconocido se está compartiendo a Discord utilizando esta cuenta.',
+        active_via: 'El estado de este usuario se está compartiendo a Discord utilizando <0></0>.',
 
         setup: 'Configurar',
         disable: 'Desactivar',
@@ -227,7 +227,7 @@ export const main_window = {
         title: 'Amigos',
         add: 'Añadir',
 
-        no_friends: 'Añade amigos usando una consola Nintendo Switch.',
+        no_friends: 'Añade amigos utilizando una consola Nintendo Switch.',
         friend_code: 'Tu código de amigo: <0></0>',
 
         presence_playing: 'Jugando',
@@ -244,8 +244,8 @@ export const main_window = {
         members: '{{event}} jugando, {{voip}} en chat de voz',
         members_with_total: '{{event}} jugando, {{voip}} en chat de voz de {{total}} miembros',
 
-        app_start: 'Usa la aplicación de Nintendo Switch Online en iOS o Android para empezar un chat de voz.',
-        app_join: 'Usa la aplicación de Nintendo Switch Online en iOS o Android para unirte un chat de voz.',
+        app_start: 'Utiliza la aplicación de Nintendo Switch Online en iOS o Android para empezar un chat de voz.',
+        app_join: 'Utiliza la aplicación de Nintendo Switch Online en iOS o Android para unirte un chat de voz.',
 
         share: 'Compartir',
     },
@@ -295,7 +295,7 @@ export const preferences_window = {
     splatnet3: {
         heading: 'SplatNet 3',
         discord: 'Activar Discord Rich Presence ampliado para Splatoon 3',
-        discord_help_1: 'Utiliza SplatNet 3 para mostrar información adicional mientras juegas Splatoon 3. Deberás usar una cuenta Nintendo secundaria que esté añadida como amigo en tu cuenta principal y tenga acceso a SplatNet 3.',
+        discord_help_1: 'Utiliza SplatNet 3 para mostrar información adicional mientras juegas Splatoon 3. Deberás utilizar una cuenta Nintendo secundaria que esté añadida como amigo en tu cuenta principal y tenga acceso a SplatNet 3.',
         discord_help_2: 'Si utilizas una URL que devuelva datos de Splatoon 3 se mostrará la información adicional sin tener en cuenta esta opción.',
     },
 };
@@ -305,7 +305,7 @@ export const friend_window = {
 
     nsa_id: 'NSA ID',
     coral_id: 'Coral user ID',
-    no_coral_user: 'Nunca ha usado la aplicación de Nintendo Switch Online',
+    no_coral_user: 'Nunca ha utilizado la aplicación de Nintendo Switch Online',
 
     friends_since: 'Amigos desde: {{date, datetime}}',
     presence_updated_at: 'Estado actualizado: {{date, datetime}}',
@@ -346,7 +346,7 @@ export const addfriend_window = {
     no_coral_user: 'Nunca ha utilizado la aplicación de Nintendo Switch Online',
 
     send_added: 'Ahora eres amigo de este usuario.',
-    send_sent: 'Solicitud de amistad enviada. {{user}} puede aceptar tu solicitud de amistad usando una consola Nintendo Switch, o enviándote una solicitud de amistad usando la aplicación de Nintendo Switch Online o nxapi.',
+    send_sent: 'Solicitud de amistad enviada. {{user}} puede aceptar tu solicitud de amistad utilizando una consola Nintendo Switch, o enviándote una solicitud de amistad utilizando la aplicación de Nintendo Switch Online o nxapi.',
     send_sending: 'Enviando solicitud de amistad...',
     send_error: 'Se produjo un error al enviar la solicitud de amistad: {{message}}',
 
@@ -370,7 +370,7 @@ export const discordsetup_window = {
     coral_friend_help: 'Este es el usuario que quieres compartir.',
 
     url_heading: '2. Ingresa una URL de estado',
-    url_help: 'Esta URL tiene que usar HTTPS y devolver un objeto JSON con una clave de usuario, amigo o estado. Esta función está diseñada para ser usada con el proxy de la API znc de nxapi.',
+    url_help: 'Esta URL tiene que utilizar HTTPS y devolver un objeto JSON con una clave de usuario, amigo o estado. Esta función está diseñada para ser utilizada con el proxy de la API znc de nxapi.',
 
     preferences_heading: 'Configura opciones adicionales para Discord Rich Presence',
     preferences: 'Preferencias',
