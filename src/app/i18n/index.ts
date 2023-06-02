@@ -20,6 +20,13 @@ export const languages = {
             ['Inkception', 'https://github.com/Inkception'],
         ],
     },
+    'es-ES': {
+        name: 'Español',
+        app: () => import('./locale/es-es.js'),
+        authors: [
+            ['sarayalth', 'https://github.com/sarayalth'],
+        ],
+    },
     'ja-JP': {
         name: 'Japanese',
         app: () => import('./locale/ja-jp.js'),
