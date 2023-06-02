@@ -1,4 +1,4 @@
-import createDebug from 'debug';
+import createDebug from './debug.js';
 
 const debug = createDebug('nxapi:util:loop');
 

@@ -212,6 +212,18 @@ DEBUG=nxapi:api:* nxapi ...
 DEBUG=* nxapi ...
 ```
 
+By default all nxapi logs will be written to a platform-specific location:
+
+Platform        | Log path
+----------------|----------------
+macOS           | `Library/Logs/nxapi-nodejs`
+Windows         | `%localappdata%\nxapi-nodejs\Log`
+Linux           | `$XDG_STATE_HOME/nxapi-nodejs` or `.local/state/nxapi-nodejs`
+
+This only applies to the command line and Electron app and can be disabled by setting `NXAPI_DEBUG_FILE` to `0`. Each process writes to a new file. nxapi will automatically delete log files older than 14 days.
+
+nxapi logs may contain sensitive information such as Nintendo Account access tokens.
+
 #### Environment variables
 
 Some options can be set using environment variables. These can be stored in a `.env` file in the data location. Environment variables will be read from the `.env` file in the default location, then the `.env` file in `NXAPI_DATA_PATH` location. `.env` files will not be read from the location set in the `--data-path` option.
@@ -234,6 +246,7 @@ Environment variable            | Description
 `NXAPI_SPLATNET3_UPGRADE_QUERIES` | Sets when the SplatNet 3 client is allowed to upgrade persisted query IDs to newer versions. If `0` queries are never upgraded (not recommended). If `1` queries are upgraded if they do not contain potentially breaking changes (not recommended, as like `0` this allows older queries to be sent to the API). If `2` queries are upgraded, requests that would include breaking changes are rejected. If `3` all queries are upgraded, even if they contain potentially breaking changes (default).
 `NXAPI_SPLATNET3_STRICT`        | Disables strict handling of errors from the SplatNet 3 GraphQL API if set to `0`. If set to `1` (default) requests will be rejected if the response includes any errors, even if the response includes a result.
 `DEBUG`                         | Used by the [debug](https://github.com/debug-js/debug) package. Sets which modules should have debug logging enabled. See [debug logs](#debug-logs).
+`NXAPI_DEBUG_FILE`              | Disables writing debug logs to a file if set to `0`.
 
 Other environment variables may also be used by Node.js, Electron or other packages nxapi depends on.
 
@@ -254,13 +267,19 @@ When using nxapi as a TypeScript/JavaScript library, the `addUserAgent` function
 import { addUserAgent } from 'nxapi';
 
 addUserAgent('your-script/1.0.0 (+https://github.com/...)');
+```
 
-// This could also be read from a package.json file
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
-import { readFile } from 'node:fs/promises':
-const pkg = JSON.parse(await readFile(resolve(fileURLToPath(import.meta.url), '..', 'package.json'), 'utf-8'));
-addUserAgent(pkg.name + '/' + pkg.version + ' (+' + pkg.repository.url + ')');
+The `addUserAgentFromPackageJson` function can be used to add data from a package.json file.
+
+```ts
+import { addUserAgentFromPackageJson } from 'nxapi';
+
+await addUserAgentFromPackageJson(new URL('../package.json', import.meta.url));
+await addUserAgentFromPackageJson(path.resolve(fileURLToString(import.meta.url), '..', 'package.json'));
+// adds "test-package/0.1.0 (+https://github.com/ghost/example.git)"
+
+await addUserAgentFromPackageJson(new URL('../package.json', import.meta.url), 'additional information');
+// adds "test-package/0.1.0 (+https://github.com/ghost/example.git; additional information)"
 ```
 
 ### Usage as a TypeScript/JavaScript library
@@ -296,7 +315,7 @@ The reason Nintendo added this is probably to try and stop people automating acc
 - Nintendo Switch Online app API docs
     - https://github.com/ZekeSnider/NintendoSwitchRESTAPI
     - https://dev.to/mathewthe2/intro-to-nintendo-switch-rest-api-2cm7
-    - nxapi includes TypeScript definitions of all API resources and JSON Web Token payloads at [src/api](src/api)
+    - nxapi includes TypeScript definitions for all API resources and JSON Web Token payloads at [src/api](src/api)
 - Coral client authentication (`f` parameter)
     - https://github.com/samuelthomas2774/nxapi/discussions/10
     - ~~https://github.com/frozenpandaman/splatnet2statink/wiki/api-docs - splatnet2statink and flapg API docs~~

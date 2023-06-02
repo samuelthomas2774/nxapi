@@ -1,8 +1,8 @@
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs/promises';
-import createDebug from 'debug';
 import mkdirp from 'mkdirp';
+import createDebug from '../../util/debug.js';
 import { StorageProvider } from './index.js';
 
 const debug = createDebug('nxapi:client:storage:local');

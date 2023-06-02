@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import createDebug from 'debug';
 import { defineResponse, ErrorResponse } from './util.js';
+import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 
@@ -14,8 +14,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Platform': 'Android',
-            'X-ProductVersion': '2.0.0',
+            'Accept': 'application/json',
             'User-Agent': 'NASDKAPI; Android',
         },
         body: new URLSearchParams({

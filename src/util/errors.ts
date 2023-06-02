@@ -1,9 +1,9 @@
-import createDebug from 'debug';
 import { AbortError } from 'node-fetch';
+import createDebug from './debug.js';
 import Loop, { LoopResult } from './loop.js';
+import { TemporaryErrorSymbol } from './misc.js';
 import { CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
-import { TemporaryErrorSymbol } from './misc.js';
 
 const debug = createDebug('nxapi:util:errors');
 
@@ -12,6 +12,7 @@ export const temporary_system_errors = {
     'ENOTFOUND': null,
     'EAI_AGAIN': 'name resolution failed',
     'ECONNRESET': 'connection reset',
+    'ENETUNREACH': 'network unreachable',
 };
 export const temporary_http_errors = [
     502, // Bad Gateway

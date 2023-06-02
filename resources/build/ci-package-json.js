@@ -10,8 +10,8 @@ const git = (...args) => execFile('git', args, options).then(({stdout}) => stdou
 const pkg = JSON.parse(await fs.readFile(new URL('../../package.json', import.meta.url), 'utf-8'));
 
 const [revision, branch, changed_files] = await Promise.all([
-    git('rev-parse', 'HEAD'),
-    git('rev-parse', '--abbrev-ref', 'HEAD'),
+    process.env.CI_COMMIT_SHA || git('rev-parse', 'HEAD'),
+    process.env.CI_COMMIT_BRANCH || git('rev-parse', '--abbrev-ref', 'HEAD'),
     git('diff', '--name-only', 'HEAD'),
 ]);
 

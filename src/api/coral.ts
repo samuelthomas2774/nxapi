@@ -1,10 +1,10 @@
 import fetch, { Response } from 'node-fetch';
 import { v4 as uuidgen } from 'uuid';
-import createDebug from 'debug';
 import { f, FResult, HashMethod } from './f.js';
 import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter, WebServiceTokenParameter } from './coral-types.js';
 import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
+import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -41,13 +41,17 @@ export interface ResultData<T> {
 }
 
 export default class CoralApi {
-    onTokenExpired: ((data: CoralErrorResponse, res: Response) => Promise<CoralAuthData | void>) | null = null;
+    onTokenExpired: ((data?: CoralErrorResponse, res?: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    /** @internal */
+    _token_expired = false;
 
     protected constructor(
         public token: string,
         public useragent: string | null = getAdditionalUserAgents(),
+        public coral_user_id: string,
+        public na_id: string,
         readonly znca_version = ZNCA_VERSION,
         readonly znca_useragent = ZNCA_USER_AGENT,
     ) {}
@@ -55,8 +59,18 @@ export default class CoralApi {
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _autoRenewToken = true,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<Result<T>> {
+        if (this._token_expired && _autoRenewToken && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken && _autoRenewToken) {
             await this._renewToken;
         }
@@ -84,6 +98,7 @@ export default class CoralApi {
         const data = await response.json() as CoralResponse<T>;
 
         if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             // _renewToken will be awaited when calling fetch
             this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
                 if (data) this.setTokenWithSavedToken(data);
@@ -210,7 +225,12 @@ export default class CoralApi {
     async getWebServiceToken(id: number, /** @internal */ _attempt = 0): Promise<Result<WebServiceToken>> {
         await this._renewToken;
 
-        const data = await f(this.token, HashMethod.WEB_SERVICE, this.useragent ?? getAdditionalUserAgents());
+        const data = await f(this.token, HashMethod.WEB_SERVICE, {
+            platform: ZNCA_PLATFORM,
+            version: this.znca_version,
+            useragent: this.useragent ?? getAdditionalUserAgents(),
+            user: {na_id: this.na_id, coral_user_id: this.coral_user_id},
+        });
 
         const req: WebServiceTokenParameter = {
             id,
@@ -242,8 +262,12 @@ export default class CoralApi {
         // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
-        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL,
-            this.useragent ?? getAdditionalUserAgents());
+        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
+            platform: ZNCA_PLATFORM,
+            version: this.znca_version,
+            useragent: this.useragent ?? getAdditionalUserAgents(),
+            user: {na_id: user.id, coral_user_id: this.coral_user_id},
+        });
 
         const req: AccountTokenParameter = {
             naBirthday: user.birthday,
@@ -273,6 +297,9 @@ export default class CoralApi {
     /** @private */
     setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
         this.token = data.credential.accessToken;
+        this.coral_user_id = '' + data.nsoAccount.user.id;
+        if ('user' in data) this.na_id = data.user.id;
+        this._token_expired = false;
     }
 
     static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
@@ -292,6 +319,8 @@ export default class CoralApi {
         return new this(
             data.credential.accessToken,
             useragent,
+            '' + data.nsoAccount.user.id,
+            data.user.id,
             data.znca_version,
             data.znca_useragent,
         );
@@ -313,14 +342,19 @@ export default class CoralApi {
     static async loginWithNintendoAccountToken(
         nintendoAccountToken: NintendoAccountToken,
         user: NintendoAccountUser,
-        useragent = getAdditionalUserAgents()
+        useragent = getAdditionalUserAgents(),
     ) {
         const { default: { coral: config } } = await import('../common/remote-config.js');
 
         if (!config) throw new Error('Remote configuration prevents Coral authentication');
         const znca_useragent = `com.nintendo.znca/${config.znca_version}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
-        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, useragent);
+        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
+            platform: ZNCA_PLATFORM,
+            version: config.znca_version,
+            useragent,
+            user: {na_id: user.id},
+        });
 
         debug('Getting Nintendo Switch Online app token');
 

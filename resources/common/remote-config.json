@@ -1,7 +1,7 @@
 {
     "require_version": [],
     "coral": {
-        "znca_version": "2.4.0"
+        "znca_version": "2.5.1"
     },
     "coral_auth": {
         "default": "imink",
@@ -10,15 +10,15 @@
         "imink": {}
     },
     "moon": {
-        "znma_version": "1.17.0",
-        "znma_build": "261"
+        "znma_version": "1.18.0",
+        "znma_build": "275"
     },
     "coral_gws_nooklink": {
         "blanco_version": "2.1.1"
     },
     "coral_gws_splatnet3": {
-        "app_ver": "2.0.0-bd36a652",
-        "version": "2.0.0",
-        "revision": "bd36a652913aa26b132b84df921e07b20f4a414d"
+        "app_ver": "4.0.0-e2ee936d",
+        "version": "4.0.0",
+        "revision": "e2ee936dbecad1fd8582c2a35c2603c63767263f"
     }
 }

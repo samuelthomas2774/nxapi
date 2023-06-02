@@ -1,10 +1,10 @@
 import process from 'node:process';
 import * as fs from 'node:fs';
-import createDebug from 'debug';
 import persist from 'node-persist';
 import { getToken, Login } from './coral.js';
 import SplatNet2Api, { SplatNet2AuthData, updateIksmSessionLastUsed } from '../../api/splatnet2.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 

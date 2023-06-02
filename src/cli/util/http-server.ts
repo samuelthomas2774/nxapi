@@ -1,6 +1,6 @@
-import createDebug from 'debug';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ErrorResponse } from '../../api/util.js';
+import createDebug from '../../util/debug.js';
 import { temporary_http_errors, temporary_system_errors } from '../../util/errors.js';
 
 const debug = createDebug('cli:util:http-server');
@@ -71,10 +71,7 @@ export class HttpServer {
         if (err instanceof ResponseError) {
             err.sendResponse(req, res);
         } else {
-            this.sendJsonResponse(res, {
-                error: err,
-                error_message: (err as Error).message,
-            }, 500);
+            this.sendJsonResponse(res, getErrorObject(err), 500);
         }
     }
 }
@@ -85,20 +82,28 @@ export class ResponseError extends Error {
     }
 
     sendResponse(req: Request, res: Response) {
-        const data = {
-            error: this.code,
-            error_message: this.message,
-        };
+        const data = this.toJSON();
 
         res.statusCode = this.status;
         res.setHeader('Content-Type', 'application/json');
         res.end(req.headers['accept']?.match(/\/html\b/i) ?
             JSON.stringify(data, null, 4) : JSON.stringify(data));
     }
+
+    sendEventStreamEvent(events: EventStreamResponse) {
+        events.sendEvent('error', this.toJSON());
+    }
+
+    toJSON() {
+        return {
+            error: this.code,
+            error_message: this.message,
+        };
+    }
 }
 
 export class EventStreamResponse {
-    json_replacer: ((key: string, value: unknown) => any) | null = null;
+    json_replacer: ((key: string, value: unknown, data: unknown) => any) | null = null;
 
     private static id = 0;
     readonly id = EventStreamResponse.id++;
@@ -123,7 +128,96 @@ export class EventStreamResponse {
 
     sendEvent(event: string | null, ...data: unknown[]) {
         if (event) this.res.write('event: ' + event + '\n');
-        for (const d of data) this.res.write('data: ' + JSON.stringify(d, this.json_replacer ?? undefined) + '\n');
+        for (const d of data) {
+            if (d instanceof EventStreamField) d.write(this.res);
+            else this.res.write('data: ' + JSON.stringify(d,
+                this.json_replacer ? (k, v) => this.json_replacer?.call(null, k, v, d) : undefined) + '\n');
+        }
         this.res.write('\n');
     }
+
+    sendErrorEvent(err: unknown) {
+        if (err instanceof ResponseError) {
+            err.sendEventStreamEvent(this);
+        } else {
+            this.sendEvent('error', getErrorObject(err));
+        }
+    }
+}
+
+abstract class EventStreamField {
+    abstract write(res: Response): void;
+}
+
+export class EventStreamLastEventId extends EventStreamField {
+    constructor(
+        readonly id: string,
+    ) {
+        super();
+
+        if (!/^[0-9a-z-_\.:;]+$/i.test(id)) {
+            throw new TypeError('Invalid event ID');
+        }
+    }
+
+    write(res: Response) {
+        res.write('id: ' + this.id + '\n');
+    }
+}
+
+export class EventStreamRetryTime extends EventStreamField {
+    constructor(
+        readonly retry_ms: number,
+    ) {
+        super();
+    }
+
+    write(res: Response) {
+        res.write('retry: ' + this.retry_ms + '\n');
+    }
+}
+
+export class EventStreamRawData extends EventStreamField {
+    constructor(
+        readonly data: string,
+    ) {
+        super();
+
+        if (/[\0\n\r]/.test(data)) {
+            throw new TypeError('Invalid data');
+        }
+    }
+
+    write(res: Response) {
+        res.write('data: ' + this.data + '\n');
+    }
+}
+
+function getErrorObject(err: unknown) {
+    if (err instanceof ResponseError) {
+        return err.toJSON();
+    }
+
+    if (err && typeof err === 'object' && 'type' in err && 'code' in err && 'message' in err && err.type === 'system') {
+        return {
+            error: 'unknown_error',
+            error_message: err.message,
+            error_code: err.code,
+            ...err,
+        };
+    }
+
+    if (err instanceof Error) {
+        return {
+            error: 'unknown_error',
+            error_message: err.message,
+            ...err,
+        };
+    }
+
+    return {
+        error: 'unknown_error',
+        error_message: (err as Error)?.message,
+        ...(err as object),
+    };
 }

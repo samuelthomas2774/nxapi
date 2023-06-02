@@ -3,9 +3,20 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs/promises';
 import * as util from 'node:util';
+import getPaths from 'env-paths';
+
+// This file is used by debug.ts
+// debug is only used before this module completes execution, so logging to a
+// file will not have been initialised then anyway
 import createDebug from 'debug';
 
 const debug = createDebug('nxapi:util:product');
+
+interface RevisionInfo {
+    revision: string;
+    branch: string | null;
+    changed_files: string[];
+}
 
 //
 // Embedded package/version info injected during Rollup build
@@ -14,11 +25,7 @@ const debug = createDebug('nxapi:util:product');
 /** @internal */
 declare global {
     var __NXAPI_BUNDLE_PKG__: any | undefined;
-    var __NXAPI_BUNDLE_GIT__: {
-        revision: string;
-        branch: string | null;
-        changed_files: string[];
-    } | null | undefined;
+    var __NXAPI_BUNDLE_GIT__: RevisionInfo | null | undefined;
     var __NXAPI_BUNDLE_RELEASE__: string | null | undefined;
     var __NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__: any | undefined;
 }
@@ -48,7 +55,7 @@ export const docker: string | true | null = pkg.__nxapi_docker ?? await (async (
     }
 })();
 
-export const git = typeof embedded_git !== 'undefined' ? embedded_git : pkg.__nxapi_git ?? await (async () => {
+export const git: RevisionInfo | null = typeof embedded_git !== 'undefined' ? embedded_git : pkg.__nxapi_git as RevisionInfo | null | undefined ?? await (async () => {
     try {
         await fs.stat(path.join(dir, '.git'));
     } catch (err) {
@@ -79,3 +86,5 @@ export const dev = process.env.NODE_ENV !== 'production' &&
 export const product = 'nxapi ' + version +
     (!release && git ? '-' + git.revision.substr(0, 7) + (git.branch ? ' (' + git.branch + ')' : '') :
         !release ? '-?' : '');
+
+export const paths = getPaths('nxapi');

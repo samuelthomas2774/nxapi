@@ -1,14 +1,14 @@
 import { dialog, Notification } from './electron.js';
-import createDebug from 'debug';
 import { i18n } from 'i18next';
+import { App } from './index.js';
+import { tryGetNativeImageFromUrl } from './util.js';
+import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
 import { CurrentUser, Friend, Game, CoralErrorResponse } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
+import createDebug from '../../util/debug.js';
 import { LoopResult } from '../../util/loop.js';
-import { tryGetNativeImageFromUrl } from './util.js';
-import { App } from './index.js';
-import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
 import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';
@@ -45,6 +45,7 @@ export class PresenceMonitorManager {
         i.presence_user = null;
         i.user_notifications = false;
         i.friend_notifications = false;
+        i.discord_preconnect = true;
 
         i.discord.onUpdateActivity = (presence: DiscordPresence | null) => {
             this.app.store.emit('update-discord-presence', presence ? {...presence, config: undefined} : null);
@@ -91,6 +92,7 @@ export class PresenceMonitorManager {
         const i = new EmbeddedProxyPresenceMonitor(presence_url);
 
         i.notifications = this.notifications;
+        i.discord_preconnect = true;
 
         i.discord.onUpdateActivity = (presence: DiscordPresence | null) => {
             this.app.store.emit('update-discord-presence', presence ? {...presence, config: undefined} : null);

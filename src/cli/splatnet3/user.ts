@@ -1,5 +1,5 @@
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';

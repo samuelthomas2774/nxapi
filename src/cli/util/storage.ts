@@ -1,6 +1,6 @@
 import * as util from 'node:util';
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../util.js';
+import createDebug from '../../util/debug.js';
 import { Argv } from '../../util/yargs.js';
 import { initStorage, iterateLocalStorage } from '../../util/storage.js';
 import Table from './table.js';

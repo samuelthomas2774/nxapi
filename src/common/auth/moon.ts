@@ -1,8 +1,8 @@
-import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { Response } from 'node-fetch';
 import { MoonAuthData, ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
+import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import MoonApi from '../../api/moon.js';
 import { checkUseLimit, LIMIT_REQUESTS, SHOULD_LIMIT_USE } from './util.js';
@@ -76,7 +76,7 @@ function createTokenExpiredHandler(
     storage: persist.LocalStorage, token: string, moon: MoonApi,
     renew_token_data: {existingToken: SavedMoonToken}, ratelimit = true
 ) {
-    return (data: MoonError, response: Response) => {
+    return (data?: MoonError, response?: Response) => {
         debug('Token expired', renew_token_data.existingToken.user.id, data);
         return renewToken(storage, token, moon, renew_token_data, ratelimit);
     };

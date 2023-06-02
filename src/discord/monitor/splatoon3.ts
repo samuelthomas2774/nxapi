@@ -1,18 +1,18 @@
-import createDebug from 'debug';
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
-import { BankaraMatchMode, BankaraMatchSetting, CoopSchedule, CoopSchedule_schedule, CoopSetting, DetailVotingStatusResult, FestMatchSetting, FestState, FestTeamRole, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, BankaraMatchSetting, CoopRule, CoopSchedule_schedule, CoopSetting_schedule, DetailVotingStatusResult, FestMatchSetting, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, LeagueMatchSetting, RegularMatchSetting, StageScheduleResult, VsSchedule_bankara, VsSchedule_fest, VsSchedule_league, VsSchedule_regular, VsSchedule_xMatch, XMatchSetting } from 'splatnet3-types/splatnet3';
+import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
 import { Game } from '../../api/coral-types.js';
 import SplatNet3Api from '../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../app/common/types.js';
 import { Arguments } from '../../cli/nso/presence.js';
 import { getBulletToken, SavedBulletToken } from '../../common/auth/splatnet3.js';
 import { ExternalMonitorPresenceInterface } from '../../common/presence.js';
+import createDebug from '../../util/debug.js';
 import { EmbeddedLoop, LoopResult } from '../../util/loop.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';
-import { DiscordPresenceContext, ErrorResult } from '../types.js';
 import { product } from '../../util/product.js';
-import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
+import { DiscordPresenceContext, ErrorResult } from '../types.js';
 
 const debug = createDebug('nxapi:discord:splatnet3');
 
@@ -35,6 +35,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     x_schedule: VsSchedule_xMatch | null = null;
     coop_regular_schedule: CoopSchedule_schedule | null = null;
     coop_big_run_schedule: CoopSchedule_schedule | null = null;
+    coop_team_contest_schedule: CoopSchedule_schedule | null = null;
     fest: Fest_schedule | null = null;
     fest_team_voting_status: FestTeam_votingStatus | null = null;
     fest_team: FestTeam_schedule | null = null;
@@ -135,6 +136,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
         this.x_schedule = this.getSchedule(this.cached_schedules?.data.xSchedules.nodes ?? []);
         this.coop_regular_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.regularSchedules.nodes ?? []);
         this.coop_big_run_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.bigRunSchedules.nodes ?? []);
+        this.coop_team_contest_schedule = this.getSchedule(this.cached_schedules?.data.coopGroupingSchedule.teamContestSchedules.nodes ?? []);
         this.fest = this.cached_schedules?.data.currentFest ?? null;
 
         // Identify the user by their icon as the vote list doesn't have friend IDs
@@ -225,7 +227,7 @@ interface PresenceUrlResponse {
     splatoon3_vs_setting?:
         RegularMatchSetting | BankaraMatchSetting | FestMatchSetting |
         LeagueMatchSetting | XMatchSetting | null;
-    splatoon3_coop_setting?: CoopSetting | null;
+    splatoon3_coop_setting?: CoopSetting_schedule | null;
     splatoon3_fest?: Fest_schedule | null;
 }
 
@@ -339,9 +341,9 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             presence_proxy_data && 'splatoon3_coop_setting' in presence_proxy_data ?
                 presence_proxy_data.splatoon3_coop_setting :
             monitor ?
-                friend.coopRule === 'BIG_RUN' ?
-                    monitor.coop_big_run_schedule?.setting :
-                    monitor.coop_regular_schedule?.setting :
+                friend.coopRule === CoopRule.BIG_RUN ? monitor.coop_big_run_schedule?.setting :
+                friend.coopRule === CoopRule.TEAM_CONTEST ? monitor.coop_team_contest_schedule?.setting :
+                monitor.coop_regular_schedule?.setting :
             null;
 
         if (coop_setting) {
@@ -358,5 +360,9 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
                     ' | ' + product;
             }
         }
+    }
+
+    if (friend.onlineState === FriendOnlineState.MINI_GAME_PLAYING) {
+        activity.details = 'Tableturf Battle';
     }
 }

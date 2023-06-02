@@ -1,12 +1,12 @@
-import createDebug from 'debug';
 import fetch, { Response } from 'node-fetch';
 import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
-import { timeoutSignal } from '../util/misc.js';
 import { WebServiceToken } from './coral-types.js';
 import CoralApi from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { BulletToken } from './splatnet3-types.js';
 import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
+import createDebug from '../util/debug.js';
+import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:splatnet3');
 const debugGraphQl = createDebug('nxapi:api:splatnet3:graphql');
@@ -74,9 +74,10 @@ enum MapQueriesMode {
 
 export default class SplatNet3Api {
     onTokenShouldRenew: ((remaining: number, res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
-    onTokenExpired: ((res: Response) => Promise<SplatNet3AuthData | void>) | null = null;
+    onTokenExpired: ((res?: Response) => Promise<SplatNet3AuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
+    protected _token_expired = false;
 
     graphql_strict = process.env.NXAPI_SPLATNET3_STRICT !== '0';
 
@@ -85,6 +86,7 @@ export default class SplatNet3Api {
         public version: string,
         public map_queries: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>,
         readonly map_queries_mode: MapQueriesMode,
+        readonly na_country: string,
         public language: string,
         public useragent: string,
     ) {}
@@ -92,8 +94,18 @@ export default class SplatNet3Api {
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string | FormData, headers?: object,
         /** @internal */ _log?: string,
-        /** @internal */ _attempt = 0
+        /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
+        if (this._token_expired && !this._renewToken) {
+            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this._renewToken = this.onTokenExpired.call(null).then(data => {
+                if (data) this.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this._renewToken = null;
+            });
+        }
+
         if (this._renewToken) {
             await this._renewToken;
         }
@@ -120,6 +132,7 @@ export default class SplatNet3Api {
             response.status, version);
 
         if (response.status === 401 && !_attempt && this.onTokenExpired) {
+            this._token_expired = true;
             // _renewToken will be awaited when calling fetch
             this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, response).then(data => {
                 if (data) this.setTokenWithSavedToken(data);
@@ -244,12 +257,16 @@ export default class SplatNet3Api {
 
     /** / */
     async getHome() {
-        return this.persistedQuery(RequestId.HomeQuery, {});
+        return this.persistedQuery(RequestId.HomeQuery, {
+            naCountry: this.na_country,
+        });
     }
 
     /** / -> /setting */
     async getSettings() {
-        return this.persistedQuery(RequestId.SettingQuery, {});
+        return this.persistedQuery(RequestId.SettingQuery, {
+            naCountry: this.na_country,
+        });
     }
 
     /** / -> /photo_album */
@@ -693,6 +710,14 @@ export default class SplatNet3Api {
         });
     }
 
+    /** / -> /my_outfits [-> /my_outfits/{id}] -> share */
+    async shareOutfit(index: number, timezone_offset_minutes = 0) {
+        return this.persistedQuery(RequestId.ShareMyOutfitQuery, {
+            myOutfitIndex: index,
+            timezoneOffset: timezone_offset_minutes, // (new Date()).getTimezoneOffset()
+        });
+    }
+
     //
     // Replays
     //
@@ -848,7 +873,7 @@ export default class SplatNet3Api {
             PagerUpdateBattleHistoriesByVsModeVariables
         >(RequestId.PagerUpdateBattleHistoriesByVsModeQuery, {
             isBankara: false,
-            isLeague: false,
+            isEvent: false,
             isPrivate: false,
             isRegular: false,
             isXBattle: false,
@@ -920,6 +945,7 @@ export default class SplatNet3Api {
         this.version = data.version;
         this.language = data.bullet_token.lang;
         this.useragent = data.useragent;
+        this._token_expired = false;
     }
 
     static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
@@ -933,6 +959,7 @@ export default class SplatNet3Api {
             data.version,
             data.queries ?? {},
             getMapPersistedQueriesModeFromEnvironment(),
+            data.country,
             data.bullet_token.lang,
             data.useragent,
         );
@@ -944,6 +971,7 @@ export default class SplatNet3Api {
             data.version,
             data.queries ?? {},
             getMapPersistedQueriesModeFromEnvironment(),
+            data.country ?? 'GB',
             data.language,
             SPLATNET3_WEBSERVICE_USERAGENT,
         );
@@ -1081,6 +1109,7 @@ export interface SplatNet3CliTokenData {
     bullet_token: string;
     expires_at: number;
     language: string;
+    country: string;
     version: string;
     queries?: Partial<Record<string, [/** new query ID */ string, /** unsafe */ boolean] | null>>;
 }

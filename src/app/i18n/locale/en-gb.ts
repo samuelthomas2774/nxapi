@@ -1,4 +1,4 @@
-import { CREDITS_NOTICE, LICENCE_NOTICE } from '../../../common/constants.js';
+import { CREDITS_NOTICE, LICENCE_NOTICE, ZNCA_API_USE_TEXT } from '../../../common/constants.js';
 
 export const app = {
     default_title: 'Nintendo Switch Online',
@@ -99,6 +99,41 @@ export const handle_uri = {
     cancel: 'Cancel',
 };
 
+export const na_auth = {
+    window: {
+        title: 'Nintendo Account',
+    },
+
+    znca_api_use: {
+        title: 'Third-party API usage',
+
+        // This should be translated in other languages
+        text: ZNCA_API_USE_TEXT,
+
+        ok: 'OK',
+        cancel: 'Cancel',
+        more_information: 'More information',
+    },
+
+    notification_coral: {
+        title: 'Nintendo Switch Online',
+        body_existing: 'Already signed in as {{name}} (Nintendo Account {{na_name}} / {{na_username}})',
+        body_authenticated: 'Authenticated as {{name}} (Nintendo Account {{na_name}} / {{na_username}})',
+        body_reauthenticated: 'Reauthenticated to {{name}} (Nintendo Account {{na_name}} / {{na_username}})',
+    },
+
+    notification_moon: {
+        title: 'Nintendo Switch Parental Controls',
+        body_existing: 'Already signed in as {{na_name}} ({{na_username}})',
+        body_authenticated: 'Authenticated as {{na_name}} ({{na_username}})',
+        body_reauthenticated: 'Reauthenticated to {{na_name}} ({{na_username}})',
+    },
+
+    error: {
+        title: 'Error adding account',
+    },
+};
+
 export const time_since = {
     default: {
         now: 'just now',
@@ -131,6 +166,7 @@ export const main_window = {
         discord_active_friend: 'Discord Rich Presence active: <0></0>',
         discord_not_active: 'Discord Rich Presence not active',
         discord_playing: 'Playing',
+        discord_not_connected: 'Not connected to Discord',
 
         add_user: 'Add user',
         discord_setup: 'Set up Discord Rich Presence',

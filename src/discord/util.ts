@@ -1,7 +1,7 @@
-import createDebug from 'debug';
 import DiscordRPC from 'discord-rpc';
 import { Game, PresenceState } from '../api/coral-types.js';
 import { defaultTitle, titles } from './titles.js';
+import createDebug from '../util/debug.js';
 import { product, version } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
 import { DiscordPresence, DiscordPresenceContext, DiscordPresencePlayTime } from './types.js';

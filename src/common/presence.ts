@@ -1,17 +1,16 @@
-import createDebug from 'debug';
 import EventSource from 'eventsource';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
 import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
-import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
+import { getPresenceFromUrl } from '../api/znc-proxy.js';
+import createDebug from '../util/debug.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import Loop, { LoopResult } from '../util/loop.js';
-import { getTitleIdFromEcUrl } from '../index.js';
 import { parseLinkHeader } from '../util/http.js';
 import { getUserAgent } from '../util/useragent.js';
-import { TemporaryErrorSymbol } from '../util/misc.js';
+import { getTitleIdFromEcUrl, TemporaryErrorSymbol } from '../util/misc.js';
 import { handleError } from '../util/errors.js';
 
 const debug = createDebug('nxapi:nso:presence');
@@ -79,8 +78,9 @@ class ZncDiscordPresenceClient {
 
             if (this.m.presence_enabled && this.m.discord_preconnect) {
                 if (this.rpc) {
-                    debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
+                    if (this.title) debugDiscord('No presence but Discord preconnect enabled - clearing Discord activity');
                     this.setActivity(this.rpc.id);
+                    this.title = null;
                 } else {
                     debugDiscord('No presence but Discord preconnect enabled - connecting');
                     const discordpresence = getInactiveDiscordPresence(PresenceState.OFFLINE, 0);
@@ -235,7 +235,8 @@ class ZncDiscordPresenceClient {
         if (!this.rpc) {
             this.connect(client_id, this.m.discord_client_filter);
         } else {
-            this.rpc.client.setActivity(typeof activity === 'string' ? undefined : activity.activity);
+            if (typeof activity === 'string') this.rpc.client.clearActivity();
+            else this.rpc.client.setActivity(activity.activity);
         }
     }
 

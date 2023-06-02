@@ -2,25 +2,25 @@ import { app, BrowserWindow, dialog, ipcMain, LoginItemSettingsOptions, Menu } f
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
-import createDebug from 'debug';
 import * as persist from 'node-persist';
 import { i18n } from 'i18next';
-import { init as initGlobals } from '../../common/globals.js';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
-import { createWindow } from './windows.js';
-import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
-import { initStorage, paths } from '../../util/storage.js';
-import { checkUpdates, UpdateCacheData } from '../../common/update.js';
-import Users, { CoralUser } from '../../common/users.js';
+import { createModalWindow, createWindow } from './windows.js';
 import { sendToAllWindows, setupIpc } from './ipc.js';
-import { dev, dir, git, release, version } from '../../util/product.js';
-import { addUserAgent } from '../../util/useragent.js';
 import { askUserForUri } from './util.js';
 import { setAppInstance, updateMenuLanguage } from './app-menu.js';
 import { handleAuthUri } from './na-auth.js';
+import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
+import { init as initGlobals } from '../../common/globals.js';
 import { CREDITS_NOTICE, GITLAB_URL, LICENCE_NOTICE } from '../../common/constants.js';
+import { checkUpdates, UpdateCacheData } from '../../common/update.js';
+import Users, { CoralUser } from '../../common/users.js';
+import createDebug from '../../util/debug.js';
+import { dev, dir, git, release, version } from '../../util/product.js';
+import { addUserAgent } from '../../util/useragent.js';
+import { initStorage, paths } from '../../util/storage.js';
 import createI18n, { languages } from '../i18n/index.js';
 
 const debug = createDebug('app:main');
@@ -101,17 +101,7 @@ export class App {
             return this.preferences_window;
         }
 
-        const window = createWindow(WindowType.PREFERENCES, {}, {
-            show: false,
-            maximizable: false,
-            minimizable: false,
-            width: 580,
-            height: 400,
-            minWidth: 580,
-            maxWidth: 580,
-            minHeight: 400,
-            maxHeight: 400,
-        });
+        const window = createModalWindow(WindowType.PREFERENCES, {});
 
         window.on('closed', () => this.preferences_window = null);
 
@@ -125,7 +115,7 @@ export class App {
         debug('Initialising i18n with language %s', language);
 
         await i18n.init({lng: language ?? undefined});
-        await i18n.loadNamespaces(['app', 'app_menu', 'menus', 'handle_uri']);
+        await i18n.loadNamespaces(['app', 'app_menu', 'menus', 'handle_uri', 'na_auth']);
 
         return i18n;
     }
@@ -290,19 +280,9 @@ export async function handleOpenFriendCodeUri(app: App, uri: string) {
     const selected_user = await askUserForUri(app, uri, app.i18n.t('handle_uri:friend_code_select'));
     if (!selected_user) return;
 
-    createWindow(WindowType.ADD_FRIEND, {
+    createModalWindow(WindowType.ADD_FRIEND, {
         user: selected_user[1].user.id,
         friendcode,
-    }, {
-        // show: false,
-        maximizable: false,
-        minimizable: false,
-        width: 560,
-        height: 300,
-        minWidth: 450,
-        maxWidth: 700,
-        minHeight: 300,
-        maxHeight: 300,
     });
 }
 

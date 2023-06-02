@@ -1,6 +1,6 @@
 import * as path from 'node:path';
-import createDebug from 'debug';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { Arguments as ParentArguments } from '../splatnet2.js';

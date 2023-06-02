@@ -1,7 +1,7 @@
-import createDebug from 'debug';
 import { Judgement } from 'splatnet3-types/splatnet3';
 import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
+import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getBulletToken } from '../../common/auth/splatnet3.js';

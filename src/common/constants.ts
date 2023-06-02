@@ -18,5 +18,17 @@ This product is not affiliated with Nintendo, Discord and others. All product na
 `.trim();
 
 export const CREDITS_NOTICE = `
-This product uses services provided by Nintendo (https://nintendo.co.jp) and Jone Wang (https://imink.app).
+This product uses services provided by Nintendo (https://nintendo.co.jp), Samuel Elliott (https://gitlab.fancy.org.uk/samuel/nxapi-znca-api) and Jone Wang (https://imink.app).
+`.trim();
+
+export const ZNCA_API_USE_TEXT = `
+To access the Nintendo Switch Online app API, nxapi must send some data to third-party APIs. This is required to generate some data to make Nintendo think you\'re using the real Nintendo Switch Online app.
+
+By default, this uses nxapi-znca-api.fancy.org.uk or api.imink.app, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
+
+The data sent includes:
+
+- Your Nintendo Account ID
+- When authenticating to the Nintendo Switch Online app: a Nintendo Account ID token, containing your Nintendo Account country, which is valid for 15 minutes
+- When authenticating to game-specific services: your Coral (Nintendo Switch Online app) user ID and a Coral ID token, containing your Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours
 `.trim();

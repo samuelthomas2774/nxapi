@@ -1,6 +1,6 @@
 import process from 'node:process';
-import createDebug from 'debug';
 import type { Arguments as ParentArguments } from '../cli.js';
+import createDebug from '../util/debug.js';
 import { Argv, YargsArguments } from '../util/yargs.js';
 import * as commands from './nooklink/index.js';
 
