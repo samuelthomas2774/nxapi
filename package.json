@@ -100,7 +100,8 @@
             "!dist/app/package",
             "!**/node_modules/**/*",
             "resources/app",
-            "resources/common"
+            "resources/common",
+            "!resources/common/remote-config.json"
         ],
         "asar": false,
         "extraMetadata": {
