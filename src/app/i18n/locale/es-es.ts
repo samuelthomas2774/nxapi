@@ -13,7 +13,7 @@ export const app_menu = {
     view: 'Ver',
     learn_more: 'Más Información',
     learn_more_github: 'Más Información (GitHub)',
-    search_issues: 'Buscar Incidendias',
+    search_issues: 'Buscar Incidencias',
 
     refresh: 'Actualizar',
 };
@@ -175,7 +175,7 @@ export const main_window = {
         discord_active_friend: 'Discord Rich Presence activo: <0></0>',
         discord_not_active: 'Discord Rich Presence no está activo',
         discord_playing: 'Jugando',
-        discord_not_connected: 'No conecado a Discord',
+        discord_not_connected: 'No conectado a Discord',
 
         add_user: 'Añadir usuario',
         discord_setup: 'Configurar Discord Rich Presence',
