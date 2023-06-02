@@ -97,7 +97,7 @@ let app_menu = createAppMenu();
 
 const menu_window_supports_refresh = new WeakSet<BrowserWindow>();
 
-export function createWindowMenu(window: BrowserWindow, i18n?: i18n) {
+export function createWindowMenu(window: BrowserWindow, i18n = appinstance?.i18n) {
     menu_window_supports_refresh.add(window);
 
     const {menu_app, menu_file, menu_edit, menu_window, menu_help} = createAppMenuItems(i18n);
