@@ -18,6 +18,14 @@ const default_remote_config =
     JSON.parse(fs.readFileSync(path.join(dir, 'resources', 'common', 'remote-config.json'), 'utf-8'));
 
 const git = (() => {
+    if (process.env.GITLAB_CI && process.env.CI_COMMIT_SHA) {
+        return {
+            revision: process.env.CI_COMMIT_SHA,
+            branch: process.env.CI_COMMIT_BRANCH || null,
+            changed_files: [],
+        };
+    }
+
     try {
         fs.statSync(path.join(dir, '.git'));
     } catch (err) {
@@ -34,7 +42,7 @@ const git = (() => {
         branch: branch && branch !== 'HEAD' ? branch : null,
         changed_files: changed_files.length ? changed_files.split('\n') : [],
     };
-})();;
+})();
 
 // If CI_COMMIT_TAG is set this is a tagged version for release
 const release = process.env.NODE_ENV === 'production' ? process.env.CI_COMMIT_TAG || null : null;
