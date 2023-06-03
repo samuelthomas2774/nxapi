@@ -25,12 +25,16 @@ export class NintendoAccountSessionAuthorisation {
     async getSessionToken(params: URLSearchParams): Promise<HasResponse<NintendoAccountSessionToken, Response>>
     async getSessionToken(code: string | URLSearchParams | null, state?: string | null) {
         if (code instanceof URLSearchParams) {
+            if (code.get('state') !== this.state) {
+                throw new TypeError('Invalid state');
+            }
+
             if (code.has('error')) {
                 throw NintendoAccountSessionAuthorisationError.fromSearchParams(code);
             }
 
-            state = code.get('state') || null;
             code = code.get('session_token_code');
+            state = undefined;
         }
 
         if (typeof state !== 'undefined' && state !== this.state) {

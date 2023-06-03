@@ -22,6 +22,7 @@
     ],
     "exports": {
         ".": "./dist/exports/index.js",
+        "./nintendo-account": "./dist/exports/nintendo-account.js",
         "./coral": "./dist/exports/coral.js",
         "./moon": "./dist/exports/moon.js",
         "./splatnet2": "./dist/exports/splatnet2.js",

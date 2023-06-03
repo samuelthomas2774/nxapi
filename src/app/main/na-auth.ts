@@ -1,14 +1,13 @@
 import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
 import process from 'node:process';
-import * as crypto from 'node:crypto';
 import * as persist from 'node-persist';
 import { protocol_registration_options } from './index.js';
-import { createModalWindow, createWindow } from './windows.js';
+import { createModalWindow } from './windows.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { WindowType } from '../common/types.js';
-import { getNintendoAccountSessionToken, NintendoAccountAuthError, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
-import { NintendoAccountSessionAuthorisationCoral, ZNCA_CLIENT_ID } from '../../api/coral.js';
-import { NintendoAccountSessionAuthorisationMoon, ZNMA_CLIENT_ID } from '../../api/moon.js';
+import { NintendoAccountAuthError, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
+import { NintendoAccountSessionAuthorisationCoral } from '../../api/coral.js';
+import { NintendoAccountSessionAuthorisationMoon } from '../../api/moon.js';
 import { ErrorResponse } from '../../api/util.js';
 import { getToken } from '../../common/auth/coral.js';
 import { getPctlToken } from '../../common/auth/moon.js';
