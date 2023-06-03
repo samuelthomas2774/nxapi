@@ -259,9 +259,14 @@ export default class CoralApi {
     }
 
     async getToken(token: string, user: NintendoAccountUser): Promise<PartialCoralAuthData> {
-        // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
+        return this.getTokenWithNintendoAccountToken(nintendoAccountToken, user);
+    }
+
+    async getTokenWithNintendoAccountToken(
+        nintendoAccountToken: NintendoAccountToken, user: NintendoAccountUser,
+    ): Promise<PartialCoralAuthData> {
         const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
             platform: ZNCA_PLATFORM,
             version: this.znca_version,
@@ -290,6 +295,12 @@ export default class CoralApi {
 
     async renewToken(token: string, user: NintendoAccountUser) {
         const data = await this.getToken(token, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    async renewTokenWithNintendoAccountToken(token: NintendoAccountToken, user: NintendoAccountUser) {
+        const data = await this.getTokenWithNintendoAccountToken(token, user);
         this.setTokenWithSavedToken(data);
         return data;
     }

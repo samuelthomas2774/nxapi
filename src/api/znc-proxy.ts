@@ -2,7 +2,7 @@ import fetch, { Response } from 'node-fetch';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralErrorResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
 import CoralApi, { CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
-import { NintendoAccountUser } from './na.js';
+import { NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -147,10 +147,22 @@ export default class ZncProxyApi implements CoralApi {
         throw new Error('Not supported in ZncProxyApi');
     }
 
+    getTokenWithNintendoAccountToken(
+        token: NintendoAccountToken, user: NintendoAccountUser,
+    ): Promise<PartialCoralAuthData> {
+        throw new Error('Not supported in ZncProxyApi');
+    }
+
     async renewToken() {
         const data = await this.fetch<SavedToken>('/auth');
         data.proxy_url = this.url;
         return data;
+    }
+
+    renewTokenWithNintendoAccountToken(
+        token: NintendoAccountToken, user: NintendoAccountUser,
+    ): Promise<PartialCoralAuthData> {
+        throw new Error('Not supported in ZncProxyApi');
     }
 
     /** @private */
