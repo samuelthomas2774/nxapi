@@ -6,8 +6,7 @@ import express, { Request, Response } from 'express';
 import fetch from 'node-fetch';
 import * as persist from 'node-persist';
 import mkdirp from 'mkdirp';
-import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
-import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
+import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
@@ -22,6 +21,7 @@ import { parseListenAddress } from '../util/net.js';
 import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
+import { getSettingForCoopRule, getSettingForVsMode } from '../discord/monitor/splatoon3.js';
 
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
@@ -839,7 +839,7 @@ class Server extends HttpServer {
             friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
         ) {
             const schedules = await user.getSchedules();
-            const vs_setting = this.getSettingForVsMode(schedules, friend.vsMode);
+            const vs_setting = getSettingForVsMode(schedules, friend.vsMode);
             const vs_stages = vs_setting?.vsStages.map(stage => ({
                 ...stage,
                 image: schedules.vsStages.nodes.find(s => s.id === stage.id)?.originalImage ?? stage.image,
@@ -858,11 +858,7 @@ class Server extends HttpServer {
             friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
         ) {
             const schedules = await user.getSchedules();
-            const coop_schedules =
-                friend.coopRule === CoopRule.BIG_RUN ? schedules.coopGroupingSchedule.bigRunSchedules :
-                friend.coopRule === CoopRule.TEAM_CONTEST ? schedules.coopGroupingSchedule.teamContestSchedules :
-                schedules.coopGroupingSchedule.regularSchedules;
-            const coop_setting = getSchedule(coop_schedules)?.setting;
+            const coop_setting = getSettingForCoopRule(schedules.coopGroupingSchedule, friend.coopRule as CoopRule);
 
             response.splatoon3_coop_setting = coop_setting ?? null;
         }
@@ -896,31 +892,6 @@ class Server extends HttpServer {
             }
         }
 
-        return null;
-    }
-
-    getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pick<VsMode, 'id' | 'mode'>) {
-        if (vs_mode.mode === 'REGULAR') {
-            return getSchedule(schedules.regularSchedules)?.regularMatchSetting;
-        }
-        if (vs_mode.mode === 'BANKARA') {
-            const settings = getSchedule(schedules.bankaraSchedules)?.bankaraMatchSettings;
-            if (vs_mode.id === 'VnNNb2RlLTI=') {
-                return settings?.find(s => s.mode === BankaraMatchMode.CHALLENGE);
-            }
-            if (vs_mode.id === 'VnNNb2RlLTUx') {
-                return settings?.find(s => s.mode === BankaraMatchMode.OPEN);
-            }
-        }
-        if (vs_mode.mode === 'FEST') {
-            return getSchedule(schedules.festSchedules)?.festMatchSetting;
-        }
-        if (vs_mode.mode === 'LEAGUE' && 'leagueSchedules' in schedules) {
-            return getSchedule((schedules as StageScheduleQuery_730cd98).leagueSchedules)?.leagueMatchSetting;
-        }
-        if (vs_mode.mode === 'X_MATCH') {
-            return getSchedule(schedules.xSchedules)?.xMatchSetting;
-        }
         return null;
     }
 
@@ -1316,28 +1287,4 @@ function replacer(key: string, value: any, data: unknown) {
     }
 
     return value;
-}
-
-function getSplatoon3inkUrl(image_url: string) {
-    const url = new URL(image_url);
-    if (!url.hostname.endsWith('.nintendo.net')) return image_url;
-    const path = url.pathname.replace(/^\/resources\/prod\//, '/');
-    return 'https://splatoon3.ink/assets/splatnet' + path;
-}
-
-function getSchedule<T extends {startTime: string; endTime: string;}>(schedules: T[] | {nodes: T[]}): T | null {
-    if ('nodes' in schedules) schedules = schedules.nodes;
-    const now = Date.now();
-
-    for (const schedule of schedules) {
-        const start = new Date(schedule.startTime);
-        const end = new Date(schedule.endTime);
-
-        if (start.getTime() >= now) continue;
-        if (end.getTime() < now) continue;
-
-        return schedule;
-    }
-
-    return null;
 }
