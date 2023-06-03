@@ -1,5 +1,5 @@
 import fetch, { Response } from 'node-fetch';
-import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
+import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
 import createDebug from '../util/debug.js';
@@ -174,6 +174,45 @@ export default class MoonApi {
             znma_build: config.znma_build,
             znma_useragent: znma_useragent,
         };
+    }
+}
+
+const na_client_settings = {
+    client_id: ZNMA_CLIENT_ID,
+    scope: [
+        'openid',
+        'user',
+        'user.mii',
+        'moonUser:administration',
+        'moonDevice:create',
+        'moonOwnedDevice:administration',
+        'moonParentalControlSetting',
+        'moonParentalControlSetting:update',
+        'moonParentalControlSettingState',
+        'moonPairingState',
+        'moonSmartDevice:administration',
+        'moonDailySummary',
+        'moonMonthlySummary',
+    ].join(' '),
+};
+
+export class NintendoAccountSessionAuthorisationMoon extends NintendoAccountSessionAuthorisation {
+    protected constructor(
+        authorise_url: string,
+        state: string,
+        verifier: string,
+        redirect_uri?: string,
+    ) {
+        const { client_id, scope } = na_client_settings;
+
+        super(client_id, scope, authorise_url, state, verifier, redirect_uri);
+    }
+
+    static create(/** @internal */ redirect_uri?: string) {
+        const { client_id, scope } = na_client_settings;
+        const auth_data = generateAuthData(client_id, scope, redirect_uri);
+
+        return new this(auth_data.url, auth_data.state, auth_data.verifier, redirect_uri);
     }
 }
 

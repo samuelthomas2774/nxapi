@@ -2,7 +2,7 @@ export { getTitleIdFromEcUrl } from '../util/misc.js';
 export { ErrorResponse, ResponseSymbol } from '../api/util.js';
 export { addUserAgent, addUserAgentFromPackageJson } from '../util/useragent.js';
 
-export { version } from '../util/product.js';
+export { version, product } from '../util/product.js';
 
 export {
     default as Users,

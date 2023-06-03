@@ -5,6 +5,8 @@ export {
 
     ResponseDataSymbol,
     CorrelationIdSymbol,
+
+    NintendoAccountSessionAuthorisationCoral,
 } from '../api/coral.js';
 
 export * from '../api/coral-types.js';

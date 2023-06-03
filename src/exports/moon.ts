@@ -2,6 +2,8 @@ export {
     default,
     MoonAuthData,
     PartialMoonAuthData,
+
+    NintendoAccountSessionAuthorisationMoon,
 } from '../api/moon.js';
 
 export * from '../api/moon-types.js';

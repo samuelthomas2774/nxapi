@@ -1,10 +1,106 @@
-import fetch from 'node-fetch';
-import { defineResponse, ErrorResponse } from './util.js';
+import * as crypto from 'node:crypto';
+import fetch, { Response } from 'node-fetch';
+import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 
 const debug = createDebug('nxapi:api:na');
+
+export class NintendoAccountSessionAuthorisation {
+    readonly scope: string;
+
+    protected constructor(
+        readonly client_id: string,
+        scope: string | string[],
+        readonly authorise_url: string,
+        readonly state: string,
+        readonly verifier: string,
+        readonly redirect_uri = 'npf' + client_id + '://auth',
+    ) {
+        this.scope = typeof scope === 'string' ? scope : scope.join(' ');
+    }
+
+    async getSessionToken(code: string, state?: string): Promise<HasResponse<NintendoAccountSessionToken, Response>>
+    async getSessionToken(params: URLSearchParams): Promise<HasResponse<NintendoAccountSessionToken, Response>>
+    async getSessionToken(code: string | URLSearchParams | null, state?: string | null) {
+        if (code instanceof URLSearchParams) {
+            if (code.has('error')) {
+                throw NintendoAccountSessionAuthorisationError.fromSearchParams(code);
+            }
+
+            state = code.get('state') || null;
+            code = code.get('session_token_code');
+        }
+
+        if (typeof state !== 'undefined' && state !== this.state) {
+            throw new TypeError('Invalid state');
+        }
+
+        if (typeof code !== 'string' || !code) {
+            throw new TypeError('Invalid code');
+        }
+
+        return getNintendoAccountSessionToken(code, this.verifier, this.client_id);
+    }
+
+    static create(
+        client_id: string,
+        scope: string | string[],
+        /** @internal */ redirect_uri = 'npf' + client_id + '://auth',
+    ) {
+        if (typeof scope !== 'string') scope = scope.join(' ');
+
+        const auth_data = generateAuthData(client_id, scope, redirect_uri);
+
+        return new NintendoAccountSessionAuthorisation(client_id, scope,
+            auth_data.url, auth_data.state, auth_data.verifier, redirect_uri);
+    }
+}
+
+export class NintendoAccountSessionAuthorisationError extends Error {
+    constructor(readonly code: string, message?: string) {
+        super(message);
+    }
+
+    static fromSearchParams(qs: URLSearchParams) {
+        const code = qs.get('error') ?? 'unknown_error';
+        const message = qs.get('error_description') ?? code;
+
+        return new NintendoAccountSessionAuthorisationError(code, message);
+    }
+}
+
+export function generateAuthData(
+    client_id: string,
+    scope: string | string[],
+    redirect_uri = 'npf' + client_id + '://auth',
+) {
+    const state = crypto.randomBytes(36).toString('base64url');
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest().toString('base64url');
+
+    const params = {
+        state,
+        redirect_uri,
+        client_id,
+        scope: typeof scope === 'string' ? scope : scope.join(' '),
+        response_type: 'session_token_code',
+        session_token_code_challenge: challenge,
+        session_token_code_challenge_method: 'S256',
+        theme: 'login_form',
+    };
+
+    const url = 'https://accounts.nintendo.com/connect/1.0.0/authorize?' +
+        new URLSearchParams(params).toString();
+
+    return {
+        url,
+        state,
+        verifier,
+        challenge,
+    };
+}
 
 export async function getNintendoAccountSessionToken(code: string, verifier: string, client_id: string) {
     debug('Getting Nintendo Account session token');

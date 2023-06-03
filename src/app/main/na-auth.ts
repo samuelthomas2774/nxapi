@@ -6,9 +6,9 @@ import { protocol_registration_options } from './index.js';
 import { createModalWindow, createWindow } from './windows.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { WindowType } from '../common/types.js';
-import { getNintendoAccountSessionToken, NintendoAccountAuthError, NintendoAccountSessionToken } from '../../api/na.js';
-import { ZNCA_CLIENT_ID } from '../../api/coral.js';
-import { ZNMA_CLIENT_ID } from '../../api/moon.js';
+import { getNintendoAccountSessionToken, NintendoAccountAuthError, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
+import { NintendoAccountSessionAuthorisationCoral, ZNCA_CLIENT_ID } from '../../api/coral.js';
+import { NintendoAccountSessionAuthorisationMoon, ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { ErrorResponse } from '../../api/util.js';
 import { getToken } from '../../common/auth/coral.js';
 import { getPctlToken } from '../../common/auth/moon.js';
@@ -19,33 +19,6 @@ import { ZNCA_API_USE_URL } from '../../common/constants.js';
 const debug = createDebug('app:main:na-auth');
 
 export type NintendoAccountAuthResult = NintendoAccountSessionToken;
-
-export function getAuthUrl(client_id: string, scope: string | string[]) {
-    const state = crypto.randomBytes(36).toString('base64url');
-    const verifier = crypto.randomBytes(32).toString('base64url');
-    const challenge = crypto.createHash('sha256').update(verifier).digest().toString('base64url');
-
-    const params = {
-        state,
-        redirect_uri: 'npf' + client_id + '://auth',
-        client_id,
-        scope: typeof scope === 'string' ? scope : scope.join(' '),
-        response_type: 'session_token_code',
-        session_token_code_challenge: challenge,
-        session_token_code_challenge_method: 'S256',
-        theme: 'login_form',
-    };
-
-    const url = 'https://accounts.nintendo.com/connect/1.0.0/authorize?' +
-        new URLSearchParams(params).toString();
-
-    return {
-        url,
-        state,
-        verifier,
-        challenge,
-    };
-}
 
 const css = `
 html {
@@ -79,51 +52,45 @@ export function createAuthWindow() {
 }
 
 export interface NintendoAccountSessionTokenCode {
+    authenticator: NintendoAccountSessionAuthorisation;
     code: string;
-    verifier: string;
     window?: BrowserWindow;
 }
 
-export class AuthoriseError extends Error {
-    constructor(readonly code: string, message?: string) {
-        super(message);
-    }
-
-    static fromSearchParams(qs: URLSearchParams) {
-        const code = qs.get('error') ?? 'unknown_error';
-        return new AuthoriseError(code, qs.get('error_description') ?? code);
-    }
-}
-
-export class AuthoriseCancelError extends AuthoriseError {
+export class AuthoriseCancelError extends NintendoAccountSessionAuthorisationError {
     constructor(message?: string) {
         super('access_denied', message);
     }
 }
 
-export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window: false):
-    Promise<NintendoAccountSessionTokenCode & {window: BrowserWindow}>
-export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window: true):
-    Promise<NintendoAccountSessionTokenCode & {window?: never}>
-export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window?: boolean):
-    Promise<NintendoAccountSessionTokenCode & {window?: BrowserWindow}>
-export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: string | string[], close_window = true) {
+export function getSessionTokenCodeByInAppBrowser(
+    authenticator: NintendoAccountSessionAuthorisation, close_window: false,
+): Promise<NintendoAccountSessionTokenCode & {window: BrowserWindow}>
+export function getSessionTokenCodeByInAppBrowser(
+    authenticator: NintendoAccountSessionAuthorisation, close_window: true,
+): Promise<NintendoAccountSessionTokenCode & {window?: never}>
+export function getSessionTokenCodeByInAppBrowser(
+    authenticator: NintendoAccountSessionAuthorisation, close_window?: boolean,
+): Promise<NintendoAccountSessionTokenCode & {window?: BrowserWindow}>
+
+export function getSessionTokenCodeByInAppBrowser(
+    authenticator: NintendoAccountSessionAuthorisation, close_window = true,
+) {
     return new Promise<NintendoAccountSessionTokenCode>((rs, rj) => {
-        const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
         const window = createAuthWindow();
 
         const handleAuthUrl = (url: URL) => {
             const authorisedparams = new URLSearchParams(url.hash.substr(1));
             debug('Redirect URL parameters', [...authorisedparams.entries()]);
 
-            if (authorisedparams.get('state') !== state) {
+            if (authorisedparams.get('state') !== authenticator.state) {
                 rj(new Error('Invalid state'));
                 window.close();
                 return;
             }
 
             if (authorisedparams.has('error')) {
-                rj(AuthoriseError.fromSearchParams(authorisedparams));
+                rj(NintendoAccountSessionAuthorisationError.fromSearchParams(authorisedparams));
                 window.close();
                 return;
             }
@@ -141,15 +108,15 @@ export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: stri
 
             if (close_window) {
                 rs({
+                    authenticator,
                     code,
-                    verifier,
                 });
 
                 window.close();
             } else {
                 rs({
+                    authenticator,
                     code,
-                    verifier,
                     window,
                 });
             }
@@ -160,7 +127,7 @@ export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: stri
 
             debug('will navigate', url);
 
-            if (url.protocol === 'npf' + client_id + ':' && url.host === 'auth') {
+            if (url.protocol === 'npf' + authenticator.client_id + ':' && url.host === 'auth') {
                 handleAuthUrl(url);
                 event.preventDefault();
             } else if (url.origin === 'https://accounts.nintendo.com') {
@@ -183,7 +150,7 @@ export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: stri
 
             debug('open', details);
 
-            if (url.protocol === 'npf' + client_id + ':' && url.host === 'auth') {
+            if (url.protocol === 'npf' + authenticator.client_id + ':' && url.host === 'auth') {
                 handleAuthUrl(url);
             } else {
                 shell.openExternal(details.url);
@@ -192,40 +159,34 @@ export function getSessionTokenCodeByInAppBrowser(client_id: string, scope: stri
             return {action: 'deny'};
         });
 
-        debug('Loading Nintendo Account authorisation', {
-            authoriseurl,
-            state,
-            verifier,
-            challenge,
-        });
+        debug('Loading Nintendo Account authorisation', authenticator);
 
-        window.loadURL(authoriseurl);
+        window.loadURL(authenticator.authorise_url);
     });
 }
 
 const FORCE_MANUAL_AUTH_URI_ENTRY = process.env.NXAPI_FORCE_MANUAL_AUTH === '1';
 
 export function getSessionTokenCodeByDefaultBrowser(
-    client_id: string, scope: string | string[],
+    authenticator: NintendoAccountSessionAuthorisation,
     close_window = true,
     force_manual = FORCE_MANUAL_AUTH_URI_ENTRY
 ) {
     return new Promise<NintendoAccountSessionTokenCode>((rs, rj) => {
-        const {url: authoriseurl, state, verifier, challenge} = getAuthUrl(client_id, scope);
         let window: BrowserWindow | undefined = undefined;
 
         const handleAuthUrl = (url: URL) => {
             const authorisedparams = new URLSearchParams(url.hash.substr(1));
             debug('Redirect URL parameters', [...authorisedparams.entries()]);
 
-            if (authorisedparams.get('state') !== state) {
+            if (authorisedparams.get('state') !== authenticator.state) {
                 rj(new Error('Invalid state'));
                 window?.close();
                 return;
             }
 
             if (authorisedparams.has('error')) {
-                rj(AuthoriseError.fromSearchParams(authorisedparams));
+                rj(NintendoAccountSessionAuthorisationError.fromSearchParams(authorisedparams));
                 window?.close();
                 return;
             }
@@ -242,28 +203,23 @@ export function getSessionTokenCodeByDefaultBrowser(
             debug('code', code, jwt, sig);
 
             if (window && close_window) window.close();
-            else if (window) rs({code, verifier, window});
-            else rs({code, verifier});
+            else if (window) rs({authenticator, code, window});
+            else rs({authenticator, code});
         };
 
-        debug('Prompting user for Nintendo Account authorisation', {
-            authoriseurl,
-            state,
-            verifier,
-            challenge,
-        });
+        debug('Prompting user for Nintendo Account authorisation', authenticator);
 
-        const protocol = 'npf' + client_id;
+        const protocol = 'npf' + authenticator.client_id;
 
         if (force_manual) {
             debug('Manual entry forced, prompting for redirect URI');
-            window = askUserForRedirectUri(authoriseurl, client_id, handleAuthUrl, rj);
+            window = askUserForRedirectUri(authenticator.authorise_url, authenticator.client_id, handleAuthUrl, rj);
         } else if (app.isDefaultProtocolClient(protocol,
             protocol_registration_options?.path, protocol_registration_options?.argv
         )) {
             debug('App is already default protocol handler, opening browser');
-            auth_state.set(state, [handleAuthUrl, rj, protocol]);
-            shell.openExternal(authoriseurl);
+            auth_state.set(authenticator.state, [handleAuthUrl, rj, protocol]);
+            shell.openExternal(authenticator.authorise_url);
         } else {
             const registered_app = app.getApplicationNameForProtocol(protocol);
 
@@ -271,11 +227,11 @@ export function getSessionTokenCodeByDefaultBrowser(
                 protocol_registration_options?.path, protocol_registration_options?.argv
             )) {
                 debug('Another app is using the auth protocol or registration failed, prompting for redirect URI');
-                window = askUserForRedirectUri(authoriseurl, client_id, handleAuthUrl, rj);
+                window = askUserForRedirectUri(authenticator.authorise_url, authenticator.client_id, handleAuthUrl, rj);
             } else {
                 debug('App is now default protocol handler, opening browser');
-                auth_state.set(state, [handleAuthUrl, rj, protocol]);
-                shell.openExternal(authoriseurl);
+                auth_state.set(authenticator.state, [handleAuthUrl, rj, protocol]);
+                shell.openExternal(authenticator.authorise_url);
             }
         }
     });
@@ -346,9 +302,10 @@ const NSO_SCOPE = [
 ];
 
 export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_browser = true) {
-    const {code, verifier, window} = use_in_app_browser ?
-        await getSessionTokenCodeByInAppBrowser(ZNCA_CLIENT_ID, NSO_SCOPE, false) :
-        await getSessionTokenCodeByDefaultBrowser(ZNCA_CLIENT_ID, NSO_SCOPE, false);
+    const authenticator = NintendoAccountSessionAuthorisationCoral.create();
+    const {code, window} = use_in_app_browser ?
+        await getSessionTokenCodeByInAppBrowser(authenticator, false) :
+        await getSessionTokenCodeByDefaultBrowser(authenticator, false);
 
     window?.setFocusable(false);
     window?.blurWebView();
@@ -378,7 +335,7 @@ export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_br
 
                     if (data.error === 'invalid_grant') {
                         // The session token has expired/was revoked
-                        return authenticateCoralSessionToken(storage, code, verifier, true);
+                        return authenticateCoralSessionToken(storage, authenticator, code, true);
                     }
                 }
 
@@ -388,7 +345,7 @@ export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_br
 
         await checkZncaApiUseAllowed(storage, window);
 
-        return authenticateCoralSessionToken(storage, code, verifier);
+        return authenticateCoralSessionToken(storage, authenticator, code);
     } finally {
         window?.close();
     }
@@ -396,10 +353,10 @@ export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_br
 
 async function authenticateCoralSessionToken(
     storage: persist.LocalStorage,
-    code: string, verifier: string,
+    authenticator: NintendoAccountSessionAuthorisation, code: string,
     reauthenticate = false,
 ) {
-    const token = await getNintendoAccountSessionToken(code, verifier, ZNCA_CLIENT_ID);
+    const token = await authenticator.getSessionToken(code);
 
     debug('session token', token);
 
@@ -426,7 +383,7 @@ export async function askAddNsoAccount(storage: persist.LocalStorage, iab = true
     try {
         return await addNsoAccount(storage, iab);
     } catch (err: any) {
-        if (err instanceof AuthoriseError && err.code === 'access_denied') return;
+        if (err instanceof NintendoAccountSessionAuthorisationError && err.code === 'access_denied') return;
 
         dialog.showErrorBox('Error adding account', err.stack || err.message);
     }
@@ -512,9 +469,10 @@ const MOON_SCOPE = [
 ];
 
 export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_browser = true) {
-    const {code, verifier, window} = use_in_app_browser ?
-        await getSessionTokenCodeByInAppBrowser(ZNMA_CLIENT_ID, MOON_SCOPE, false) :
-        await getSessionTokenCodeByDefaultBrowser(ZNMA_CLIENT_ID, MOON_SCOPE, false);
+    const authenticator = NintendoAccountSessionAuthorisationMoon.create();
+    const {code, window} = use_in_app_browser ?
+        await getSessionTokenCodeByInAppBrowser(authenticator, false) :
+        await getSessionTokenCodeByDefaultBrowser(authenticator, false);
 
     window?.setFocusable(false);
     window?.blurWebView();
@@ -542,7 +500,7 @@ export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_b
 
                     if (data.error === 'invalid_grant') {
                         // The session token has expired/was revoked
-                        return authenticateMoonSessionToken(storage, code, verifier, true);
+                        return authenticateMoonSessionToken(storage, authenticator, code, true);
                     }
                 }
 
@@ -550,7 +508,7 @@ export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_b
             }
         }
 
-        return authenticateMoonSessionToken(storage, code, verifier);
+        return authenticateMoonSessionToken(storage, authenticator, code);
     } finally {
         window?.close();
     }
@@ -558,11 +516,10 @@ export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_b
 
 async function authenticateMoonSessionToken(
     storage: persist.LocalStorage,
-    code: string, verifier: string,
+    authenticator: NintendoAccountSessionAuthorisation, code: string,
     reauthenticate = false,
 ) {
-
-    const token = await getNintendoAccountSessionToken(code, verifier, ZNMA_CLIENT_ID);
+    const token = await authenticator.getSessionToken(code);
 
     debug('session token', token);
 
@@ -586,7 +543,7 @@ export async function askAddPctlAccount(storage: persist.LocalStorage, iab = tru
     try {
         return await addPctlAccount(storage, iab);
     } catch (err: any) {
-        if (err instanceof AuthoriseError && err.code === 'access_denied') return;
+        if (err instanceof NintendoAccountSessionAuthorisationError && err.code === 'access_denied') return;
 
         dialog.showErrorBox('Error adding account', err.stack || err.message);
     }
