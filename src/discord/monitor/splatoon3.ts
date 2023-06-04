@@ -365,11 +365,16 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
 
         // REGULAR, BANKARA, X_MATCH, LEAGUE, PRIVATE, FEST
         const mode_image =
-            friend.vsMode.mode === 'REGULAR' ? 'mode-regular-1' :
-            friend.vsMode.mode === 'BANKARA' ? 'mode-anarchy-1' :
+            friend.vsMode.mode === 'FEST' && fest ? 'https://fancy.org.uk/api/nxapi/s3/fest-icon?' + new URLSearchParams({
+                id: fest.id,
+                v: '2023060401',
+            }).toString() :
+            friend.vsMode.mode === 'REGULAR' ? 'mode-vs-regular-2' :
+            friend.vsMode.mode === 'BANKARA' ? 'mode-vs-bankara-2' :
             friend.vsMode.mode === 'FEST' ? 'mode-fest-1' :
-            friend.vsMode.mode === 'LEAGUE' ? 'mode-league-1' :
-            friend.vsMode.mode === 'X_MATCH' ? 'mode-x-1' :
+            friend.vsMode.mode === 'LEAGUE' ? 'mode-vs-event-1' :
+            friend.vsMode.mode === 'X_MATCH' ? 'mode-vs-xmatch-2' :
+            friend.vsMode.mode === 'PRIVATE' ? 'mode-vs-private-1' :
             undefined;
 
         activity.smallImageKey = mode_image;
@@ -400,6 +405,19 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
                 activity.largeImageText = setting.coopStage.name +
                     ' | ' + product;
             }
+        }
+
+        if (friend.coopRule === CoopRule.REGULAR) {
+            activity.smallImageKey = 'mode-coop-regular-1';
+            activity.smallImageText = 'Salmon Run';
+        }
+        if (friend.coopRule === CoopRule.BIG_RUN) {
+            activity.smallImageKey = 'mode-coop-bigrun-1';
+            activity.smallImageText = 'Big Run';
+        }
+        if (friend.coopRule === CoopRule.TEAM_CONTEST) {
+            activity.smallImageKey = 'mode-coop-teamcontest-1';
+            activity.smallImageText = 'Eggstra Work';
         }
     }
 
