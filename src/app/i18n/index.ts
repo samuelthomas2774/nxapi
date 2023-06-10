@@ -28,7 +28,7 @@ export const languages = {
         ],
     },
     'ja-JP': {
-        name: 'Japanese',
+        name: '日本語',
         app: () => import('./locale/ja-jp.js'),
         authors: [
             ['hilot06', 'https://github.com/hilot06'],

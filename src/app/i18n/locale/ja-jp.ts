@@ -1,18 +1,18 @@
-import { CREDITS_NOTICE, LICENCE_NOTICE } from '../../../common/constants.js';
+import { CREDITS_NOTICE, LICENCE_NOTICE, ZNCA_API_USE_TEXT } from '../../../common/constants.js';
 
 export const app = {
     default_title: 'Nintendo Switch Online',
 
     licence: LICENCE_NOTICE,
     credits: CREDITS_NOTICE,
-    translation_credits: 'Japanese translation by hilot06.',
+    translation_credits: '{{language}}の翻訳は{{authors, list}}が行いました。',
 };
 
 export const app_menu = {
     preferences: '設定',
     view: '表示',
     learn_more: 'もっと知る',
-    learn_more_github: 'GitHubでもっと知る',
+    learn_more_github: 'もっと知る (GitHub)',
     search_issues: 'Issuesの検索',
 
     refresh: '更新',
@@ -20,7 +20,7 @@ export const app_menu = {
 
 export const menu_app = {
     coral_heading: 'Nintendo Switch Online',
-    na_id: 'ニンテンドーアカウントのID: {{id}}',
+    na_id: 'ニンテンドーアカウント ID: {{id}}',
     coral_id: 'Coral ID: {{id}}',
     nsa_id: 'NSA ID: {{id}}',
     discord_presence_enable: 'Discord Presenceを有効にする',
@@ -49,21 +49,21 @@ export const menus = {
         share: '共有',
         copy: 'コピー',
         friend_code_regenerable: 'Nintendo Switch本体を使ってフレンドコードを再発行',
-        friend_code_regenerable_at: '{{date, datetime}}から再発行できます',
+        friend_code_regenerable_at: '{{date, datetime}}に再発行できます',
     },
 
     user: {
-        na_id: 'ニンテンドーアカウントのID: {{id}}',
+        na_id: 'ニンテンドーアカウント ID: {{id}}',
         coral_id: 'Coral ID: {{id}}',
         nsa_id: 'NSA ID: {{id}}',
-        discord_disable: 'Discord Rich Presenceが無効',
+        discord_disable: 'Discord Rich Presenceを無効化',
         discord_enabled_for: '{{name}}のDiscord Rich Presenceが有効',
         discord_enabled_via: '{{name}}を経由したDiscord Rich Presenceが有効',
         discord_enable: 'このユーザーに対してDiscord Rich Presenceを有効化する...',
         friend_notifications_enable: 'フレンド通知を有効化',
         refresh: '今すぐアップデート',
         add_friend: 'フレンドを追加',
-        remove_help: 'このユーザーを削除するには、nxapiコマンドを使用してください。',
+        remove_help: 'このユーザーを削除するには、nxapiコマンドを使用してください',
     },
 
     friend: {
@@ -99,6 +99,41 @@ export const handle_uri = {
     cancel: 'キャンセル',
 };
 
+export const na_auth = {
+    window: {
+        title: 'ニンテンドーアカウント',
+    },
+
+    znca_api_use: {
+        title: 'サードパーティAPIの使用',
+
+        // This should be translated in other languages
+        text: ZNCA_API_USE_TEXT,
+
+        ok: 'OK',
+        cancel: 'キャンセル',
+        more_information: 'さらに多くの情報',
+    },
+
+    notification_coral: {
+        title: 'Nintendo Switch Online',
+        body_existing: '既に {{name}} (ニンテンドーアカウント {{na_name}} / {{na_username}}) としてサインインしています',
+        body_authenticated: '{{name}} (ニンテンドーアカウント {{na_name}} / {{na_username}}) として認証しました',
+        body_reauthenticated: '{{name}} (ニンテンドーアカウント {{na_name}} / {{na_username}}) として再認証しました',
+    },
+
+    notification_moon: {
+        title: 'NintendoみまもりSwitch',
+        body_existing: '既に {{na_name}} ({{na_username}}) としてサインインしています',
+        body_authenticated: '{{na_name}} ({{na_username}}) として認証しました',
+        body_reauthenticated: '{{na_name}} ({{na_username}}) として再認証しました',
+    },
+
+    error: {
+        title: 'アカウント追加のエラー',
+    },
+};
+
 export const time_since = {
     default: {
         now: 'たった今',
@@ -131,11 +166,12 @@ export const main_window = {
         discord_active_friend: 'Discord Rich Presenceが動作中: <0></0>',
         discord_not_active: 'Discord Rich Presenceは動作していません',
         discord_playing: 'プレイ中',
+        discord_not_connected: 'Discordに接続されていません',
 
         add_user: 'ユーザーを追加',
         discord_setup: 'Discord Rich Presenceを設定',
 
-        enable_auto_refresh: '自動更新',
+        enable_auto_refresh: '自動更新を有効化',
     },
 
     update: {
@@ -147,7 +183,7 @@ export const main_window = {
 
     main_section: {
         error: {
-            title: 'データ読み込みエラー',
+            title: 'データ読み込みのエラー',
             message: '{{errors, list}} データの読み込み中にエラーが発生しました。.',
             message_friends: 'フレンド',
             message_webservices: 'ゲーム固有サービス',
@@ -163,7 +199,7 @@ export const main_window = {
             login: 'ログイン',
         },
 
-        section_error: 'データ更新エラー',
+        section_error: 'データ更新のエラー',
     },
 
     discord_section: {
@@ -213,7 +249,7 @@ export const preferences_window = {
 
     startup: {
         heading: 'スタートアップ',
-        login: 'Windowsにログインした時に開く',
+        login: 'OSのログイン時に開く',
         background: 'バックグラウンドで開く',
     },
 
@@ -299,7 +335,7 @@ export const addfriend_window = {
     lookup_error: 'フレンドコードを見つけられません: {{message}}',
 
     nsa_id: 'NSA ID',
-    coral_id: 'Coral user ID',
+    coral_id: 'CoralユーザーID',
     no_coral_user: 'Nintendo Switch Onlineアプリ未使用',
 
     send_added: 'このユーザーはフレンドです。',
@@ -340,7 +376,7 @@ export const addaccountmanual_window = {
     title: 'アカウントを追加',
 
     authorise_heading: '1. ニンテンドーアカウントにログイン',
-    authorise_help: 'まだアカウントを選択しないでください',
+    authorise_help: 'まだアカウントを選択しないでください。',
     authorise_open: 'ニンテンドーアカウントのログインページを開く',
 
     response_heading: '2. コールバックリンクを入力',
