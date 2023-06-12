@@ -89,7 +89,7 @@ function DiscordPresence(props: {
     const user_image_url = props.user ?
         props.user.avatar ? 'https://cdn.discordapp.com/avatars/' + props.user.id + '/' + props.user.avatar + '.png' :
         !props.user.discriminator || props.user.discriminator === '0' ?
-            'https://cdn.discordapp.com/embed/avatars/' + ((parseInt(props.user.id) >> 22) % 5) + '.png' :
+            'https://cdn.discordapp.com/embed/avatars/' + ((parseInt(props.user.id) >> 22) % 6) + '.png' :
         'https://cdn.discordapp.com/embed/avatars/' + (parseInt(props.user.discriminator) % 5) + '.png' : undefined;
 
     return <View style={styles.discordPresenceContainer}>
@@ -101,7 +101,9 @@ function DiscordPresence(props: {
         {props.user ? <View style={styles.discordUser}>
             <Image source={{uri: user_image_url, width: 18, height: 18}} style={styles.discordUserImage} />
             <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">
-                {props.user.username}<Text style={styles.discordUserDiscriminator}>#{props.user.discriminator}</Text>
+                {props.user.username}
+                {props.user.discriminator && props.user.discriminator !== '0' ?
+                    <Text style={styles.discordUserDiscriminator}>#{props.user.discriminator}</Text> : null}
             </Text>
         </View> : <View style={styles.discordUser}>
             <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">Not connected to Discord</Text>

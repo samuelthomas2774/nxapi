@@ -106,7 +106,8 @@ export default function Preferences(props: PreferencesProps) {
             value={discord_options.user} />);
     }
     for (const user of discord_users ?? []) {
-        discord_user_picker.push(<Picker.Item key={user.id} label={user.username + '#' + user.discriminator}
+        discord_user_picker.push(<Picker.Item key={user.id}
+            label={user.username + (user.discriminator && user.discriminator !== '0' ? '#' + user.discriminator : '')}
             value={user.id} />);
     }
 
