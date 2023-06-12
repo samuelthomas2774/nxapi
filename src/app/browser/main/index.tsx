@@ -50,7 +50,7 @@ export default function App(props: AppProps) {
                         style={styles.checkbox}
                     />
                 )} />
-                <TouchableOpacity onPress={() => setAutoRefresh(auto_refresh ? undefined : 30 * 1000)}>
+                <TouchableOpacity style={styles.checkboxLabel} onPress={() => setAutoRefresh(auto_refresh ? undefined : 30 * 1000)}>
                     <Translation keyPrefix="main_window:sidebar">{
                         t => <Text style={theme.text}>{t('enable_auto_refresh')}</Text>
                     }</Translation>
@@ -94,6 +94,9 @@ const styles = StyleSheet.create({
     },
     checkbox: {
         marginRight: 10,
+    },
+    checkboxLabel: {
+        flex: 1,
     },
 });
 
