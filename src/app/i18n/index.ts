@@ -27,6 +27,13 @@ export const languages = {
             ['sarayalth', 'https://github.com/sarayalth'],
         ],
     },
+    'ja-JP': {
+        name: '日本語',
+        app: () => import('./locale/ja-jp.js'),
+        authors: [
+            ['hilot06', 'https://github.com/hilot06'],
+        ],
+    },
 };
 
 const namespaces = {
