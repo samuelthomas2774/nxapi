@@ -21,9 +21,16 @@ export default class MenuApp {
     tray: Tray;
 
     constructor(readonly app: App) {
-        const icon = nativeImage
+        let icon;
+        if (window.matchMedia('(prefers-color-scheme: night)').matches) {
+            icon = nativeImage
             .createFromPath(path.join(dir, 'resources', 'app', 'menu-icon.png'))
             .resize({height: 16});
+        } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+            icon = nativeImage
+            .createFromPath(path.join(dir, 'resources', 'app', 'menu-icon-dark.png'))
+            .resize({height: 16});
+        };
 
         icon.setTemplateImage(true);
 
