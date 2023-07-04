@@ -2,7 +2,7 @@ import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
 import { BankaraMatchMode, CoopRule, CoopSetting_schedule, DetailVotingStatusResult, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, StageScheduleResult, VsMode, VsSchedule_regular } from 'splatnet3-types/splatnet3';
 import { Game } from '../../api/coral-types.js';
-import SplatNet3Api from '../../api/splatnet3.js';
+import SplatNet3Api, { SplatNet3GraphQLErrorResponse } from '../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../app/common/types.js';
 import { Arguments } from '../../cli/nso/presence.js';
 import { getBulletToken, SavedBulletToken } from '../../common/auth/splatnet3.js';
@@ -95,20 +95,27 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
             if (result === ErrorResult.STOP) return LoopResult.STOP;
         }
 
-        const history = await this.splatnet!.getHistoryRecords();
+        const history = await this.splatnet!.getHistoryRecords().catch(err => {
+            if (err instanceof SplatNet3GraphQLErrorResponse) {
+                debug('Error in HistoryRecordQuery', err);
+                return null;
+            }
 
-        Promise.all([
-            this.splatnet!.getCurrentFest(),
-            this.splatnet!.getConfigureAnalytics(),
-        ]).catch(err => {
-            debug('Error in useCurrentFest/ConfigureAnalyticsQuery', err);
+            throw err;
         });
 
-        debug('Authenticated to SplatNet 3 %s - player %s#%s (title %s, first played %s)', this.data!.version,
-            history.data.currentPlayer.name,
-            history.data.currentPlayer.nameId,
-            history.data.currentPlayer.byname,
-            new Date(history.data.playHistory.gameStartTime).toLocaleString());
+        this.splatnet!.getCurrentFest().catch(err => debug('Error in useCurrentFest', err));
+        this.splatnet!.getConfigureAnalytics().catch(err => debug('Error in ConfigureAnalyticsQuery', err));
+
+        if (history) {
+            debug('Authenticated to SplatNet 3 %s - player %s#%s (title %s, first played %s)', this.data!.version,
+                history.data.currentPlayer.name,
+                history.data.currentPlayer.nameId,
+                history.data.currentPlayer.byname,
+                new Date(history.data.playHistory.gameStartTime).toLocaleString());
+        } else {
+            debug('Authenticated to SplatNet 3 - unable to retrieve history data');
+        }
 
         this.cached_friends = await this.splatnet!.getFriends();
         this.cached_schedules = await this.splatnet!.getSchedules();
