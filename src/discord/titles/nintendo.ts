@@ -1203,18 +1203,48 @@ export const titles: Title[] = [
         showActiveEvent: true,
     },
 
-    // {
-    //     // Pikmin 4
-    //     id: '',
-    //     client: '1107033455755264010',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Pikmin 4
+        id: '0100b7c00933a000',
+        client: '1107033455755264010',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Pikmin 4 Demo
+        id: '0100e0b019974000',
+        client: '1107033455755264010',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Metroid Prime Remastered
         id: '010012101468c000',
         client: '1107120929953284150',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Pikmin 1
+        id: '0100aa80194b0000',
+        client: '1121121911229927476',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Pikmin 2
+        id: '0100d680194b2000',
+        client: '1121122602782576640',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Everybody 1-2-Switch!
+        id: '01006f900bf8e000',
+        client: '1121122719019323413',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
