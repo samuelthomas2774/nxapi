@@ -1,6 +1,6 @@
 import { Response } from 'node-fetch';
 import CoralApi, { CoralApiInterface, CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralErrorResponse } from '../api/coral-types.js';
+import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralError } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
 import { checkUseLimit } from './util.js';
@@ -262,7 +262,7 @@ function createTokenExpiredHandler(
     session: NintendoAccountSession<SavedToken>, coral: CoralApi,
     renew_token_data: {auth_data: SavedToken}, ratelimit = true
 ) {
-    return (data: CoralErrorResponse, response: Response) => {
+    return (data: CoralError, response: Response) => {
         debug('Token expired', renew_token_data.auth_data.user.id, data);
         return renewToken(session, coral, renew_token_data, ratelimit);
     };

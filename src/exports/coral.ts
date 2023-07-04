@@ -8,6 +8,8 @@ export {
     ResponseDataSymbol,
     CorrelationIdSymbol,
 
+    CoralErrorResponse,
+
     NintendoAccountSessionAuthorisationCoral,
 } from '../api/coral.js';
 

@@ -5,7 +5,7 @@ import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
-import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, FriendCodeUrl, FriendCodeUser, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, FriendCodeUrl, FriendCodeUser, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
 import { f, FResult, HashMethod } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
@@ -74,7 +74,7 @@ export default class CoralApi implements CoralApiInterface {
     [CoralUserIdSymbol]: string;
     [NintendoAccountIdSymbol]: string;
 
-    onTokenExpired: ((data?: CoralErrorResponse, res?: Response) => Promise<CoralAuthData | void>) | null = null;
+    onTokenExpired: ((data?: CoralError, res?: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
     /** @internal */
@@ -144,7 +144,7 @@ export default class CoralApi implements CoralApiInterface {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[znc] Non-200 status code', response, await response.text());
+            throw new CoralErrorResponse('[znc] Non-200 status code', response, await response.text());
         }
 
         const data = await response.json() as CoralResponse<T>;
@@ -161,10 +161,10 @@ export default class CoralApi implements CoralApiInterface {
         }
 
         if ('errorMessage' in data) {
-            throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
+            throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
         if (data.status !== CoralStatus.OK) {
-            throw new ErrorResponse('[znc] Unknown error', response, data);
+            throw new CoralErrorResponse('[znc] Unknown error', response, data);
         }
 
         const result = data.result;
@@ -295,7 +295,7 @@ export default class CoralApi implements CoralApiInterface {
         try {
             return await this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req, false);
         } catch (err) {
-            if (err instanceof ErrorResponse && err.data.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+            if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
                 debug('Error getting web service token, renewing token before retrying', err);
                 // _renewToken will be awaited when calling getWebServiceToken
                 this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).then(data => {
@@ -448,16 +448,16 @@ export default class CoralApi implements CoralApiInterface {
         debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[znc] Non-200 status code', response, await response.text());
+            throw new CoralErrorResponse('[znc] Non-200 status code', response, await response.text());
         }
 
         const data = await response.json() as CoralResponse<AccountLogin>;
 
         if ('errorMessage' in data) {
-            throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
+            throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
         if (data.status !== CoralStatus.OK) {
-            throw new ErrorResponse('[znc] Unknown error', response, data);
+            throw new CoralErrorResponse('[znc] Unknown error', response, data);
         }
 
         debug('Got Nintendo Switch Online app token', data);
@@ -471,6 +471,12 @@ export default class CoralApi implements CoralApiInterface {
             znca_version: config.znca_version,
             znca_useragent,
         };
+    }
+}
+
+export class CoralErrorResponse extends ErrorResponse<CoralError> {
+    get status(): CoralStatus | null {
+        return this.data?.status ?? null;
     }
 }
 

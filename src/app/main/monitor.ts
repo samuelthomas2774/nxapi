@@ -2,7 +2,7 @@ import { dialog, Notification } from './electron.js';
 import { App } from './index.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
-import { CurrentUser, Friend, Game, CoralErrorResponse } from '../../api/coral-types.js';
+import { CurrentUser, Friend, Game, CoralError } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
@@ -346,7 +346,7 @@ export class PresenceMonitorManager {
 
     async handleError(
         monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
-        err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException
+        err: ErrorResponse<CoralError> | NodeJS.ErrnoException
     ): Promise<LoopResult> {
         const {response} = await dialog.showMessageBox({
             message: err.name + ' updating presence monitor',
@@ -366,7 +366,7 @@ export class PresenceMonitorManager {
 
 export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
     notifications = new ElectronNotificationManager();
-    onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
+    onError?: (error: ErrorResponse<CoralError> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
     enable() {
@@ -409,7 +409,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
         }
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
         } catch (err: any) {
@@ -425,7 +425,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
 export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
     notifications = new ElectronNotificationManager();
-    onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
+    onError?: (error: ErrorResponse<CoralError> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
     enable() {
@@ -468,7 +468,7 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
         }
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
         } catch (err: any) {

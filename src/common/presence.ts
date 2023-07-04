@@ -3,7 +3,7 @@ import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
 import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
-import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralErrorResponse } from '../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralError } from '../api/coral-types.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import createDebug from '../util/debug.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
@@ -499,7 +499,7 @@ export class ZncDiscordPresence extends ZncNotifications {
         this.discord.title = {id: title_id, since: saved_presence.title_since};
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         this.discord.onError(err);
 
         return super.handleError(err);
@@ -759,7 +759,7 @@ export class ZncProxyDiscordPresence extends Loop {
         }
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         this.discord.onError(err);
 
         return handleError(err, this);

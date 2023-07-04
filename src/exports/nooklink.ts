@@ -2,6 +2,8 @@ export {
     default as NooklinkApi,
     NooklinkAuthData,
 
+    NooklinkErrorResponse,
+
     NooklinkUserApi,
     NooklinkUserAuthData,
     PartialNooklinkUserAuthData,

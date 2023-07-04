@@ -86,13 +86,13 @@ export default class MoonApi {
         }
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[moon] Non-200 status code', response, await response.text());
+            throw new MoonErrorResponse('[moon] Non-200 status code', response, await response.text());
         }
 
         const data = await response.json() as T | MoonError;
 
         if ('errorCode' in data) {
-            throw new ErrorResponse('[moon] ' + data.title, response, data);
+            throw new MoonErrorResponse('[moon] ' + data.title, response, data);
         }
 
         return defineResponse(data, response);
@@ -176,6 +176,8 @@ export default class MoonApi {
         };
     }
 }
+
+export class MoonErrorResponse extends ErrorResponse<MoonError> {}
 
 const na_client_settings = {
     client_id: ZNMA_CLIENT_ID,

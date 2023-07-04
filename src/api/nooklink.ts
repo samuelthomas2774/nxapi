@@ -80,14 +80,14 @@ export default class NooklinkApi {
             return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
         }
 
-        if (response.status !== 200 && response.status !== 201) {
-            throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
+        if (!response.ok) {
+            throw new NooklinkErrorResponse('[nooklink] Non-2xx status code', response, await response.text());
         }
 
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse<WebServiceError>('[nooklink] Error ' + data.code, response, data);
+            throw new NooklinkErrorResponse('[nooklink] Error ' + data.code, response, data);
         }
 
         return defineResponse(data, response);
@@ -175,14 +175,14 @@ export default class NooklinkApi {
         const body = await response.text();
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[nooklink] Non-200 status code', response, body);
+            throw new NooklinkErrorResponse('[nooklink] Non-200 status code', response, body);
         }
 
         const cookies = response.headers.get('Set-Cookie');
         const match = cookies?.match(/\b_gtoken=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);
 
         if (!match) {
-            throw new ErrorResponse('[nooklink] Response didn\'t include _gtoken cookie', response, body);
+            throw new NooklinkErrorResponse('[nooklink] Response didn\'t include _gtoken cookie', response, body);
         }
 
         const gtoken = decodeURIComponent(match[1]);
@@ -275,14 +275,14 @@ export class NooklinkUserApi {
             return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
         }
 
-        if (response.status !== 200 && response.status !== 201) {
-            throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
+        if (!response.ok) {
+            throw new NooklinkErrorResponse('[nooklink] Non-2xx status code', response, await response.text());
         }
 
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse<WebServiceError>('[nooklink] Error ' + data.code, response, data);
+            throw new NooklinkErrorResponse('[nooklink] Error ' + data.code, response, data);
         }
 
         return defineResponse(data, response);
@@ -390,6 +390,8 @@ export class NooklinkUserApi {
         );
     }
 }
+
+export class NooklinkErrorResponse extends ErrorResponse<WebServiceError> {}
 
 export interface NooklinkAuthData {
     webserviceToken: WebServiceToken;

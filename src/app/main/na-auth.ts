@@ -5,7 +5,7 @@ import { protocol_registration_options } from './index.js';
 import { createModalWindow } from './windows.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { WindowType } from '../common/types.js';
-import { NintendoAccountAuthError, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
+import { NintendoAccountAuthError, NintendoAccountAuthErrorResponse, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
 import { NintendoAccountSessionAuthorisationCoral } from '../../api/coral.js';
 import { NintendoAccountSessionAuthorisationMoon } from '../../api/moon.js';
 import { ErrorResponse } from '../../api/util.js';
@@ -329,13 +329,9 @@ export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_br
 
                 return {nso, data};
             } catch (err) {
-                if (err instanceof ErrorResponse && err.response.url.startsWith('https://accounts.nintendo.com/')) {
-                    const data: NintendoAccountAuthError = err.data;
-
-                    if (data.error === 'invalid_grant') {
-                        // The session token has expired/was revoked
-                        return authenticateCoralSessionToken(storage, authenticator, code, true);
-                    }
+                if (err instanceof NintendoAccountAuthErrorResponse && err.data?.error === 'invalid_grant') {
+                    // The session token has expired/was revoked
+                    return authenticateCoralSessionToken(storage, authenticator, code, true);
                 }
 
                 throw err;
@@ -494,13 +490,9 @@ export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_b
 
                 return {moon, data};
             } catch (err) {
-                if (err instanceof ErrorResponse && err.response.url.startsWith('https://accounts.nintendo.com/')) {
-                    const data: NintendoAccountAuthError = err.data;
-
-                    if (data.error === 'invalid_grant') {
-                        // The session token has expired/was revoked
-                        return authenticateMoonSessionToken(storage, authenticator, code, true);
-                    }
+                if (err instanceof NintendoAccountAuthErrorResponse && err.data?.error === 'invalid_grant') {
+                    // The session token has expired/was revoked
+                    return authenticateMoonSessionToken(storage, authenticator, code, true);
                 }
 
                 throw err;

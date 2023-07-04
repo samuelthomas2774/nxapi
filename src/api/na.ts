@@ -126,16 +126,16 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw new NintendoAccountAuthErrorResponse('[na] Non-200 status code', response, await response.text());
     }
 
     const token = await response.json() as NintendoAccountSessionToken | NintendoAccountAuthError | NintendoAccountError;
 
-    if ('errorCode' in token) {
-        throw new ErrorResponse<NintendoAccountError>('[na] ' + token.detail, response, token);
-    }
     if ('error' in token) {
-        throw new ErrorResponse<NintendoAccountAuthError>('[na] ' + token.error_description ?? token.error, response, token);
+        throw new NintendoAccountAuthErrorResponse('[na] ' + token.error_description ?? token.error, response, token);
+    }
+    if ('errorCode' in token) {
+        throw new NintendoAccountErrorResponse('[na] ' + token.detail, response, token);
     }
 
     debug('Got Nintendo Account session token', token);
@@ -163,16 +163,17 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw new NintendoAccountAuthErrorResponse('[na] Non-200 status code', response, await response.text());
     }
 
     const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountAuthError | NintendoAccountError;
 
-    if ('errorCode' in nintendoAccountToken) {
-        throw new ErrorResponse<NintendoAccountError>('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
-    }
     if ('error' in nintendoAccountToken) {
-        throw new ErrorResponse<NintendoAccountAuthError>('[na] ' + nintendoAccountToken.error_description ?? nintendoAccountToken.error, response, nintendoAccountToken);
+        throw new NintendoAccountAuthErrorResponse('[na] ' + nintendoAccountToken.error_description ??
+            nintendoAccountToken.error, response, nintendoAccountToken);
+    }
+    if ('errorCode' in nintendoAccountToken) {
+        throw new NintendoAccountErrorResponse('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
     }
 
     debug('Got Nintendo Account token', nintendoAccountToken);
@@ -196,13 +197,13 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw new NintendoAccountErrorResponse('[na] Non-200 status code', response, await response.text());
     }
 
     const user = await response.json() as NintendoAccountUser | NintendoAccountError;
 
     if ('errorCode' in user) {
-        throw new ErrorResponse<NintendoAccountError>('[na] ' + user.detail, response, user);
+        throw new NintendoAccountErrorResponse('[na] ' + user.detail, response, user);
     }
 
     debug('Got Nintendo Account user info', user);
@@ -406,3 +407,7 @@ export interface NintendoAccountError {
     status: number;
     type: string;
 }
+
+export class NintendoAccountAuthErrorResponse extends ErrorResponse<NintendoAccountAuthError> {}
+
+export class NintendoAccountErrorResponse extends ErrorResponse<NintendoAccountError> {}

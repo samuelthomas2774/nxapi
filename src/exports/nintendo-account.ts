@@ -2,6 +2,9 @@ export {
     NintendoAccountSessionAuthorisation,
     NintendoAccountSessionAuthorisationError,
 
+    NintendoAccountAuthErrorResponse,
+    NintendoAccountErrorResponse,
+
     NintendoAccountSessionToken,
     NintendoAccountToken,
     NintendoAccountAuthError,

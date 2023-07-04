@@ -1,7 +1,7 @@
 import * as persist from 'node-persist';
 import { Response } from 'node-fetch';
 import CoralApi, { CoralAuthData, ZNCA_CLIENT_ID } from '../../api/coral.js';
-import { CoralErrorResponse } from '../../api/coral-types.js';
+import { CoralError } from '../../api/coral-types.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
 import { getNintendoAccountUser, NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import createDebug from '../../util/debug.js';
@@ -120,7 +120,7 @@ function createTokenExpiredHandler(
     storage: persist.LocalStorage, token: string, nso: CoralApi,
     renew_token_data: {existingToken: SavedToken}, ratelimit = true
 ) {
-    return (data?: CoralErrorResponse, response?: Response) => {
+    return (data?: CoralError, response?: Response) => {
         debug('Token expired', renew_token_data.existingToken.user.id, data);
         return renewToken(storage, token, nso, renew_token_data, ratelimit);
     };

@@ -5,10 +5,9 @@ import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
 import type { Arguments as ParentArguments } from '../nso.js';
-import CoralApi, { CoralApiInterface } from '../../api/coral.js';
+import CoralApi, { CoralApiInterface, CoralErrorResponse } from '../../api/coral.js';
 import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
 import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
-import { ErrorResponse } from '../../api/util.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -685,7 +684,7 @@ class Server extends HttpServer {
                     const user = await coral.getUserByFriendCode(friendcode);
                     return [user, id];
                 } catch (err) {
-                    if (err instanceof ErrorResponse && err.data?.status === CoralStatus.RESOURCE_NOT_FOUND) {
+                    if (err instanceof CoralErrorResponse && err.status === CoralStatus.RESOURCE_NOT_FOUND) {
                         // A user with this friend code doesn't exist
                         // This should be cached
                         return [null, id];

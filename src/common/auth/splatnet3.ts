@@ -1,12 +1,11 @@
 import persist from 'node-persist';
 import { Response } from 'node-fetch';
 import { getToken, Login, SavedToken } from './coral.js';
-import SplatNet3Api, { SplatNet3AuthData } from '../../api/splatnet3.js';
+import SplatNet3Api, { SplatNet3AuthData, SplatNet3AuthErrorCode, SplatNet3AuthErrorResponse } from '../../api/splatnet3.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
-import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('nxapi:auth:splatnet3');
 
@@ -121,7 +120,7 @@ async function renewToken(
             debug('Unable to renew bullet token with saved web services token - cached data for this session token doesn\'t exist??');
         }
     } catch (err) {
-        if (err instanceof ErrorResponse && err.response.status === 401) {
+        if (err instanceof SplatNet3AuthErrorResponse && err.code === SplatNet3AuthErrorCode.ERROR_INVALID_GAME_WEB_TOKEN) {
             // Web service token invalid/expired...
             debug('Web service token expired, authenticating with new token', err);
         } else {

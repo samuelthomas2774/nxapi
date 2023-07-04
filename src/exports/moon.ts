@@ -3,6 +3,8 @@ export {
     MoonAuthData,
     PartialMoonAuthData,
 
+    MoonErrorResponse,
+
     NintendoAccountSessionAuthorisationMoon,
 } from '../api/moon.js';
 

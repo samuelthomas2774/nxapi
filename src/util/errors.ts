@@ -2,7 +2,6 @@ import { AbortError } from 'node-fetch';
 import createDebug from './debug.js';
 import Loop, { LoopResult } from './loop.js';
 import { TemporaryErrorSymbol } from './misc.js';
-import { CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
 
 const debug = createDebug('nxapi:util:errors');
@@ -28,7 +27,7 @@ export const temporary_http_errors = [
 ];
 
 export async function handleError(
-    err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException,
+    err: ErrorResponse | NodeJS.ErrnoException,
     loop: Loop,
 ): Promise<LoopResult> {
     if (TemporaryErrorSymbol in err && err[TemporaryErrorSymbol]) {

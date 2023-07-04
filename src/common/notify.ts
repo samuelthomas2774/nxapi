@@ -1,6 +1,6 @@
 import persist from 'node-persist';
 import { CoralApiInterface } from '../api/coral.js';
-import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralErrorResponse, GetActiveEventResult } from '../api/coral-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralError, GetActiveEventResult } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
@@ -179,7 +179,7 @@ export class ZncNotifications extends Loop {
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         return handleError(err, this);
     }
 }

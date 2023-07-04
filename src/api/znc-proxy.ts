@@ -33,8 +33,8 @@ export default class ZncProxyApi implements CoralApiInterface {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
-        if (response.status !== 200 && response.status !== 204) {
-            throw new ErrorResponse('[zncproxy] Non-200/204 status code', response, await response.text());
+        if (!response.ok) {
+            throw new ZncProxyErrorResponse('[zncproxy] Non-2xx status code', response, await response.text());
         }
 
         const data = (response.status === 204 ? {} : await response.json()) as T;
@@ -182,6 +182,8 @@ function createResult<T extends {}, R>(data: R & {[ResponseSymbol]: Response}, r
     return result as Result<T>;
 }
 
+export class ZncProxyErrorResponse extends ErrorResponse {}
+
 export interface AuthToken {
     user: string;
     policy?: AuthPolicy;
@@ -227,12 +229,12 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
     debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[zncproxy] Unknown error', response, await response.text());
+        throw new ZncProxyErrorResponse('[zncproxy] Unknown error', response, await response.text());
     }
 
     if (!response.headers.get('Content-Type')?.match(/^application\/json(;|$)$/)) {
         controller.abort();
-        throw new ErrorResponse('[zncproxy] Unacceptable content type', response);
+        throw new ZncProxyErrorResponse('[zncproxy] Unacceptable content type', response);
     }
 
     const data = await response.json() as PresenceUrlResponse;

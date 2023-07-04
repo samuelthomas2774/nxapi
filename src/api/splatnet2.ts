@@ -63,7 +63,7 @@ export default class SplatNet2Api {
         }
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet2] Non-200 status code', response, await response.text());
+            throw new SplatNet2ErrorResponse('[splatnet2] Non-200 status code', response, await response.text());
         }
 
         updateIksmSessionLastUsed.handler?.call(null, this.iksm_session);
@@ -71,7 +71,7 @@ export default class SplatNet2Api {
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse<WebServiceError>('[splatnet2] ' + data.message, response, data);
+            throw new SplatNet2ErrorResponse('[splatnet2] ' + data.message, response, data);
         }
 
         return defineResponse(data, response);
@@ -305,14 +305,14 @@ ${colour}
         const body = await response.text();
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet2] Non-200 status code', response, body);
+            throw new SplatNet2ErrorResponse('[splatnet2] Non-200 status code', response, body);
         }
 
         const cookies = response.headers.get('Set-Cookie');
         const match = cookies?.match(/\biksm_session=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);
 
         if (!match) {
-            throw new ErrorResponse('[splatnet2] Response didn\'t include iksm_session cookie', response, body);
+            throw new SplatNet2ErrorResponse('[splatnet2] Response didn\'t include iksm_session cookie', response, body);
         }
 
         const iksm_session = decodeURIComponent(match[1]);
@@ -330,10 +330,10 @@ ${colour}
         const mn = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-nsa-id=(?:"([^"]*)"|([^\s>]*))/i);
         const [language, region, user_id, nsa_id] = [ml, mr, mu, mn].map(m => m?.[1] || m?.[2] || null);
 
-        if (!language) throw new Error('[splatnet2] Invalid language in response');
-        if (!region) throw new Error('[splatnet2] Invalid region in response');
-        if (!user_id) throw new Error('[splatnet2] Invalid unique player ID in response');
-        if (!nsa_id) throw new Error('[splatnet2] Invalid NSA ID in response');
+        if (!language) throw new ErrorResponse('[splatnet2] Invalid language in response', response, body);
+        if (!region) throw new ErrorResponse('[splatnet2] Invalid region in response', response, body);
+        if (!user_id) throw new ErrorResponse('[splatnet2] Invalid unique player ID in response', response, body);
+        if (!nsa_id) throw new ErrorResponse('[splatnet2] Invalid NSA ID in response', response, body);
 
         debug('SplatNet 2 user', {
             language,
@@ -358,6 +358,8 @@ ${colour}
         };
     }
 }
+
+export class SplatNet2ErrorResponse extends ErrorResponse<WebServiceError> {}
 
 export interface SplatNet2AuthData {
     webserviceToken: WebServiceToken;
