@@ -27,9 +27,15 @@ export async function getToken(
     data: SavedToken;
 }>
 export async function getToken(
-    storage: persist.LocalStorage, token: string, proxy_url?: string, ratelimit?: boolean
+    storage: persist.LocalStorage, token: string, proxy_url?: undefined, ratelimit?: boolean
 ): Promise<{
     nso: CoralApi;
+    data: SavedToken;
+}>
+export async function getToken(
+    storage: persist.LocalStorage, token: string, proxy_url?: string, ratelimit?: boolean
+): Promise<{
+    nso: CoralApi | ZncProxyApi;
     data: SavedToken;
 }>
 export async function getToken(
@@ -73,7 +79,9 @@ export async function getToken(
             expires_at: Date.now() + (data.credential.expiresIn * 1000),
         };
 
-        nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
+        if (nso instanceof CoralApi) {
+            nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
+        }
 
         await storage.setItem('NsoToken.' + token, existingToken);
         await storage.setItem('NintendoAccountToken.' + data.user.id, token);
@@ -90,7 +98,9 @@ export async function getToken(
         new ZncProxyApi(proxy_url, token) :
         CoralApi.createWithSavedToken(existingToken);
 
-    nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
+    if (nso instanceof CoralApi) {
+        nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
+    }
 
     return {nso, data: existingToken};
 }

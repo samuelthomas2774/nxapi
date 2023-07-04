@@ -1,8 +1,7 @@
-import { BrowserWindow, clipboard, dialog, IpcMain, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
-import * as util from 'node:util';
+import { BrowserWindow, clipboard, IpcMain, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import { User } from 'discord-rpc';
-import openWebService, { QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
-import { createModalWindow, createWindow, getWindowConfiguration, setWindowHeight } from './windows.js';
+import openWebService, { handleOpenWebServiceError, QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
+import { createModalWindow, getWindowConfiguration, setWindowHeight } from './windows.js';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
@@ -60,21 +59,9 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
     ipcMain.handle('nxapi:coral:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
         store.users.get(token).then(u => openWebService(store, token, u.nso, u.data, webservice, qs)
-            .catch(err => err instanceof WebServiceValidationError ? dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender)!, {
-                type: 'error',
-                message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
-                detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
-                    webservice: {
-                        id: webservice.id,
-                        name: webservice.name,
-                        uri: webservice.uri,
-                    },
-                    qs,
-                    user_na_id: u.data.user.id,
-                    user_nsa_id: u.data.nsoAccount.user.nsaId,
-                    user_coral_id: u.data.nsoAccount.user.id,
-                }, {compact: true}),
-            }) : null)));
+            .catch(err => err instanceof WebServiceValidationError ?
+                handleOpenWebServiceError(err, webservice, qs, u.data, BrowserWindow.fromWebContents(e.sender)!) :
+                null)));
     ipcMain.handle('nxapi:coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
     ipcMain.handle('nxapi:coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()));
     ipcMain.handle('nxapi:coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)));

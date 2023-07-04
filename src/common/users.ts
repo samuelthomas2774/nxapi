@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import * as persist from 'node-persist';
 import createDebug from '../util/debug.js';
-import CoralApi, { Result } from '../api/coral.js';
+import CoralApi, { CoralApiInterface, Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
@@ -52,7 +52,8 @@ export default class Users<T extends UserData> {
     }
 
     static coral(store: Store | persist.LocalStorage, znc_proxy_url: string, ratelimit?: boolean): Users<CoralUser<ZncProxyApi>>
-    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser>
+    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: undefined, ratelimit?: boolean): Users<CoralUser<CoralApi>>
+    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser<CoralApiInterface>>
     static coral(_store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean) {
         const store = 'storage' in _store ? _store : null;
         const storage = 'storage' in _store ? _store.storage : _store;
@@ -83,7 +84,7 @@ export default class Users<T extends UserData> {
     }
 }
 
-export interface CoralUserData<T extends CoralApi = CoralApi> extends UserData {
+export interface CoralUserData<T extends CoralApiInterface = CoralApi> extends UserData {
     nso: T;
     data: SavedToken;
     announcements: CoralSuccessResponse<Announcements>;
@@ -92,7 +93,7 @@ export interface CoralUserData<T extends CoralApi = CoralApi> extends UserData {
     active_event: CoralSuccessResponse<GetActiveEventResult>;
 }
 
-export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T> {
+export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralUserData<T> {
     created_at = Date.now();
     expires_at = Infinity;
 
@@ -171,6 +172,10 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
     }
 
     async addFriend(nsa_id: string) {
+        if (!(this.nso instanceof CoralApi)) {
+            throw new Error('Cannot send friend requests using Coral API proxy');
+        }
+
         if (nsa_id === this.data.nsoAccount.user.nsaId) {
             throw new Error('Cannot add self as a friend');
         }

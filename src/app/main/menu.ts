@@ -1,13 +1,12 @@
-import { app, dialog, Menu, Tray, nativeImage, MenuItem, BrowserWindow, KeyboardEvent } from './electron.js';
+import { app, Menu, Tray, nativeImage, MenuItem, BrowserWindow, KeyboardEvent } from './electron.js';
 import path from 'node:path';
-import * as util from 'node:util';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
-import openWebService, { WebServiceValidationError } from './webservices.js';
+import openWebService, { handleOpenWebServiceError, WebServiceValidationError } from './webservices.js';
 import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
-import { createModalWindow, createWindow } from './windows.js';
+import { createModalWindow } from './windows.js';
 import { WindowType } from '../common/types.js';
-import CoralApi from '../../api/coral.js';
+import { CoralApiInterface } from '../../api/coral.js';
 import { WebService } from '../../api/coral-types.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
@@ -155,11 +154,7 @@ export default class MenuApp {
 
                         await this.openWebService(token, nso, data, webservice);
                     } catch (err) {
-                        dialog.showMessageBox({
-                            type: 'error',
-                            message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
-                            detail: '' + (err instanceof Error ? err.stack ?? err.message : err),
-                        });
+                        handleOpenWebServiceError(err, webservice);
                     }
                 },
             }));
@@ -168,26 +163,13 @@ export default class MenuApp {
         return items;
     }
 
-    async openWebService(token: string, nso: CoralApi, data: SavedToken, webservice: WebService) {
+    async openWebService(token: string, coral: CoralApiInterface, data: SavedToken, webservice: WebService) {
         try {
-            await openWebService(this.app.store, token, nso, data, webservice);
+            await openWebService(this.app.store, token, coral, data, webservice);
         } catch (err) {
             if (!(err instanceof WebServiceValidationError)) return;
 
-            dialog.showMessageBox({
-                type: 'error',
-                message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
-                detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
-                    webservice: {
-                        id: webservice.id,
-                        name: webservice.name,
-                        uri: webservice.uri,
-                    },
-                    user_na_id: data.user.id,
-                    user_nsa_id: data.nsoAccount.user.nsaId,
-                    user_coral_id: data.nsoAccount.user.id,
-                }, {compact: true}),
-            });
+            handleOpenWebServiceError(err, webservice, undefined, data);
         }
     }
 

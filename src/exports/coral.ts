@@ -1,5 +1,7 @@
 export {
     default,
+    CoralApiInterface,
+
     CoralAuthData,
     PartialCoralAuthData,
 

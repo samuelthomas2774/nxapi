@@ -295,10 +295,12 @@ export enum NintendoAccountScope {
 }
 export enum NintendoAccountJwtScope {
     'openid' = 0,
+    'offline' = 1,
     'user' = 8,
     'user.birthday' = 9,
     'user.mii' = 17,
     'user.screenName' = 23,
+    'user.links.nintendoNetwork.id' = 31,
     'moonUser:administration' = 320,
     'moonDevice:create' = 321,
     'moonOwnedDevice:administration' = 325,
@@ -323,10 +325,6 @@ export enum NintendoAccountJwtScope {
     // 'pointWallet' = -1,
     // 'userNotificationMessage:anyClients' = -1,
     // 'userNotificationMessage:anyClients:write' = -1,
-
-    // 1, 31
-    // 'offline' = -1,
-    // 'user.links.nintendoNetwork.id' = -1,
 }
 
 export interface NintendoAccountUser {

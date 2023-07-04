@@ -1,5 +1,5 @@
 import { Response } from 'node-fetch';
-import CoralApi, { CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
+import CoralApi, { CoralApiInterface, CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralErrorResponse } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
@@ -35,7 +35,7 @@ export default class Coral {
     onUpdatedWebServices: ((webservices: Result<WebServices>) => void) | null = null;
 
     constructor(
-        public api: CoralApi,
+        public api: CoralApiInterface,
         public data: CoralAuthData,
         public announcements: Result<Announcements> | null = null,
         public friends: Result<Friends> | null = null,
@@ -115,6 +115,10 @@ export default class Coral {
     }
 
     async addFriend(nsa_id: string) {
+        if (!(this.api instanceof CoralApi)) {
+            throw new Error('Cannot send friend requests using Coral API proxy');
+        }
+
         if (nsa_id === this.data.nsoAccount.user.nsaId) {
             throw new Error('Cannot add self as a friend');
         }
@@ -220,7 +224,7 @@ export default class Coral {
         return [nso, auth_data] as const;
     }
 
-    static async createWithCoralApi(coral: CoralApi, data: SavedToken, skip_fetch = false) {
+    static async createWithCoralApi(coral: CoralApiInterface, data: SavedToken, skip_fetch = false) {
         if (skip_fetch) {
             debug('Already authenticated, skip fetching coral data');
             return new Coral(coral, data, null, null, null, null);

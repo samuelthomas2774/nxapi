@@ -2,7 +2,7 @@ import fetch, { Response } from 'node-fetch';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
-import CoralApi from './coral.js';
+import { CoralApiInterface } from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -107,8 +107,8 @@ export default class NooklinkApi {
         return NooklinkUserApi._createWithNooklinkApi(this, user_id);
     }
 
-    async renewTokenWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await NooklinkApi.loginWithCoral(nso, user);
+    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await NooklinkApi.loginWithCoral(coral, user);
         this.setTokenWithSavedToken(data);
         return data;
     }
@@ -124,8 +124,8 @@ export default class NooklinkApi {
         this._token_expired = false;
     }
 
-    static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await this.loginWithCoral(nso, user);
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await this.loginWithCoral(coral, user);
         return {nooklink: this.createWithSavedToken(data), data};
     }
 
@@ -133,11 +133,11 @@ export default class NooklinkApi {
         return new this(data.gtoken, data.useragent);
     }
 
-    static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
         const { default: { coral_gws_nooklink: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents NookLink authentication');
 
-        const webserviceToken = await nso.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
+        const webserviceToken = await coral.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken, user);
     }

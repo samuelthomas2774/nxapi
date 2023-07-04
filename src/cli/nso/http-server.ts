@@ -5,7 +5,7 @@ import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
 import { v4 as uuidgen } from 'uuid';
 import type { Arguments as ParentArguments } from '../nso.js';
-import CoralApi from '../../api/coral.js';
+import CoralApi, { CoralApiInterface } from '../../api/coral.js';
 import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
 import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 import { ErrorResponse } from '../../api/util.js';
@@ -37,12 +37,12 @@ declare global {
 interface RequestData {
     req: Request;
     res: Response;
-    user?: CoralUser;
+    user?: CoralUser<CoralApiInterface>;
     policy?: AuthPolicy;
     token?: string;
 }
 interface RequestDataWithUser extends RequestData {
-    user: CoralUser;
+    user: CoralUser<CoralApiInterface>;
 }
 
 const debug = createDebug('cli:nso:http-server');
@@ -104,7 +104,7 @@ class Server extends HttpServer {
 
     constructor(
         readonly storage: persist.LocalStorage,
-        readonly users: Users<CoralUser>,
+        readonly users: Users<CoralUser<CoralApiInterface>>,
     ) {
         super();
 
@@ -265,7 +265,7 @@ class Server extends HttpServer {
         }
     });
 
-    private coral_auth_promise = new Map</** session token */ string, Promise<CoralUser>>();
+    private coral_auth_promise = new Map</** session token */ string, Promise<CoralUser<CoralApiInterface>>>();
     private coral_auth_timeout = new Map</** session token */ string, NodeJS.Timeout>();
 
     async getCoralUser(req: Request) {
@@ -404,7 +404,7 @@ class Server extends HttpServer {
     private user_data_promise = new Map</** NA ID */ string, Promise<[number, CurrentUser]>>();
     private cached_userdata = new Map</** NA ID */ string, [number, CurrentUser]>();
 
-    async getUserData(id: string, coral: CoralApi) {
+    async getUserData(id: string, coral: CoralApiInterface) {
         return this._cache(id, () => coral.getCurrentUser(),
             this.user_data_promise, this.cached_userdata);
     }
@@ -670,7 +670,7 @@ class Server extends HttpServer {
     private cached_friendcode_data = new Map</** FC ID */ string,
         [number, [FriendCodeUser | null, /** NA ID */ string]]>();
 
-    async getFriendCodeUser(id: string, coral: CoralApi, friendcode: string) {
+    async getFriendCodeUser(id: string, coral: CoralApiInterface, friendcode: string) {
         if (!FRIEND_CODE.test(friendcode)) {
             throw new ResponseError(400, 'invalid_request', 'Invalid friend code');
         }
@@ -715,7 +715,7 @@ class Server extends HttpServer {
     private user_friendcodeurl_promise = new Map</** NA ID */ string, Promise<[number, FriendCodeUrl]>>();
     private cached_friendcodeurl = new Map</** NA ID */ string, [number, FriendCodeUrl]>();
 
-    getFriendCodeUrl(id: string, coral: CoralApi) {
+    getFriendCodeUrl(id: string, coral: CoralApiInterface) {
         return this._cache(id, () => coral.getFriendCodeUrl(),
             this.user_friendcodeurl_promise, this.cached_friendcodeurl);
     }
