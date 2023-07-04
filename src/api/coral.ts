@@ -9,6 +9,7 @@ import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParamete
 import { f, FResult, HashMethod } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
+import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
 
 const debug = createDebug('nxapi:api:coral');
 
@@ -474,9 +475,20 @@ export default class CoralApi implements CoralApiInterface {
     }
 }
 
-export class CoralErrorResponse extends ErrorResponse<CoralError> {
+export class CoralErrorResponse extends ErrorResponse<CoralError> implements HasErrorDescription {
     get status(): CoralStatus | null {
         return this.data?.status ?? null;
+    }
+
+    get [ErrorDescriptionSymbol]() {
+        if (this.status === CoralStatus.NSA_NOT_LINKED) {
+            return new ErrorDescription('coral.nsa_not_linked', 'Your Nintendo Account is not linked to a Network Service Account (Nintendo Switch user).\n\nMake sure you are using the Nintendo Account linked to your Nintendo Switch console.');
+        }
+        if (this.status === CoralStatus.UPGRADE_REQUIRED) {
+            return new ErrorDescription('coral.upgrade_required', 'The Coral (Nintendo Switch Online app) version used by nxapi is no longer supported by the Coral API.\n\nTry restarting nxapi and make sure nxapi is up to date.');
+        }
+
+        return null;
     }
 }
 

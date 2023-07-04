@@ -16,6 +16,7 @@ import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
+import { MembershipRequiredError } from '../../common/auth/util.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -59,7 +60,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
     ipcMain.handle('nxapi:coral:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
         store.users.get(token).then(u => openWebService(store, token, u.nso, u.data, webservice, qs)
-            .catch(err => err instanceof WebServiceValidationError ?
+            .catch(err => err instanceof WebServiceValidationError || err instanceof MembershipRequiredError ?
                 handleOpenWebServiceError(err, webservice, qs, u.data, BrowserWindow.fromWebContents(e.sender)!) :
                 null)));
     ipcMain.handle('nxapi:coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));

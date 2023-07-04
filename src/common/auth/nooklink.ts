@@ -3,7 +3,7 @@ import { Response } from 'node-fetch';
 import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
 import { Users, WebServiceError } from '../../api/nooklink-types.js';
-import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import { checkMembershipActive, checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
@@ -31,14 +31,6 @@ export async function getWebServiceToken(
         const { default: { coral_gws_nooklink: config } } = await import('../remote-config.js');
         if (!config) throw new Error('Remote configuration prevents NookLink authentication');
 
-        if (ratelimit) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-            await checkUseLimit(storage, 'nooklink', jwt.payload.sub);
-        }
-
-        console.warn('Authenticating to NookLink');
-        debug('Authenticating to NookLink');
-
         const {nso, data} = await getToken(storage, token, proxy_url);
 
         if (data[Login]) {
@@ -48,18 +40,35 @@ export async function getWebServiceToken(
             const activeevent = await nso.getActiveEvent();
         }
 
-        const existingToken: SavedToken = await NooklinkApi.loginWithCoral(nso, data.user);
+        checkMembershipActive(data);
 
-        await storage.setItem('NookToken.' + token, existingToken);
+        let attempt;
+        if (ratelimit) {
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+            attempt = await checkUseLimit(storage, 'nooklink', jwt.payload.sub);
+        }
 
-        const nooklink = NooklinkApi.createWithSavedToken(existingToken);
+        try {
+            console.warn('Authenticating to NookLink');
+            debug('Authenticating to NookLink');
 
-        nooklink.onTokenExpired = createTokenExpiredHandler(storage, token, nooklink, {
-            existingToken,
-            znc_proxy_url: proxy_url,
-        });
+            const existingToken: SavedToken = await NooklinkApi.loginWithCoral(nso, data.user);
 
-        return {nooklink, data: existingToken};
+            await storage.setItem('NookToken.' + token, existingToken);
+
+            const nooklink = NooklinkApi.createWithSavedToken(existingToken);
+
+            nooklink.onTokenExpired = createTokenExpiredHandler(storage, token, nooklink, {
+                existingToken,
+                znc_proxy_url: proxy_url,
+            });
+
+            return {nooklink, data: existingToken};
+        } catch (err) {
+            await attempt?.recordError(err);
+
+            throw err;
+        }
     }
 
     debug('Using existing web service token');

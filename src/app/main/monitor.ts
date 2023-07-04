@@ -1,6 +1,6 @@
-import { dialog, Notification } from './electron.js';
+import { Notification } from './electron.js';
 import { App } from './index.js';
-import { tryGetNativeImageFromUrl } from './util.js';
+import { showErrorDialog, tryGetNativeImageFromUrl } from './util.js';
 import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
 import { CurrentUser, Friend, Game, CoralError } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
@@ -51,10 +51,9 @@ export class PresenceMonitorManager {
             this.app.store.emit('update-discord-user', client?.user ?? null);
         };
         i.discord.onMonitorError = async (monitor, instance, err) => {
-            const {response} = await dialog.showMessageBox({
+            const {response} = await showErrorDialog({
                 message: err.name + ' in external monitor ' + monitor.name,
-                detail: err.stack ?? err.message,
-                type: 'error',
+                error: err,
                 buttons: ['OK', 'Retry', 'Stop'],
                 defaultId: 0,
             });
@@ -348,10 +347,9 @@ export class PresenceMonitorManager {
         monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
         err: ErrorResponse<CoralError> | NodeJS.ErrnoException
     ): Promise<LoopResult> {
-        const {response} = await dialog.showMessageBox({
+        const {response} = await showErrorDialog({
             message: err.name + ' updating presence monitor',
-            detail: err.stack ?? err.message,
-            type: 'error',
+            error: err,
             buttons: ['OK', 'Retry'],
             defaultId: 0,
         });

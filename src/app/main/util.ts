@@ -1,10 +1,11 @@
-import { BrowserWindow, Menu, MenuItem, nativeImage } from './electron.js';
+import { BrowserWindow, dialog, Menu, MenuItem, MessageBoxOptions, nativeImage } from './electron.js';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
 import fetch from 'node-fetch';
 import { dir } from '../../util/product.js';
-import { Store } from './index.js';
+import { App, Store } from './index.js';
 import { SavedToken } from '../../common/auth/coral.js';
+import { ErrorDescription } from '../../util/errors.js';
 
 export const bundlepath = path.resolve(dir, 'dist', 'app', 'bundle');
 
@@ -64,4 +65,25 @@ export async function askUserForUri(store: Store, uri: string, prompt: string): 
     window.destroy();
 
     return selected_user;
+}
+
+interface ErrorBoxOptions extends MessageBoxOptions {
+    error: Error | unknown;
+    app?: App;
+    window?: BrowserWindow;
+}
+
+export function showErrorDialog(options: ErrorBoxOptions) {
+    const {error, app, window, ...message_box_options} = options;
+    const detail = ErrorDescription.getErrorDescription(error);
+
+    message_box_options.detail = message_box_options.detail ?
+        detail + '\n\n' + message_box_options.detail :
+        detail;
+
+    if (!message_box_options.type) message_box_options.type = 'error';
+
+    return window ?
+        dialog.showMessageBox(window, message_box_options) :
+        dialog.showMessageBox(message_box_options);
 }

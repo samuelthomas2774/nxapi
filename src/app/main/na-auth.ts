@@ -5,15 +5,15 @@ import { protocol_registration_options } from './index.js';
 import { createModalWindow } from './windows.js';
 import { tryGetNativeImageFromUrl } from './util.js';
 import { WindowType } from '../common/types.js';
-import { NintendoAccountAuthError, NintendoAccountAuthErrorResponse, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
+import { NintendoAccountAuthErrorResponse, NintendoAccountSessionAuthorisation, NintendoAccountSessionAuthorisationError, NintendoAccountSessionToken } from '../../api/na.js';
 import { NintendoAccountSessionAuthorisationCoral } from '../../api/coral.js';
 import { NintendoAccountSessionAuthorisationMoon } from '../../api/moon.js';
-import { ErrorResponse } from '../../api/util.js';
 import { getToken } from '../../common/auth/coral.js';
 import { getPctlToken } from '../../common/auth/moon.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { ZNCA_API_USE_URL } from '../../common/constants.js';
+import { InvalidNintendoAccountTokenError } from '../../common/auth/na.js';
 
 const debug = createDebug('app:main:na-auth');
 
@@ -329,7 +329,10 @@ export async function addNsoAccount(storage: persist.LocalStorage, use_in_app_br
 
                 return {nso, data};
             } catch (err) {
-                if (err instanceof NintendoAccountAuthErrorResponse && err.data?.error === 'invalid_grant') {
+                if (
+                    (err instanceof InvalidNintendoAccountTokenError) ||
+                    (err instanceof NintendoAccountAuthErrorResponse && err.data?.error === 'invalid_grant')
+                ) {
                     // The session token has expired/was revoked
                     return authenticateCoralSessionToken(storage, authenticator, code, true);
                 }
@@ -490,7 +493,10 @@ export async function addPctlAccount(storage: persist.LocalStorage, use_in_app_b
 
                 return {moon, data};
             } catch (err) {
-                if (err instanceof NintendoAccountAuthErrorResponse && err.data?.error === 'invalid_grant') {
+                if (
+                    (err instanceof InvalidNintendoAccountTokenError) ||
+                    (err instanceof NintendoAccountAuthErrorResponse && err.data?.error === 'invalid_grant')
+                ) {
                     // The session token has expired/was revoked
                     return authenticateMoonSessionToken(storage, authenticator, code, true);
                 }

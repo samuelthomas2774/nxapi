@@ -13,6 +13,7 @@ import { SavedMoonToken } from '../../common/auth/moon.js';
 import { CachedWebServicesList } from '../../common/users.js';
 import createDebug from '../../util/debug.js';
 import { dev, dir } from '../../util/product.js';
+import { MembershipRequiredError } from '../../common/auth/util.js';
 
 const debug = createDebug('app:main:menu');
 
@@ -167,7 +168,7 @@ export default class MenuApp {
         try {
             await openWebService(this.app.store, token, coral, data, webservice);
         } catch (err) {
-            if (!(err instanceof WebServiceValidationError)) return;
+            if (!(err instanceof WebServiceValidationError) && !(err instanceof MembershipRequiredError)) return;
 
             handleOpenWebServiceError(err, webservice, undefined, data);
         }

@@ -4,6 +4,7 @@ import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
+import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
 
 const debug = createDebug('nxapi:api:na');
 
@@ -408,6 +409,14 @@ export interface NintendoAccountError {
     type: string;
 }
 
-export class NintendoAccountAuthErrorResponse extends ErrorResponse<NintendoAccountAuthError> {}
+export class NintendoAccountAuthErrorResponse extends ErrorResponse<NintendoAccountAuthError> implements HasErrorDescription {
+    get [ErrorDescriptionSymbol]() {
+        if (this.data?.error === 'invalid_grant') {
+            return new ErrorDescription('na.invalid_grant', 'Your Nintendo Account session token has expired or was revoked.\n\nYou need to sign in again.');
+        }
+
+        return null;
+    }
+}
 
 export class NintendoAccountErrorResponse extends ErrorResponse<NintendoAccountError> {}

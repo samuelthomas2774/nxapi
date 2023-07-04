@@ -1,3 +1,4 @@
+import * as util from 'node:util';
 import { AbortError } from 'node-fetch';
 import createDebug from './debug.js';
 import Loop, { LoopResult } from './loop.js';
@@ -5,6 +6,43 @@ import { TemporaryErrorSymbol } from './misc.js';
 import { ErrorResponse } from '../api/util.js';
 
 const debug = createDebug('nxapi:util:errors');
+
+export class ErrorDescription {
+    constructor(
+        readonly type: string,
+        readonly message: string,
+    ) {}
+
+    static getErrorDescription(err: Error | unknown) {
+        if (err instanceof HasErrorDescription) {
+            const description = err[ErrorDescriptionSymbol];
+
+            if (description) {
+                return description.message +
+                    (err instanceof Error ? '\n\n--\n\n' + (err.stack ?? err.message) : '');
+            }
+        }
+
+        if (err instanceof Error) {
+            return err.stack || err.message;
+        }
+
+        return util.inspect(err, {compact: true});
+    }
+}
+
+export const ErrorDescriptionSymbol = Symbol('ErrorDescription');
+
+export abstract class HasErrorDescription {
+    abstract get [ErrorDescriptionSymbol](): ErrorDescription | null;
+}
+
+Object.defineProperty(HasErrorDescription, Symbol.hasInstance, {
+    configurable: true,
+    value: (instance: HasErrorDescription) => {
+        return instance && ErrorDescriptionSymbol in instance;
+    },
+});
 
 export const temporary_system_errors = {
     'ETIMEDOUT': 'request timed out',

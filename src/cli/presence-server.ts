@@ -22,6 +22,7 @@ import { EventStreamResponse, HttpServer, ResponseError } from './util/http-serv
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
 import { getSettingForCoopRule, getSettingForVsMode } from '../discord/monitor/splatoon3.js';
+import { CoralApiInterface } from '../api/coral.js';
 
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
@@ -524,7 +525,7 @@ class Server extends HttpServer {
 
     constructor(
         readonly storage: persist.LocalStorage,
-        readonly coral_users: Users<CoralUser>,
+        readonly coral_users: Users<CoralUser<CoralApiInterface>>,
         readonly splatnet3_users: Users<SplatNet3User> | null,
         readonly user_ids: string[],
         image_proxy_path?: {baas?: string; atum?: string; splatnet3?: string;},
@@ -736,7 +737,7 @@ class Server extends HttpServer {
 
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
-        let match: [CoralUser, Friend, string] | null = null;
+        let match: [CoralUser<CoralApiInterface>, Friend, string] | null = null;
 
         for (const user_naid of this.user_ids) {
             const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);

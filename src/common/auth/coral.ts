@@ -66,29 +66,35 @@ export async function getToken(
     const existingToken: SavedToken | undefined = await storage.getItem('NsoToken.' + token);
 
     if (!existingToken || existingToken.expires_at <= Date.now()) {
-        await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
+        const attempt = await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
 
         console.warn('Authenticating to Nintendo Switch Online app');
 
-        const {nso, data} = proxy_url ?
-            await ZncProxyApi.createWithSessionToken(proxy_url, token) :
-            await createWithSessionToken(storage, token, ratelimit);
+        try {
+            const {nso, data} = proxy_url ?
+                await ZncProxyApi.createWithSessionToken(proxy_url, token) :
+                await createWithSessionToken(storage, token, ratelimit);
 
-        const existingToken: SavedToken = {
-            ...data,
-            expires_at: Date.now() + (data.credential.expiresIn * 1000),
-        };
+            const existingToken: SavedToken = {
+                ...data,
+                expires_at: Date.now() + (data.credential.expiresIn * 1000),
+            };
 
-        if (nso instanceof CoralApi) {
-            nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
+            if (nso instanceof CoralApi) {
+                nso.onTokenExpired = createTokenExpiredHandler(storage, token, nso, {existingToken});
+            }
+
+            await storage.setItem('NsoToken.' + token, existingToken);
+            await storage.setItem('NintendoAccountToken.' + data.user.id, token);
+
+            existingToken[Login] = true;
+
+            return {nso, data: existingToken};
+        } catch (err) {
+            await attempt.recordError(err);
+
+            throw err;
         }
-
-        await storage.setItem('NsoToken.' + token, existingToken);
-        await storage.setItem('NintendoAccountToken.' + data.user.id, token);
-
-        existingToken[Login] = true;
-
-        return {nso, data: existingToken};
     }
 
     debug('Using existing token');
@@ -130,23 +136,30 @@ async function renewToken(
     storage: persist.LocalStorage, na_session_token: string, nso: CoralApi,
     renew_token_data: {existingToken: SavedToken}, ratelimit = true
 ) {
+    let attempt;
     if (ratelimit) {
         const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(na_session_token);    
-        await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
+        attempt = await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
     }
 
-    const na_token = await getNaToken(storage, na_session_token, ZNCA_CLIENT_ID, ratelimit);
+    try {
+        const na_token = await getNaToken(storage, na_session_token, ZNCA_CLIENT_ID, ratelimit);
 
-    debug('Reauthenticating to coral');
+        debug('Reauthenticating to coral');
 
-    const data = await nso.renewTokenWithNintendoAccountToken(na_token.token, renew_token_data.existingToken.user);
+        const data = await nso.renewTokenWithNintendoAccountToken(na_token.token, renew_token_data.existingToken.user);
 
-    const existingToken: SavedToken = {
-        ...renew_token_data.existingToken,
-        ...data,
-        expires_at: Date.now() + (data.credential.expiresIn * 1000),
-    };
+        const existingToken: SavedToken = {
+            ...renew_token_data.existingToken,
+            ...data,
+            expires_at: Date.now() + (data.credential.expiresIn * 1000),
+        };
 
-    await storage.setItem('NsoToken.' + na_session_token, existingToken);
-    renew_token_data.existingToken = existingToken;
+        await storage.setItem('NsoToken.' + na_session_token, existingToken);
+        renew_token_data.existingToken = existingToken;
+    } catch (err) {
+        await attempt?.recordError(err);
+
+        throw err;
+    }
 }

@@ -7,13 +7,13 @@ import * as util from 'node:util';
 import fetch from 'node-fetch';
 import { Store } from './index.js';
 import { createWebServiceWindow } from './windows.js';
-import { askUserForUri } from './util.js';
+import { askUserForUri, showErrorDialog } from './util.js';
 import type { DownloadImagesRequest, NativeShareRequest, NativeShareUrlRequest, QrCodeReaderCameraOptions, QrCodeReaderCheckinOptions, QrCodeReaderCheckinResult, QrCodeReaderPhotoLibraryOptions, SendMessageOptions } from '../preload-webservice/znca-js-api.js';
 import createDebug from '../../util/debug.js';
 import { CoralApiInterface, CoralAuthData } from '../../api/coral.js';
-import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
-import { NintendoAccountUser } from '../../api/na.js';
+import { WebService, WebServiceToken } from '../../api/coral-types.js';
 import { SavedToken } from '../../common/auth/coral.js';
+import { checkMembershipActive } from '../../common/auth/util.js';
 
 const debug = createDebug('app:main:webservices');
 
@@ -41,12 +41,7 @@ export default async function openWebService(
     }
 
     const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
-
-    if (verifymembership?.attrValue === 'true') {
-        const membership = data.nsoAccount.user.links.nintendoAccount.membership;
-        const active = typeof membership.active === 'object' ? membership.active.active : membership.active;
-        if (!active) throw new WebServiceValidationError('Nintendo Switch Online membership required');
-    }
+    if (verifymembership?.attrValue === 'true') checkMembershipActive(data);
 
     const user_title_prefix = '[' + data.user.nickname +
         (data.nsoAccount.user.name !== data.user.nickname ? '/' + data.nsoAccount.user.name : '') + '] ';
@@ -202,19 +197,13 @@ export async function handleOpenWebServiceError(
         user_coral_id: auth_data?.nsoAccount.user.id,
     };
 
-    const options: MessageBoxOptions = {
-        type: 'error',
+    return showErrorDialog({
         message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
-        detail: (err instanceof Error ? err.stack ?? err.message : err) +
-            '\n\n' + util.inspect(data, {compact: true}),
+        error: err,
+        detail: util.inspect(data, {compact: true}),
         buttons,
-    };
-
-    const result = window ?
-        await dialog.showMessageBox(window, options) :
-        await dialog.showMessageBox(options);
-
-    return result;
+        window,
+    });
 }
 
 export interface WebServiceData {
