@@ -19,8 +19,23 @@ import type { AddFriendProps } from '../browser/add-friend/index.js';
 
 const debug = createDebug('app:preload');
 
-const inv = <T = void>(channel: string, ...args: any[]) =>
-    ipcRenderer.invoke('nxapi:' + channel, ...args) as Promise<T>;
+const inv = async <T = void>(channel: string, ...args: any[]) => {
+    const data: {
+        result: T;
+    } | {
+        error_type: string;
+        message: string;
+        type?: string;
+        description: string;
+        data: unknown;
+    } = await ipcRenderer.invoke('nxapi:' + channel, ...args);
+
+    if ('result' in data) return data.result;
+
+    // Context isolation removes all other properties of Error objects
+    throw new Error(data.description.replace(/^Error\: /, ''));
+};
+
 const invSync = <T = void>(channel: string, ...args: any[]) =>
     ipcRenderer.sendSync('nxapi:' + channel, ...args) as T;
 

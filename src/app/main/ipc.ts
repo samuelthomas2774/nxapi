@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, IpcMain, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
+import { BrowserWindow, clipboard, IpcMain, IpcMainInvokeEvent, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from './electron.js';
 import { User } from 'discord-rpc';
 import openWebService, { handleOpenWebServiceError, QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
 import { createModalWindow, getWindowConfiguration, setWindowHeight } from './windows.js';
@@ -17,6 +17,7 @@ import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
 import { MembershipRequiredError } from '../../common/auth/util.js';
+import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../../util/errors.js';
 
 const debug = createDebug('app:main:ipc');
 
@@ -38,58 +39,78 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         sendToAllWindows('nxapi:systemPreferences:accent-colour', accent_colour);
     });
 
-    ipcMain.handle('nxapi:systemPreferences:getloginitem', () => appinstance.store.getLoginItem());
-    ipcMain.handle('nxapi:systemPreferences:setloginitem', (e, settings: LoginItemOptions) => appinstance.store.setLoginItem(settings));
+    const handle = (channel: string, listener: (event: IpcMainInvokeEvent, ...args: any[]) => unknown) => ipcMain.handle('nxapi:' + channel, async (event, ...args) => {
+        try {
+            return {result: await listener.call(null, event, ...args)};
+        } catch (err) {
+            debug('Error invoking IPC method', channel, err);
 
-    ipcMain.handle('nxapi:update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
-    ipcMain.handle('nxapi:update:check', () => appinstance.updater.check());
+            if (!(err instanceof Error)) err = new Error(ErrorDescription.getErrorDescription(err));
+
+            const description = err instanceof HasErrorDescription ? err[ErrorDescriptionSymbol] : null;
+
+            return {
+                error_type: (err as Error).constructor.name,
+                message: (err as Error).message,
+                type: description?.type,
+                description: ErrorDescription.getErrorDescription(err),
+                data: err,
+            };
+        }
+    });
+
+    handle('systemPreferences:getloginitem', () => appinstance.store.getLoginItem());
+    handle('systemPreferences:setloginitem', (e, settings: LoginItemOptions) => appinstance.store.setLoginItem(settings));
+
+    handle('update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
+    handle('update:check', () => appinstance.updater.check());
 
     setTimeout(async () => {
         const update = await appinstance.updater.check();
         if (update) sendToAllWindows('nxapi:update:latest', update);
     }, 60 * 60 * 1000);
 
-    ipcMain.handle('nxapi:accounts:list', () => storage.getItem('NintendoAccountIds'));
-    ipcMain.handle('nxapi:accounts:add-coral', () => askAddNsoAccount(store.storage).then(u => u?.data.user.id));
-    ipcMain.handle('nxapi:accounts:add-moon', () => askAddPctlAccount(store.storage).then(u => u?.data.user.id));
+    handle('accounts:list', () => storage.getItem('NintendoAccountIds'));
+    handle('accounts:add-coral', () => askAddNsoAccount(store.storage).then(u => u?.data.user.id));
+    handle('accounts:add-moon', () => askAddPctlAccount(store.storage).then(u => u?.data.user.id));
 
-    ipcMain.handle('nxapi:coral:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
-    ipcMain.handle('nxapi:coral:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
-    ipcMain.handle('nxapi:coral:announcements', (e, token: string) => store.users.get(token).then(u => u.announcements.result));
-    ipcMain.handle('nxapi:coral:friends', (e, token: string) => store.users.get(token).then(u => u.getFriends()));
-    ipcMain.handle('nxapi:coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
-    ipcMain.handle('nxapi:coral:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
+    handle('coral:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
+    handle('coral:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
+    handle('coral:announcements', (e, token: string) => store.users.get(token).then(u => u.announcements.result));
+    handle('coral:friends', (e, token: string) => store.users.get(token).then(u => u.getFriends()));
+    handle('coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
+    handle('coral:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
         store.users.get(token).then(u => openWebService(store, token, u.nso, u.data, webservice, qs)
             .catch(err => err instanceof WebServiceValidationError || err instanceof MembershipRequiredError ?
                 handleOpenWebServiceError(err, webservice, qs, u.data, BrowserWindow.fromWebContents(e.sender)!) :
                 null)));
-    ipcMain.handle('nxapi:coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
-    ipcMain.handle('nxapi:coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()));
-    ipcMain.handle('nxapi:coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)));
-    ipcMain.handle('nxapi:coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
+    handle('coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
+    handle('coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()));
+    handle('coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)));
+    handle('coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
 
-    ipcMain.handle('nxapi:window:showpreferences', () => appinstance.showPreferencesWindow().id);
-    ipcMain.handle('nxapi:window:showfriend', (e, props: FriendProps) =>
+    handle('window:showpreferences', () => appinstance.showPreferencesWindow().id);
+    handle('window:showfriend', (e, props: FriendProps) =>
         createModalWindow(WindowType.FRIEND, props, e.sender).id);
-    ipcMain.handle('nxapi:window:discord', (e, props: DiscordSetupProps) =>
+    handle('window:discord', (e, props: DiscordSetupProps) =>
         createModalWindow(WindowType.DISCORD_PRESENCE, props).id);
-    ipcMain.handle('nxapi:window:addfriend', (e, props: AddFriendProps) =>
+    handle('window:addfriend', (e, props: AddFriendProps) =>
         createModalWindow(WindowType.ADD_FRIEND, props, e.sender).id);
-    ipcMain.handle('nxapi:window:setheight', (e, height: number) => {
+    handle('window:setheight', (e, height: number) => {
         const window = BrowserWindow.fromWebContents(e.sender)!;
         setWindowHeight(window, height);
     });
 
-    ipcMain.handle('nxapi:discord:config', () => appinstance.monitors.getDiscordPresenceConfiguration());
-    ipcMain.handle('nxapi:discord:setconfig', (e, config: DiscordPresenceConfiguration | null) => appinstance.monitors.setDiscordPresenceConfiguration(config));
-    ipcMain.handle('nxapi:discord:options', () => appinstance.monitors.getActiveDiscordPresenceOptions() ?? appinstance.store.getSavedDiscordPresenceOptions());
-    ipcMain.handle('nxapi:discord:savedoptions', () => appinstance.store.getSavedDiscordPresenceOptions());
-    ipcMain.handle('nxapi:discord:setoptions', (e, options: Omit<DiscordPresenceConfiguration, 'source'>) => appinstance.monitors.setDiscordPresenceOptions(options));
-    ipcMain.handle('nxapi:discord:source', () => appinstance.monitors.getDiscordPresenceSource());
-    ipcMain.handle('nxapi:discord:setsource', (e, source: DiscordPresenceSource | null) => appinstance.monitors.setDiscordPresenceSource(source));
-    ipcMain.handle('nxapi:discord:presence', () => appinstance.monitors.getDiscordPresence());
-    ipcMain.handle('nxapi:discord:user', () => appinstance.monitors.getActiveDiscordPresenceMonitor()?.discord.rpc?.client.user ?? null);
-    ipcMain.handle('nxapi:discord:users', async () => {
+    handle('discord:config', () => appinstance.monitors.getDiscordPresenceConfiguration());
+    handle('discord:setconfig', (e, config: DiscordPresenceConfiguration | null) => appinstance.monitors.setDiscordPresenceConfiguration(config));
+    handle('discord:options', () => appinstance.monitors.getActiveDiscordPresenceOptions() ?? appinstance.store.getSavedDiscordPresenceOptions());
+    handle('discord:savedoptions', () => appinstance.store.getSavedDiscordPresenceOptions());
+    handle('discord:setoptions', (e, options: Omit<DiscordPresenceConfiguration, 'source'>) => appinstance.monitors.setDiscordPresenceOptions(options));
+    handle('discord:source', () => appinstance.monitors.getDiscordPresenceSource());
+    handle('discord:setsource', (e, source: DiscordPresenceSource | null) => appinstance.monitors.setDiscordPresenceSource(source));
+    handle('discord:presence', () => appinstance.monitors.getDiscordPresence());
+    handle('discord:user', () => appinstance.monitors.getActiveDiscordPresenceMonitor()?.discord.rpc?.client.user ?? null);
+    handle('discord:users', async () => {
         const users: User[] = [];
 
         for (const client of await getDiscordRpcClients()) {
@@ -104,17 +125,17 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         return users;
     });
 
-    ipcMain.handle('nxapi:moon:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken-pctl.' + id));
-    ipcMain.handle('nxapi:moon:getcachedtoken', (e, token: string) => storage.getItem('MoonToken.' + token));
+    handle('moon:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken-pctl.' + id));
+    handle('moon:getcachedtoken', (e, token: string) => storage.getItem('MoonToken.' + token));
 
-    ipcMain.handle('nxapi:misc:open-url', (e, url: string) => shell.openExternal(url));
-    ipcMain.handle('nxapi:misc:share', (e, item: SharingItem) =>
+    handle('misc:open-url', (e, url: string) => shell.openExternal(url));
+    handle('misc:share', (e, item: SharingItem) =>
         new ShareMenu(item).popup({window: BrowserWindow.fromWebContents(e.sender)!}));
 
-    ipcMain.handle('nxapi:menu:user', (e, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean) =>
+    handle('menu:user', (e, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean) =>
         (buildUserMenu(appinstance, user, nso, moon, BrowserWindow.fromWebContents(e.sender) ?? undefined)
             .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
-    ipcMain.handle('nxapi:menu:add-user', e => (Menu.buildFromTemplate([
+    handle('menu:add-user', e => (Menu.buildFromTemplate([
         new MenuItem({label: 'Add Nintendo Switch Online account', click:
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
                 askAddNsoAccount(storage, !event.shiftKey)}),
@@ -122,7 +143,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
                 askAddPctlAccount(storage, !event.shiftKey)}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
-    ipcMain.handle('nxapi:menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
+    handle('menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
         new MenuItem({label: 'SW-' + fc.id, enabled: false}),
         new MenuItem({label: 'Share', role: 'shareMenu', sharingItem: {texts: ['SW-' + fc.id]}}),
         new MenuItem({label: 'Copy', click: () => clipboard.writeText('SW-' + fc.id)}),
@@ -130,7 +151,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
         new MenuItem({label: fc.regenerable ? 'Regenerate using a Nintendo Switch console' :
             'Can be regenerated at ' + new Date(fc.regenerableAt * 1000).toLocaleString('en-GB'), enabled: false}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
-    ipcMain.handle('nxapi:menu:friend', (e, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) =>
+    handle('menu:friend', (e, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) =>
         (buildFriendMenu(appinstance, user, nso, friend)
             .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
 
