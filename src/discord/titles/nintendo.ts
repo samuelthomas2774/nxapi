@@ -1214,6 +1214,7 @@ export const titles: Title[] = [
         // Pikmin 4 Demo
         id: '0100e0b019974000',
         client: '1107033455755264010',
+        largeImageText: 'Demo',
         showPlayingOnline: true,
         showActiveEvent: true,
     },
