@@ -5,7 +5,7 @@ import { createModalWindow, getWindowConfiguration, setWindowHeight } from './wi
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
-import { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItemOptions, WindowType } from '../common/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItemOptions, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import createDebug from '../../util/debug.js';
@@ -109,6 +109,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     handle('discord:source', () => appinstance.monitors.getDiscordPresenceSource());
     handle('discord:setsource', (e, source: DiscordPresenceSource | null) => appinstance.monitors.setDiscordPresenceSource(source));
     handle('discord:presence', () => appinstance.monitors.getDiscordPresence());
+    handle('discord:status', () => appinstance.monitors.getDiscordStatus());
+    handle('discord:showerror', () => appinstance.monitors.showDiscordPresenceLastUpdateError());
     handle('discord:user', () => appinstance.monitors.getActiveDiscordPresenceMonitor()?.discord.rpc?.client.user ?? null);
     handle('discord:users', async () => {
         const users: User[] = [];
@@ -173,6 +175,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     store.on('update-discord-presence-source', () => sendToAllWindows('nxapi:discord:shouldrefresh'));
     store.on('update-discord-presence', (p: DiscordPresence) => sendToAllWindows('nxapi:discord:presence', p));
     store.on('update-discord-user', (u: User) => sendToAllWindows('nxapi:discord:user', u));
+    store.on('update-discord-status', (s: DiscordStatus | null) => sendToAllWindows('nxapi:discord:status', s));
 }
 
 function sendToAllWindows(channel: string, ...args: any[]) {

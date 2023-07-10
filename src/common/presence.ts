@@ -47,6 +47,11 @@ class ZncDiscordPresenceClient {
         ErrorResult | Promise<ErrorResult>) | null = null;
 
     update_presence_errors = 0;
+    last_update_error: Error | null = null;
+    last_update_error_at: Date | null = null;
+    onUpdateError: ((error: Error | null) => void) | null = null;
+    onUpdateSuccess: (() => void) | null = null;
+    onUpdate: (() => void) | null = null;
 
     constructor(
         readonly m: ZncDiscordPresence | ZncProxyDiscordPresence,
@@ -62,6 +67,13 @@ class ZncDiscordPresenceClient {
         this.last_user = user;
         this.last_friendcode = friendcode;
         this.last_event = activeevent;
+
+        this.onUpdate?.call(null);
+
+        if (this.update_presence_errors) {
+            this.update_presence_errors = 0;
+            this.onUpdateSuccess?.call(null);
+        }
 
         const online = presence?.state === PresenceState.ONLINE || presence?.state === PresenceState.PLAYING;
 
@@ -328,15 +340,15 @@ class ZncDiscordPresenceClient {
 
     async onError(err: Error) {
         this.update_presence_errors++;
+        this.last_update_error = err;
+        this.last_update_error_at = new Date();
 
-        if (this.update_presence_errors > 2) {
+        this.onUpdateError?.call(null, err);
+
+        if (this.update_presence_errors > 2 && this.rpc) {
             // Disconnect from Discord if the last two attempts to update presence failed
             // This prevents the user's activity on Discord being stuck
-            if (this.rpc) {
-                const client = this.rpc.client;
-                this.rpc = null;
-                await client.destroy();
-            }
+            this.setActivity(this.m.discord_preconnect ? this.rpc.id : null);
         }
 
         if (this.update_presence_errors > 10) {

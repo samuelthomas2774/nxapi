@@ -1,23 +1,39 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { User } from 'discord-rpc';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAsync, useEventListener } from '../util.js';
-import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral } from '../../common/types.js';
+import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral, DiscordStatus } from '../../common/types.js';
 import { DiscordPresence } from '../../../discord/types.js';
 import { DISCORD_COLOUR, TEXT_COLOUR_DARK } from '../constants.js';
+import Warning from '../components/icons/warning.js';
 
 export default function DiscordPresenceSource(props: {
     source: DiscordPresenceSource | null;
     presence: DiscordPresence | null;
     user: User | null;
 }) {
+    const [status, setStatus] = useState<DiscordStatus | null>(null);
+
+    useEffect(() => {
+        ipc.getDiscordStatus().then(setStatus);
+    }, [ipc]);
+
+    useEventListener(events, 'update-discord-status', setStatus, []);
+
+    const showErrorDetails = useCallback(() => {
+        ipc.showDiscordLastUpdateError();
+    }, [ipc]);
+
     if (!props.source) return null;
 
     return <TouchableOpacity onPress={() => ipc.showDiscordModal()}>
         <View style={[styles.discord, !props.source ? styles.discordInactive : null]}>
             {renderDiscordPresenceSource(props.source)}
             {props.presence || props.user ? <DiscordPresence presence={props.presence} user={props.user} /> : null}
+
+            {status?.error_message ?
+                <DiscordPresenceError message={status?.error_message} onPress={showErrorDetails} /> : null}
         </View>
     </TouchableOpacity>;
 }
@@ -111,6 +127,18 @@ function DiscordPresence(props: {
     </View>;
 }
 
+function DiscordPresenceError(props: {
+    message: string;
+    onPress?: () => void;
+}) {
+    return <TouchableOpacity onPress={props.onPress} style={styles.errorTouchable}>
+        <View style={styles.error}>
+            <Text style={styles.icon}><Warning /></Text>
+            <Text style={styles.errorText} numberOfLines={1} ellipsizeMode="tail">{props.message}</Text>
+        </View>
+    </TouchableOpacity>;
+}
+
 const styles = StyleSheet.create({
     discord: {
         backgroundColor: DISCORD_COLOUR,
@@ -167,5 +195,24 @@ const styles = StyleSheet.create({
     },
     discordUserDiscriminator: {
         opacity: 0.7,
+    },
+
+    errorTouchable: {
+        marginVertical: -16,
+        marginHorizontal: -20,
+        marginTop: 6,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+    error: {
+        flexDirection: 'row',
+    },
+    icon: {
+        marginRight: 10,
+        color: TEXT_COLOUR_DARK,
+    },
+    errorText: {
+        color: TEXT_COLOUR_DARK,
     },
 });

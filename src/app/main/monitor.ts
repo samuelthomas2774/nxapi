@@ -1,7 +1,7 @@
 import { Notification } from './electron.js';
 import { App } from './index.js';
 import { showErrorDialog, tryGetNativeImageFromUrl } from './util.js';
-import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
+import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource, DiscordStatus } from '../common/types.js';
 import { CurrentUser, Friend, Game, CoralError } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
@@ -11,6 +11,7 @@ import { LoopResult } from '../../util/loop.js';
 import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';
+import { ErrorDescription } from '../../util/errors.js';
 
 const debug = createDebug('app:main:monitor');
 
@@ -68,6 +69,19 @@ export class PresenceMonitorManager {
             return ErrorResult.IGNORE;
         };
 
+        i.discord.onUpdateError = err => {
+            const status: DiscordStatus = {
+                error_message: err instanceof Error ?
+                    err.name + ': ' + err.message :
+                    ErrorDescription.getErrorDescription(err),
+            };
+            this.app.store.emit('update-discord-status', status);
+        };
+        i.discord.onUpdateSuccess = () => {
+            const status: DiscordStatus = {error_message: null};
+            this.app.store.emit('update-discord-status', status);
+        };
+
         i.onError = err => this.handleError(i, err);
 
         this.monitors.push(i);
@@ -95,6 +109,19 @@ export class PresenceMonitorManager {
         };
         i.discord.onUpdateClient = (client: DiscordRpcClient | null) => {
             this.app.store.emit('update-discord-user', client?.user ?? null);
+        };
+
+        i.discord.onUpdateError = err => {
+            const status: DiscordStatus = {
+                error_message: err instanceof Error ?
+                    err.name + ': ' + err.message :
+                    ErrorDescription.getErrorDescription(err),
+            };
+            this.app.store.emit('update-discord-status', status);
+        };
+        i.discord.onUpdateSuccess = () => {
+            const status: DiscordStatus = {error_message: null};
+            this.app.store.emit('update-discord-status', status);
         };
 
         i.onError = err => this.handleError(i, err);
@@ -317,6 +344,8 @@ export class PresenceMonitorManager {
             this.app.store.saveMonitorState(this);
             this.app.menu?.updateMenu();
             this.app.store.emit('update-discord-presence-source', source);
+        } else {
+            this.app.store.emit('update-discord-status', null);
         }
     }
 
@@ -359,6 +388,29 @@ export class PresenceMonitorManager {
         }
 
         return LoopResult.OK;
+    }
+
+    async getDiscordStatus(): Promise<DiscordStatus | null> {
+        const monitor = this.getActiveDiscordPresenceMonitor();
+        if (!monitor) return null;
+
+        return {
+            error_message: monitor.discord.last_update_error ?
+                monitor.discord.last_update_error instanceof Error ?
+                    monitor.discord.last_update_error.name + ': ' + monitor.discord.last_update_error.message :
+                ErrorDescription.getErrorDescription(monitor.discord.last_update_error) : null,
+        };
+    }
+
+    async showDiscordPresenceLastUpdateError() {
+        const monitor = this.getActiveDiscordPresenceMonitor();
+        const error = monitor?.discord.last_update_error;
+        if (!error) return;
+
+        await showErrorDialog({
+            message: error.name + ' updating presence monitor',
+            error,
+        });
     }
 }
 

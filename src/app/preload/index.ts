@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import type { User } from 'discord-rpc';
 import type { SharingItem } from '../main/electron.js';
-import type { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
+import type { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
@@ -74,6 +74,8 @@ const ipc = {
     getDiscordPresenceSource: () => inv<DiscordPresenceSource | null>('discord:source'),
     setDiscordPresenceSource: (source: DiscordPresenceSource | null) => inv<void>('discord:setsource', source),
     getDiscordPresence: () => inv<DiscordPresence | null>('discord:presence'),
+    getDiscordStatus: () => inv<DiscordStatus | null>('discord:status'),
+    showDiscordLastUpdateError: () => inv('discord:showerror'),
     getDiscordUser: () => inv<User | null>('discord:user'),
     getDiscordUsers: () => inv<User[]>('discord:users'),
 
@@ -109,6 +111,7 @@ ipcRenderer.on('nxapi:accounts:shouldrefresh', () => events.emit('update-nintend
 ipcRenderer.on('nxapi:discord:shouldrefresh', () => events.emit('update-discord-presence-source'));
 ipcRenderer.on('nxapi:discord:presence', (e, p: DiscordPresence) => events.emit('update-discord-presence', p));
 ipcRenderer.on('nxapi:discord:user', (e, u: User) => events.emit('update-discord-user', u));
+ipcRenderer.on('nxapi:discord:status', (e, s: DiscordStatus | null) => events.emit('update-discord-status', s));
 
 let accent_colour: string | undefined = invSync('systemPreferences:accent-colour');
 ipcRenderer.on('nxapi:systemPreferences:accent-colour', (event, c) => {
