@@ -12,6 +12,9 @@ import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../dis
 import { DiscordRpcClient } from '../../discord/rpc.js';
 import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';
 import { ErrorDescription } from '../../util/errors.js';
+import { CoralErrorResponse } from '../../api/coral.js';
+import { NintendoAccountAuthErrorResponse, NintendoAccountErrorResponse } from '../../api/na.js';
+import { InvalidNintendoAccountTokenError } from '../../common/auth/na.js';
 
 const debug = createDebug('app:main:monitor');
 
@@ -376,6 +379,10 @@ export class PresenceMonitorManager {
         monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
         err: ErrorResponse<CoralError> | NodeJS.ErrnoException
     ): Promise<LoopResult> {
+        if (monitor instanceof EmbeddedProxyPresenceMonitor || checkShouldIgnorePresenceMonitorError(err)) {
+            return LoopResult.OK;
+        }
+
         const {response} = await showErrorDialog({
             message: err.name + ' updating presence monitor',
             error: err,
@@ -573,4 +580,32 @@ export class ElectronNotificationManager extends NotificationManager {
             icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
+}
+
+function checkShouldIgnorePresenceMonitorError(err: Error): boolean {
+    // Invalid session token, the user needs to sign in again
+    if (err instanceof InvalidNintendoAccountTokenError) {
+        return false;
+    }
+
+    // Received error getting a Nintendo Account token; usually this means
+    // the session token is invalid and the user needs to sign in again
+    if (err instanceof NintendoAccountAuthErrorResponse && err.data) {
+        return false;
+    }
+
+    // Received error getting Nintendo Account user data
+    // This can only happen once when the app starts and there isn't a cached token
+    if (err instanceof NintendoAccountErrorResponse && err.data) {
+        return false;
+    }
+
+    // Received error from Coral (see CoralStatus in src/api/coral-types.ts)
+    // This usually should either not happen (e.g. BAD_REQUEST), is something the
+    // user needs to do (e.g. NSA_NOT_LINKED or UPGRADE_REQUIRED), or is permanent
+    if (err instanceof CoralErrorResponse && err.data) {
+        return false;
+    }
+
+    return true;
 }
