@@ -1,14 +1,15 @@
-import { app, BrowserWindow, ipcMain, LoginItemSettingsOptions } from './electron.js';
+import { app, BrowserWindow, ipcMain, LoginItemSettingsOptions, session } from './electron.js';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
+import { setGlobalDispatcher } from 'undici';
 import * as persist from 'node-persist';
 import MenuApp from './menu.js';
 import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createModalWindow, createWindow } from './windows.js';
 import { setupIpc } from './ipc.js';
-import { askUserForUri, showErrorDialog } from './util.js';
+import { askUserForUri, buildElectronProxyAgent, showErrorDialog } from './util.js';
 import { setAppInstance } from './app-menu.js';
 import { handleAuthUri } from './na-auth.js';
 import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
@@ -118,6 +119,11 @@ export async function init() {
 
     initGlobals();
     addUserAgent('nxapi-app (Chromium ' + process.versions.chrome + '; Electron ' + process.versions.electron + ')');
+
+    const agent = buildElectronProxyAgent({
+        session: session.defaultSession,
+    });
+    setGlobalDispatcher(agent);
 
     app.setAboutPanelOptions({
         applicationName: 'nxapi-app',

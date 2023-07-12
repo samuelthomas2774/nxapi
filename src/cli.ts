@@ -1,5 +1,6 @@
 import process from 'node:process';
 import Yargs from 'yargs';
+import { setGlobalDispatcher } from 'undici';
 import * as commands from './cli/index.js';
 import { checkUpdates } from './common/update.js';
 import createDebug from './util/debug.js';
@@ -9,10 +10,14 @@ import { YargsArguments } from './util/yargs.js';
 import { addUserAgent } from './util/useragent.js';
 import { USER_AGENT_INFO_URL } from './common/constants.js';
 import { init as initGlobals } from './common/globals.js';
+import { buildEnvironmentProxyAgent } from './util/undici-proxy.js';
 
 const debug = createDebug('cli');
 
 initGlobals();
+
+const agent = buildEnvironmentProxyAgent();
+setGlobalDispatcher(agent);
 
 export function createYargs(argv: string[]) {
     const yargs = Yargs(argv).option('data-path', {

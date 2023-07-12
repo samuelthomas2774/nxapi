@@ -20,12 +20,12 @@ export class ErrorDescription {
 
             if (description) {
                 return description.message +
-                    (err instanceof Error ? '\n\n--\n\n' + (err.stack ?? err.message) : '');
+                    (err instanceof Error ? '\n\n--\n\n' + util.inspect(err) : '');
             }
         }
 
         if (err instanceof Error) {
-            return err.stack || err.message;
+            return util.inspect(err);
         }
 
         return util.inspect(err, {compact: true});

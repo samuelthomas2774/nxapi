@@ -1,11 +1,15 @@
-import { BrowserWindow, dialog, Menu, MenuItem, MessageBoxOptions, nativeImage } from './electron.js';
+import { BrowserWindow, dialog, Menu, MenuItem, MessageBoxOptions, nativeImage, Session } from './electron.js';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
+import createDebug from '../../util/debug.js';
 import { fetch } from 'undici';
 import { dir } from '../../util/product.js';
 import { App, Store } from './index.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { ErrorDescription } from '../../util/errors.js';
+import { buildProxyAgent, ProxyAgentOptions } from '../../util/undici-proxy.js';
+
+const debug = createDebug('app:main:util');
 
 export const bundlepath = path.resolve(dir, 'dist', 'app', 'bundle');
 
@@ -86,4 +90,36 @@ export function showErrorDialog(options: ErrorBoxOptions) {
     return window ?
         dialog.showMessageBox(window, message_box_options) :
         dialog.showMessageBox(message_box_options);
+}
+
+export function buildElectronProxyAgent(options: ProxyAgentOptions & {
+    session: Session;
+}) {
+    let warned_proxy_unsupported: string | null = null;
+
+    return buildProxyAgent({
+        ...options,
+        resolveProxy: async origin => {
+            // https://chromium.googlesource.com/chromium/src/+/HEAD/net/docs/proxy.md
+            const proxies = await options.session.resolveProxy(origin);
+            const proxy = proxies.split(';')[0].trim();
+
+            if (proxy === 'DIRECT') return null;
+
+            if (proxy.startsWith('PROXY ')) {
+                return new URL('http://' + proxy.substr(6));
+            }
+            if (proxy.startsWith('HTTPS ')) {
+                return new URL('https://' + proxy.substr(6));
+            }
+
+            if (warned_proxy_unsupported !== proxy) {
+                warned_proxy_unsupported = proxy;
+
+                debug('Unsupported proxy', proxy);
+            }
+
+            return null;
+        },
+    });
 }

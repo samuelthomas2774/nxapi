@@ -30,6 +30,7 @@ export type Menu = import('electron').Menu;
 export type MenuItem = import('electron').MenuItem;
 export type MessageBoxOptions = import('electron').MessageBoxOptions;
 export type Notification = import('electron').Notification;
+export type Session = import('electron').Session;
 export type Settings = import('electron').Settings;
 export type ShareMenu = import('electron').ShareMenu;
 export type SharingItem = import('electron').SharingItem;
