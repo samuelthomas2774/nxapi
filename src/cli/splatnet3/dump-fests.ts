@@ -1,6 +1,5 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import mkdirp from 'mkdirp';
 import { FestState, Fest_detail, RequestId } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import createDebug from '../../util/debug.js';
@@ -44,7 +43,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet3');
 
-    await mkdirp(directory);
+    await fs.mkdir(directory, {recursive: true});
 
     await dumpFestRecords(splatnet, directory, argv.includeRankings);
 }

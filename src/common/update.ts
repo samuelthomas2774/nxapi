@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { fetch } from 'undici';
-import mkdirp from 'mkdirp';
 import createDebug from '../util/debug.js';
 import { dir, docker, version } from '../util/product.js';
 import { paths } from '../util/storage.js';
@@ -26,7 +25,7 @@ export async function checkUpdates() {
         }
     } catch (err) {}
 
-    await mkdirp(paths.cache);
+    await fs.mkdir(paths.cache, {recursive: true});
     const update_cache_path = path.resolve(paths.cache, 'update.json');
 
     try {

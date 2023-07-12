@@ -1,6 +1,5 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import mkdirp from 'mkdirp';
 import type { Arguments as ParentArguments } from '../splatnet2.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -68,7 +67,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet2');
 
-    await mkdirp(directory);
+    await fs.mkdir(directory, {recursive: true});
 
     const [records, stages, activefestivals, timeline] = await Promise.all([
         splatnet.getRecords(),

@@ -1,5 +1,5 @@
 import * as path from 'node:path';
-import mkdirp from 'mkdirp';
+import * as fs from 'node:fs/promises';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -77,7 +77,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet3');
 
-    await mkdirp(directory);
+    await fs.mkdir(directory, {recursive: true});
 
     let vs: (ReturnType<typeof dumpResults> extends Promise<infer T> ? T : never) | null = null;
     let coop: (ReturnType<typeof dumpCoopResults> extends Promise<infer T> ? T : never) | null = null;

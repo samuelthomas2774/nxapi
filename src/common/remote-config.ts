@@ -2,7 +2,6 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { fetch } from 'undici';
-import mkdirp from 'mkdirp';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -29,7 +28,7 @@ const default_config: NxapiRemoteConfig = {
 };
 
 async function loadRemoteConfig() {
-    await mkdirp(paths.cache);
+    await fs.mkdir(paths.cache, {recursive: true});
     const config_cache_path = path.resolve(paths.cache, 'config.json');
 
     const url = process.env.NXAPI_CONFIG_URL ?? CONFIG_URL;

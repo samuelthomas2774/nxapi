@@ -5,7 +5,6 @@ import * as path from 'node:path';
 import express, { Request, Response } from 'express';
 import { fetch } from 'undici';
 import * as persist from 'node-persist';
-import mkdirp from 'mkdirp';
 import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { product, version } from '../util/product.js';
@@ -425,7 +424,7 @@ class SplatNet3ApiUser extends SplatNet3User {
             fest: await this.getCurrentFest(),
         };
 
-        await mkdirp(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id));
+        await fs.mkdir(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id), {recursive: true});
         await fs.writeFile(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id, Date.now() + '.json'), JSON.stringify(record, null, 4) + '\n');
     }
 
@@ -1217,7 +1216,7 @@ class Server extends HttpServer {
 
             if (!response.ok) throw new ErrorResponse('Unable to download resource ' + name, response, data.toString());
 
-            await mkdirp(path.dirname(path.join(dir, name)));
+            await fs.mkdir(path.dirname(path.join(dir, name)), {recursive: true});
             await fs.writeFile(path.join(dir, name), data);
 
             debug('Downloaded image %s', name);

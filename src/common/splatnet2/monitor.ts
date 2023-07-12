@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import persist from 'node-persist';
-import mkdirp from 'mkdirp';
 import SplatNet2Api, { SplatNet2ErrorResponse } from '../../api/splatnet2.js';
 import { renewIksmToken } from '../auth/splatnet2.js';
 import { Records, Stages } from '../../api/splatnet2-types.js';
@@ -41,7 +40,7 @@ export class SplatNet2RecordsMonitor extends Loop {
     }
 
     async init() {
-        await mkdirp(this.directory);
+        await fs.mkdir(this.directory, {recursive: true});
     }
 
     async hasChanged(records: Records) {
