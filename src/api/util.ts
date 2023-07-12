@@ -1,5 +1,4 @@
 import * as util from 'node:util';
-import { Response as NodeFetchResponse } from 'node-fetch';
 import { Response as UndiciResponse } from 'undici';
 
 export const ResponseSymbol = Symbol('Response');
@@ -21,7 +20,7 @@ export class ErrorResponse<T = unknown> extends Error {
 
     constructor(
         message: string,
-        readonly response: Response | NodeFetchResponse | UndiciResponse,
+        readonly response: Response | UndiciResponse,
         body?: string | ArrayBuffer | T
     ) {
         super(message);

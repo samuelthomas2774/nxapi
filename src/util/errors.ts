@@ -1,5 +1,4 @@
 import * as util from 'node:util';
-import { AbortError } from 'node-fetch';
 import { errors } from 'undici';
 import createDebug from './debug.js';
 import Loop, { LoopResult } from './loop.js';
@@ -71,10 +70,6 @@ export async function handleError(
 ): Promise<LoopResult> {
     if (TemporaryErrorSymbol in err && err[TemporaryErrorSymbol]) {
         debug('Temporary error, waiting %ds before retrying', loop.update_interval, err);
-
-        return LoopResult.OK;
-    } else if (err instanceof AbortError) {
-        debug('Request aborted (timeout?), waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;
     } else if (err instanceof errors.ConnectTimeoutError) {
