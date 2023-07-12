@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import * as util from 'node:util';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import { Store } from './index.js';
 import { createWebServiceWindow } from './windows.js';
 import { askUserForUri, showErrorDialog } from './util.js';

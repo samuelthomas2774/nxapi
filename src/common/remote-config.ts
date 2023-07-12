@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import mkdirp from 'mkdirp';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import createDebug from '../util/debug.js';
@@ -124,7 +124,7 @@ async function loadRemoteConfig() {
             version,
             revision: git?.revision ?? null,
             url: response.url,
-            headers: response.headers.raw(),
+            headers: Object.fromEntries(response.headers.entries()),
             data: config,
         };
 
@@ -241,7 +241,7 @@ export interface RemoteConfigCacheData {
     version: string;
     revision: string | null;
     url: string;
-    headers: Record<string, string[]>;
+    headers: Record<string, string> | Record<string, string[]>;
     data: NxapiRemoteConfig;
 }
 

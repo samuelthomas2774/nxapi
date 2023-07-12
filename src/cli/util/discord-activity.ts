@@ -1,5 +1,5 @@
 import process from 'node:process';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from '../util.js';

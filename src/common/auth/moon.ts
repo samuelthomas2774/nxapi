@@ -1,5 +1,5 @@
 import * as persist from 'node-persist';
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import { MoonAuthData, ZNMA_CLIENT_ID } from '../../api/moon.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import createDebug from '../../util/debug.js';

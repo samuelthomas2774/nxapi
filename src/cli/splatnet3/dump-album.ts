@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import mkdirp from 'mkdirp';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import { PhotoAlbumResult } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../splatnet3.js';
 import createDebug from '../../util/debug.js';

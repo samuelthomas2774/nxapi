@@ -46,7 +46,9 @@ class RateLimitAttempt {
         readonly storage: persist.LocalStorage,
         readonly key: string, readonly user: string,
         readonly time = Date.now(),
-    ) {}
+    ) {
+        Object.defineProperty(this, 'storage', {configurable: true, enumerable: false, value: storage});
+    }
 
     async recordError(err: Error | unknown) {
         const error_description = ErrorDescription.getErrorDescription(err);

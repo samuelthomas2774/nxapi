@@ -1,5 +1,6 @@
 import * as util from 'node:util';
 import { AbortError } from 'node-fetch';
+import { errors } from 'undici';
 import createDebug from './debug.js';
 import Loop, { LoopResult } from './loop.js';
 import { TemporaryErrorSymbol } from './misc.js';
@@ -74,6 +75,22 @@ export async function handleError(
         return LoopResult.OK;
     } else if (err instanceof AbortError) {
         debug('Request aborted (timeout?), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.ConnectTimeoutError) {
+        debug('Request timeout (connect), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.HeadersTimeoutError) {
+        debug('Request timeout (headers), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.BodyTimeoutError) {
+        debug('Request timeout (body), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.RequestAbortedError) {
+        debug('Request aborted, waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;
     } else if ('code' in err && (err as any).type === 'system' && err.code && err.code in temporary_system_errors) {

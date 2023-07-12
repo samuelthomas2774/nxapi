@@ -1,5 +1,5 @@
 import * as persist from 'node-persist';
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import CoralApi, { CoralAuthData, ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { CoralError } from '../../api/coral-types.js';
 import ZncProxyApi from '../../api/znc-proxy.js';

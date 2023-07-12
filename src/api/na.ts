@@ -1,5 +1,5 @@
 import * as crypto from 'node:crypto';
-import fetch, { Response } from 'node-fetch';
+import { fetch, Response } from 'undici';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
@@ -127,7 +127,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new NintendoAccountAuthErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw await NintendoAccountAuthErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
     const token = await response.json() as NintendoAccountSessionToken | NintendoAccountAuthError | NintendoAccountError;
@@ -164,7 +164,7 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new NintendoAccountAuthErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw await NintendoAccountAuthErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
     const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountAuthError | NintendoAccountError;
@@ -198,7 +198,7 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new NintendoAccountErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw await NintendoAccountErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
     const user = await response.json() as NintendoAccountUser | NintendoAccountError;

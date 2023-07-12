@@ -1,5 +1,5 @@
 import persist from 'node-persist';
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import { getToken, Login, SavedToken } from './coral.js';
 import SplatNet3Api, { SplatNet3AuthData, SplatNet3AuthErrorCode, SplatNet3AuthErrorResponse } from '../../api/splatnet3.js';
 import { checkMembershipActive, checkUseLimit, SHOULD_LIMIT_USE } from './util.js';

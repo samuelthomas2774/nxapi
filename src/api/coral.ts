@@ -1,4 +1,4 @@
-import fetch, { Response } from 'node-fetch';
+import { fetch, Response } from 'undici';
 import { v4 as uuidgen } from 'uuid';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
@@ -145,7 +145,7 @@ export default class CoralApi implements CoralApiInterface {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (response.status !== 200) {
-            throw new CoralErrorResponse('[znc] Non-200 status code', response, await response.text());
+            throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
         }
 
         const data = await response.json() as CoralResponse<T>;
@@ -449,7 +449,7 @@ export default class CoralApi implements CoralApiInterface {
         debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
 
         if (response.status !== 200) {
-            throw new CoralErrorResponse('[znc] Non-200 status code', response, await response.text());
+            throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
         }
 
         const data = await response.json() as CoralResponse<AccountLogin>;

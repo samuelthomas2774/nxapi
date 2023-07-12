@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import express, { Request, Response } from 'express';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import * as persist from 'node-persist';
 import mkdirp from 'mkdirp';
 import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';

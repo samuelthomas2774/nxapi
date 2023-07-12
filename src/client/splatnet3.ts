@@ -1,4 +1,4 @@
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import { ConfigureAnalyticsResult, CurrentFestResult, DetailVotingStatusResult, FriendListResult, Friend_friendList, HomeResult, StageScheduleResult } from 'splatnet3-types/splatnet3';
 import createDebug from '../util/debug.js';
 import { ZNCA_CLIENT_ID } from '../api/coral.js';

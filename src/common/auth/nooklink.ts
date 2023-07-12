@@ -1,5 +1,5 @@
 import persist from 'node-persist';
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import { getToken, Login } from './coral.js';
 import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
 import { Users, WebServiceError } from '../../api/nooklink-types.js';

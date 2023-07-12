@@ -1,4 +1,4 @@
-import fetch, { Response } from 'node-fetch';
+import { fetch, Response } from 'undici';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import { DailySummaries, Devices, MonthlySummaries, MonthlySummary, MoonError, ParentalControlSettingState, SmartDevices, User } from './moon-types.js';
@@ -86,7 +86,7 @@ export default class MoonApi {
         }
 
         if (response.status !== 200) {
-            throw new MoonErrorResponse('[moon] Non-200 status code', response, await response.text());
+            throw await MoonErrorResponse.fromResponse(response, '[moon] Non-200 status code');
         }
 
         const data = await response.json() as T | MoonError;

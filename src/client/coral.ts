@@ -1,4 +1,4 @@
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import CoralApi, { CoralApiInterface, CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralError } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';

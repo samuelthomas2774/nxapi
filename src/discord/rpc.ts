@@ -1,7 +1,7 @@
 import process from 'node:process';
 import * as net from 'node:net';
 import { EventEmitter } from 'node:events';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import DiscordRPC from 'discord-rpc';
 // @ts-expect-error
 import __BaseIpcTransport from 'discord-rpc/src/transports/ipc.js';

@@ -1,4 +1,4 @@
-import fetch, { Response } from 'node-fetch';
+import { fetch, FormData, Response } from 'undici';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
@@ -81,7 +81,7 @@ export default class NooklinkApi {
         }
 
         if (!response.ok) {
-            throw new NooklinkErrorResponse('[nooklink] Non-2xx status code', response, await response.text());
+            throw await NooklinkErrorResponse.fromResponse(response, '[nooklink] Non-2xx status code');
         }
 
         const data = await response.json() as T | WebServiceError;
@@ -172,11 +172,11 @@ export default class NooklinkApi {
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
-        const body = await response.text();
-
         if (response.status !== 200) {
-            throw new NooklinkErrorResponse('[nooklink] Non-200 status code', response, body);
+            throw await NooklinkErrorResponse.fromResponse(response, '[nooklink] Non-200 status code');
         }
+
+        const body = await response.text();
 
         const cookies = response.headers.get('Set-Cookie');
         const match = cookies?.match(/\b_gtoken=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);

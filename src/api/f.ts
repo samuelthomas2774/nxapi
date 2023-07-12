@@ -1,5 +1,5 @@
 import process from 'node:process';
-import fetch, { Headers } from 'node-fetch';
+import { fetch, Headers } from 'undici';
 import { v4 as uuidgen } from 'uuid';
 import { defineResponse, ErrorResponse } from './util.js';
 import createDebug from '../util/debug.js';
@@ -61,7 +61,7 @@ export async function flapg(
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse<FlapgApiError>('[flapg] Non-200 status code', response, await response.text());
+        throw await ErrorResponse.fromResponse(response, '[flapg] Non-200 status code');
     }
 
     const data = await response.json() as FlapgApiResponse;
@@ -142,13 +142,13 @@ export async function iminkf(
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse<IminkFError>('[imink] Non-200 status code', response, await response.text());
+        throw await ErrorResponse.fromResponse(response, '[imink] Non-200 status code');
     }
 
     const data = await response.json() as IminkFResponse | IminkFError;
 
     if ('error' in data) {
-        throw new ErrorResponse<IminkFError>('[imink] ' + data.reason, response, data);
+        throw new ErrorResponse('[imink] ' + data.reason, response, data);
     }
 
     debugImink('Got f parameter "%s"', data.f);
@@ -229,7 +229,7 @@ export async function genf(
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse<AndroidZncaFError>('[znca-api] Non-200 status code', response, await response.text());
+        throw await ErrorResponse.fromResponse(response, '[znca-api] Non-200 status code');
     }
 
     const data = await response.json() as AndroidZncaFResponse | AndroidZncaFError;

@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, Menu, MenuItem, MessageBoxOptions, nativeImage } from './electron.js';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import { dir } from '../../util/product.js';
 import { App, Store } from './index.js';
 import { SavedToken } from '../../common/auth/coral.js';

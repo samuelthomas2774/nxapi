@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import mkdirp from 'mkdirp';
 import createDebug from '../util/debug.js';
 import { dir, docker, version } from '../util/product.js';

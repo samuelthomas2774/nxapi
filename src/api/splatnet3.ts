@@ -1,4 +1,4 @@
-import fetch, { Response } from 'node-fetch';
+import { fetch, Response } from 'undici';
 import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLError, GraphQLErrorResponse, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
 import { WebServiceToken } from './coral-types.js';
 import { CoralApiInterface } from './coral.js';
@@ -102,7 +102,7 @@ export default class SplatNet3Api {
     ) {}
 
     async fetch<T = unknown>(
-        url: string, method = 'GET', body?: string | FormData, headers?: object,
+        url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _log?: string,
         /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
@@ -153,7 +153,7 @@ export default class SplatNet3Api {
         }
 
         if (response.status !== 200) {
-            throw new SplatNet3ErrorResponse('[splatnet3] Non-200 status code', response, await response.text());
+            throw await SplatNet3ErrorResponse.fromResponse(response, '[splatnet3] Non-200 status code');
         }
 
         const remaining = parseInt(response.headers.get('x-bullettoken-remaining') ?? '0');
@@ -1029,11 +1029,11 @@ export default class SplatNet3Api {
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
-        const body = await response.text();
-
         if (response.status !== 200) {
-            throw new SplatNet3ErrorResponse('[splatnet3] Non-200 status code', response, body);
+            throw await SplatNet3ErrorResponse.fromResponse(response, '[splatnet3] Non-200 status code');
         }
+
+        const body = await response.text();
 
         const cookies = response.headers.get('Set-Cookie');
 
@@ -1058,8 +1058,8 @@ export default class SplatNet3Api {
         debug('fetch %s %s, response %s', 'POST', '/bullet_tokens', response.status);
 
         const error: SplatNet3AuthErrorCode | undefined = AUTH_ERROR_CODES[tr.status as keyof typeof AUTH_ERROR_CODES];
-        if (error) throw new SplatNet3AuthErrorResponse('[splatnet3] ' + error, tr, await tr.text(), error);
-        if (tr.status !== 201) throw new SplatNet3ErrorResponse('[splatnet3] Non-201 status code', tr, await tr.text());
+        if (error) throw await SplatNet3AuthErrorResponse.fromResponse(tr, '[splatnet3] ' + error);
+        if (tr.status !== 201) throw await SplatNet3ErrorResponse.fromResponse(tr, '[splatnet3] Non-201 status code');
 
         const bullet_token = await tr.json() as BulletToken;
         const created_at = Date.now();
@@ -1099,7 +1099,8 @@ export class SplatNet3AuthErrorResponse extends SplatNet3ErrorResponse {
     constructor(
         message: string, response: Response | globalThis.Response,
         body?: string | unknown | undefined,
-        readonly code = SplatNet3AuthErrorCode.ERROR_SERVER,
+        readonly code = AUTH_ERROR_CODES[response.status as keyof typeof AUTH_ERROR_CODES] ??
+            SplatNet3AuthErrorCode.ERROR_SERVER,
     ) {
         super(message, response, body);
     }

@@ -1,4 +1,4 @@
-import fetch, { Response } from 'node-fetch';
+import { fetch, Response } from 'undici';
 import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
 import { CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
@@ -34,7 +34,7 @@ export default class ZncProxyApi implements CoralApiInterface {
         debug('fetch %s %s, response %s', method, url, response.status);
 
         if (!response.ok) {
-            throw new ZncProxyErrorResponse('[zncproxy] Non-2xx status code', response, await response.text());
+            throw await ZncProxyErrorResponse.fromResponse(response, '[zncproxy] Non-2xx status code');
         }
 
         const data = (response.status === 204 ? {} : await response.json()) as T;
@@ -229,11 +229,11 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
     debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
 
     if (response.status !== 200) {
-        throw new ZncProxyErrorResponse('[zncproxy] Unknown error', response, await response.text());
+        throw await ZncProxyErrorResponse.fromResponse(response, '[zncproxy] Non-200 status code');
     }
 
     if (!response.headers.get('Content-Type')?.match(/^application\/json(;|$)$/)) {
-        controller.abort();
+        response.body?.cancel();
         throw new ZncProxyErrorResponse('[zncproxy] Unacceptable content type', response);
     }
 
