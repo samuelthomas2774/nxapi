@@ -1,5 +1,5 @@
+import { randomUUID } from 'node:crypto';
 import { Cookie, fetch, FormData, getSetCookies } from 'undici';
-import { v4 as uuidgen } from 'uuid';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
@@ -193,7 +193,7 @@ export default class SplatNet2Api {
     }
 
     async shareProfile(stage: string, colour: ShareColour) {
-        const boundary = uuidgen();
+        const boundary = randomUUID();
 
         const data = `--${boundary}
 Content-Disposition: form-data; name="stage"

@@ -52,7 +52,6 @@
         "supports-color": "^8.1.1",
         "tslib": "^2.4.1",
         "undici": "^5.22.1",
-        "uuid": "^8.3.2",
         "yargs": "^17.6.2"
     },
     "devDependencies": {
@@ -75,7 +74,6 @@
         "@types/react": "^17.0.45",
         "@types/react-native": "^0.67.7",
         "@types/read": "^0.0.29",
-        "@types/uuid": "^8.3.4",
         "@types/yargs": "^17.0.14",
         "electron": "^21.3.1",
         "electron-builder": "^23.6.0",

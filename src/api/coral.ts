@@ -1,5 +1,5 @@
+import { randomUUID } from 'node:crypto';
 import { fetch, Response } from 'undici';
-import { v4 as uuidgen } from 'uuid';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -185,7 +185,7 @@ export default class CoralApi implements CoralApiInterface {
         url: string, parameter = {},
         /** @internal */ _autoRenewToken = true
     ) {
-        const uuid = uuidgen();
+        const uuid = randomUUID();
 
         return this.fetch<T>(url, 'POST', JSON.stringify({
             parameter,

@@ -1,9 +1,9 @@
 import * as net from 'node:net';
 import * as os from 'node:os';
+import { randomUUID } from 'node:crypto';
 import * as persist from 'node-persist';
 import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
-import { v4 as uuidgen } from 'uuid';
 import type { Arguments as ParentArguments } from '../nso.js';
 import CoralApi, { CoralApiInterface, CoralErrorResponse } from '../../api/coral.js';
 import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
@@ -361,7 +361,8 @@ class Server extends HttpServer {
     }
 
     async handleCreateTokenRequest({req, user}: RequestDataWithUser) {
-        const token = uuidgen();
+        const token = randomUUID();
+
         const auth: AuthToken = {
             user: user.data.user.id,
             policy: req.body.policy,

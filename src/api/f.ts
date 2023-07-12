@@ -1,6 +1,6 @@
 import process from 'node:process';
+import { randomUUID } from 'node:crypto';
 import { fetch, Headers } from 'undici';
-import { v4 as uuidgen } from 'uuid';
 import { defineResponse, ErrorResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -91,7 +91,7 @@ export type FlapgApiError = IminkFError;
 
 export class ZncaApiFlapg extends ZncaApi {
     async genf(token: string, hash_method: HashMethod) {
-        const request_id = uuidgen();
+        const request_id = randomUUID();
 
         const result = await flapg(hash_method, token, undefined, request_id, this.useragent);
 
@@ -174,7 +174,7 @@ export interface IminkFError {
 
 export class ZncaApiImink extends ZncaApi {
     async genf(token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string;}) {
-        const request_id = uuidgen();
+        const request_id = randomUUID();
 
         const result = await iminkf(hash_method, token, undefined, request_id, user, this.useragent);
 
@@ -271,7 +271,7 @@ export class ZncaApiNxapi extends ZncaApi {
     }
 
     async genf(token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string}) {
-        const request_id = uuidgen();
+        const request_id = randomUUID();
 
         const result = await genf(this.url + '/f', hash_method, token, undefined, request_id,
             user, this.app, this.useragent);
