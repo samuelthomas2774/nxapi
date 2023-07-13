@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import type { NxapiElectronIpc } from '../preload/index.js';
 

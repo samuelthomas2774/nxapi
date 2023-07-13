@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, LoginItemSettingsOptions, session } from './electron.js';
+import { app, BrowserWindow, ipcMain, LoginItemSettingsOptions, session } from 'electron';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';

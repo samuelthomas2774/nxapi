@@ -1043,7 +1043,7 @@ class Server extends HttpServer {
 
         let last_result = result;
 
-        while (!req.socket.closed) {
+        while (!req.socket.destroyed) {
             try {
                 debug('Updating data for event stream %d', stream.id);
                 const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);

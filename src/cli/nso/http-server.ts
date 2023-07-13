@@ -749,7 +749,7 @@ class Server extends HttpServer {
         try {
             await i.loop(true);
 
-            while (!res.closed) {
+            while (!res.destroyed) {
                 await i.loop();
 
                 this.resetAuthTimeout(na_session_token, () => user.data.user.id);

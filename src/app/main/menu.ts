@@ -1,4 +1,4 @@
-import { app, Menu, Tray, nativeImage, MenuItem, BrowserWindow, KeyboardEvent } from './electron.js';
+import { app, Menu, Tray, nativeImage, MenuItem, BrowserWindow, KeyboardEvent } from 'electron';
 import path from 'node:path';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';

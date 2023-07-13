@@ -1,4 +1,4 @@
-import { Notification } from './electron.js';
+import { Notification } from 'electron';
 import { App } from './index.js';
 import { showErrorDialog, tryGetNativeImageFromUrl } from './util.js';
 import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource, DiscordStatus } from '../common/types.js';

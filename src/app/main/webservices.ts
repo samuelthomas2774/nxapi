@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, MessageBoxOptions, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from 'electron';
 import * as path from 'node:path';
 import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';

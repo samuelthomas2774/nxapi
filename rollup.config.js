@@ -151,10 +151,10 @@ const app_entry = {
     ],
     external: [
         'electron',
-        path.resolve(__dirname, 'dist/app/app-main-bundle.js'),
-        path.resolve(__dirname, 'dist/app/app-init-bundle.js'),
-        path.resolve(__dirname, 'dist/app/app-init.js'),
-        path.resolve(__dirname, 'dist/app/main/index.js'),
+        path.resolve(dir, 'dist/app/app-main-bundle.js'),
+        path.resolve(dir, 'dist/app/app-init-bundle.js'),
+        path.resolve(dir, 'dist/app/app-init.js'),
+        path.resolve(dir, 'dist/app/main/index.js'),
     ],
     watch,
 };
@@ -243,8 +243,8 @@ const app_browser = {
                 // react-native-web has an ESM and CommonJS build. By default the ESM build is
                 // used when resolving react-native-web. For some reason this causes both versions
                 // to be included in the bundle, so here we explicitly use the CommonJS build.
-                {find: 'react-native', replacement: path.resolve(__dirname, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
-                {find: 'react-native-web', replacement: path.resolve(__dirname, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
+                {find: 'react-native', replacement: path.resolve(dir, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
+                {find: 'react-native-web', replacement: path.resolve(dir, 'node_modules', 'react-native-web', 'dist', 'cjs', 'index.js')},
 
                 // rollup-plugin-polyfill-node doesn't support node: module identifiers
                 {find: /^node:(.+)/, replacement: '$1'},

@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, Menu, MenuItem, MessageBoxOptions, nativeImage, Session } from './electron.js';
+import { BrowserWindow, dialog, Menu, MenuItem, MessageBoxOptions, nativeImage, Session } from 'electron';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
 import createDebug from '../../util/debug.js';

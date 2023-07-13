@@ -1,4 +1,4 @@
-import { app, BrowserWindow, BrowserWindowConstructorOptions, Menu, nativeTheme, session, WebContents } from './electron.js';
+import { app, BrowserWindow, BrowserWindowConstructorOptions, Menu, nativeTheme, session, WebContents } from 'electron';
 import * as path from 'node:path';
 import { dev } from '../../util/product.js';
 import { WindowConfiguration, WindowType } from '../common/types.js';

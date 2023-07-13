@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from './electron.js';
+import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, session, shell } from 'electron';
 import process from 'node:process';
 import * as persist from 'node-persist';
 import { protocol_registration_options } from './index.js';
