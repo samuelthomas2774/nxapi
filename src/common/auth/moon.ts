@@ -72,7 +72,7 @@ export async function getPctlToken(storage: persist.LocalStorage, token: string,
 
     debug('Using existing token');
     await storage.setItem('NintendoAccountToken-pctl.' + existingToken.user.id, token);
-    
+
     const moon = MoonApi.createWithSavedToken(existingToken);
     moon.onTokenExpired = createTokenExpiredHandler(storage, token, moon, {existingToken});
 

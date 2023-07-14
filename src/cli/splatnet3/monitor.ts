@@ -158,7 +158,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     try {
         await new Promise(rs => sleep_timeout = setTimeout(sleep_resolve = rs, argv.updateInterval * 1000));
-        
+
         while (!should_exit) {
             updating = true;
             [vs, coop, album] = await update(argv, splatnet, directory, vs, coop, album);

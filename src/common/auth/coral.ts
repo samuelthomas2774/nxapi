@@ -138,7 +138,7 @@ async function renewToken(
 ) {
     let attempt;
     if (ratelimit) {
-        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(na_session_token);    
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(na_session_token);
         attempt = await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
     }
 

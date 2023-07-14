@@ -1,4 +1,5 @@
-import EventSource from 'eventsource';
+import { errors } from 'undici';
+import EventSource, { ErrorEvent } from '../util/eventsource.js';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
@@ -30,6 +31,7 @@ interface SavedPresence {
 
 class ZncDiscordPresenceClient {
     rpc: {client: DiscordRpcClient, id: string} | null = null;
+    connecting: string | null = null;
     title: {id: string; since: number} | null = null;
     monitors = new Map<ExternalMonitorConstructor<any>, ExternalMonitor>();
     protected i = 0;
@@ -245,7 +247,10 @@ class ZncDiscordPresenceClient {
         }
 
         if (!this.rpc) {
-            this.connect(client_id, this.m.discord_client_filter);
+            if (this.connecting !== client_id) {
+                this.connect(client_id, this.m.discord_client_filter).finally(() => this.connecting = null);
+                this.connecting = client_id;
+            }
         } else {
             if (typeof activity === 'string') this.rpc.client.clearActivity();
             else this.rpc.client.setActivity(activity.activity);
@@ -265,7 +270,7 @@ class ZncDiscordPresenceClient {
         let i = ++this.i;
 
         while (attempts < MAX_CONNECT_ATTEMPTS) {
-            if (this.i !== i || client!) return;
+            if (this.i !== i || client! || this.rpc) return;
 
             if (attempts === 0) debugDiscord('RPC connecting', client_id, i);
             else debugDiscord('RPC connecting, attempt %d', attempts + 1, client_id, i);
@@ -524,7 +529,7 @@ export class ZncProxyDiscordPresence extends Loop {
     readonly user_notifications = false;
     readonly friend_notifications = false;
     update_interval = 30;
-    upgrade_to_sse = process.env.NXAPI_PRESENCE_SSE === '1';
+    upgrade_to_sse = process.env.NXAPI_PRESENCE_SSE !== '0';
 
     presence_user: null = null;
     discord_preconnect = false;
@@ -626,9 +631,7 @@ export class ZncProxyDiscordPresence extends Loop {
         if (this.events) this.events.close();
 
         const events = new EventSource(this.eventstream_url ?? this.presence_url, {
-            headers: {
-                'User-Agent': getUserAgent(),
-            },
+            useragent: getUserAgent(),
         });
 
         this.events = events;
@@ -636,11 +639,10 @@ export class ZncProxyDiscordPresence extends Loop {
         let timeout: NodeJS.Timeout;
         let timeout_interval = 90000;
         const ontimeout = () => {
-            const err = new Error('Timeout') as any;
-            err.type = 'error';
-            err[TemporaryErrorSymbol] = true;
-            Object.defineProperty(err, 'detail', {enumerable: false, value: err});
-            events.dispatchEvent(err);
+            const event = new ErrorEvent(new errors.RequestAbortedError('Timeout'));
+            // @ts-expect-error
+            event[TemporaryErrorSymbol] = true;
+            events.dispatchEvent(event);
         };
 
         events.onopen = event => {
@@ -650,11 +652,10 @@ export class ZncProxyDiscordPresence extends Loop {
 
         let user: CurrentUser | Friend | undefined = undefined;
         let presence: Presence | null = null;
-        let supported_events: readonly string[] = ['friend'];
 
         this.last_data = {};
 
-        const onmessage = (event: MessageEvent) => {
+        events.onAnyMessage = (event: MessageEvent) => {
             clearTimeout(timeout);
             timeout = setTimeout(ontimeout, timeout_interval);
 
@@ -672,15 +673,6 @@ export class ZncProxyDiscordPresence extends Loop {
                         e !== 'message' && e !== 'update' &&
                         e !== 'supported_events');
                 debugEventStream('Received supported events message', new_supported_events);
-
-                for (const type of supported_events) {
-                    events.removeEventListener(type, onmessage);
-                }
-                for (const type of new_supported_events) {
-                    events.addEventListener(type, onmessage);
-                }
-                supported_events = new_supported_events;
-
                 return;
             }
 
@@ -703,11 +695,6 @@ export class ZncProxyDiscordPresence extends Loop {
             }
         };
 
-        events.onmessage = onmessage;
-        events.addEventListener('supported_events', onmessage);
-        events.addEventListener('update', onmessage);
-        events.addEventListener('friend', onmessage);
-
         return new Promise<void>((rs, rj) => {
             this.timeout_resolve = () => {
                 debugEventStream('Update interval cancelled, closing event stream');
@@ -715,19 +702,14 @@ export class ZncProxyDiscordPresence extends Loop {
                 rs();
             };
 
-            events.onerror = event => {
+            events.onerror = (event: ErrorEvent | MessageEvent) => {
                 debugEventStream('EventSource error', event);
                 events.close();
 
-                if (event instanceof Error) {
-                    rj(event);
-                } else if ((event as any).message) {
-                    const err = new Error((event as any).message);
-                    Object.assign(err, event);
-                    rj(err);
+                if (event instanceof MessageEvent) {
+                    rj(new ErrorResponse('Received error in event stream', events.response!, event.data));
                 } else {
-                    // No error message
-                    rs();
+                    rj(event.error);
                 }
             };
         });

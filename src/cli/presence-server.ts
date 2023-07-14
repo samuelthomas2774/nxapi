@@ -695,7 +695,7 @@ class Server extends HttpServer {
                             }
 
                             if (match.splatoon3_fest_team) break;
-                            
+
                             for (const player of team.preVotes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
@@ -705,7 +705,7 @@ class Server extends HttpServer {
                                 };
                                 break;
                             }
-    
+
                             if (match.splatoon3_fest_team) break;
                         }
 

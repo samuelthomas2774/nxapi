@@ -181,7 +181,7 @@ export default class Coral {
             oidc.getToken(),
             oidc.getUser(),
         ]);
-    
+
         const {nso, data} = await CoralApi.createWithNintendoAccountToken(token, user);
 
         const auth_data: SavedToken = {
@@ -273,7 +273,7 @@ async function renewToken(
     renew_token_data: {auth_data: SavedToken}, ratelimit = true
 ) {
     // if (ratelimit) {
-    //     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);    
+    //     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
     //     await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
     // }
 
