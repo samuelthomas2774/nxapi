@@ -87,7 +87,7 @@
     "build": {
         "appId": "uk.org.fancy.nxapi.app",
         "productName": "Nintendo Switch Online",
-        "copyright": "Copyright © 2022 Samuel Elliott",
+        "copyright": "Copyright © 2023 Samuel Elliott",
         "npmRebuild": false,
         "files": [
             "dist/app/bundle",
@@ -130,7 +130,25 @@
             }
         ],
         "mac": {
+            "extraFiles": [
+                {
+                    "from": "resources/build/app/cli-macos.sh",
+                    "to": "bin/nxapi"
+                }
+            ],
             "identity": null
+        },
+        "linux": {
+            "extraFiles": [
+                {
+                    "from": "resources/build/app/cli-linux.sh",
+                    "to": "nxapi"
+                }
+            ]
+        },
+        "deb": {
+            "afterInstall": "resources/build/app/deb/postinst",
+            "afterRemove": "resources/build/app/deb/postrm"
         }
     }
 }

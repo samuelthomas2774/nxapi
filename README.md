@@ -64,17 +64,25 @@ nxapi includes an Electron app, which can be downloaded [here](https://github.co
 
 ![Screenshot of the menu bar app with SplatNet 2 and NookLink open in the background](resources/menu-app.png)
 
-The app includes the nxapi command line at `dist/bundle/cli-bundle.js`. Node.js must be installed separately to use this.
+The app includes the nxapi command line at `dist/bundle/cli-bundle.js`.
 
 ```sh
 # macOS
-node Nintendo\ Switch\ Online.app/Contents/Resources/app/dist/bundle/cli-bundle.js ...
-
-# Windows
-node 'Nintendo Switch Online/resources/app/dist/bundle/cli-bundle.js' ...
+Nintendo\ Switch\ Online.app/Contents/bin/nxapi
 
 # Linux, installed via dpkg
-node /opt/Nintendo\ Switch\ Online/resources/app/dist/bundle/cli-bundle.js ...
+# This is linked as /usr/bin/nxapi
+/opt/Nintendo\ Switch\ Online/bin/nxapi
+```
+
+On Windows, Node.js must be installed separately.
+
+```powershell
+# PowerShell
+node $env:LOCALAPPDATA\Programs\nxapi-app\resources\app\dist\bundle\cli-bundle.js ...
+
+# Command Prompt
+node %localappdata%\Programs\nxapi-app\resources\app\dist\bundle\cli-bundle.js ...
 ```
 
 #### Do I need a Nintendo Switch Online membership?

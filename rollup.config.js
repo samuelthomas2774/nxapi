@@ -106,6 +106,7 @@ const main = {
         }),
     ],
     external: [
+        'electron',
         'node-notifier',
         'register-scheme',
         'bindings',
