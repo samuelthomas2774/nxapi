@@ -30,8 +30,12 @@ type Listener<T extends string> =
     [type: T, handler: (event: MessageEvent<string>) => void];
 
 export default class EventSource {
+    protected static connections = new Set<EventSource>();
+
+    protected _connecting: Promise<Response> | null = null;
     protected _response: Response | null = null;
     protected _controller: AbortController | null = null;
+    protected _reconnect_timeout: NodeJS.Timeout | null = null;
     protected _closed = false;
 
     protected _id: string | null = null;
@@ -54,6 +58,26 @@ export default class EventSource {
         if (init?.withCredentials) debug('init.withCredentials is not supported');
         if (init?.authorisation) this._authorisation = init.authorisation;
         if (init?.useragent) this._useragent = init.useragent;
+
+        Object.defineProperty(this, '_connecting', {enumerable: false});
+        Object.defineProperty(this, '_response', {enumerable: false});
+        Object.defineProperty(this, '_controller', {enumerable: false});
+        Object.defineProperty(this, '_reconnect_timeout', {enumerable: false});
+        Object.defineProperty(this, '_closed', {enumerable: false});
+        Object.defineProperty(this, '_id', {enumerable: false});
+        Object.defineProperty(this, '_retry_after', {enumerable: false});
+        Object.defineProperty(this, '_authorisation', {enumerable: false});
+        Object.defineProperty(this, '_useragent', {enumerable: false});
+        Object.defineProperty(this, 'onerror', {enumerable: false, writable: true});
+        Object.defineProperty(this, 'onmessage', {enumerable: false, writable: true});
+        Object.defineProperty(this, 'onopen', {enumerable: false, writable: true});
+        Object.defineProperty(this, 'onAnyMessage', {enumerable: false, writable: true});
+        Object.defineProperty(this, '_listeners', {enumerable: false});
+        Object.defineProperty(this, '_message_event', {enumerable: false});
+        Object.defineProperty(this, '_message_data', {enumerable: false});
+        Object.defineProperty(this, '_message_id', {enumerable: false});
+
+        EventSource.connections.add(this);
 
         this._connect();
     }
@@ -96,6 +120,8 @@ export default class EventSource {
             headers.append('Last-Event-Id', this._id);
         }
 
+        debug('Connecting', this);
+
         return fetch(this.url, {
             headers,
             signal,
@@ -104,16 +130,38 @@ export default class EventSource {
     }
 
     protected _connect() {
-        const controller = new AbortController();
+        if (this._closed || this._connecting) {
+            return;
+        }
 
-        this._fetch(controller.signal).then(async response => {
-            if (this._closed || this._response) {
+        if (this._reconnect_timeout) {
+            clearTimeout(this._reconnect_timeout);
+            this._reconnect_timeout = null;
+        }
+
+        this._controller?.abort();
+
+        const controller = new AbortController();
+        const connecting = this._fetch(controller.signal);
+
+        this._response = null;
+        this._controller = controller;
+        this._connecting = connecting;
+
+        connecting.then(async response => {
+            const url = new URL(this.url);
+            url.search = '';
+            url.hash = '';
+
+            debug('fetch %s %s, response %s', 'GET', url, response.status);
+
+            if (this._closed || this._controller !== controller) {
                 controller.abort();
                 return;
             }
 
             this._response = response;
-            this._controller = controller;
+            this._connecting = null;
 
             if (!response.ok) {
                 debug('Non-200 response code', await response.text());
@@ -133,9 +181,6 @@ export default class EventSource {
                 return this._handleConnectionClosed();
             }
 
-            const url = new URL(this.url);
-            url.search = '';
-            url.hash = '';
             debug('Connected to %s', url);
 
             const event = new Event('open');
@@ -255,14 +300,17 @@ export default class EventSource {
         }
 
         const wait = Math.max(1000, this._retry_after ?? 0);
-        await new Promise(rs => setTimeout(rs, wait));
 
-        this._connect();
+        clearTimeout(this._reconnect_timeout!);
+        this._reconnect_timeout = setTimeout(() => this._connect(), wait);
     }
 
     close() {
+        debug('Closing', this);
+
         this._closed = true;
         this._controller?.abort();
+        EventSource.connections.delete(this);
     }
 
     dispatchEvent(event: Event) {
