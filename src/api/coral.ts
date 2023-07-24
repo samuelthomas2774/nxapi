@@ -142,13 +142,14 @@ export default class CoralApi implements CoralApiInterface {
             signal,
         }).finally(cancel);
 
-        debug('fetch %s %s, response %s', method, url, response.status);
+        const data = await response.json().catch(err => null) as CoralResponse<T> | null;
 
-        if (response.status !== 200) {
-            throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
+        debug('fetch %s %s, response %s, status %d %s, correlationId %s', method, url, response.status,
+            data?.status, CoralStatus[data?.status!], data?.correlationId);
+
+        if (response.status !== 200 || !data) {
+            throw new CoralErrorResponse('[znc] Non-200 status code', response, data as CoralError);
         }
-
-        const data = await response.json() as CoralResponse<T>;
 
         if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
             this._token_expired = true;
