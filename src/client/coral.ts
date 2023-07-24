@@ -22,6 +22,7 @@ export default class Coral {
     expires_at = Date.now() + (2 * 60 * 60 * 1000);
 
     promise = new Map<string, Promise<void>>();
+    delay_retry_after_error_until: number | null = null;
 
     updated = {
         announcements: null as number | null,
@@ -29,6 +30,8 @@ export default class Coral {
         webservices: null as number | null,
         active_event: null as number | null,
     };
+
+    delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
     update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
@@ -50,10 +53,16 @@ export default class Coral {
 
     private update(key: keyof Coral['updated'], callback: () => Promise<void>, ttl: number) {
         if (((this.updated[key] ?? 0) + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? Promise.resolve().then(() => callback.call(null)).then(() => {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
+                const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
+
+                return delay_retry > 0 ? new Promise(rs => setTimeout(rs, delay_retry)) : null;
+            }).then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
+                this.delay_retry_after_error_until = null;
                 this.promise.delete(key);
             }).catch(err => {
+                this.delay_retry_after_error_until = Date.now() + this.delay_retry_after_error;
                 this.promise.delete(key);
                 throw err;
             });

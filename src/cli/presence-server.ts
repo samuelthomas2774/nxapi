@@ -227,6 +227,7 @@ abstract class SplatNet3User {
     fest_vote_status: GraphQLSuccessResponse<DetailVotingStatusResult> | null = null;
 
     promise = new Map<string, Promise<void>>();
+    delay_retry_after_error_until: number | null = null;
 
     updated = {
         friends: Date.now(),
@@ -235,6 +236,8 @@ abstract class SplatNet3User {
         current_fest: null as number | null,
         fest_vote_status: null as number | null,
     };
+
+    delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
     update_interval_schedules = 60 * 60 * 1000; // 60 minutes
     update_interval_fest_voting_status: number | null = null; // 10 seconds
@@ -245,10 +248,16 @@ abstract class SplatNet3User {
 
     protected async update(key: keyof SplatNet3User['updated'], callback: () => Promise<void>, ttl: number) {
         if (((this.updated[key] ?? 0) + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? callback.call(null).then(() => {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
+                const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
+
+                return delay_retry > 0 ? new Promise(rs => setTimeout(rs, delay_retry)) : null;
+            }).then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
+                this.delay_retry_after_error_until = null;
                 this.promise.delete(key);
             }).catch(err => {
+                this.delay_retry_after_error_until = Date.now() + this.delay_retry_after_error;
                 this.promise.delete(key);
                 throw err;
             });

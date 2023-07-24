@@ -98,6 +98,7 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
     expires_at = Infinity;
 
     promise = new Map<string, Promise<void>>();
+    delay_retry_after_error_until: number | null = null;
 
     updated = {
         announcements: Date.now(),
@@ -105,6 +106,8 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
         webservices: Date.now(),
         active_event: Date.now(),
     };
+
+    delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
     update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
@@ -121,10 +124,16 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
 
     private async update(key: keyof CoralUser['updated'], callback: () => Promise<void>, ttl: number) {
         if ((this.updated[key] + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? callback.call(null).then(() => {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
+                const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
+
+                return delay_retry > 0 ? new Promise(rs => setTimeout(rs, delay_retry)) : null;
+            }).then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
+                this.delay_retry_after_error_until = null;
                 this.promise.delete(key);
             }).catch(err => {
+                this.delay_retry_after_error_until = Date.now() + this.delay_retry_after_error;
                 this.promise.delete(key);
                 throw err;
             });
