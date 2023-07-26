@@ -151,8 +151,6 @@ export default class EventSource {
         this._controller = controller;
         this._connecting = connecting;
 
-        let _response: Response | null = null;
-
         connecting.then(async response => {
             const url = new URL(this.url);
             url.search = '';
@@ -171,7 +169,7 @@ export default class EventSource {
             const retry_after = response.headers.get('Retry-After');
 
             if (retry_after && /^\d+$/.test(retry_after)) {
-                this._retry_after = parseInt(retry_after);
+                this._retry_after = parseInt(retry_after) * 1000;
             }
 
             if (!response.ok) {

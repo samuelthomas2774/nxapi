@@ -566,11 +566,11 @@ export class ZncProxyDiscordPresence extends Loop {
     protected proxy_temporary_errors = 0;
 
     async update() {
-        if (this.is_sse) {
-            return await this.useEventStream();
-        }
-
         try {
+            if (this.is_sse) {
+                return await this.useEventStream();
+            }
+
             const result = await getPresenceFromUrl(this.presence_url);
             const [presence, user, data] = result;
             this.last_data = data;
@@ -598,7 +598,7 @@ export class ZncProxyDiscordPresence extends Loop {
             }
         } catch (err) {
             if (err instanceof ErrorResponse) {
-                if (err.response.headers.get('Content-Type')?.match(/^text\/event-stream(;|$)/)) {
+                if (!this.is_sse && err.response.headers.get('Content-Type')?.match(/^text\/event-stream(;|$)/)) {
                     this.is_sse = true;
                     debug('Presence URL responded with an event stream');
                     return LoopResult.OK_SKIP_INTERVAL;
