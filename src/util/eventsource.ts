@@ -168,6 +168,12 @@ export default class EventSource {
             this._response = response;
             this._connecting = null;
 
+            const retry_after = response.headers.get('Retry-After');
+
+            if (retry_after && /^\d+$/.test(retry_after)) {
+                this._retry_after = parseInt(retry_after);
+            }
+
             if (!response.ok) {
                 const error = await EventSourceErrorResponse.fromResponse(response, 'Non-200 status code');
                 return this._handleResponseError(response, controller, error);
