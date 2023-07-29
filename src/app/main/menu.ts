@@ -5,7 +5,7 @@ import { App } from './index.js';
 import openWebService, { handleOpenWebServiceError, WebServiceValidationError } from './webservices.js';
 import { EmbeddedPresenceMonitor, EmbeddedProxyPresenceMonitor } from './monitor.js';
 import { createModalWindow } from './windows.js';
-import { WindowType } from '../common/types.js';
+import { ApperancePrefrence, WindowType } from '../common/types.js';
 import { CoralApiInterface } from '../../api/coral.js';
 import { WebService } from '../../api/coral-types.js';
 import { SavedToken } from '../../common/auth/coral.js';
@@ -22,7 +22,7 @@ export default class MenuApp {
 
     constructor(readonly app: App) {
         const icon = nativeImage
-            .createFromPath(path.join(dir, 'resources', 'app', 'menu-icon.png'))
+            .createFromPath(path.join(dir, 'resources', 'app', 'menu-icon-dark.png'))
             .resize({height: 16});
 
         icon.setTemplateImage(true);
@@ -36,6 +36,22 @@ export default class MenuApp {
             this.updateMenu();
         });
         this.updateMenu();
+        this.updateIcon();
+    }
+
+    async updateIcon() {
+        const options = await this.app.store.getAppearanceItem();
+        let menu_icon = null;
+
+        if (options.statusbar_icon === ApperancePrefrence.DARK) menu_icon = 'menu-icon-dark.png';
+        else menu_icon = 'menu-icon-light.png';
+
+        const icon = nativeImage
+            .createFromPath(path.join(dir, 'resources', 'app', menu_icon))
+            .resize({height: 16});
+
+        icon.setTemplateImage(true);
+        this.tray.setImage(icon);
     }
 
     async updateMenu() {
@@ -123,6 +139,7 @@ export default class MenuApp {
 
         this.tray.setContextMenu(menu);
     }
+    
 
     addNsoAccount = (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
         askAddNsoAccount(this.app.store.storage, !event.shiftKey);

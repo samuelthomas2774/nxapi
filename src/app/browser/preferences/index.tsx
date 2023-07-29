@@ -6,6 +6,7 @@ import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, HIGHLIGHT_COLOUR_DARK, HIGHLIGHT_COLOUR_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import ipc, { events } from '../ipc.js';
 import { getAccounts, RequestState, Root, useAsync, useDiscordPresenceSource, useEventListener } from '../util.js';
+import { ApperancePrefrence } from '../../common/types.js';
 
 export interface PreferencesProps {}
 
@@ -19,14 +20,29 @@ export default function Preferences(props: PreferencesProps) {
     const [users, ,, forceRefreshAccounts] = useAsync(useCallback(() => getAccounts(), [ipc]));
     useEventListener(events, 'update-nintendo-accounts', forceRefreshAccounts, []);
 
+
+
+    const [appearance_options, , apperance_options_state, forceRefreshApperanceOptions] = 
+        useAsync(useCallback(() => ipc.getSavedApperanceOptions(), [ipc]));
+
+    const setStatusbarIcon = useCallback(async (appStatusBarIcon: ApperancePrefrence) => {
+        await ipc.setSavedApperanceOptions({...appearance_options!, statusbar_icon: appStatusBarIcon});
+        forceRefreshApperanceOptions();
+    }, [ipc, appearance_options]);
+
+
     const [login_item, ,, forceRefreshLoginItem] = useAsync(useCallback(() => ipc.getLoginItemSettings(), [ipc]));
 
     const setOpenAtLogin = useCallback(async (open_at_login: boolean | 'mixed') => {
         await ipc.setLoginItemSettings({...login_item!, startup_enabled: !!open_at_login});
         forceRefreshLoginItem();
     }, [ipc, login_item]);
+    const setOpenAtLoginAsHidden = useCallback(async (open_at_login_as_hidden: boolean | 'mixed') => {
+        await ipc.setLoginItemSettings({...login_item!, startup_hidden: !!open_at_login_as_hidden});
+        forceRefreshLoginItem();
+    }, [ipc, login_item]);
     const setOpenAsHidden = useCallback(async (open_as_hidden: boolean | 'mixed') => {
-        await ipc.setLoginItemSettings({...login_item!, startup_hidden: !!open_as_hidden});
+        await ipc.setLoginItemSettings({...login_item!, launch_hidden: !!open_as_hidden});
         forceRefreshLoginItem();
     }, [ipc, login_item]);
 
@@ -115,7 +131,7 @@ export default function Preferences(props: PreferencesProps) {
         <View style={styles.main}>
             {/* <Text style={theme.text}>Preferences</Text> */}
 
-            {login_item.supported || login_item.startup_enabled ? <View style={styles.section}>
+            <View style={styles.section}>
                 <View style={styles.sectionLeft}>
                     <Text style={[styles.label, theme.text]}>Startup</Text>
                 </View>
@@ -123,7 +139,7 @@ export default function Preferences(props: PreferencesProps) {
                     {/* <Text style={theme.text}>Launch at startup menu here</Text>
                     <Text style={theme.text}>{JSON.stringify(login_item, null, 4)}</Text> */}
 
-                    <View style={styles.checkboxContainer}>
+                    {login_item.supported || login_item.startup_enabled ? <View style={styles.checkboxContainer}>
                         <CheckBox
                             value={login_item.startup_enabled}
                             onValueChange={setOpenAtLogin}
@@ -134,26 +150,60 @@ export default function Preferences(props: PreferencesProps) {
                         <TouchableOpacity disabled={!login_item.supported} style={styles.checkboxLabel} onPress={() => setOpenAtLogin(!login_item.startup_enabled)}>
                             <Text style={[styles.checkboxLabelText, theme.text]}>Open at login</Text>
                         </TouchableOpacity>
-                    </View>
+                    </View> : null }
 
-                    <View
+                    {login_item.supported || login_item.startup_enabled ? <View
                         style={[styles.checkboxContainer, !login_item.startup_enabled ? styles.disabled : null]}
                     >
                         <CheckBox
                             value={login_item.startup_hidden}
-                            onValueChange={setOpenAsHidden}
+                            onValueChange={setOpenAtLoginAsHidden}
                             disabled={!login_item.startup_enabled}
                             color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
                             style={styles.checkbox}
                         />
                         <TouchableOpacity disabled={!login_item.startup_enabled} style={styles.checkboxLabel}
-                            onPress={() => setOpenAsHidden(!login_item.startup_hidden)}
+                            onPress={() => setOpenAtLoginAsHidden(!login_item.startup_hidden)}
+                        >
+                            <Text style={[styles.checkboxLabelText, theme.text]}>Open at login in background</Text>
+                        </TouchableOpacity>
+                    </View> : null }
+
+                    <View
+                        style={[styles.checkboxContainer]}
+                    >
+                        <CheckBox
+                            value={login_item.launch_hidden}
+                            onValueChange={setOpenAsHidden}
+                            color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                            style={styles.checkbox}
+                        />
+                        <TouchableOpacity style={styles.checkboxLabel}
+                            onPress={() => setOpenAsHidden(!login_item.launch_hidden)}
                         >
                             <Text style={[styles.checkboxLabelText, theme.text]}>Open in background</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
-            </View> : null}
+            </View> 
+
+            <View style={styles.section}>
+                <View style={styles.sectionLeft}>
+                    <Text style={[styles.label, theme.text]}>Appearance</Text>
+                </View>
+                <View style={styles.sectionRight}>
+                    <Text style={theme.text}>Indicator icon</Text>
+                    <Picker<string> 
+                        selectedValue={'' + appearance_options?.statusbar_icon ?? ApperancePrefrence.DARK}
+                        onValueChange={v => setStatusbarIcon(parseInt(v))}
+                        style={[styles.picker, theme.picker]}>
+                        <Picker.Item key={ApperancePrefrence.DARK} value={ApperancePrefrence.DARK}
+                            label="Dark" />
+                        <Picker.Item key={ApperancePrefrence.LIGHT} value={ApperancePrefrence.LIGHT}
+                            label="Light" />
+                    </Picker>
+                </View>
+            </View>
 
             {/* <View style={styles.section}>
                 <View style={styles.sectionLeft}>

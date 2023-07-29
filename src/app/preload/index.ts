@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, SharingItem } from 'electron';
 import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import type { User } from 'discord-rpc';
-import type { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
+import type { AppearanceItem, AppearanceItemOptions, DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
@@ -46,6 +46,9 @@ const ipc = {
 
     getLoginItemSettings: () => inv<LoginItem>('systemPreferences:getloginitem'),
     setLoginItemSettings: (settings: LoginItemOptions) => inv('systemPreferences:setloginitem', settings),
+
+    getSavedApperanceOptions: () => inv<AppearanceItem>('systemPreferences:getApperanceItem'),
+    setSavedApperanceOptions: (settings: AppearanceItemOptions) => inv('systemPreferences:setApperanceItem', settings),
 
     getUpdateData: () => inv<UpdateCacheData | null>('update:get'),
     checkUpdates: () => inv<UpdateCacheData | null>('update:check'),

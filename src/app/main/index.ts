@@ -12,7 +12,7 @@ import { setupIpc } from './ipc.js';
 import { askUserForUri, buildElectronProxyAgent, showErrorDialog } from './util.js';
 import { setAppInstance } from './app-menu.js';
 import { handleAuthUri } from './na-auth.js';
-import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
+import { AppearanceItem, AppearanceItemOptions, DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
 import { init as initGlobals } from '../../common/globals.js';
 import { CREDITS_NOTICE, GITLAB_URL, LICENCE_NOTICE } from '../../common/constants.js';
 import { checkUpdates, UpdateCacheData } from '../../common/update.js';
@@ -199,11 +199,15 @@ export async function init() {
 
     debug('App started');
 
-    const should_hide =
+    const should_hide_startup =
         login_item_type === LoginItemType.NATIVE ? app.getLoginItemSettings(login_item_options).wasOpenedAsHidden :
         process.argv.includes('--app-open-at-login=1') && (await appinstance.store.getLoginItem()).startup_hidden;
 
-    if (!should_hide) {
+    const should_hide_launch = 
+        process.argv.includes('--app-open-hidden=1') || 
+        (await appinstance.store.getLoginItem()).launch_hidden;
+
+    if (!(should_hide_startup || should_hide_launch)) {
         appinstance.showMainWindow();
     }
 }
@@ -265,6 +269,7 @@ class Updater {
 
 interface SavedStartupOptions {
     hide: boolean;
+    hideLaunch: boolean;
 }
 
 interface SavedMonitorState {
@@ -290,6 +295,16 @@ export class Store extends EventEmitter {
         this.users = Users.coral(this, process.env.ZNC_PROXY_URL, false);
     }
 
+    async getAppearanceItem(): Promise<AppearanceItem> {
+        const options = await this.storage.getItem('Appearance');
+        return options ?? null;
+    }
+
+    async setAppearanceItem(settings: AppearanceItemOptions) {
+        await this.storage.setItem('Appearance', settings);
+        await this.app.menu?.updateIcon();
+    }
+
     async getLoginItem(): Promise<LoginItem> {
         const settings = app.getLoginItemSettings(login_item_options);
 
@@ -299,6 +314,7 @@ export class Store extends EventEmitter {
                 supported: true,
                 startup_enabled: settings.openAtLogin,
                 startup_hidden: settings.openAsHidden,
+                launch_hidden: settings.launchAsHidden
             };
         }
 
@@ -311,6 +327,7 @@ export class Store extends EventEmitter {
                 supported: true,
                 startup_enabled: settings.openAtLogin,
                 startup_hidden: startup_options?.hide ?? false,
+                launch_hidden: startup_options?.hideLaunch ?? false,
             };
         }
 
@@ -318,6 +335,7 @@ export class Store extends EventEmitter {
             supported: false,
             startup_enabled: was_opened_at_login,
             startup_hidden: startup_options?.hide ?? false,
+            launch_hidden: startup_options?.hideLaunch ?? false,
         };
     }
 
@@ -328,6 +346,7 @@ export class Store extends EventEmitter {
                 ...login_item_options,
                 openAtLogin: settings.startup_enabled,
                 openAsHidden: settings.startup_hidden,
+                launchAsHidden: settings.launch_hidden,
             });
             return;
         }
@@ -337,11 +356,13 @@ export class Store extends EventEmitter {
             app.setLoginItemSettings({
                 ...login_item_options,
                 openAtLogin: settings.startup_enabled,
+                launchAsHidden: settings.launch_hidden,
             });
         }
 
         const startup_options: SavedStartupOptions = {
             hide: settings.startup_hidden,
+            hideLaunch: settings.launch_hidden,
         };
 
         await this.storage.setItem('StartupOptions', startup_options);
