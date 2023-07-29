@@ -29,6 +29,25 @@ input,
 input:focus-visible {
     outline: none 0;
 }
+
+::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+    
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 6px;
+}
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border: 6px;
+    border-radius: 6px;
+    
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
 `;
 
 window.document.head.appendChild(style);
