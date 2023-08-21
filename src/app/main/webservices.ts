@@ -145,11 +145,12 @@ function isWebServiceUrlAllowed(webservice: WebService, url: string | URL) {
 
     for (const host of webservice.whiteList) {
         if (host.startsWith('*.')) {
-            return url.hostname === host.substr(2) ||
-                url.hostname.endsWith(host.substr(1));
+            if (url.hostname === host.substr(2) ||
+                url.hostname.endsWith(host.substr(1))
+            ) return true;
         }
 
-        return url.hostname === host;
+        if (url.hostname === host) return true;
     }
 
     return false;
