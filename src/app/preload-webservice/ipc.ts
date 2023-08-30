@@ -20,6 +20,7 @@ const ipc = {
     copyToClipboard: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:copyToClipboard', data) as Promise<void>,
     downloadImages: (data: string) => ipcRenderer.invoke('nxapi:webserviceapi:downloadImages', data) as Promise<void>,
     completeLoading: () => ipcRenderer.invoke('nxapi:webserviceapi:completeLoading') as Promise<void>,
+    clearUnreadFlag: () => ipcRenderer.invoke('nxapi:webserviceapi:clearUnreadFlag') as Promise<void>,
 };
 
 export default ipc;

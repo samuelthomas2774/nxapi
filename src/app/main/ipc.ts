@@ -170,6 +170,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     ipcMain.handle('nxapi:webserviceapi:copyToClipboard', (e, data: string) => webserviceipc.copyToClipboard(e, data));
     ipcMain.handle('nxapi:webserviceapi:downloadImages', (e, data: string) => webserviceipc.downloadImages(e, data));
     ipcMain.handle('nxapi:webserviceapi:completeLoading', e => webserviceipc.completeLoading(e));
+    ipcMain.handle('nxapi:webserviceapi:clearUnreadFlag', e => webserviceipc.clearUnreadFlag(e));
 
     store.on('update-nintendo-accounts', () => sendToAllWindows('nxapi:accounts:shouldrefresh'));
     store.on('update-discord-presence-source', () => sendToAllWindows('nxapi:discord:shouldrefresh'));

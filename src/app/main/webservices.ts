@@ -442,4 +442,10 @@ export class WebServiceIpc {
 
         debug('Web service %s, user %s, called completeLoading', webservice.name, nsoAccount.user.name);
     }
+
+    async clearUnreadFlag(event: IpcMainInvokeEvent): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        debug('Web service %s, user %s, called clearUnreadFlag', webservice.name, nsoAccount.user.name);
+    }
 }
