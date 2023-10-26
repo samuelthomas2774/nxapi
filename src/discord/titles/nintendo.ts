@@ -1249,4 +1249,44 @@ export const titles: Title[] = [
         showPlayingOnline: true,
         showActiveEvent: true,
     },
+
+    {
+        // Super Mario Bros. Wonder
+        id: '010015100b514000',
+        client: '1121122895519813642',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // WarioWare: Move It!
+        id: '010045b018ec2000',
+        client: '1121123023961985054',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Super Mario RPG
+        id: '0100bc0018138000',
+        client: '1121123106942095522',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Detective Pikachu Returns
+        id: '010007500f27c000',
+        client: '1121123195882307604',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // F-ZERO 99
+        id: '0100ccf019c8c000',
+        client: '1167145130294255637',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 ];
