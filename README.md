@@ -109,6 +109,19 @@ It's extremely unlikely:
 
 A secondary account is required for Discord Rich Presence; you don't need to sign in to your main account.
 
+##### Update 08/09/2023
+
+> Nintendo has banned a small number of users from accessing SplatNet 3. Nintendo has not sent any notification to affected users. This is only known to have affected users of one application unrelated to nxapi.
+>
+> SplatNet 3 returns `401 Unauthorized` (`ERROR_INVALID_GAME_WEB_TOKEN`... which causes the official app to retry repeatedly); there is no specific error message for banned users. No other Nintendo services are affected.
+>
+> If you only use nxapi for Discord Rich Presence, your main account is safe, because nxapi does not use it to fetch presence data. nxapi requires a secondary account to fetch your main account's presence data, so even if that account was banned you could just create another one without losing anything.
+>
+> More information:
+>
+> - https://tkgstrator.work/article/2023/09/announcement.html
+> - https://github.com/frozenpandaman/s3s/issues/146
+
 #### Why is a token sent to one/two different non-Nintendo servers?
 
 It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app, as currently it's too hard to do this locally. (This isn't required for Parental Controls data.) See the [Coral client authentication](#coral-client-authentication) section below for more information.
