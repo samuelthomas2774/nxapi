@@ -1,6 +1,6 @@
 import persist from 'node-persist';
 import DiscordRPC from 'discord-rpc';
-import { BankaraMatchMode, CoopRule, CoopSetting_schedule, DetailVotingStatusResult, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, StageScheduleResult, VsMode, VsSchedule_regular } from 'splatnet3-types/splatnet3';
+import { BankaraMatchMode, CoopRule, CoopSetting_schedule, DetailVotingStatusResult, FestMatchMode, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, StageScheduleResult, VsMode, VsSchedule_regular } from 'splatnet3-types/splatnet3';
 import { Game } from '../../api/coral-types.js';
 import SplatNet3Api, { SplatNet3GraphQLErrorResponse } from '../../api/splatnet3.js';
 import { DiscordPresenceExternalMonitorsConfiguration } from '../../app/common/types.js';
@@ -23,7 +23,7 @@ type VsSetting_schedule =
     StageScheduleResult['bankaraSchedules']['nodes'][0]['bankaraMatchSettings'][0] |
     StageScheduleResult['eventSchedules']['nodes'][0]['leagueMatchSetting'] |
     StageScheduleResult['xSchedules']['nodes'][0]['xMatchSetting'] |
-    StageScheduleResult['festSchedules']['nodes'][0]['festMatchSetting'];
+    StageScheduleResult['festSchedules']['nodes'][0]['festMatchSettings'][0];
 
 export default class SplatNet3Monitor extends EmbeddedLoop {
     update_interval: number = 1 * 60; // 1 minute in seconds
@@ -186,14 +186,21 @@ export function getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pic
         const settings = getSchedule(schedules.bankaraSchedules)?.bankaraMatchSettings;
 
         if (vs_mode.id === 'VnNNb2RlLTI=') {
-            return settings?.find(s => s.mode === BankaraMatchMode.CHALLENGE);
+            return settings?.find(s => s.bankaraMode === BankaraMatchMode.CHALLENGE);
         }
         if (vs_mode.id === 'VnNNb2RlLTUx') {
-            return settings?.find(s => s.mode === BankaraMatchMode.OPEN);
+            return settings?.find(s => s.bankaraMode === BankaraMatchMode.OPEN);
         }
     }
     if (vs_mode.mode === 'FEST') {
-        return getSchedule(schedules.festSchedules)?.festMatchSetting;
+        const settings = getSchedule(schedules.festSchedules)?.festMatchSettings;
+
+        if (vs_mode.id === 'VnNNb2RlLTY=') {
+            return settings?.find(s => (s as VsSetting_schedule)!.festMode === FestMatchMode.OPEN);
+        }
+        if (vs_mode.id === 'VnNNb2RlLTc=') {
+            return settings?.find(s => (s as VsSetting_schedule)!.festMode === FestMatchMode.CHALLENGE);
+        }
     }
     if (vs_mode.mode === 'LEAGUE') {
         return getSchedule(schedules.eventSchedules)?.leagueMatchSetting;
