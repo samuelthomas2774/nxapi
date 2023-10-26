@@ -95,6 +95,16 @@ You will need to have an online membership (free trial is ok) to use any game-sp
 
 For Parental Controls data, you don't need to have linked your account to a console. You will need to use Nintendo's app to add a console to your account though, as this isn't supported in nxapi and the Parental Controls API is a bit useless without doing this.
 
+#### The Electron app does not connect to Discord on Linux
+
+The Electron app, Discord, or both, may be sandboxed depending on how they're installed.
+
+The dpkg and AppImage nxapi packages are not sandboxed. The official dpkg Discord package and tar release are not sandboxed.
+
+The snap packages of nxapi and Discord are sandboxed and cannot support Discord Rich Presence.
+
+The Flatpak Discord package is sandboxed, but can be used by linking the IPC socket outside of the app directory: https://github.com/flathub/com.discordapp.Discord/wiki/Rich-Precense-(discord-rpc).
+
 #### Will my Nintendo Switch console be banned for using this?
 
 No.
