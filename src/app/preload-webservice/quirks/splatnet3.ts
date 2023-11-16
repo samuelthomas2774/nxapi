@@ -5,7 +5,7 @@ const debug = createDebug('app:preload-webservice:quirks:splatnet3');
 
 const SPLATNET3_WEBSERVICE_ID = 4834290508791808;
 
-if (webservice.id === SPLATNET3_WEBSERVICE_ID) {
+if (webservice.id === SPLATNET3_WEBSERVICE_ID && location.hostname.endsWith('.av5ja.srv.nintendo.net')) {
     const style = window.document.createElement('style');
 
     style.textContent = `
@@ -55,5 +55,19 @@ if (webservice.id === SPLATNET3_WEBSERVICE_ID) {
             debug('Error triggering refresh, forcing full page reload', err);
             location.reload();
         }
+    });
+}
+
+if (webservice.id === SPLATNET3_WEBSERVICE_ID && location.hostname === 'c.nintendo.com' && location.pathname.match(/^\/splatoon3-tournament(\/|$)/i)) {
+    const style = window.document.createElement('style');
+
+    style.textContent = `
+    [class*=AppHeader_closeWebView] {
+        display: none;
+    }
+    `;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        window.document.head.appendChild(style);
     });
 }
