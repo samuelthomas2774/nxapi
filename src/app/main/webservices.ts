@@ -143,7 +143,12 @@ function isWebServiceUrlAllowed(webservice: WebService, url: string | URL) {
 
     if (typeof url === 'string') url = new URL(url);
 
-    for (const host of webservice.whiteList) {
+    for (const allowed of webservice.whiteList) {
+        const host = allowed.includes('/') ? allowed.substr(0, allowed.indexOf('/')) : allowed;
+        const path = allowed.includes('/') ? allowed.substr(allowed.indexOf('/')) : null;
+
+        if (path && url.pathname !== path && !url.pathname.startsWith(path + '/')) continue;
+
         if (host.startsWith('*.')) {
             if (url.hostname === host.substr(2) ||
                 url.hostname.endsWith(host.substr(1))
