@@ -200,6 +200,37 @@ publish-github:
       - node_modules/
     policy: pull
 
+publish-github-releases:
+  stage: deploy
+  image: alpine
+  before_script:
+    - apk add github-cli
+  script:
+    - gh release --repo "$GITHUB_REPOSITORY" view "$CI_COMMIT_TAG" --json id,url || gh release --repo "$GITHUB_REPOSITORY" create "$CI_COMMIT_TAG" --verify-tag --draft --generate-notes
+
+    - |
+      gh release --repo "$GITHUB_REPOSITORY" upload "$CI_COMMIT_TAG" \
+        "app/Nintendo\ Switch\ Online-*-mac.zip" \
+        "app/Nintendo\ Switch\ Online-*.AppImage" \
+        "app/nxapi-app_*.deb" \
+        "app/nxapi-app_*.snap" \
+        "app/Nintendo\ Switch\ Online\ Setup\ *.exe"
+  needs:
+    - build-app
+    - build-windows
+  only:
+    refs:
+      - /^v.*$/
+    variables:
+      - $GITHUB_REPOSITORY
+      - $GITHUB_TOKEN
+  except:
+    - branches
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
+
 publish-next:
   stage: deploy
   script:
