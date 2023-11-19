@@ -79,9 +79,8 @@ build-docker:
       fi
   tags:
     - docker
-  only:
-    variables:
-      - $BUILD_DOCKER_IMAGE == "true"
+  rules:
+    - if: $BUILD_DOCKER_IMAGE == "true"
   cache:
     policy: pull
 
@@ -101,9 +100,8 @@ build-app:
       - app/mac/**/*
       - app/mac-arm64/**/*
       - app/linux-unpacked/**/*
-  only:
-    variables:
-      - $BUILD_APP == "true"
+  rules:
+    - if: $BUILD_APP == "true"
   cache:
     paths:
       - node_modules/
@@ -124,9 +122,8 @@ build-windows:
       - app
     exclude:
       - app/win-unpacked/**/*
-  only:
-    variables:
-      - $BUILD_WINDOWS_APP == "true"
+  rules:
+    - if: $BUILD_WINDOWS_APP == "true"
   cache:
     paths:
       - node_modules/
@@ -141,13 +138,8 @@ publish-npm:
     - npm --color="always" publish
   needs:
     - build
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $NPM_TOKEN
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $NPM_TOKEN
   cache:
     paths:
       - node_modules/
@@ -163,14 +155,8 @@ publish-gitlab:
     - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
   needs:
     - build
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $GITLAB_NPM_PUBLISH == "true"
-      - $GITLAB_NPM_PACKAGE_NAME
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $GITLAB_NPM_PUBLISH == "true" && $GITLAB_NPM_PACKAGE_NAME
   cache:
     paths:
       - node_modules/
@@ -186,15 +172,8 @@ publish-github:
     - npm --color="always" --registry=https://npm.pkg.github.com/ publish
   needs:
     - build
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $GITHUB_REPOSITORY
-      - $GITHUB_NPM_PACKAGE_NAME
-      - $GITHUB_NPM_TOKEN
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $GITHUB_NPM_REPOSITORY && $GITHUB_NPM_PACKAGE_NAME && $GITHUB_NPM_TOKEN
   cache:
     paths:
       - node_modules/
@@ -218,14 +197,8 @@ publish-github-releases:
   needs:
     - build-app
     - build-windows
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $GITHUB_REPOSITORY
-      - $GITHUB_TOKEN
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $GITLAB_REPOSITORY && $GITHUB_TOKEN && $GITHUB_UPLOAD_RELEASE_ASSETS == "true"
   cache:
     paths:
       - node_modules/
@@ -264,9 +237,8 @@ publish-next:
       fi
   needs:
     - build
-  only:
-    refs:
-      - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   cache:
     paths:
       - node_modules/
