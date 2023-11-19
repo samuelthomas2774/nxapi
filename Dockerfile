@@ -1,4 +1,4 @@
-FROM node:18 as build
+FROM node:20 as build
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ ADD tsconfig.json /app
 
 RUN npx tsc
 
-FROM node:18
+FROM node:20
 
 WORKDIR /app
 

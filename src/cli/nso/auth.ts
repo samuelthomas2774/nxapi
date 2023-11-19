@@ -1,10 +1,10 @@
+import { read } from 'read';
 import type { Arguments as ParentArguments } from '../nso.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/coral.js';
 import { NintendoAccountSessionAuthorisationCoral } from '../../api/coral.js';
-import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:nso:auth');
 
@@ -37,7 +37,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf71b963c1b7b6d119://auth".');
     console.log('');
 
-    const applink = await prompt({
+    const applink = await read<string>({
+        output: process.stderr,
         prompt: `Paste the link: `,
     });
 

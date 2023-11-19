@@ -1,9 +1,9 @@
+import { read } from 'read';
 import type { Arguments as ParentArguments } from '../nooklink.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getUserToken } from '../../common/auth/nooklink.js';
-import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:nooklink:keyboard');
 
@@ -30,7 +30,8 @@ type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (!argv.message) {
-        argv.message = await prompt({
+        argv.message = await read<string>({
+            output: process.stderr,
             prompt: 'Message: ',
         });
     }
