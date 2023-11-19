@@ -47,7 +47,7 @@
         "node-notifier": "^10.0.1",
         "node-persist": "^3.1.3",
         "read": "^1.0.7",
-        "splatnet3-types": "^0.2.20230830134457",
+        "splatnet3-types": "^0.2.20231119210145",
         "supports-color": "^8.1.1",
         "tslib": "^2.6.0",
         "undici": "^5.22.1",

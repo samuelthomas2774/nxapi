@@ -196,7 +196,7 @@ export function getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pic
         const settings = getSchedule(schedules.festSchedules)?.festMatchSettings;
 
         if (vs_mode.id === 'VnNNb2RlLTY=') {
-            return settings?.find(s => (s as VsSetting_schedule)!.festMode === FestMatchMode.OPEN);
+            return settings?.find(s => (s as VsSetting_schedule)!.festMode === FestMatchMode.REGULAR);
         }
         if (vs_mode.id === 'VnNNb2RlLTc=') {
             return settings?.find(s => (s as VsSetting_schedule)!.festMode === FestMatchMode.CHALLENGE);
