@@ -127,6 +127,7 @@
                 ]
             }
         ],
+        "publish": [],
         "mac": {
             "extraFiles": [
                 {
