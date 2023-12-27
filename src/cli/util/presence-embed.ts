@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Request } from 'express';
 import sharp from 'sharp';
-import { FriendOnlineState } from 'splatnet3-types/splatnet3';
+import { CoopRule, FriendOnlineState, StageScheduleResult } from 'splatnet3-types/splatnet3';
 import { dir } from '../../util/product.js';
 import createDebug from '../../util/debug.js';
 import { Game, PresenceState } from '../../api/coral-types.js';
@@ -10,6 +10,9 @@ import { RawValueSymbol, htmlentities } from '../../util/misc.js';
 import { PresenceResponse } from '../presence-server.js';
 
 const debug = createDebug('cli:util:presence-embed');
+
+type VsSchedule_event = StageScheduleResult['eventSchedules']['nodes'][0];
+type LeagueMatchSetting_schedule = VsSchedule_event['leagueMatchSetting'];
 
 export enum PresenceEmbedFormat {
     SVG,
@@ -52,7 +55,7 @@ const embed_titles: Partial<Record<string, (
     url_map: Record<string, string | readonly [url: string, data: Uint8Array, type: string]>,
     image: (url: string) => string | undefined,
     theme?: PresenceEmbedTheme,
-) => readonly [svg: string, height: number]>> = {
+) => readonly [svg: string, height: number, override_description: string | null]>> = {
     '0100c2500fc20000': renderUserSplatoon3EmbedPartialSvg,
 };
 
@@ -160,7 +163,7 @@ export function renderUserEmbedSvg(
         <image x="180" y="87" width="60" height="60"
             href="${image(game.imageUri) ?? game.imageUri}" />
 
-        ${{[RawValueSymbol]: renderUserTitleEmbedPartialSvg(game, colours, font_family)}}
+        ${{[RawValueSymbol]: renderUserTitleEmbedPartialSvg(game, title_extra?.[2], colours, font_family)}}
     ` : htmlentities`
         <text x="180" y="97" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400">Offline</text>
     `}}
@@ -174,9 +177,14 @@ export function renderUserEmbedSvg(
 `;
 }
 
-function renderUserTitleEmbedPartialSvg(game: Game, colours: PresenceEmbedThemeColours, font_family: string) {
-    const playing_text_offset = game.sysDescription ? 92 : 97;
-    const title_name_text_offset = game.sysDescription ? 122 : 133;
+function renderUserTitleEmbedPartialSvg(
+    game: Game, description: string | null | undefined,
+    colours: PresenceEmbedThemeColours, font_family: string,
+) {
+    if (typeof description !== 'string') description = game.sysDescription;
+
+    const playing_text_offset = description ? 92 : 97;
+    const title_name_text_offset = description ? 122 : 133;
 
     return htmlentities`
         <rect x="255" y="${playing_text_offset}" width="10" height="10" fill="${colours.online}"
@@ -185,9 +193,9 @@ function renderUserTitleEmbedPartialSvg(game: Game, colours: PresenceEmbedThemeC
         <text x="272" y="${playing_text_offset + 10}" fill="${colours.online}" font-size="14" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">Playing</text>
 
         <text x="255" y="${title_name_text_offset}" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">${game.name}</text>
-
-        <text x="255" y="142" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="300" mask="url(#mask-out)">${game.sysDescription}</text>
-    `;
+    ` + (description ? htmlentities`
+        <text x="255" y="142" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="300" mask="url(#mask-out)">${description ?? ''}</text>
+    ` : '');
 }
 
 function renderUserSplatoon3EmbedPartialSvg(
@@ -196,7 +204,60 @@ function renderUserSplatoon3EmbedPartialSvg(
     image: (url: string) => string | undefined,
     theme = PresenceEmbedTheme.LIGHT,
 ) {
-    return ['', 0] as const;
+    if (result.splatoon3?.vsMode && (
+        result.splatoon3.onlineState === FriendOnlineState.VS_MODE_FIGHTING ||
+        result.splatoon3.onlineState === FriendOnlineState.VS_MODE_MATCHING
+    )) {
+        const mode_name =
+            result.splatoon3.vsMode.mode === 'REGULAR' ? 'Regular Battle' :
+            result.splatoon3.vsMode.id === 'VnNNb2RlLTI=' ? 'Anarchy Battle (Series)' : // VsMode-2
+            result.splatoon3.vsMode.id === 'VnNNb2RlLTUx' ? 'Anarchy Battle (Open)' : // VsMode-51
+            result.splatoon3.vsMode.mode === 'BANKARA' ? 'Anarchy Battle' :
+            result.splatoon3.vsMode.id === 'VnNNb2RlLTY=' ? 'Splatfest Battle (Open)' : // VsMode-6
+            result.splatoon3.vsMode.id === 'VnNNb2RlLTc=' ? 'Splatfest Battle (Pro)' : // VsMode-7
+            result.splatoon3.vsMode.id === 'VnNNb2RlLTg=' ? 'Tricolour Battle' : // VsMode-8
+            result.splatoon3.vsMode.mode === 'FEST' ? 'Splatfest Battle' :
+            result.splatoon3.vsMode.id === 'VnNNb2RlLTQ=' ? 'Challenge' : // VsMode-4
+            result.splatoon3.vsMode.mode === 'LEAGUE' ? 'Challenge' :
+            result.splatoon3.vsMode.mode === 'X_MATCH' ? 'X Battle' : // VsMode-3
+            undefined;
+
+        const setting = result.splatoon3_vs_setting;
+        const fest_team = result.splatoon3_fest_team;
+
+        const description =
+            (mode_name ?? result.splatoon3.vsMode.name) +
+            (result.splatoon3.vsMode.mode === 'FEST' && fest_team ?
+                ' - Team ' + fest_team.teamName : '') +
+            (result.splatoon3.vsMode.mode === 'LEAGUE' && setting && 'leagueMatchEvent' in setting ?
+                ': ' + (setting as LeagueMatchSetting_schedule).leagueMatchEvent.name : '') +
+            (result.splatoon3.vsMode.mode !== 'FEST' && result.splatoon3.vsMode.mode !== 'LEAGUE' && setting ?
+                ' - ' + setting.vsRule.name : '') +
+            (result.splatoon3.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
+
+        return ['', 0, description] as const;
+    }
+
+    if (result.splatoon3?.onlineState === FriendOnlineState.COOP_MODE_FIGHTING ||
+        result.splatoon3?.onlineState === FriendOnlineState.COOP_MODE_MATCHING
+    ) {
+        const rule_name =
+            result.splatoon3.coopRule === CoopRule.REGULAR ? 'Salmon Run' :
+            result.splatoon3.coopRule === CoopRule.BIG_RUN ? 'Big Run' :
+            result.splatoon3.coopRule === CoopRule.TEAM_CONTEST ? 'Eggstra Work' : null;
+
+        const description = (rule_name ?? 'Salmon Run') +
+            (result.splatoon3.onlineState === FriendOnlineState.COOP_MODE_MATCHING ? ' (matching)' : '');
+
+        return ['', 0, description] as const;
+    }
+
+    if (result.splatoon3?.onlineState === FriendOnlineState.MINI_GAME_PLAYING) {
+        const description = 'Tableturf Battle';
+        return ['', 0, description] as const;
+    }
+
+    return ['', 0, null] as const;
 }
 
 const embed_fonts: [name: string, style: string, weight: string, files: [format: string, type: string, path: string][]][] = [
