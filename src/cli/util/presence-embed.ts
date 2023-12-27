@@ -190,7 +190,7 @@ function renderUserTitleEmbedPartialSvg(
         <rect x="255" y="${playing_text_offset}" width="10" height="10" fill="${colours.online}"
             stroke="${colours.online_border}" stroke-width="1" rx="1" ry="1" stroke-linejoin="round"
         />
-        <text x="272" y="${playing_text_offset + 10}" fill="${colours.online}" font-size="14" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">Playing</text>
+        <text x="272" y="${playing_text_offset + 10}" fill="${colours.online}" font-size="14" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">Online</text>
 
         <text x="255" y="${title_name_text_offset}" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">${game.name}</text>
     ` + (description ? htmlentities`

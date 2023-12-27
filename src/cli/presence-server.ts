@@ -1168,6 +1168,10 @@ class Server extends HttpServer {
 
                     throw err;
                 }
+            } else if (req_url.searchParams.get('fallback-prevent-navigation') === '1') {
+                res.statusCode = 204;
+                res.end();
+                return;
             } else {
                 throw new ResponseError(404, 'not_found', 'No active title');
             }
