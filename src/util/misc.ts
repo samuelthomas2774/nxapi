@@ -40,3 +40,14 @@ export function timeoutSignal(ms = 60 * 1000) {
 
     return [controller.signal, () => clearTimeout(timeout), controller] as const;
 }
+
+export const RawValueSymbol = Symbol('RawValue');
+export type RawValue = {[RawValueSymbol]: string};
+
+export function htmlentities(strings: TemplateStringsArray, ...args: (string | number | RawValue)[]): string {
+    return strings.map((s, i) => s + (args[i] ? (
+        typeof args[i] === 'object' && RawValueSymbol in (args[i] as object) ?
+            (args[i] as RawValue)[RawValueSymbol] :
+            args[i].toString().replace(/[\u00A0-\u9999<>\&]/gim, c => '&#' + c.charCodeAt(0) + ';')
+    ) : '')).join('');
+}

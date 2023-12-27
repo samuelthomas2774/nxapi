@@ -2,12 +2,13 @@ import * as net from 'node:net';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { createHash } from 'node:crypto';
 import express, { Request, Response } from 'express';
 import { fetch } from 'undici';
 import * as persist from 'node-persist';
 import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { product, version } from '../util/product.js';
+import { git, product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import SplatNet3Api, { PersistedQueryResult, RequestIdSymbol } from '../api/splatnet3.js';
@@ -22,6 +23,7 @@ import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
 import { getSettingForCoopRule, getSettingForVsMode } from '../discord/monitor/splatoon3.js';
 import { CoralApiInterface } from '../api/coral.js';
+import { PresenceEmbedFormat, getUserEmbedOptionsFromRequest, renderUserEmbedImage, renderUserEmbedSvg } from './util/presence-embed.js';
 
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
@@ -31,7 +33,7 @@ interface AllUsersResult extends Friend {
     splatoon3?: Friend_friendList | null;
     splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
 }
-interface PresenceResponse {
+export interface PresenceResponse {
     friend: Friend;
     title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
@@ -529,7 +531,8 @@ class Server extends HttpServer {
     app: express.Express;
 
     titles = new Map</** NSA ID */ string, [TitleResult | null, /** updated */ number]>();
-    readonly promise_image = new Map<string, Promise<string>>();
+    readonly promise_image = new Map<string, Promise<string |
+        readonly [name: string, data: Uint8Array, type: string]>>();
 
     constructor(
         readonly storage: persist.LocalStorage,
@@ -564,6 +567,18 @@ class Server extends HttpServer {
             this.handleUserFestVotingStatusHistoryRequest(req, res, req.params.user)));
         app.get('/api/presence/:user/events', this.createApiRequestHandler((req, res) =>
             this.handlePresenceStreamRequest(req, res, req.params.user)));
+
+        app.get('/api/presence/:user/image', this.createApiRequestHandler((req, res) =>
+            this.handleUserImageRequest(req, res, req.params.user)));
+
+        app.get('/api/presence/:user/embed', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.SVG)));
+        app.get('/api/presence/:user/embed.png', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.PNG)));
+        app.get('/api/presence/:user/embed.jpeg', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.JPEG)));
+        app.get('/api/presence/:user/embed.webp', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.WEBP)));
 
         if (image_proxy_path?.baas) {
             this.image_proxy_path_baas = image_proxy_path.baas;
@@ -1097,6 +1112,55 @@ class Server extends HttpServer {
         }
     }
 
+    async handleUserImageRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
+
+        const url_map = await this.downloadImages({
+            url: result.friend.imageUri,
+        }, this.getResourceBaseUrls(req));
+
+        const image_url = url_map[result.friend.imageUri];
+
+        res.statusCode = 303;
+        res.setHeader('Location', image_url);
+        res.setHeader('Content-Type', 'text/plain');
+        res.write('Redirecting to ' + image_url + '\n');
+        res.end();
+    }
+
+    async handlePresenceEmbedRequest(req: Request, res: Response, presence_user_nsaid: string, format = PresenceEmbedFormat.SVG) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
+
+        const {theme, friend_code, transparent} = getUserEmbedOptionsFromRequest(req);
+
+        const etag = createHash('sha256').update(JSON.stringify({
+            result,
+            theme,
+            friend_code,
+            transparent,
+            v: version + '-' + git?.revision,
+        })).digest('base64url');
+
+        if (req.headers['if-none-match'] === '"' + etag + '"' || req.headers['if-none-match'] === 'W/"' + etag + '"') {
+            res.statusCode = 304;
+            res.end();
+            return;
+        }
+
+        const url_map = await this.downloadImages(result, this.getResourceBaseUrls(req));
+
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code);
+        const [image, type] = await renderUserEmbedImage(svg, format);
+
+        res.setHeader('Content-Type', type);
+        res.setHeader('Etag', '"' + etag + '"');
+        res.end(image);
+    }
+
     async handleSplatNet3ProxyFriends(req: Request, res: Response) {
         if (!this.enable_splatnet3_proxy) throw new ResponseError(403, 'forbidden');
 
@@ -1154,6 +1218,37 @@ class Server extends HttpServer {
         atum: string | null;
         splatnet3: string | null;
     }): Promise<Record<string, string>> {
+        const image_urls = this.getImageUrls(data, base_url);
+        const url_map: Record<string, string> = {};
+
+        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
+            url_map[url] = new URL(await this.downloadImage(url, dir), base_url).toString();
+        }));
+
+        return url_map;
+    }
+
+    async getImages(data: unknown, base_url: {
+        baas: string | null;
+        atum: string | null;
+        splatnet3: string | null;
+    }): Promise<Record<string, readonly [name: string, data: Uint8Array, type: string]>> {
+        const image_urls = this.getImageUrls(data, base_url);
+        const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};
+
+        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
+            const [name, data, type] = await this.downloadImage(url, dir, true);
+            url_map[url] = [new URL(name, base_url).toString(), data, type];
+        }));
+
+        return url_map;
+    }
+
+    getImageUrls(data: unknown, base_url: {
+        baas: string | null;
+        atum: string | null;
+        splatnet3: string | null;
+    }) {
         const image_urls: [url: string, dir: string, base_url: string][] = [];
 
         // Use JSON.stringify to iterate over everything in the response
@@ -1185,13 +1280,7 @@ class Server extends HttpServer {
             return value;
         });
 
-        const url_map: Record<string, string> = {};
-
-        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
-            url_map[url] = new URL(await this.downloadImage(url, dir), base_url).toString();
-        }));
-
-        return url_map;
+        return image_urls;
     }
 
     getResourceBaseUrls(req: Request) {
@@ -1206,7 +1295,10 @@ class Server extends HttpServer {
         };
     }
 
-    downloadImage(url: string, dir: string) {
+    downloadImage(url: string, dir: string, return_image_data: true): Promise<readonly [name: string, data: Uint8Array, type: string]>
+    downloadImage(url: string, dir: string, return_image_data?: false): Promise<string>
+    downloadImage(url: string, dir: string, return_image_data?: boolean): Promise<string | readonly [name: string, data: Uint8Array, type: string]>
+    downloadImage(url: string, dir: string, return_image_data?: boolean) {
         const pathname = new URL(url).pathname;
         const name = pathname.substr(1).toLowerCase()
             .replace(/^resources\//g, '')
@@ -1215,6 +1307,11 @@ class Server extends HttpServer {
 
         const promise = this.promise_image.get(dir + '/' + name) ?? Promise.resolve().then(async () => {
             try {
+                if (return_image_data) {
+                    const data = await fs.readFile(path.join(dir, name));
+                    return [name, data, 'image/jpeg'] as const;
+                }
+
                 await fs.stat(path.join(dir, name));
                 return name;
             } catch (err) {}
@@ -1229,6 +1326,10 @@ class Server extends HttpServer {
             await fs.writeFile(path.join(dir, name), data);
 
             debug('Downloaded image %s', name);
+
+            if (return_image_data) {
+                return [name, data, 'image/jpeg'] as const;
+            }
 
             return name;
         }).then(result => {
