@@ -100,7 +100,7 @@ class Server extends HttpServer {
         const [presence, user, data] = await getPresenceFromUrl(this.base_url + '/' + presence_user_nsaid + qs);
         const result = data as PresenceResponse;
 
-        const {theme, friend_code, transparent} = getUserEmbedOptionsFromRequest(req);
+        const {theme, friend_code, transparent, width} = getUserEmbedOptionsFromRequest(req);
 
         const etag = createHash('sha256').update(JSON.stringify({
             data,
@@ -108,6 +108,7 @@ class Server extends HttpServer {
             theme,
             friend_code,
             transparent,
+            width,
             v: version + '-' + git?.revision,
         })).digest('base64url');
 
@@ -131,10 +132,11 @@ class Server extends HttpServer {
             url_map[url] = [url, data, 'image/jpeg'];
         }));
 
-        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, 1, transparent);
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, 1, transparent, width);
         const [image, type] = await renderUserEmbedImage(svg, format);
 
         res.setHeader('Content-Type', type);
+        res.setHeader('Cache-Control', 'public, no-cache'); // no-cache means store but revalidate
         res.setHeader('Etag', '"' + etag + '"');
         res.end(image);
     }
@@ -168,7 +170,7 @@ class Server extends HttpServer {
             url_map[url] = [url, data, 'image/jpeg'];
         }));
 
-        const svg = renderUserEmbedSvg(result, url_map, PresenceEmbedTheme.LIGHT, undefined, 1, true);
+        const svg = renderUserEmbedSvg(result, url_map, PresenceEmbedTheme.LIGHT, undefined, 1, true, 800);
 
         res.setHeader('Content-Type', 'text/html');
         res.write(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><style>body{margin:0;min-height:100vh;width:100vw;min-width:fit-content;display:flex;align-items:center;justify-content:center}</style></head>`);

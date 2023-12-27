@@ -34,6 +34,9 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Remove border and use transparent background',
         type: 'boolean',
         default: false,
+    }).option('width', {
+        describe: 'Image width',
+        type: 'number',
     });
 }
 
@@ -50,6 +53,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.friendCode && !argv.friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
         throw new TypeError('Invalid friend code');
     }
+
+    const width = argv.width ? 
+        argv.transparent ? argv.width + 60 : argv.width :
+        500;
 
     const [presence, user, data] = await getPresenceFromUrl(argv.url);
     const result = data as PresenceResponse;
@@ -70,7 +77,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         url_map[url] = [url, data, 'image/jpeg'];
     }));
 
-    const svg = renderUserEmbedSvg(result, url_map, theme, argv.friendCode, argv.scale, argv.transparent);
+    const svg = renderUserEmbedSvg(result, url_map, theme, argv.friendCode, argv.scale, argv.transparent, width);
     const [image, type] = await renderUserEmbedImage(svg, format);
 
     console.warn('output type', type);

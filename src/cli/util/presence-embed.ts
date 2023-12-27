@@ -65,8 +65,16 @@ export function getUserEmbedOptionsFromRequest(req: Request) {
     const theme = url.searchParams.get('theme') === 'dark' ? PresenceEmbedTheme.DARK : PresenceEmbedTheme.LIGHT;
     const friend_code = url.searchParams.getAll('friend-code').find(c => c.match(/^\d{4}-\d{4}-\d{4}$/));
     const transparent = url.searchParams.get('transparent') === '1';
+    
+    let width = url.searchParams.getAll('width')
+        .map(w => parseInt(w))
+        .map(w => transparent ? w + 60 : w)
+        .find(w => !isNaN(w) && w >= 500);
 
-    return {theme, friend_code, transparent};
+    if (!width) width = 500;
+    if (width > 1500) width = 1500;
+
+    return {theme, friend_code, transparent, width};
 }
 
 export async function renderUserEmbedImage(
@@ -106,8 +114,9 @@ export function renderUserEmbedSvg(
     friend_code?: string,
     scale = 1,
     transparent = false,
+    width = 500,
 ) {
-    let width = 500;
+    if (width < 500) width = 500;
     let height = 180;
     if (friend_code) height += 40;
 
@@ -155,9 +164,9 @@ export function renderUserEmbedSvg(
 
     <image x="30" y="30" width="120" height="120"
         href="${image(result.friend.imageUri) ?? result.friend.imageUri}" />
-    <text x="180" y="57" fill="${colours.text}" font-size="26" font-family="${font_family}" font-weight="500">${result.friend.name}</text>
+    <text x="180" y="57" fill="${colours.text}" font-size="26" font-family="${font_family}" font-weight="500" mask="url(#mask-out)">${result.friend.name}</text>
 
-    <line x1="180" y1="73" x2="470" y2="73" stroke="${colours.separator}" />
+    <line x1="180" y1="73" x2="${width - 30}" y2="73" stroke="${colours.separator}" />
 
     ${{[RawValueSymbol]: game && (state === PresenceState.ONLINE || state === PresenceState.PLAYING) ? htmlentities`
         <image x="180" y="87" width="60" height="60"

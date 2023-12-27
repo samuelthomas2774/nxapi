@@ -1189,13 +1189,14 @@ class Server extends HttpServer {
 
         const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
 
-        const {theme, friend_code, transparent} = getUserEmbedOptionsFromRequest(req);
+        const {theme, friend_code, transparent, width} = getUserEmbedOptionsFromRequest(req);
 
         const etag = createHash('sha256').update(JSON.stringify({
             result,
             theme,
             friend_code,
             transparent,
+            width,
             v: version + '-' + git?.revision,
         })).digest('base64url');
 
@@ -1207,10 +1208,11 @@ class Server extends HttpServer {
 
         const url_map = await this.downloadImages(result, this.getResourceBaseUrls(req));
 
-        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code);
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, 1, transparent, width);
         const [image, type] = await renderUserEmbedImage(svg, format);
 
         res.setHeader('Content-Type', type);
+        res.setHeader('Cache-Control', 'public, no-cache'); // no-cache means store but revalidate
         res.setHeader('Etag', '"' + etag + '"');
         res.end(image);
     }
