@@ -1206,7 +1206,7 @@ class Server extends HttpServer {
             return;
         }
 
-        const url_map = await this.downloadImages(result, this.getResourceBaseUrls(req));
+        const url_map = await this.getImages(result, this.getResourceBaseUrls(req));
 
         const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, 1, transparent, width);
         const [image, type] = await renderUserEmbedImage(svg, format);
