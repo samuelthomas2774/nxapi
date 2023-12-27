@@ -570,6 +570,8 @@ class Server extends HttpServer {
 
         app.get('/api/presence/:user/image', this.createApiRequestHandler((req, res) =>
             this.handleUserImageRequest(req, res, req.params.user)));
+        app.get('/api/presence/:user/title/redirect', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceTitleRedirectRequest(req, res, req.params.user)));
 
         app.get('/api/presence/:user/embed', this.createApiRequestHandler((req, res) =>
             this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.SVG)));
@@ -1127,6 +1129,54 @@ class Server extends HttpServer {
         res.setHeader('Location', image_url);
         res.setHeader('Content-Type', 'text/plain');
         res.write('Redirecting to ' + image_url + '\n');
+        res.end();
+    }
+
+    async handlePresenceTitleRedirectRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
+
+        let redirect_url = result.title?.url;
+
+        if (!redirect_url) {
+            const req_url = new URL(req.url, 'http://localhost');
+            const fallback_url = req_url.searchParams.get('fallback-url');
+            const friend_code = req_url.searchParams.get('friend-code');
+            const friend_code_hash = req_url.searchParams.get('friend-code-hash');
+
+            if (friend_code || friend_code_hash) {
+                if (!friend_code?.match(/^\d{4}-\d{4}-\d{4}$/)) {
+                    throw new ResponseError(400, 'invalid_request', 'Invalid friend code');
+                }
+                if (!friend_code_hash?.match(/^[0-9a-z]{10}$/i)) {
+                    throw new ResponseError(400, 'invalid_request', 'Invalid friend code hash');
+                }
+
+                redirect_url = 'https://lounge.nintendo.com/friendcode/' + friend_code + '/' + friend_code_hash;
+            } else if (fallback_url) {
+                try {
+                    const fallback_url_parsed = new URL(fallback_url);
+
+                    if (fallback_url_parsed.protocol !== 'https:') {
+                        throw new ResponseError(400, 'invalid_request', 'Unacceptable fallback URL protocol');
+                    }
+
+                    redirect_url = fallback_url;
+                } catch (err) {
+                    if (err instanceof TypeError) {
+                        throw new ResponseError(400, 'invalid_request', 'Invalid fallback URL');
+                    }
+
+                    throw err;
+                }
+            } else {
+                throw new ResponseError(404, 'not_found', 'No active title');
+            }
+        }
+
+        res.statusCode = 303;
+        res.setHeader('Location', redirect_url);
+        res.setHeader('Content-Type', 'text/plain');
+        res.write('Redirecting to ' + redirect_url + '\n');
         res.end();
     }
 

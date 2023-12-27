@@ -95,7 +95,8 @@
             "!**/node_modules/**/*",
             "resources/app",
             "resources/common",
-            "!resources/common/remote-config.json"
+            "!resources/common/remote-config.json",
+            "resources/cli"
         ],
         "asar": false,
         "extraMetadata": {
