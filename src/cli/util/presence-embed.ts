@@ -79,11 +79,15 @@ export function getUserEmbedOptionsFromRequest(req: Request) {
     if (!width) width = 500;
     if (width > 1500) width = 1500;
 
+    let scale = url.searchParams.getAll('scale')
+        .map(s => parseInt(s))
+        .find(s => !isNaN(s) && s >= 1 && s <= 4);
+
     const options: UserEmbedOptions = {
         show_splatoon3_fest_team: url.searchParams.get('show-splatoon3-fest-team') === '1',
     };
 
-    return {theme, friend_code, transparent, width, options};
+    return {theme, friend_code, transparent, width, scale, options};
 }
 
 export async function renderUserEmbedImage(

@@ -1190,7 +1190,8 @@ class Server extends HttpServer {
 
         const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
 
-        const {theme, friend_code, transparent, width, options} = getUserEmbedOptionsFromRequest(req);
+        const {theme, friend_code, transparent, width, scale: req_scale, options} = getUserEmbedOptionsFromRequest(req);
+        const scale = format === PresenceEmbedFormat.SVG ? 1 : req_scale;
 
         const etag = createHash('sha256').update(JSON.stringify({
             result,
@@ -1198,6 +1199,7 @@ class Server extends HttpServer {
             friend_code,
             transparent,
             width,
+            scale,
             options,
             v: version + '-' + git?.revision,
         })).digest('base64url');
@@ -1210,7 +1212,7 @@ class Server extends HttpServer {
 
         const url_map = await this.getImages(result, this.getResourceBaseUrls(req));
 
-        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, options, 1, transparent, width);
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, options, scale, transparent, width);
         const [image, type] = await renderUserEmbedImage(svg, format);
 
         res.setHeader('Content-Type', type);
