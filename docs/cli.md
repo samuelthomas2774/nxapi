@@ -702,6 +702,8 @@ curl http://[::1]:12345/api/presence/0123456789abcdef/embed?transparent=1 > embe
 curl http://[::1]:12345/api/presence/0123456789abcdef/embed?width=800 > embed.svg
 # ... with Splatoon 3 presence
 curl http://[::1]:12345/api/presence/0123456789abcdef/embed?include-splatoon3=1 > embed.svg
+# ... with Splatoon 3 Splatfest team
+curl 'http://[::1]:12345/api/presence/0123456789abcdef/embed?include-splatoon3=1&show-splatoon3-fest-team=1' > embed.svg
 ```
 
 Example EventStream use:

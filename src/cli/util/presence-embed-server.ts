@@ -2,6 +2,7 @@ import * as os from 'node:os';
 import * as net from 'node:net';
 import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
+import { FestVoteState } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../util.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -100,7 +101,7 @@ class Server extends HttpServer {
         const [presence, user, data] = await getPresenceFromUrl(this.base_url + '/' + presence_user_nsaid + qs);
         const result = data as PresenceResponse;
 
-        const {theme, friend_code, transparent, width} = getUserEmbedOptionsFromRequest(req);
+        const {theme, friend_code, transparent, width, options} = getUserEmbedOptionsFromRequest(req);
 
         const etag = createHash('sha256').update(JSON.stringify({
             data,
@@ -109,6 +110,7 @@ class Server extends HttpServer {
             friend_code,
             transparent,
             width,
+            options,
             v: version + '-' + git?.revision,
         })).digest('base64url');
 
@@ -121,6 +123,7 @@ class Server extends HttpServer {
         const image_urls = [result.friend.imageUri];
 
         if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
+        if (options.show_splatoon3_fest_team && result.splatoon3_fest_team?.image.url) image_urls.push(result.splatoon3_fest_team.image.url);
 
         const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};
 
@@ -132,7 +135,7 @@ class Server extends HttpServer {
             url_map[url] = [url, data, 'image/jpeg'];
         }));
 
-        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, 1, transparent, width);
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, options, 1, transparent, width);
         const [image, type] = await renderUserEmbedImage(svg, format);
 
         res.setHeader('Content-Type', type);
@@ -159,6 +162,7 @@ class Server extends HttpServer {
         const image_urls = [result.friend.imageUri];
 
         if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
+        if (result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED) image_urls.push(result.splatoon3_fest_team.image.url);
 
         const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};
 
@@ -170,7 +174,9 @@ class Server extends HttpServer {
             url_map[url] = [url, data, 'image/jpeg'];
         }));
 
-        const svg = renderUserEmbedSvg(result, url_map, PresenceEmbedTheme.LIGHT, undefined, 1, true, 800);
+        const svg = renderUserEmbedSvg(result, url_map, PresenceEmbedTheme.LIGHT, undefined, {
+            show_splatoon3_fest_team: true,
+        }, 2, true, 800);
 
         res.setHeader('Content-Type', 'text/html');
         res.write(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"/><style>body{margin:0;min-height:100vh;width:100vw;min-width:fit-content;display:flex;align-items:center;justify-content:center}</style></head>`);

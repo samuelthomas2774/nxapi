@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Request } from 'express';
 import sharp from 'sharp';
-import { CoopRule, FriendOnlineState, StageScheduleResult } from 'splatnet3-types/splatnet3';
+import { CoopRule, FestVoteState, FriendOnlineState, StageScheduleResult } from 'splatnet3-types/splatnet3';
 import { dir } from '../../util/product.js';
 import createDebug from '../../util/debug.js';
 import { Game, PresenceState } from '../../api/coral-types.js';
@@ -50,11 +50,16 @@ const embed_themes: Record<PresenceEmbedTheme, PresenceEmbedThemeColours> = {
     },
 };
 
+interface UserEmbedOptions {
+    show_splatoon3_fest_team?: boolean;
+}
+
 const embed_titles: Partial<Record<string, (
     result: PresenceResponse,
     url_map: Record<string, string | readonly [url: string, data: Uint8Array, type: string]>,
     image: (url: string) => string | undefined,
     theme?: PresenceEmbedTheme,
+    options?: UserEmbedOptions,
 ) => readonly [svg: string, height: number, override_description: string | null]>> = {
     '0100c2500fc20000': renderUserSplatoon3EmbedPartialSvg,
 };
@@ -65,7 +70,7 @@ export function getUserEmbedOptionsFromRequest(req: Request) {
     const theme = url.searchParams.get('theme') === 'dark' ? PresenceEmbedTheme.DARK : PresenceEmbedTheme.LIGHT;
     const friend_code = url.searchParams.getAll('friend-code').find(c => c.match(/^\d{4}-\d{4}-\d{4}$/));
     const transparent = url.searchParams.get('transparent') === '1';
-    
+
     let width = url.searchParams.getAll('width')
         .map(w => parseInt(w))
         .map(w => transparent ? w + 60 : w)
@@ -74,7 +79,11 @@ export function getUserEmbedOptionsFromRequest(req: Request) {
     if (!width) width = 500;
     if (width > 1500) width = 1500;
 
-    return {theme, friend_code, transparent, width};
+    const options: UserEmbedOptions = {
+        show_splatoon3_fest_team: url.searchParams.get('show-splatoon3-fest-team') === '1',
+    };
+
+    return {theme, friend_code, transparent, width, options};
 }
 
 export async function renderUserEmbedImage(
@@ -112,6 +121,7 @@ export function renderUserEmbedSvg(
     url_map: Record<string, string | readonly [url: string, data: Uint8Array, type: string]>,
     theme = PresenceEmbedTheme.LIGHT,
     friend_code?: string,
+    options?: UserEmbedOptions,
     scale = 1,
     transparent = false,
     width = 500,
@@ -132,7 +142,7 @@ export function renderUserEmbedSvg(
             Buffer.from(url_map[url][1]).toString('base64') :
         url_map[url] as string | undefined;
 
-    const title_extra = result.title ? embed_titles[result.title.id]?.call(null, result, url_map, image, theme) : null;
+    const title_extra = result.title ? embed_titles[result.title.id]?.call(null, result, url_map, image, theme, options) : null;
     if (title_extra) height += title_extra[1];
 
     return htmlentities`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -181,6 +191,11 @@ export function renderUserEmbedSvg(
         <text x="30" y="186" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400">Friend code: SW-${friend_code}</text>
     ` : ''}}
 
+    ${{[RawValueSymbol]: options?.show_splatoon3_fest_team && result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED ? htmlentities`
+        <image x="${width - 60}" y="33" width="30" height="30"
+            href="${image(result.splatoon3_fest_team.image.url) ?? result.splatoon3_fest_team.image.url}" />
+    ` : ''}}
+
     ${{[RawValueSymbol]: title_extra?.[0] ?? ''}}
 </svg>
 `;
@@ -212,6 +227,7 @@ function renderUserSplatoon3EmbedPartialSvg(
     url_map: Record<string, string | readonly [url: string, data: Uint8Array, type: string]>,
     image: (url: string) => string | undefined,
     theme = PresenceEmbedTheme.LIGHT,
+    options?: UserEmbedOptions,
 ) {
     if (result.splatoon3?.vsMode && (
         result.splatoon3.onlineState === FriendOnlineState.VS_MODE_FIGHTING ||

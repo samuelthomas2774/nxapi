@@ -1,3 +1,4 @@
+import { FestVoteState } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../util.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -26,6 +27,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('friend-code', {
         describe: 'Friend code',
         type: 'string',
+    }).option('show-splatoon3-fest-team', {
+        describe: 'Show Splatoon 3 Splatfest team',
+        type: 'boolean',
+        default: false,
     }).option('scale', {
         describe: 'Image scale',
         type: 'number',
@@ -64,6 +69,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const image_urls = [result.friend.imageUri];
 
     if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
+    if (argv.showSplatoon3FestTeam && result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED) image_urls.push(result.splatoon3_fest_team.image.url);
 
     const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};
 
@@ -77,7 +83,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         url_map[url] = [url, data, 'image/jpeg'];
     }));
 
-    const svg = renderUserEmbedSvg(result, url_map, theme, argv.friendCode, argv.scale, argv.transparent, width);
+    const svg = renderUserEmbedSvg(result, url_map, theme, argv.friendCode, {
+        show_splatoon3_fest_team: argv.showSplatoon3FestTeam,
+    }, argv.scale, argv.transparent, width);
     const [image, type] = await renderUserEmbedImage(svg, format);
 
     console.warn('output type', type);
