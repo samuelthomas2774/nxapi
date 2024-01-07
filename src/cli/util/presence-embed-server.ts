@@ -2,6 +2,7 @@ import * as os from 'node:os';
 import * as net from 'node:net';
 import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
+import mimetypes from 'mime-types';
 import { FestVoteState } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../util.js';
 import createDebug from '../../util/debug.js';
@@ -123,7 +124,7 @@ class Server extends HttpServer {
         const image_urls = [result.friend.imageUri];
 
         if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
-        if (options.show_splatoon3_fest_team && result.splatoon3_fest_team?.image.url) image_urls.push(result.splatoon3_fest_team.image.url);
+        if (options.show_splatoon3_fest_team && result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED) image_urls.push(result.splatoon3_fest_team.image.url);
 
         const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};
 
@@ -132,7 +133,10 @@ class Server extends HttpServer {
             const response = await fetch(url);
             const data = new Uint8Array(await response.arrayBuffer());
 
-            url_map[url] = [url, data, 'image/jpeg'];
+            const type = (mimetypes.contentType(response.headers.get('Content-Type') ?? 'application/octet-stream')
+                || 'application/octet-stream').split(';')[0];
+
+            url_map[url] = [url, data, type];
         }));
 
         const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, options, 1, transparent, width);

@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import express, { Request, Response } from 'express';
 import { fetch } from 'undici';
 import * as persist from 'node-persist';
+import mimetypes from 'mime-types';
 import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { git, product, version } from '../util/product.js';
@@ -1189,7 +1190,7 @@ class Server extends HttpServer {
 
         const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
 
-        const {theme, friend_code, transparent, width} = getUserEmbedOptionsFromRequest(req);
+        const {theme, friend_code, transparent, width, options} = getUserEmbedOptionsFromRequest(req);
 
         const etag = createHash('sha256').update(JSON.stringify({
             result,
@@ -1197,6 +1198,7 @@ class Server extends HttpServer {
             friend_code,
             transparent,
             width,
+            options,
             v: version + '-' + git?.revision,
         })).digest('base64url');
 
@@ -1208,7 +1210,7 @@ class Server extends HttpServer {
 
         const url_map = await this.getImages(result, this.getResourceBaseUrls(req));
 
-        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, 1, transparent, width);
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, options, 1, transparent, width);
         const [image, type] = await renderUserEmbedImage(svg, format);
 
         res.setHeader('Content-Type', type);
@@ -1361,11 +1363,13 @@ class Server extends HttpServer {
             .replace(/(\/|^)\.\.(\/|$)/g, '$1...$2') +
             (path.extname(pathname) ? '' : '.jpeg');
 
+        const type = (mimetypes.lookup(path.extname(pathname) || '.jpeg') || 'image/jpeg').split(';')[0];
+
         const promise = this.promise_image.get(dir + '/' + name) ?? Promise.resolve().then(async () => {
             try {
                 if (return_image_data) {
                     const data = await fs.readFile(path.join(dir, name));
-                    return [name, data, 'image/jpeg'] as const;
+                    return [name, data, type] as const;
                 }
 
                 await fs.stat(path.join(dir, name));
@@ -1384,7 +1388,7 @@ class Server extends HttpServer {
             debug('Downloaded image %s', name);
 
             if (return_image_data) {
-                return [name, data, 'image/jpeg'] as const;
+                return [name, data, type] as const;
             }
 
             return name;

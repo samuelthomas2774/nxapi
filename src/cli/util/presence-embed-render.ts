@@ -1,3 +1,4 @@
+import mimetypes from 'mime-types';
 import { FestVoteState } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../util.js';
 import createDebug from '../../util/debug.js';
@@ -80,7 +81,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         const response = await fetch(url);
         const data = new Uint8Array(await response.arrayBuffer());
 
-        url_map[url] = [url, data, 'image/jpeg'];
+        const type = (mimetypes.contentType(response.headers.get('Content-Type') ?? 'application/octet-stream')
+            || 'application/octet-stream').split(';')[0];
+
+        url_map[url] = [url, data, type];
     }));
 
     const svg = renderUserEmbedSvg(result, url_map, theme, argv.friendCode, {
