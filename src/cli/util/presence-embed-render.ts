@@ -60,7 +60,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         throw new TypeError('Invalid friend code');
     }
 
-    const width = argv.width ? 
+    const width = argv.width ?
         argv.transparent ? argv.width + 60 : argv.width :
         500;
 
@@ -70,6 +70,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const image_urls = [result.friend.imageUri];
 
     if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
+    for (const stage of result.splatoon3_vs_setting?.vsStages ?? []) image_urls.push(stage.image.url);
+    if (result.splatoon3_coop_setting) image_urls.push(result.splatoon3_coop_setting.coopStage.thumbnailImage.url);
+    for (const weapon of result.splatoon3_coop_setting?.weapons ?? []) image_urls.push(weapon.image.url);
     if (argv.showSplatoon3FestTeam && result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED) image_urls.push(result.splatoon3_fest_team.image.url);
 
     const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};

@@ -202,7 +202,7 @@ export function renderUserEmbedSvg(
     `}}
 
     ${{[RawValueSymbol]: friend_code ? htmlentities`
-        <text x="30" y="186" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400">Friend code: SW-${friend_code}</text>
+        <text x="30" y="${186 + (title_extra?.[1] ?? 0)}" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400">Friend code: SW-${friend_code}</text>
     ` : ''}}
 
     ${{[RawValueSymbol]: show_splatoon3_fest_team ? htmlentities`
