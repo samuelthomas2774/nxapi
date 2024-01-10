@@ -146,6 +146,9 @@ export function renderUserEmbedSvg(
             Buffer.from(url_map[url][1]).toString('base64') :
         url_map[url] as string | undefined;
 
+    const show_splatoon3_fest_team = options?.show_splatoon3_fest_team &&
+        result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED ? result.splatoon3_fest_team : null;
+
     const title_extra = result.title ? embed_titles[result.title.id]?.call(null, result, url_map, image, theme, options) : null;
     if (title_extra) height += title_extra[1];
 
@@ -153,8 +156,8 @@ export function renderUserEmbedSvg(
 <!-- ${JSON.stringify(result, null, 4)} -->
 <svg
     width="${(width + (transparent ? -60 : 0)) * scale}"
-    height="${(height + (transparent ? -60 : 0) + (title_extra?.[1] ?? 0)) * scale}"
-    viewBox="${transparent ? '30 30' : '0 0'} ${width + (transparent ? -60 : 0)} ${height + (transparent ? -60 : 0) + (title_extra?.[1] ?? 0)}"
+    height="${(height + (transparent ? -60 : 0)) * scale}"
+    viewBox="${transparent ? '30 30' : '0 0'} ${width + (transparent ? -60 : 0)} ${height + (transparent ? -60 : 0)}"
     version="1.1"
     xmlns="http://www.w3.org/2000/svg"
 >
@@ -170,6 +173,13 @@ export function renderUserEmbedSvg(
             <rect x="0" y="0" width="${width - 50}" height="${height}" fill="#ffffff"></rect>
             <rect x="${width - 50}" y="0" width="20" height="${height}" fill="url(#gradient-out)"></rect>
         </mask>
+
+        <mask id="mask-out-title">
+            <rect x="0" y="0" width="${width - 50 - (show_splatoon3_fest_team ? 40 : 0)}" height="${height}"
+                fill="#ffffff"></rect>
+            <rect x="${width - 50 - (show_splatoon3_fest_team ? 40 : 0)}" y="0" width="20" height="${height}"
+                fill="url(#gradient-out)"></rect>
+        </mask>
     </defs>
 
     ${{[RawValueSymbol]: transparent ? '' : htmlentities`
@@ -178,7 +188,7 @@ export function renderUserEmbedSvg(
 
     <image x="30" y="30" width="120" height="120"
         href="${image(result.friend.imageUri) ?? result.friend.imageUri}" />
-    <text x="180" y="57" fill="${colours.text}" font-size="26" font-family="${font_family}" font-weight="500" mask="url(#mask-out)">${result.friend.name}</text>
+    <text x="180" y="57" fill="${colours.text}" font-size="26" font-family="${font_family}" font-weight="500" mask="url(#mask-out-title)">${result.friend.name}</text>
 
     <line x1="180" y1="73" x2="${width - 30}" y2="73" stroke="${colours.separator}" />
 
@@ -195,9 +205,9 @@ export function renderUserEmbedSvg(
         <text x="30" y="186" fill="${colours.text}" font-size="14" font-family="${font_family}" font-weight="400">Friend code: SW-${friend_code}</text>
     ` : ''}}
 
-    ${{[RawValueSymbol]: options?.show_splatoon3_fest_team && result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED ? htmlentities`
+    ${{[RawValueSymbol]: show_splatoon3_fest_team ? htmlentities`
         <image x="${width - 60}" y="33" width="30" height="30"
-            href="${image(result.splatoon3_fest_team.image.url) ?? result.splatoon3_fest_team.image.url}" />
+            href="${image(show_splatoon3_fest_team.image.url) ?? show_splatoon3_fest_team.image.url}" />
     ` : ''}}
 
     ${{[RawValueSymbol]: title_extra?.[0] ?? ''}}
@@ -233,6 +243,11 @@ function renderUserSplatoon3EmbedPartialSvg(
     theme = PresenceEmbedTheme.LIGHT,
     options?: UserEmbedOptions,
 ) {
+    const x = 180;
+    const y = 165;
+    const colours = embed_themes[theme];
+    const font_family = '\'Open Sans\', -apple-system, BlinkMacSystemFont, Arial, sans-serif';
+
     if (result.splatoon3?.vsMode && (
         result.splatoon3.onlineState === FriendOnlineState.VS_MODE_FIGHTING ||
         result.splatoon3.onlineState === FriendOnlineState.VS_MODE_MATCHING
@@ -264,6 +279,28 @@ function renderUserSplatoon3EmbedPartialSvg(
                 ' - ' + setting.vsRule.name : '') +
             (result.splatoon3.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
 
+        if (result.splatoon3.vsMode.id === 'VnNNb2RlLTg=' && result.splatoon3_fest) {
+            const stage = result.splatoon3_fest.tricolorStage;
+
+            return [htmlentities`
+                <image x="${x}" y="${y}" width="80" height="40"
+                    href="${image(stage.image.url) ?? stage.image.url}" />
+
+                <text x="${x + 95}" y="${y + 25}" fill="${colours.text}" font-size="12" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">${stage.name}</text>
+            `, 55, description] as const;
+        }
+
+        if (setting?.vsStages.length) {
+            return [htmlentities`
+                ${{[RawValueSymbol]: setting.vsStages.map((stage, i) => htmlentities`
+                    <image x="${x}" y="${y + (i * 50)}" width="80" height="40"
+                        href="${image(stage.image.url) ?? stage.image.url}" />
+
+                    <text x="${x + 95}" y="${y + (i * 50) + 25}" fill="${colours.text}" font-size="12" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">${stage.name}</text>
+                `).join('')}}
+            `, (setting.vsStages.length * 50) + 5, description] as const;
+        }
+
         return ['', 0, description] as const;
     }
 
@@ -278,6 +315,21 @@ function renderUserSplatoon3EmbedPartialSvg(
         const description = (rule_name ?? 'Salmon Run') +
             (result.splatoon3.onlineState === FriendOnlineState.COOP_MODE_MATCHING ? ' (matching)' : '');
 
+        const setting = result.splatoon3_coop_setting;
+
+        if (setting) {
+            return [htmlentities`
+                <image x="${x}" y="${y}" width="80" height="40"
+                    href="${image(setting.coopStage.thumbnailImage.url) ?? setting.coopStage.thumbnailImage.url}" />
+
+                <text x="${x + 95}" y="${y + 13}" fill="${colours.text}" font-size="12" font-family="${font_family}" font-weight="400" mask="url(#mask-out)">${setting.coopStage.name}</text>
+
+                ${{[RawValueSymbol]: setting.weapons.map((weapon, i) => htmlentities`
+                    <image x="${x + 95 + (i * 22)}" y="${y + 21}" width="18" height="18"
+                        href="${image(weapon.image.url) ?? weapon.image.url}" />
+                `).join('')}}
+            `, 55, description] as const;
+        }
         return ['', 0, description] as const;
     }
 
