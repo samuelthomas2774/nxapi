@@ -5,6 +5,7 @@ import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import * as util from 'node:util';
 import { fetch } from 'undici';
+import mimetypes from 'mime-types';
 import { Store } from './index.js';
 import { createWebServiceWindow } from './windows.js';
 import { askUserForUri, showErrorDialog } from './util.js';
@@ -287,16 +288,8 @@ export class WebServiceIpc {
         const dir = app.getPath('downloads');
         const basename = path.basename(new URL(image_url).pathname);
         const extname = path.extname(basename);
-        let filename;
-        let i = 0;
 
-        do {
-            i++;
-
-            filename = i === 1 ? basename : basename.substr(0, basename.length - extname.length) + ' ' + i + extname;
-        } while (await this.pathExists(path.join(dir, filename)));
-
-        debug('Downloading image %s to %s as %s', image_url, dir, filename);
+        debug('Downloading image %s to %s', image_url, dir);
 
         const response = await fetch(image_url, {
             headers: {
@@ -304,6 +297,22 @@ export class WebServiceIpc {
             },
         });
         const image = await response.arrayBuffer();
+
+        const type = response.headers.get('Content-Type');
+        const ext = type ? mimetypes.extension(type) : null;
+
+        let filename;
+        let i = 0;
+
+        do {
+            i++;
+
+            filename = basename.substr(0, basename.length - extname.length) +
+                (i === 1 ? basename : ' ' + i) +
+                (ext ? '.' + ext : extname);
+        } while (await this.pathExists(path.join(dir, filename)));
+
+        debug('Writing image %s to %s as %s', image_url, dir, filename);
         await fs.writeFile(path.join(dir, filename), Buffer.from(image));
 
         return path.join(dir, filename);
