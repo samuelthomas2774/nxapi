@@ -153,7 +153,6 @@ export function renderUserEmbedSvg(
     if (title_extra) height += title_extra[1];
 
     return htmlentities`<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- ${JSON.stringify(result, null, 4)} -->
 <svg
     width="${(width + (transparent ? -60 : 0)) * scale}"
     height="${(height + (transparent ? -60 : 0)) * scale}"
