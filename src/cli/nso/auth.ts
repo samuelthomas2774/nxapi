@@ -1,5 +1,5 @@
 import { read } from 'read';
-import type { Arguments as ParentArguments } from '../nso.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';

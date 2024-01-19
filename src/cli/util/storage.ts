@@ -1,9 +1,9 @@
 import * as util from 'node:util';
-import type { Arguments as ParentArguments } from '../util.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { Argv } from '../../util/yargs.js';
 import { initStorage, iterateLocalStorage } from '../../util/storage.js';
-import Table from './table.js';
+import Table from '../../util/table.js';
 import { createHash } from 'node:crypto';
 import { Storage } from '../../client/storage/index.js';
 import { LocalStorageProvider } from '../../client/storage/local.js';

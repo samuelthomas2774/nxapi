@@ -1,10 +1,29 @@
-export * as users from './users.js';
-export * as user from './user.js';
-export * as island from './island.js';
-export * as newspapers from './newspapers.js';
-export * as newspaper from './newspaper.js';
-export * as dumpNewspapers from './dump-newspapers.js';
-export * as keyboard from './keyboard.js';
-export * as reactions from './reactions.js';
-export * as postReaction from './post-reaction.js';
-export * as userToken from './user-token.js';
+import process from 'node:process';
+import type { Arguments as ParentArguments } from '../../cli.js';
+import createDebug from '../../util/debug.js';
+import { Argv, YargsArguments } from '../../util/yargs.js';
+import * as commands from './commands.js';
+
+const debug = createDebug('cli:nooklink');
+
+export const command = 'nooklink <command>';
+export const desc = 'NookLink';
+
+export function builder(yargs: Argv<ParentArguments>) {
+    for (const command of Object.values(commands)) {
+        // @ts-expect-error
+        yargs.command(command);
+    }
+
+    return yargs.option('znc-proxy-url', {
+        describe: 'URL of Nintendo Switch Online app API proxy server to use',
+        type: 'string',
+        default: process.env.ZNC_PROXY_URL,
+    }).option('auto-update-session', {
+        describe: 'Automatically obtain and refresh the NookLink game web token and user token',
+        type: 'boolean',
+        default: true,
+    });
+}
+
+export type Arguments = YargsArguments<ReturnType<typeof builder>>;

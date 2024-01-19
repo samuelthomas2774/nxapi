@@ -19,12 +19,12 @@ import createDebug from '../util/debug.js';
 import { initStorage } from '../util/storage.js';
 import { addCliFeatureUserAgent, getUserAgent } from '../util/useragent.js';
 import { parseListenAddress } from '../util/net.js';
-import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
+import { EventStreamResponse, HttpServer, ResponseError } from '../util/http-server.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
 import { getSettingForCoopRule, getSettingForVsMode } from '../discord/monitor/splatoon3.js';
 import { CoralApiInterface } from '../api/coral.js';
-import { PresenceEmbedFormat, getUserEmbedOptionsFromRequest, renderUserEmbedImage, renderUserEmbedSvg } from './util/presence-embed.js';
+import { PresenceEmbedFormat, getUserEmbedOptionsFromRequest, renderUserEmbedImage, renderUserEmbedSvg } from '../common/presence-embed.js';
 
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');

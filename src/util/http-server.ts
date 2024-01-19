@@ -1,9 +1,9 @@
 import { NextFunction, Request, RequestHandler, Response } from 'express';
-import { ErrorResponse } from '../../api/util.js';
-import createDebug from '../../util/debug.js';
-import { temporary_http_errors, temporary_system_errors } from '../../util/errors.js';
+import { ErrorResponse } from '../api/util.js';
+import createDebug from './debug.js';
+import { temporary_http_errors, temporary_system_errors } from './errors.js';
 
-const debug = createDebug('cli:util:http-server');
+const debug = createDebug('nxapi:util:http-server');
 
 export class HttpServer {
     retry_after = 60;

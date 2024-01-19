@@ -4,17 +4,17 @@ import express, { Request, Response } from 'express';
 import { createHash } from 'node:crypto';
 import mimetypes from 'mime-types';
 import { FestVoteState } from 'splatnet3-types/splatnet3';
-import type { Arguments as ParentArguments } from '../util.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { PresenceResponse } from '../presence-server.js';
 import { addCliFeatureUserAgent } from '../../util/useragent.js';
-import { HttpServer, ResponseError } from './http-server.js';
+import { HttpServer, ResponseError } from '../../util/http-server.js';
 import { git, product, version } from '../../util/product.js';
 import { parseListenAddress } from '../../util/net.js';
 import { RawValueSymbol, htmlentities } from '../../util/misc.js';
-import { PresenceEmbedFormat, PresenceEmbedTheme, getUserEmbedOptionsFromRequest, renderUserEmbedImage, renderUserEmbedSvg } from './presence-embed.js';
+import { PresenceEmbedFormat, PresenceEmbedTheme, getUserEmbedOptionsFromRequest, renderUserEmbedImage, renderUserEmbedSvg } from '../../common/presence-embed.js';
 
 const debug = createDebug('cli:util:presence-embed-server');
 

@@ -1,4 +1,4 @@
-import type { Arguments as ParentArguments } from '../util.js';
+import type { Arguments as ParentArguments } from './index.js';
 import { DiscordRpcClient, getAllIpcSockets } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import createDebug from '../../util/debug.js';

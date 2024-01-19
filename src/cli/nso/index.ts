@@ -1,16 +1,25 @@
-export * as token from './token.js';
-export * as auth from './auth.js';
-export * as user from './user.js';
-export * as permissions from './permissions.js';
-export * as announcements from './announcements.js';
-export * as webservices from './webservices.js';
-export * as webservicetoken from './webservicetoken.js';
-export * as friends from './friends.js';
-export * as activeEvent from './active-event.js';
-export * as presence from './presence.js';
-export * as notify from './notify.js';
-export * as httpServer from './http-server.js';
-export * as zncProxyTokens from './znc-proxy-tokens.js';
-export * as friendcode from './friendcode.js';
-export * as lookup from './lookup.js';
-export * as addFriend from './add-friend.js';
+import process from 'node:process';
+import type { Arguments as ParentArguments } from '../../cli.js';
+import createDebug from '../../util/debug.js';
+import { Argv, YargsArguments } from '../../util/yargs.js';
+import * as commands from './commands.js';
+
+const debug = createDebug('cli:nso');
+
+export const command = 'nso <command>';
+export const desc = 'Nintendo Switch Online';
+
+export function builder(yargs: Argv<ParentArguments>) {
+    for (const command of Object.values(commands)) {
+        // @ts-expect-error
+        yargs.command(command);
+    }
+
+    return yargs.option('znc-proxy-url', {
+        describe: 'URL of Nintendo Switch Online app API proxy server to use',
+        type: 'string',
+        default: process.env.ZNC_PROXY_URL,
+    });
+}
+
+export type Arguments = YargsArguments<ReturnType<typeof builder>>;

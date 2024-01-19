@@ -3,13 +3,13 @@ import * as path from 'node:path';
 import { Request } from 'express';
 import sharp from 'sharp';
 import { CoopRule, FestVoteState, FriendOnlineState, StageScheduleResult } from 'splatnet3-types/splatnet3';
-import { dir } from '../../util/product.js';
-import createDebug from '../../util/debug.js';
-import { Game, PresenceState } from '../../api/coral-types.js';
-import { RawValueSymbol, htmlentities } from '../../util/misc.js';
-import { PresenceResponse } from '../presence-server.js';
+import { dir } from '../util/product.js';
+import createDebug from '../util/debug.js';
+import { Game, PresenceState } from '../api/coral-types.js';
+import { RawValueSymbol, htmlentities } from '../util/misc.js';
+import { PresenceResponse } from '../cli/presence-server.js';
 
-const debug = createDebug('cli:util:presence-embed');
+const debug = createDebug('nxapi:common:presence-embed');
 
 type VsSchedule_event = StageScheduleResult['eventSchedules']['nodes'][0];
 type LeagueMatchSetting_schedule = VsSchedule_event['leagueMatchSetting'];

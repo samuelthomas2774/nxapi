@@ -1,11 +1,11 @@
 import mimetypes from 'mime-types';
 import { FestVoteState } from 'splatnet3-types/splatnet3';
-import type { Arguments as ParentArguments } from '../util.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
 import { PresenceResponse } from '../presence-server.js';
-import { PresenceEmbedFormat, PresenceEmbedTheme, renderUserEmbedImage, renderUserEmbedSvg } from './presence-embed.js';
+import { PresenceEmbedFormat, PresenceEmbedTheme, renderUserEmbedImage, renderUserEmbedSvg } from '../../common/presence-embed.js';
 
 const debug = createDebug('cli:util:render-presence-embed');
 

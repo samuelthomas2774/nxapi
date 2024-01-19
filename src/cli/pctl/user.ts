@@ -1,4 +1,4 @@
-import type { Arguments as ParentArguments } from '../pctl.js';
+import type { Arguments as ParentArguments } from './index.js';
 import { getPctlToken } from '../../common/auth/moon.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';

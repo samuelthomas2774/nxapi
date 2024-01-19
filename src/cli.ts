@@ -1,7 +1,7 @@
 import process from 'node:process';
 import Yargs from 'yargs';
 import { setGlobalDispatcher } from 'undici';
-import * as commands from './cli/index.js';
+import * as commands from './cli/commands.js';
 import { checkUpdates } from './common/update.js';
 import createDebug from './util/debug.js';
 import { dev } from './util/product.js';

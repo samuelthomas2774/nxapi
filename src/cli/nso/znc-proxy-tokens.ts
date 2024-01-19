@@ -1,6 +1,6 @@
 import { fetch } from 'undici';
-import Table from '../util/table.js';
-import type { Arguments as ParentArguments } from '../nso.js';
+import Table from '../../util/table.js';
+import type { Arguments as ParentArguments } from './index.js';
 import { getToken } from '../../common/auth/coral.js';
 import { AuthPolicy, AuthToken } from '../../api/znc-proxy.js';
 import createDebug from '../../util/debug.js';

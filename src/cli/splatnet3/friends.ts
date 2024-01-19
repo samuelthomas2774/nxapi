@@ -1,6 +1,6 @@
 import { FriendOnlineState, Friend_friendList } from 'splatnet3-types/splatnet3';
-import Table from '../util/table.js';
-import type { Arguments as ParentArguments } from '../splatnet3.js';
+import Table from '../../util/table.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';

@@ -3,7 +3,7 @@ import { getIksmToken } from '../../common/auth/splatnet2.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { Arguments as ParentArguments } from '../splatnet2.js';
+import { Arguments as ParentArguments } from './index.js';
 import { SplatNet2RecordsMonitor } from '../../common/splatnet2/monitor.js';
 
 const debug = createDebug('cli:splatnet2:monitor');
