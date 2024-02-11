@@ -1,9 +1,10 @@
 import * as crypto from 'node:crypto';
 import * as persist from 'node-persist';
+import { Response } from 'undici';
 import createDebug from '../util/debug.js';
 import CoralApi, { CoralApiInterface, Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices } from '../api/coral-types.js';
+import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices, CoralError } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
 import type { Store } from '../app/main/index.js';
 import { NintendoAccountUser } from '../api/na.js';
@@ -71,6 +72,16 @@ export default class Users<T extends UserData> {
             ]);
 
             const user = new CoralUser(nso, data, announcements, friends, webservices, active_event);
+
+            if (nso instanceof CoralApi && nso.onTokenExpired) {
+                const renewToken = nso.onTokenExpired;
+
+                nso.onTokenExpired = async (error?: CoralError, response?: Response) => {
+                    const auth_data = await renewToken(error, response) as SavedToken;
+                    user.data = auth_data;
+                    return auth_data;
+                };
+            }
 
             if (store) {
                 await maybeUpdateWebServicesListCache(cached_webservices, store, data.user, webservices);

@@ -7,7 +7,7 @@ import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from './index.js';
 import CoralApi, { CoralApiInterface, CoralErrorResponse } from '../../api/coral.js';
 import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
-import { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
+import ZncProxyApi, { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -319,7 +319,11 @@ class Server extends HttpServer {
     }
 
     async handleAuthRequest({user}: RequestDataWithUser) {
-        return user.data;
+        if (user.nso instanceof ZncProxyApi) {
+            return user.nso.fetch('/auth');
+        } else {
+            return user.data;
+        }
     }
 
     async handleTokenRequest({policy, token}: RequestData) {

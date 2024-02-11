@@ -157,6 +157,8 @@ async function renewToken(
 
         await storage.setItem('NsoToken.' + na_session_token, existingToken);
         renew_token_data.existingToken = existingToken;
+
+        return existingToken;
     } catch (err) {
         await attempt?.recordError(err);
 
