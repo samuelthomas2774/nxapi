@@ -29,6 +29,14 @@ import { PresenceEmbedFormat, getUserEmbedOptionsFromRequest, renderUserEmbedIma
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
 
+enum PresenceScope {
+    PRESENCE = 'presence',
+    PRESENCE_TIMESTAMPS = 'presence_timestamps',
+    PRESENCE_TITLE = 'title',
+    SPLATOON3_PRESENCE = 'splatoon3',
+    SPLATOON3_FEST_TEAM = 'splatoon3_fest_team',
+}
+
 interface AllUsersResult extends Friend {
     title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
@@ -658,9 +666,20 @@ class Server extends HttpServer {
         return user;
     }
 
+    getAccessScopeFromHeaders(req: Request) {
+        const headers = typeof req.headers['x-nxapi-auth-presence-scope'] === 'string' ?
+            [req.headers['x-nxapi-auth-presence-scope']] :
+            req.headers['x-nxapi-auth-presence-scope'] ?? [];
+
+        if (!headers.length) return null;
+
+        return headers.map(s => s.split(' ') as PresenceScope[])
+            .reduce((a, b) => a.filter(s => b.includes(s)));
+    }
+
     async handleAllUsersRequest(req: Request, res: Response) {
         if (!this.allow_all_users) {
-            throw new ResponseError(403, 'forbidden');
+            throw new ResponseError(403, 'unauthorised');
         }
 
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
@@ -751,7 +770,10 @@ class Server extends HttpServer {
         return {result, [ResourceUrlMapSymbol]: images};
     }
 
-    async handlePresenceRequest(req: Request, res: Response | null, presence_user_nsaid: string, is_stream = false) {
+    async handlePresenceRequest(
+        req: Request, res: Response | null, presence_user_nsaid: string,
+        is_stream = false, scope = this.getAccessScopeFromHeaders(req),
+    ) {
         if (res && !is_stream) {
             const req_url = new URL(req.url, 'http://localhost');
             const stream_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid) + '/events', req_url);
@@ -760,6 +782,10 @@ class Server extends HttpServer {
         }
 
         res?.setHeader('Access-Control-Allow-Origin', '*');
+
+        if (scope && !scope.includes(PresenceScope.PRESENCE)) {
+            throw new ResponseError(403, 'unauthorised', 'Missing required scope presence');
+        }
 
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
@@ -797,10 +823,41 @@ class Server extends HttpServer {
             title,
         };
 
-        if (this.splatnet3_users && include_splatnet3) {
+        if (scope && !scope.includes(PresenceScope.PRESENCE_TIMESTAMPS)) {
+            response.friend = {
+                ...response.friend,
+                presence: {
+                    ...response.friend.presence,
+                    game: 'name' in response.friend.presence.game ? {
+                        ...response.friend.presence.game,
+                        firstPlayedAt: 0,
+                        totalPlayTime: 0,
+                    } : {},
+                    logoutAt: 0,
+                    updatedAt: 0,
+                },
+            };
+        }
+
+        if (scope && !scope.includes(PresenceScope.PRESENCE_TITLE)) {
+            response.friend = {
+                ...response.friend,
+                presence: {
+                    ...response.friend.presence,
+                    game: {},
+                },
+            };
+
+            response.title = null;
+        }
+
+        if (this.splatnet3_users && include_splatnet3 && (!scope ||
+            scope.includes(PresenceScope.SPLATOON3_PRESENCE) ||
+            scope.includes(PresenceScope.SPLATOON3_FEST_TEAM)
+        )) {
             const user = await this.getSplatNet3User(user_naid);
 
-            await this.handleSplatoon3Presence(friend, user, response);
+            await this.handleSplatoon3Presence(friend, user, response, scope);
         }
 
         const images = await this.downloadImages(response, this.getResourceBaseUrls(req));
@@ -829,7 +886,10 @@ class Server extends HttpServer {
         return title;
     }
 
-    async handleSplatoon3Presence(coral_friend: Friend, user: SplatNet3User, response: PresenceResponse) {
+    async handleSplatoon3Presence(
+        coral_friend: Friend, user: SplatNet3User, response: PresenceResponse,
+        scope: PresenceScope[] | null,
+    ) {
         const is_playing_splatoon3 = 'name' in coral_friend.presence.game ?
             getTitleIdFromEcUrl(coral_friend.presence.game.shopUri) === '0100c2500fc20000' : false;
 
@@ -848,9 +908,11 @@ class Server extends HttpServer {
 
         if (!friend) return;
 
-        response.splatoon3 = friend;
+        if (!scope || scope.includes(PresenceScope.SPLATOON3_PRESENCE)) {
+            response.splatoon3 = friend;
+        }
 
-        if (fest_vote_status) {
+        if (fest_vote_status && (!scope || scope.includes(PresenceScope.SPLATOON3_FEST_TEAM))) {
             const fest = await user.getCurrentFest();
 
             const fest_team = this.getFestTeamVotingStatus(fest_vote_status, fest, friend);
@@ -860,6 +922,22 @@ class Server extends HttpServer {
             } else if (fest_vote_status.undecidedVotes) {
                 response.splatoon3_fest_team = null;
             }
+        }
+
+        if (scope && !scope.includes(PresenceScope.PRESENCE_TITLE)) {
+            // Remove all information that could show if the user is playing Splatoon 3
+            response.splatoon3 = {
+                ...friend,
+                playerName: null,
+                isLocked: null,
+                isVcEnabled: null,
+                vsMode: null,
+                coopRule: null,
+                onlineState: friend.onlineState === FriendOnlineState.OFFLINE ?
+                    FriendOnlineState.OFFLINE : FriendOnlineState.ONLINE,
+            };
+
+            return;
         }
 
         if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
@@ -1037,7 +1115,8 @@ class Server extends HttpServer {
 
         res.setHeader('Access-Control-Allow-Origin', '*');
 
-        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
+        const scope = this.getAccessScopeFromHeaders(req);
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true, scope);
 
         const stream = new EventStreamResponse(req, res);
         stream.json_replacer = replacer;
@@ -1073,7 +1152,7 @@ class Server extends HttpServer {
         while (!req.socket.destroyed) {
             try {
                 debug('Updating data for event stream %d', stream.id);
-                const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
+                const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true, scope);
 
                 stream.sendEvent('update', 'debug: timestamp ' + new Date().toISOString());
 
