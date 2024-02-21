@@ -9,6 +9,15 @@ export enum WindowType {
     ADD_ACCOUNT_MANUAL_PROMPT = 'AddAccountManualPrompt',
 }
 
+export enum ApperancePrefrence {
+    /** Match system */
+    SYSTEM_DEFAULT,
+    /** Force dark theme */
+    DARK,
+    /** Force light theme */
+    LIGHT,
+}
+
 interface WindowProps {
     [WindowType.MAIN_WINDOW]: import('../browser/main/index.js').AppProps;
     [WindowType.FRIEND]: import('../browser/friend/index.js').FriendProps;
@@ -56,5 +65,12 @@ export interface LoginItem {
     supported: boolean;
     startup_enabled: boolean;
     startup_hidden: boolean;
+    launch_hidden: boolean;
 }
 export type LoginItemOptions = Omit<LoginItem, 'supported'>;
+
+export interface AppearanceItem {
+    theme: ApperancePrefrence;
+    statusbar_icon: ApperancePrefrence;
+}
+export type AppearanceItemOptions = AppearanceItem;
