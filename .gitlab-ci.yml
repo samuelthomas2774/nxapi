@@ -27,7 +27,9 @@ build:
 
 build-docker:
   stage: build
+  image: alpine
   before_script:
+    - apk add docker
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - |
       [ "$DH_REGISTRY_IMAGE" != "" ] && docker login -u "$DH_REGISTRY_USER" -p "$DH_REGISTRY_PASSWORD" "$DH_REGISTRY"
@@ -77,8 +79,6 @@ build-docker:
         docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$GH_REGISTRY_IMAGE:latest"
         docker push "$GH_REGISTRY_IMAGE:latest"
       fi
-  tags:
-    - docker
   rules:
     - if: $BUILD_DOCKER_IMAGE == "true"
   cache:
