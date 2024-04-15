@@ -27,7 +27,7 @@ build:
 
 build-docker:
   stage: build
-  image: alpine
+  image: node:20-alpine
   before_script:
     - apk add docker
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
