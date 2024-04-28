@@ -33,7 +33,10 @@
         "nxapi": "bin/nxapi.js"
     },
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "npx tsc && npx rollup --config",
+        "buildandstart": "npm run build && npm run start",
+        "start": "node bin/nxapi.js app"
     },
     "dependencies": {
         "body-parser": "^1.20.2",

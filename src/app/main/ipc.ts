@@ -5,7 +5,7 @@ import { createModalWindow, getWindowConfiguration, setWindowHeight } from './wi
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
-import { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItemOptions, WindowType } from '../common/types.js';
+import { AppearanceItemOptions, DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItemOptions, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
 import { NintendoAccountUser } from '../../api/na.js';
 import createDebug from '../../util/debug.js';
@@ -61,6 +61,9 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
 
     handle('systemPreferences:getloginitem', () => appinstance.store.getLoginItem());
     handle('systemPreferences:setloginitem', (e, settings: LoginItemOptions) => appinstance.store.setLoginItem(settings));
+
+    handle('systemPreferences:getApperanceItem', () => appinstance.store.getAppearanceItem());
+    handle('systemPreferences:setApperanceItem', (e, settings: AppearanceItemOptions) => appinstance.store.setAppearanceItem(settings));
 
     handle('update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
     handle('update:check', () => appinstance.updater.check());
