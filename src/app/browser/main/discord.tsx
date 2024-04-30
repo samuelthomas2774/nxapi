@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     },
     discordNsoUserImage: {
         borderRadius: 8,
-        textAlignVertical: -3,
+        verticalAlign: -3,
     },
     discordSourceUrlValue: {
         fontFamily: 'monospace',

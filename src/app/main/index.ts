@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, LoginItemSettingsOptions, session } from 'electron';
+import { app, BrowserWindow, ipcMain, session, Settings } from 'electron';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -31,7 +31,7 @@ export const protocol_registration_options = dev && process.platform === 'win32'
         path.join(dir, 'dist', 'app', 'app-entry.cjs'),
     ],
 } : null;
-export const login_item_options: LoginItemSettingsOptions = {
+export const login_item_options: Settings = {
     path: process.execPath,
     args: dev ? [
         path.join(dir, 'dist', 'app', 'app-entry.cjs'),

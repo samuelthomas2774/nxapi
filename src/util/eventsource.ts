@@ -96,6 +96,7 @@ export default class EventSource {
     }
 
     addEventListener<T extends string>(event: T, handler: Listener<T>[1]) {
+        // @ts-expect-error TODO: this worked pre-dep bump but i have no idea what broke it - i attempted to downgrade @types/node, undici and typescript to the pre-bump version but no luck?
         this._listeners.push([event, handler]);
     }
 

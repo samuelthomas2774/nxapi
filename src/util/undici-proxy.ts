@@ -42,8 +42,8 @@ export function buildProxyAgent(options: ProxyAgentOptions & {
                 const { origin, port, host } = proxy;
 
                 const { socket, statusCode } = await agent.connect({
-                    // @ts-expect-error
                     origin,
+                    // @ts-expect-error
                     port,
                     path: requestedHost,
                     // @ts-expect-error
