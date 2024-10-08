@@ -109,7 +109,7 @@ async function dumpDailySummariesForDevice(moon: MoonApi, directory: string, dev
 
     for (const summary of summaries.items) {
         const filename = 'pctl-daily-' + summary.deviceId + '-' + summary.date +
-            (summary.result === DailySummaryResult.ACHIEVED ? '' : '-' + timestamp) + '.json';
+            (summary.result === DailySummaryResult.COMPUTING ? '-' + timestamp : '') + '.json';
         const file = path.join(directory, filename);
 
         try {
