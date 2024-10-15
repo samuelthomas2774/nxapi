@@ -1,7 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Request } from 'express';
-import sharp from 'sharp';
 import { CoopRule, FestVoteState, FriendOnlineState, StageScheduleResult } from 'splatnet3-types/splatnet3';
 import { dir } from '../util/product.js';
 import createDebug from '../util/debug.js';
@@ -100,6 +99,8 @@ export async function renderUserEmbedImage(
 
     const start = Date.now();
     debug('generating image, format %s', PresenceEmbedFormat[format]);
+
+    const { default: sharp } = await import('sharp');
 
     let image = sharp(Buffer.from(svg)).withMetadata({
         density: 72 * 2,
