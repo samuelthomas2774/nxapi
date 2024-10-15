@@ -27,7 +27,6 @@ export default function FriendCode(props: {
 
 const styles = StyleSheet.create({
     friendCodeValue: {
-        // @ts-expect-error
         userSelect: 'all',
     },
 });

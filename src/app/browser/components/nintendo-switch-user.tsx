@@ -34,6 +34,7 @@ export function NintendoSwitchUsers(props: {
 const styles = StyleSheet.create({
     userImage: {
         borderRadius: 8,
-        verticalAlign: -3,
+        // @ts-expect-error react-native-web
+        verticalAlign: -3 as 'auto',
     },
 });

@@ -236,7 +236,7 @@ export async function genf(
 
     if ('error' in data) {
         debugZncaApi('Error getting f parameter "%s"', data.error);
-        throw new ErrorResponse<AndroidZncaFError>('[znca-api] ' + data.error_message ?? data.error, response, data);
+        throw new ErrorResponse<AndroidZncaFError>('[znca-api] ' + (data.error_message ?? data.error), response, data);
     }
 
     debugZncaApi('Got f parameter', data, response.headers);

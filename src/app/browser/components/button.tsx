@@ -56,6 +56,7 @@ function ButtonMac(props: {
 
 const styles_mac = StyleSheet.create({
     button: {
+        // @ts-expect-error react-native-web
         cursor: 'default',
         lineHeight: 19,
         borderRadius: 3,
@@ -63,6 +64,7 @@ const styles_mac = StyleSheet.create({
     },
     buttonLight: {
         backgroundColor: '#ffffff',
+        // @ts-expect-error react-native-web
         boxShadow: '#0000008a 0px 0px 1px',
     },
 
@@ -76,10 +78,12 @@ const styles_mac = StyleSheet.create({
     },
     innerActive: {
         backgroundColor: 'transparent',
+        // @ts-expect-error react-native-web
         backgroundImage: 'linear-gradient(0deg, #00000050, #00000040)',
     },
     innerPressed: {
         backgroundColor: 'transparent',
+        // @ts-expect-error react-native-web
         backgroundImage: 'linear-gradient(0deg, #00000040, #00000020)',
     },
 

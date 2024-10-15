@@ -133,7 +133,7 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
     const token = await response.json() as NintendoAccountSessionToken | NintendoAccountAuthError | NintendoAccountError;
 
     if ('error' in token) {
-        throw new NintendoAccountAuthErrorResponse('[na] ' + token.error_description ?? token.error, response, token);
+        throw new NintendoAccountAuthErrorResponse('[na] ' + (token.error_description ?? token.error), response, token);
     }
     if ('errorCode' in token) {
         throw new NintendoAccountErrorResponse('[na] ' + token.detail, response, token);
@@ -170,8 +170,8 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
     const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountAuthError | NintendoAccountError;
 
     if ('error' in nintendoAccountToken) {
-        throw new NintendoAccountAuthErrorResponse('[na] ' + nintendoAccountToken.error_description ??
-            nintendoAccountToken.error, response, nintendoAccountToken);
+        throw new NintendoAccountAuthErrorResponse('[na] ' + (nintendoAccountToken.error_description ??
+            nintendoAccountToken.error), response, nintendoAccountToken);
     }
     if ('errorCode' in nintendoAccountToken) {
         throw new NintendoAccountErrorResponse('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
