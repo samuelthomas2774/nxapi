@@ -1,5 +1,5 @@
 import process from 'node:process';
-import type { Arguments as ParentArguments } from '../util.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';
 import * as publishers from '../../discord/titles/index.js';

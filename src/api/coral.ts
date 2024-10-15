@@ -1,13 +1,15 @@
-import fetch, { Response } from 'node-fetch';
-import { v4 as uuidgen } from 'uuid';
-import { f, FResult, HashMethod } from './f.js';
-import { AccountLogin, AccountToken, Announcements, CurrentUser, CurrentUserPermissions, Event, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, CoralErrorResponse, CoralResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, AccountTokenParameter, AccountLoginParameter, WebServiceTokenParameter } from './coral-types.js';
-import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from './na.js';
-import { ErrorResponse, ResponseSymbol } from './util.js';
+import { randomUUID } from 'node:crypto';
+import { fetch, Response } from 'undici';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
-import { getAdditionalUserAgents } from '../util/useragent.js';
 import { timeoutSignal } from '../util/misc.js';
+import { getAdditionalUserAgents } from '../util/useragent.js';
+import type { CoralRemoteConfig } from '../common/remote-config.js';
+import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, FriendCodeUrl, FriendCodeUser, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { f, FResult, HashMethod } from './f.js';
+import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
+import { ErrorResponse, ResponseSymbol } from './util.js';
+import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
 
 const debug = createDebug('nxapi:api:coral');
 
@@ -40,8 +42,40 @@ export interface ResultData<T> {
     correlationId: string;
 }
 
-export default class CoralApi {
-    onTokenExpired: ((data?: CoralErrorResponse, res?: Response) => Promise<CoralAuthData | void>) | null = null;
+export interface CoralApiInterface {
+    getAnnouncements(): Promise<Result<Announcements>>;
+    getFriendList(): Promise<Result<Friends>>;
+    addFavouriteFriend(nsa_id: string): Promise<Result<{}>>;
+    removeFavouriteFriend(nsa_id: string): Promise<Result<{}>>;
+    getWebServices(): Promise<Result<WebServices>>;
+    getActiveEvent(): Promise<Result<GetActiveEventResult>>;
+    getEvent(id: number): Promise<Result<Event>>;
+    getUser(id: number): Promise<Result<User>>;
+    getUserByFriendCode(friend_code: string, hash?: string): Promise<Result<FriendCodeUser>>;
+    getCurrentUser(): Promise<Result<CurrentUser>>;
+    getFriendCodeUrl(): Promise<Result<FriendCodeUrl>>;
+    getCurrentUserPermissions(): Promise<Result<CurrentUserPermissions>>;
+    getWebServiceToken(id: number): Promise<Result<WebServiceToken>>;
+}
+
+export interface ClientInfo {
+    platform: string;
+    version: string;
+    useragent: string;
+}
+
+const RemoteConfigSymbol = Symbol('RemoteConfigSymbol');
+const ClientInfoSymbol = Symbol('CoralClientInfo');
+const CoralUserIdSymbol = Symbol('CoralUserId');
+const NintendoAccountIdSymbol = Symbol('NintendoAccountId');
+
+export default class CoralApi implements CoralApiInterface {
+    [RemoteConfigSymbol]!: CoralRemoteConfig | null;
+    [ClientInfoSymbol]: ClientInfo;
+    [CoralUserIdSymbol]: string;
+    [NintendoAccountIdSymbol]: string;
+
+    onTokenExpired: ((data?: CoralError, res?: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
     _renewToken: Promise<void> | null = null;
     /** @internal */
@@ -50,11 +84,30 @@ export default class CoralApi {
     protected constructor(
         public token: string,
         public useragent: string | null = getAdditionalUserAgents(),
-        public coral_user_id: string,
-        public na_id: string,
-        readonly znca_version = ZNCA_VERSION,
-        readonly znca_useragent = ZNCA_USER_AGENT,
-    ) {}
+        coral_user_id: string,
+        na_id: string,
+        znca_version = ZNCA_VERSION,
+        znca_useragent = ZNCA_USER_AGENT,
+        config?: CoralRemoteConfig,
+    ) {
+        this[ClientInfoSymbol] = {platform: ZNCA_PLATFORM, version: znca_version, useragent: znca_useragent};
+        this[CoralUserIdSymbol] = coral_user_id;
+        this[NintendoAccountIdSymbol] = na_id;
+
+        Object.defineProperty(this, RemoteConfigSymbol, {enumerable: false, value: config ?? null});
+        Object.defineProperty(this, 'token', {enumerable: false, value: this.token});
+        Object.defineProperty(this, '_renewToken', {enumerable: false, value: this._renewToken});
+        Object.defineProperty(this, '_token_expired', {enumerable: false, value: this._token_expired});
+    }
+
+    /** @internal */
+    get znca_version() {
+        return this[ClientInfoSymbol].version;
+    }
+    /** @internal */
+    get znca_useragent() {
+        return this[ClientInfoSymbol].useragent;
+    }
 
     async fetch<T = unknown>(
         url: string, method = 'GET', body?: string, headers?: object,
@@ -79,23 +132,24 @@ export default class CoralApi {
         const response = await fetch(ZNC_URL + url, {
             method,
             headers: Object.assign({
-                'X-Platform': ZNCA_PLATFORM,
-                'X-ProductVersion': this.znca_version,
+                'X-Platform': this[ClientInfoSymbol].platform,
+                'X-ProductVersion': this[ClientInfoSymbol].version,
                 'Authorization': 'Bearer ' + this.token,
                 'Content-Type': 'application/json; charset=utf-8',
-                'User-Agent': this.znca_useragent,
+                'User-Agent': this[ClientInfoSymbol].useragent,
             }, headers),
             body,
             signal,
         }).finally(cancel);
 
-        debug('fetch %s %s, response %s', method, url, response.status);
+        const data = await response.json().catch(err => null) as CoralResponse<T> | null;
 
-        if (response.status !== 200) {
-            throw new ErrorResponse('[znc] Non-200 status code', response, await response.text());
+        debug('fetch %s %s, response %s, status %d %s, correlationId %s', method, url, response.status,
+            data?.status, CoralStatus[data?.status!], data?.correlationId);
+
+        if (response.status !== 200 || !data) {
+            throw new CoralErrorResponse('[znc] Non-200 status code', response, data as CoralError);
         }
-
-        const data = await response.json() as CoralResponse<T>;
 
         if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
             this._token_expired = true;
@@ -109,10 +163,10 @@ export default class CoralApi {
         }
 
         if ('errorMessage' in data) {
-            throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
+            throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
         if (data.status !== CoralStatus.OK) {
-            throw new ErrorResponse('[znc] Unknown error', response, data);
+            throw new CoralErrorResponse('[znc] Unknown error', response, data);
         }
 
         const result = data.result;
@@ -132,7 +186,7 @@ export default class CoralApi {
         url: string, parameter = {},
         /** @internal */ _autoRenewToken = true
     ) {
-        const uuid = uuidgen();
+        const uuid = randomUUID();
 
         return this.fetch<T>(url, 'POST', JSON.stringify({
             parameter,
@@ -148,15 +202,15 @@ export default class CoralApi {
         return this.call<Friends>('/v3/Friend/List');
     }
 
-    async addFavouriteFriend(nsaid: string) {
+    async addFavouriteFriend(nsa_id: string) {
         return this.call<{}>('/v3/Friend/Favorite/Create', {
-            nsaId: nsaid,
+            nsaId: nsa_id,
         });
     }
 
-    async removeFavouriteFriend(nsaid: string) {
+    async removeFavouriteFriend(nsa_id: string) {
         return this.call<{}>('/v3/Friend/Favorite/Delete', {
-            nsaId: nsaid,
+            nsaId: nsa_id,
         });
     }
 
@@ -226,10 +280,10 @@ export default class CoralApi {
         await this._renewToken;
 
         const data = await f(this.token, HashMethod.WEB_SERVICE, {
-            platform: ZNCA_PLATFORM,
-            version: this.znca_version,
+            platform: this[ClientInfoSymbol].platform,
+            version: this[ClientInfoSymbol].version,
             useragent: this.useragent ?? getAdditionalUserAgents(),
-            user: {na_id: this.na_id, coral_user_id: this.coral_user_id},
+            user: {na_id: this[NintendoAccountIdSymbol], coral_user_id: this[CoralUserIdSymbol]},
         });
 
         const req: WebServiceTokenParameter = {
@@ -243,7 +297,7 @@ export default class CoralApi {
         try {
             return await this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req, false);
         } catch (err) {
-            if (err instanceof ErrorResponse && err.data.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+            if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
                 debug('Error getting web service token, renewing token before retrying', err);
                 // _renewToken will be awaited when calling getWebServiceToken
                 this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).then(data => {
@@ -259,14 +313,19 @@ export default class CoralApi {
     }
 
     async getToken(token: string, user: NintendoAccountUser): Promise<PartialCoralAuthData> {
-        // Nintendo Account token
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
 
+        return this.getTokenWithNintendoAccountToken(nintendoAccountToken, user);
+    }
+
+    async getTokenWithNintendoAccountToken(
+        nintendoAccountToken: NintendoAccountToken, user: NintendoAccountUser,
+    ): Promise<PartialCoralAuthData> {
         const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
-            platform: ZNCA_PLATFORM,
-            version: this.znca_version,
+            platform: this[ClientInfoSymbol].platform,
+            version: this[ClientInfoSymbol].version,
             useragent: this.useragent ?? getAdditionalUserAgents(),
-            user: {na_id: user.id, coral_user_id: this.coral_user_id},
+            user: {na_id: user.id, coral_user_id: this[CoralUserIdSymbol]},
         });
 
         const req: AccountTokenParameter = {
@@ -294,11 +353,16 @@ export default class CoralApi {
         return data;
     }
 
-    /** @private */
-    setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
+    async renewTokenWithNintendoAccountToken(token: NintendoAccountToken, user: NintendoAccountUser) {
+        const data = await this.getTokenWithNintendoAccountToken(token, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    protected setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
         this.token = data.credential.accessToken;
-        this.coral_user_id = '' + data.nsoAccount.user.id;
-        if ('user' in data) this.na_id = data.user.id;
+        this[CoralUserIdSymbol] = '' + data.nsoAccount.user.id;
+        if ('user' in data) this[NintendoAccountIdSymbol] = data.user.id;
         this._token_expired = false;
     }
 
@@ -386,16 +450,16 @@ export default class CoralApi {
         debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[znc] Non-200 status code', response, await response.text());
+            throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
         }
 
         const data = await response.json() as CoralResponse<AccountLogin>;
 
         if ('errorMessage' in data) {
-            throw new ErrorResponse('[znc] ' + data.errorMessage, response, data);
+            throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
         }
         if (data.status !== CoralStatus.OK) {
-            throw new ErrorResponse('[znc] Unknown error', response, data);
+            throw new CoralErrorResponse('[znc] Unknown error', response, data);
         }
 
         debug('Got Nintendo Switch Online app token', data);
@@ -409,6 +473,48 @@ export default class CoralApi {
             znca_version: config.znca_version,
             znca_useragent,
         };
+    }
+}
+
+export class CoralErrorResponse extends ErrorResponse<CoralError> implements HasErrorDescription {
+    get status(): CoralStatus | null {
+        return this.data?.status ?? null;
+    }
+
+    get [ErrorDescriptionSymbol]() {
+        if (this.status === CoralStatus.NSA_NOT_LINKED) {
+            return new ErrorDescription('coral.nsa_not_linked', 'Your Nintendo Account is not linked to a Network Service Account (Nintendo Switch user).\n\nMake sure you are using the Nintendo Account linked to your Nintendo Switch console.');
+        }
+        if (this.status === CoralStatus.UPGRADE_REQUIRED) {
+            return new ErrorDescription('coral.upgrade_required', 'The Coral (Nintendo Switch Online app) version used by nxapi is no longer supported by the Coral API.\n\nTry restarting nxapi and make sure nxapi is up to date.');
+        }
+
+        return null;
+    }
+}
+
+const na_client_settings = {
+    client_id: ZNCA_CLIENT_ID,
+    scope: 'openid user user.birthday user.mii user.screenName',
+};
+
+export class NintendoAccountSessionAuthorisationCoral extends NintendoAccountSessionAuthorisation {
+    protected constructor(
+        authorise_url: string,
+        state: string,
+        verifier: string,
+        redirect_uri?: string,
+    ) {
+        const { client_id, scope } = na_client_settings;
+
+        super(client_id, scope, authorise_url, state, verifier, redirect_uri);
+    }
+
+    static create(/** @internal */ redirect_uri?: string) {
+        const { client_id, scope } = na_client_settings;
+        const auth_data = generateAuthData(client_id, scope, redirect_uri);
+
+        return new this(auth_data.url, auth_data.state, auth_data.verifier, redirect_uri);
     }
 }
 

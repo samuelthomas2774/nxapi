@@ -1,10 +1,9 @@
 import { WriteStream } from 'node:fs';
-import { FileHandle, open, opendir, stat, unlink } from 'node:fs/promises';
+import { FileHandle, mkdir, open, opendir, stat, unlink } from 'node:fs/promises';
 import * as util from 'node:util';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createDebug from 'debug';
-import mkdirp from 'mkdirp';
 import { dev, dir, docker, git, product, release, version } from './product.js';
 
 const MAX_FILE_SIZE = 1000 * 1000 * 2; // 2 MB
@@ -136,7 +135,7 @@ async function openLogFile(path: string, start: Date, i = 0) {
         '-' + process.pid + '-' + i + '.log';
     const file = join(path, filename);
 
-    await mkdirp(path, {mode: 0o700});
+    await mkdir(path, {mode: 0o700, recursive: true});
 
     const file_handle = await open(file, 'a', 0o600);
     const stream = file_handle.createWriteStream();

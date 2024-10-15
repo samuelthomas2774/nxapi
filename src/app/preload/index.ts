@@ -1,9 +1,8 @@
-import { contextBridge, ipcRenderer } from 'electron';
-import { EventEmitter } from 'events';
+import { contextBridge, ipcRenderer, SharingItem } from 'electron';
+import { EventEmitter } from 'node:events';
 import createDebug from 'debug';
 import type { User } from 'discord-rpc';
-import type { SharingItem } from '../main/electron.js';
-import type { DiscordPresenceConfiguration, DiscordPresenceSource, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
+import type { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItem, LoginItemOptions, WindowConfiguration } from '../common/types.js';
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
@@ -19,8 +18,23 @@ import type { AddFriendProps } from '../browser/add-friend/index.js';
 
 const debug = createDebug('app:preload');
 
-const inv = <T = void>(channel: string, ...args: any[]) =>
-    ipcRenderer.invoke('nxapi:' + channel, ...args) as Promise<T>;
+const inv = async <T = void>(channel: string, ...args: any[]) => {
+    const data: {
+        result: T;
+    } | {
+        error_type: string;
+        message: string;
+        type?: string;
+        description: string;
+        data: unknown;
+    } = await ipcRenderer.invoke('nxapi:' + channel, ...args);
+
+    if ('result' in data) return data.result;
+
+    // Context isolation removes all other properties of Error objects
+    throw new Error(data.description.replace(/^Error\: /, ''));
+};
+
 const invSync = <T = void>(channel: string, ...args: any[]) =>
     ipcRenderer.sendSync('nxapi:' + channel, ...args) as T;
 
@@ -59,6 +73,8 @@ const ipc = {
     getDiscordPresenceSource: () => inv<DiscordPresenceSource | null>('discord:source'),
     setDiscordPresenceSource: (source: DiscordPresenceSource | null) => inv<void>('discord:setsource', source),
     getDiscordPresence: () => inv<DiscordPresence | null>('discord:presence'),
+    getDiscordStatus: () => inv<DiscordStatus | null>('discord:status'),
+    showDiscordLastUpdateError: () => inv('discord:showerror'),
     getDiscordUser: () => inv<User | null>('discord:user'),
     getDiscordUsers: () => inv<User[]>('discord:users'),
 
@@ -95,6 +111,7 @@ ipcRenderer.on('nxapi:accounts:shouldrefresh', () => events.emit('update-nintend
 ipcRenderer.on('nxapi:discord:shouldrefresh', () => events.emit('update-discord-presence-source'));
 ipcRenderer.on('nxapi:discord:presence', (e, p: DiscordPresence) => events.emit('update-discord-presence', p));
 ipcRenderer.on('nxapi:discord:user', (e, u: User) => events.emit('update-discord-user', u));
+ipcRenderer.on('nxapi:discord:status', (e, s: DiscordStatus | null) => events.emit('update-discord-status', s));
 
 let language: string | undefined = invSync('app:language');
 ipcRenderer.on('nxapi:app:update-language', (event, l: string) => {

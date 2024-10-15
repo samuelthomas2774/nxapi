@@ -1,11 +1,48 @@
-import { AbortError } from 'node-fetch';
+import * as util from 'node:util';
+import { errors } from 'undici';
 import createDebug from './debug.js';
 import Loop, { LoopResult } from './loop.js';
 import { TemporaryErrorSymbol } from './misc.js';
-import { CoralErrorResponse } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
 
 const debug = createDebug('nxapi:util:errors');
+
+export class ErrorDescription {
+    constructor(
+        readonly type: string,
+        readonly message: string,
+    ) {}
+
+    static getErrorDescription(err: Error | unknown) {
+        if (err instanceof HasErrorDescription) {
+            const description = err[ErrorDescriptionSymbol];
+
+            if (description) {
+                return description.message +
+                    (err instanceof Error ? '\n\n--\n\n' + util.inspect(err) : '');
+            }
+        }
+
+        if (err instanceof Error) {
+            return util.inspect(err);
+        }
+
+        return util.inspect(err, {compact: true});
+    }
+}
+
+export const ErrorDescriptionSymbol = Symbol('ErrorDescription');
+
+export abstract class HasErrorDescription {
+    abstract get [ErrorDescriptionSymbol](): ErrorDescription | null;
+}
+
+Object.defineProperty(HasErrorDescription, Symbol.hasInstance, {
+    configurable: true,
+    value: (instance: HasErrorDescription) => {
+        return instance && ErrorDescriptionSymbol in instance;
+    },
+});
 
 export const temporary_system_errors = {
     'ETIMEDOUT': 'request timed out',
@@ -28,15 +65,27 @@ export const temporary_http_errors = [
 ];
 
 export async function handleError(
-    err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException,
+    err: ErrorResponse | NodeJS.ErrnoException,
     loop: Loop,
 ): Promise<LoopResult> {
     if (TemporaryErrorSymbol in err && err[TemporaryErrorSymbol]) {
         debug('Temporary error, waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;
-    } else if (err instanceof AbortError) {
-        debug('Request aborted (timeout?), waiting %ds before retrying', loop.update_interval, err);
+    } else if (err instanceof errors.ConnectTimeoutError) {
+        debug('Request timeout (connect), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.HeadersTimeoutError) {
+        debug('Request timeout (headers), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.BodyTimeoutError) {
+        debug('Request timeout (body), waiting %ds before retrying', loop.update_interval, err);
+
+        return LoopResult.OK;
+    } else if (err instanceof errors.RequestAbortedError) {
+        debug('Request aborted, waiting %ds before retrying', loop.update_interval, err);
 
         return LoopResult.OK;
     } else if ('code' in err && (err as any).type === 'system' && err.code && err.code in temporary_system_errors) {

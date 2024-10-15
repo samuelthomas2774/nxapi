@@ -1,9 +1,9 @@
-import type { Arguments as ParentArguments } from '../nso.js';
+import { read } from 'read';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/coral.js';
-import prompt from '../util/prompt.js';
 
 const debug = createDebug('cli:nso:token');
 
@@ -26,7 +26,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const storage = await initStorage(argv.dataPath);
 
     if (!argv.token) {
-        argv.token = await prompt({
+        argv.token = await read<string>({
+            output: process.stderr,
             prompt: `Token: `,
             silent: true,
         });

@@ -1,10 +1,111 @@
-import fetch from 'node-fetch';
-import { defineResponse, ErrorResponse } from './util.js';
+import * as crypto from 'node:crypto';
+import { fetch, Response } from 'undici';
+import { defineResponse, ErrorResponse, HasResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
+import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
 
 const debug = createDebug('nxapi:api:na');
+
+export class NintendoAccountSessionAuthorisation {
+    readonly scope: string;
+
+    protected constructor(
+        readonly client_id: string,
+        scope: string | string[],
+        readonly authorise_url: string,
+        readonly state: string,
+        readonly verifier: string,
+        readonly redirect_uri = 'npf' + client_id + '://auth',
+    ) {
+        this.scope = typeof scope === 'string' ? scope : scope.join(' ');
+    }
+
+    async getSessionToken(code: string, state?: string): Promise<HasResponse<NintendoAccountSessionToken, Response>>
+    async getSessionToken(params: URLSearchParams): Promise<HasResponse<NintendoAccountSessionToken, Response>>
+    async getSessionToken(code: string | URLSearchParams | null, state?: string | null) {
+        if (code instanceof URLSearchParams) {
+            if (code.get('state') !== this.state) {
+                throw new TypeError('Invalid state');
+            }
+
+            if (code.has('error')) {
+                throw NintendoAccountSessionAuthorisationError.fromSearchParams(code);
+            }
+
+            code = code.get('session_token_code');
+            state = undefined;
+        }
+
+        if (typeof state !== 'undefined' && state !== this.state) {
+            throw new TypeError('Invalid state');
+        }
+
+        if (typeof code !== 'string' || !code) {
+            throw new TypeError('Invalid code');
+        }
+
+        return getNintendoAccountSessionToken(code, this.verifier, this.client_id);
+    }
+
+    static create(
+        client_id: string,
+        scope: string | string[],
+        /** @internal */ redirect_uri = 'npf' + client_id + '://auth',
+    ) {
+        if (typeof scope !== 'string') scope = scope.join(' ');
+
+        const auth_data = generateAuthData(client_id, scope, redirect_uri);
+
+        return new NintendoAccountSessionAuthorisation(client_id, scope,
+            auth_data.url, auth_data.state, auth_data.verifier, redirect_uri);
+    }
+}
+
+export class NintendoAccountSessionAuthorisationError extends Error {
+    constructor(readonly code: string, message?: string) {
+        super(message);
+    }
+
+    static fromSearchParams(qs: URLSearchParams) {
+        const code = qs.get('error') ?? 'unknown_error';
+        const message = qs.get('error_description') ?? code;
+
+        return new NintendoAccountSessionAuthorisationError(code, message);
+    }
+}
+
+export function generateAuthData(
+    client_id: string,
+    scope: string | string[],
+    redirect_uri = 'npf' + client_id + '://auth',
+) {
+    const state = crypto.randomBytes(36).toString('base64url');
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest().toString('base64url');
+
+    const params = {
+        state,
+        redirect_uri,
+        client_id,
+        scope: typeof scope === 'string' ? scope : scope.join(' '),
+        response_type: 'session_token_code',
+        session_token_code_challenge: challenge,
+        session_token_code_challenge_method: 'S256',
+        theme: 'login_form',
+    };
+
+    const url = 'https://accounts.nintendo.com/connect/1.0.0/authorize?' +
+        new URLSearchParams(params).toString();
+
+    return {
+        url,
+        state,
+        verifier,
+        challenge,
+    };
+}
 
 export async function getNintendoAccountSessionToken(code: string, verifier: string, client_id: string) {
     debug('Getting Nintendo Account session token');
@@ -26,16 +127,16 @@ export async function getNintendoAccountSessionToken(code: string, verifier: str
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw await NintendoAccountAuthErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
     const token = await response.json() as NintendoAccountSessionToken | NintendoAccountAuthError | NintendoAccountError;
 
-    if ('errorCode' in token) {
-        throw new ErrorResponse<NintendoAccountError>('[na] ' + token.detail, response, token);
-    }
     if ('error' in token) {
-        throw new ErrorResponse<NintendoAccountAuthError>('[na] ' + token.error_description ?? token.error, response, token);
+        throw new NintendoAccountAuthErrorResponse('[na] ' + token.error_description ?? token.error, response, token);
+    }
+    if ('errorCode' in token) {
+        throw new NintendoAccountErrorResponse('[na] ' + token.detail, response, token);
     }
 
     debug('Got Nintendo Account session token', token);
@@ -63,16 +164,17 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw await NintendoAccountAuthErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
     const nintendoAccountToken = await response.json() as NintendoAccountToken | NintendoAccountAuthError | NintendoAccountError;
 
-    if ('errorCode' in nintendoAccountToken) {
-        throw new ErrorResponse<NintendoAccountError>('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
-    }
     if ('error' in nintendoAccountToken) {
-        throw new ErrorResponse<NintendoAccountAuthError>('[na] ' + nintendoAccountToken.error_description ?? nintendoAccountToken.error, response, nintendoAccountToken);
+        throw new NintendoAccountAuthErrorResponse('[na] ' + nintendoAccountToken.error_description ??
+            nintendoAccountToken.error, response, nintendoAccountToken);
+    }
+    if ('errorCode' in nintendoAccountToken) {
+        throw new NintendoAccountErrorResponse('[na] ' + nintendoAccountToken.detail, response, nintendoAccountToken);
     }
 
     debug('Got Nintendo Account token', nintendoAccountToken);
@@ -96,13 +198,13 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
     }).finally(cancel);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[na] Non-200 status code', response, await response.text());
+        throw await NintendoAccountErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
     const user = await response.json() as NintendoAccountUser | NintendoAccountError;
 
     if ('errorCode' in user) {
-        throw new ErrorResponse<NintendoAccountError>('[na] ' + user.detail, response, user);
+        throw new NintendoAccountErrorResponse('[na] ' + user.detail, response, user);
     }
 
     debug('Got Nintendo Account user info', user);
@@ -195,10 +297,12 @@ export enum NintendoAccountScope {
 }
 export enum NintendoAccountJwtScope {
     'openid' = 0,
+    'offline' = 1,
     'user' = 8,
     'user.birthday' = 9,
     'user.mii' = 17,
     'user.screenName' = 23,
+    'user.links.nintendoNetwork.id' = 31,
     'moonUser:administration' = 320,
     'moonDevice:create' = 321,
     'moonOwnedDevice:administration' = 325,
@@ -223,10 +327,6 @@ export enum NintendoAccountJwtScope {
     // 'pointWallet' = -1,
     // 'userNotificationMessage:anyClients' = -1,
     // 'userNotificationMessage:anyClients:write' = -1,
-
-    // 1, 31
-    // 'offline' = -1,
-    // 'user.links.nintendoNetwork.id' = -1,
 }
 
 export interface NintendoAccountUser {
@@ -308,3 +408,15 @@ export interface NintendoAccountError {
     status: number;
     type: string;
 }
+
+export class NintendoAccountAuthErrorResponse extends ErrorResponse<NintendoAccountAuthError> implements HasErrorDescription {
+    get [ErrorDescriptionSymbol]() {
+        if (this.data?.error === 'invalid_grant') {
+            return new ErrorDescription('na.invalid_grant', 'Your Nintendo Account session token has expired or was revoked.\n\nYou need to sign in again.');
+        }
+
+        return null;
+    }
+}
+
+export class NintendoAccountErrorResponse extends ErrorResponse<NintendoAccountError> {}

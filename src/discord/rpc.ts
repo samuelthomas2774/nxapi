@@ -1,7 +1,7 @@
 import process from 'node:process';
 import * as net from 'node:net';
 import { EventEmitter } from 'node:events';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import DiscordRPC from 'discord-rpc';
 // @ts-expect-error
 import __BaseIpcTransport from 'discord-rpc/src/transports/ipc.js';
@@ -36,9 +36,10 @@ export async function findDiscordRpcClient(
         if (!socket) continue;
 
         const client = new DiscordRpcClient({transport: 'ipc', ipc_socket: socket});
-        await client.connect(clientid);
 
         try {
+            await client.connect(clientid);
+
             if (filter.call(null, client, i)) return [i, client] as const;
 
             await client.destroy();

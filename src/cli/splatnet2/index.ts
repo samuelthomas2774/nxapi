@@ -1,12 +1,30 @@
-export * as user from './user.js';
-export * as token from './token.js';
-export * as stages from './stages.js';
-export * as challenges from './challenges.js';
-export * as weapons from './weapons.js';
-export * as hero from './hero.js';
-export * as battles from './battles.js';
-export * as schedule from './schedule.js';
-export * as dumpResults from './dump-results.js';
-export * as dumpRecords from './dump-records.js';
-export * as monitor from './monitor.js';
-export * as xRankSeasons from './x-rank-seasons.js';
+import process from 'node:process';
+import type { Arguments as ParentArguments } from '../../cli.js';
+import createDebug from '../../util/debug.js';
+import { Argv, YargsArguments } from '../../util/yargs.js';
+import * as commands from './commands.js';
+
+const debug = createDebug('cli:splatnet2');
+
+export const command = 'splatnet2 <command>';
+export const desc = 'SplatNet 2';
+
+export function builder(yargs: Argv<ParentArguments>) {
+    for (const command of Object.values(commands)) {
+        // @ts-expect-error
+        yargs.command(command);
+    }
+
+    return yargs.option('znc-proxy-url', {
+        describe: 'URL of Nintendo Switch Online app API proxy server to use',
+        type: 'string',
+        default: process.env.ZNC_PROXY_URL,
+    }).option('auto-update-session', {
+        alias: ['auto-update-iksm-session'],
+        describe: 'Automatically obtain and refresh the iksm_session cookie',
+        type: 'boolean',
+        default: true,
+    });
+}
+
+export type Arguments = YargsArguments<ReturnType<typeof builder>>;

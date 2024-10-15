@@ -1,12 +1,10 @@
-import * as crypto from 'node:crypto';
-import type { Arguments as ParentArguments } from '../nso.js';
+import { read } from 'read';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/coral.js';
-import { getNintendoAccountSessionToken } from '../../api/na.js';
-import { ZNCA_CLIENT_ID } from '../../api/coral.js';
-import prompt from '../util/prompt.js';
+import { NintendoAccountSessionAuthorisationCoral } from '../../api/coral.js';
 
 const debug = createDebug('cli:nso:auth');
 
@@ -27,39 +25,20 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    const state = crypto.randomBytes(36).toString('base64url');
-    const verifier = crypto.randomBytes(32).toString('base64url');
-    const challenge = crypto.createHash('sha256').update(verifier).digest().toString('base64url');
+    const authenticator = NintendoAccountSessionAuthorisationCoral.create();
 
-    const params = {
-        state,
-        redirect_uri: 'npf71b963c1b7b6d119://auth',
-        client_id: ZNCA_CLIENT_ID,
-        scope: 'openid user user.birthday user.mii user.screenName',
-        response_type: 'session_token_code',
-        session_token_code_challenge: challenge,
-        session_token_code_challenge_method: 'S256',
-        theme: 'login_form',
-    };
-
-    const authoriseurl = 'https://accounts.nintendo.com/connect/1.0.0/authorize?' +
-        new URLSearchParams(params).toString();
-
-    debug('Authentication parameters', {
-        state,
-        verifier,
-        challenge,
-    }, params);
+    debug('Authentication parameters', authenticator);
 
     console.log('1. Open this URL and login to your Nintendo Account:');
     console.log('');
-    console.log(authoriseurl);
+    console.log(authenticator.authorise_url);
     console.log('');
 
     console.log('2. On the "Linking an External Account" page, right click "Select this person" and copy the link. It should start with "npf71b963c1b7b6d119://auth".');
     console.log('');
 
-    const applink = await prompt({
+    const applink = await read<string>({
+        output: process.stderr,
         prompt: `Paste the link: `,
     });
 
@@ -69,8 +48,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const authorisedparams = new URLSearchParams(authorisedurl.hash.substr(1));
     debug('Redirect URL parameters', [...authorisedparams.entries()]);
 
-    const code = authorisedparams.get('session_token_code')!;
-    const token = await getNintendoAccountSessionToken(code, verifier, ZNCA_CLIENT_ID);
+    const token = await authenticator.getSessionToken(authorisedparams);
 
     console.log('Session token', token);
 

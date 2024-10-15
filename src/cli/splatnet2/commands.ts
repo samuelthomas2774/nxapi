@@ -1,0 +1,12 @@
+export * as user from './user.js';
+export * as token from './token.js';
+export * as stages from './stages.js';
+export * as challenges from './challenges.js';
+export * as weapons from './weapons.js';
+export * as hero from './hero.js';
+export * as battles from './battles.js';
+export * as schedule from './schedule.js';
+export * as dumpResults from './dump-results.js';
+export * as dumpRecords from './dump-records.js';
+export * as monitor from './monitor.js';
+export * as xRankSeasons from './x-rank-seasons.js';

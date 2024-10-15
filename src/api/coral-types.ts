@@ -5,7 +5,7 @@ export interface CoralSuccessResponse<T = unknown> {
     correlationId: string;
 }
 
-export interface CoralErrorResponse {
+export interface CoralError {
     status: CoralStatus | number;
     errorMessage: string;
     correlationId: string;
@@ -53,7 +53,7 @@ export enum CoralStatus {
     // UNKNOWN = -1,
 }
 
-export type CoralResponse<T = unknown> = CoralSuccessResponse<T> | CoralErrorResponse;
+export type CoralResponse<T = unknown> = CoralSuccessResponse<T> | CoralError;
 
 export interface AccountLoginParameter {
     naIdToken: string;

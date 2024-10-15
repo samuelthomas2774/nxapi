@@ -1,8 +1,8 @@
-import fetch, { Response } from 'node-fetch';
-import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralErrorResponse, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
+import { fetch, Response } from 'undici';
+import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
-import CoralApi, { CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
-import { NintendoAccountUser } from './na.js';
+import { CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
+import { NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -10,21 +10,7 @@ import { getAdditionalUserAgents, getUserAgent } from '../util/useragent.js';
 
 const debug = createDebug('nxapi:api:znc-proxy');
 
-export default class ZncProxyApi implements CoralApi {
-    // Not used by ZncProxyApi
-    onTokenExpired: ((data?: CoralErrorResponse, res?: Response) => Promise<CoralAuthData | void>) | null = null;
-    /** @internal */
-    _renewToken: Promise<void> | null = null;
-
-    /** @internal */
-    _token_expired = false;
-    /** @internal */
-    na_id = '';
-    /** @internal */
-    coral_user_id = '';
-    readonly znca_version = '';
-    readonly znca_useragent = '';
-
+export default class ZncProxyApi implements CoralApiInterface {
     constructor(
         private url: string,
         // ZncApi uses the NSO token (valid for a few hours)
@@ -47,8 +33,8 @@ export default class ZncProxyApi implements CoralApi {
 
         debug('fetch %s %s, response %s', method, url, response.status);
 
-        if (response.status !== 200 && response.status !== 204) {
-            throw new ErrorResponse('[zncproxy] Non-200/204 status code', response, await response.text());
+        if (!response.ok) {
+            throw await ZncProxyErrorResponse.fromResponse(response, '[zncproxy] Non-2xx status code');
         }
 
         const data = (response.status === 204 ? {} : await response.json()) as T;
@@ -70,15 +56,15 @@ export default class ZncProxyApi implements CoralApi {
         return createResult(result, result);
     }
 
-    async addFavouriteFriend(nsaid: string) {
-        const result = await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
+    async addFavouriteFriend(nsa_id: string) {
+        const result = await this.fetch('/friend/' + nsa_id, 'POST', JSON.stringify({
             isFavoriteFriend: true,
         }));
         return createResult(result, {});
     }
 
-    async removeFavouriteFriend(nsaid: string) {
-        const result = await this.fetch('/friend/' + nsaid, 'POST', JSON.stringify({
+    async removeFavouriteFriend(nsa_id: string) {
+        const result = await this.fetch('/friend/' + nsa_id, 'POST', JSON.stringify({
             isFavoriteFriend: false,
         }));
         return createResult(result, {});
@@ -143,7 +129,13 @@ export default class ZncProxyApi implements CoralApi {
         return createResult(result, result.token);
     }
 
-    async getToken(token: string, user: NintendoAccountUser): ReturnType<CoralApi['getToken']> {
+    async getToken(token: string, user: NintendoAccountUser): Promise<PartialCoralAuthData> {
+        throw new Error('Not supported in ZncProxyApi');
+    }
+
+    getTokenWithNintendoAccountToken(
+        token: NintendoAccountToken, user: NintendoAccountUser,
+    ): Promise<PartialCoralAuthData> {
         throw new Error('Not supported in ZncProxyApi');
     }
 
@@ -153,8 +145,13 @@ export default class ZncProxyApi implements CoralApi {
         return data;
     }
 
-    /** @private */
-    setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
+    renewTokenWithNintendoAccountToken(
+        token: NintendoAccountToken, user: NintendoAccountUser,
+    ): Promise<PartialCoralAuthData> {
+        throw new Error('Not supported in ZncProxyApi');
+    }
+
+    protected setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
         throw new Error('Not supported in ZncProxyApi');
     }
 
@@ -184,6 +181,8 @@ function createResult<T extends {}, R>(data: R & {[ResponseSymbol]: Response}, r
 
     return result as Result<T>;
 }
+
+export class ZncProxyErrorResponse extends ErrorResponse {}
 
 export interface AuthToken {
     user: string;
@@ -230,12 +229,12 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
     debug('fetch %s %s, response %s', 'GET', presence_url, response.status);
 
     if (response.status !== 200) {
-        throw new ErrorResponse('[zncproxy] Unknown error', response, await response.text());
+        throw await ZncProxyErrorResponse.fromResponse(response, '[zncproxy] Non-200 status code');
     }
 
     if (!response.headers.get('Content-Type')?.match(/^application\/json(;|$)$/)) {
-        controller.abort();
-        throw new ErrorResponse('[zncproxy] Unacceptable content type', response);
+        response.body?.cancel();
+        throw new ZncProxyErrorResponse('[zncproxy] Unacceptable content type', response);
     }
 
     const data = await response.json() as PresenceUrlResponse;

@@ -146,9 +146,11 @@ function WindowTitle(props: {
 
 const styles = StyleSheet.create({
     app: {
+        // @ts-expect-error vh unit only supported on web
         height: Platform.OS === 'web' ? '100vh' : '100%',
     },
     appScrollable: {
+        // @ts-expect-error vh unit only supported on web
         minHeight: Platform.OS === 'web' ? '100vh' : '100%',
     },
 });

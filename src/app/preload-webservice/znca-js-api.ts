@@ -142,6 +142,16 @@ interface WebServiceJsApi {
      * Used by SplatNet 3.
      */
     reloadExtension(): void;
+
+    /**
+     * Clears the unread notifications flag.
+     */
+    clearUnreadFlag(): void;
+
+    /**
+     * Opens a URL in the default browser.
+     */
+    openExternalBrowser(url: string): void;
 }
 
 //
@@ -339,6 +349,16 @@ function reloadExtension() {
     debug('reloadExtension called');
 }
 
+function clearUnreadFlag() {
+    debug('clearUnreadFlag called');
+    ipc.clearUnreadFlag();
+}
+
+function openExternalBrowser(url: string) {
+    debug('openExternalBrowser called', url);
+    window.open(url);
+}
+
 const api: WebServiceJsApi = {
     invokeNativeShare,
     invokeNativeShareUrl,
@@ -356,6 +376,8 @@ const api: WebServiceJsApi = {
     completeLoading,
     closeWebView,
     reloadExtension,
+    clearUnreadFlag,
+    openExternalBrowser,
 };
 
 window.jsBridge = api;

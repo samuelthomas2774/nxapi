@@ -1,5 +1,5 @@
 import * as util from 'node:util';
-import { Response as NodeFetchResponse } from 'node-fetch';
+import { Response as UndiciResponse } from 'undici';
 
 export const ResponseSymbol = Symbol('Response');
 const ErrorResponseSymbol = Symbol('IsErrorResponse');
@@ -20,12 +20,16 @@ export class ErrorResponse<T = unknown> extends Error {
 
     constructor(
         message: string,
-        readonly response: Response | NodeFetchResponse,
-        body?: string | T
+        readonly response: Response | UndiciResponse,
+        body?: string | ArrayBuffer | T
     ) {
         super(message);
 
         Object.defineProperty(this, ErrorResponseSymbol, {enumerable: false, value: ErrorResponseSymbol});
+
+        if (body instanceof ArrayBuffer) {
+            body = (new TextDecoder()).decode(body);
+        }
 
         if (typeof body === 'string') {
             this.body = body;
@@ -49,6 +53,12 @@ export class ErrorResponse<T = unknown> extends Error {
                 }).replace(/\n/g, '\n      ') +
                 (lines.length ? '\n' + lines.join('\n') : ''),
         });
+    }
+
+    static async fromResponse(response: UndiciResponse, message: string) {
+        const body = await response.arrayBuffer();
+
+        return new this(message, response, body);
     }
 }
 

@@ -1,25 +1,41 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Trans, useTranslation } from 'react-i18next';
 import { User } from 'discord-rpc';
 import ipc, { events } from '../ipc.js';
 import { RequestState, useAsync, useEventListener } from '../util.js';
-import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral } from '../../common/types.js';
+import { DiscordPresenceSource, DiscordPresenceSourceUrl, DiscordPresenceSourceCoral, DiscordStatus } from '../../common/types.js';
 import { DiscordPresence } from '../../../discord/types.js';
 import { DISCORD_COLOUR, TEXT_COLOUR_DARK } from '../constants.js';
 import { NintendoSwitchUser } from '../components/index.js';
+import Warning from '../components/icons/warning.js';
 
 export default function DiscordPresenceSource(props: {
     source: DiscordPresenceSource | null;
     presence: DiscordPresence | null;
     user: User | null;
 }) {
+    const [status, setStatus] = useState<DiscordStatus | null>(null);
+
+    useEffect(() => {
+        ipc.getDiscordStatus().then(setStatus);
+    }, [ipc]);
+
+    useEventListener(events, 'update-discord-status', setStatus, []);
+
+    const showErrorDetails = useCallback(() => {
+        ipc.showDiscordLastUpdateError();
+    }, [ipc]);
+
     if (!props.source) return null;
 
     return <TouchableOpacity onPress={() => ipc.showDiscordModal()}>
         <View style={[styles.discord, !props.source ? styles.discordInactive : null]}>
             {renderDiscordPresenceSource(props.source)}
             {props.presence || props.user ? <DiscordPresence presence={props.presence} user={props.user} /> : null}
+
+            {status?.error_message ?
+                <DiscordPresenceError message={status?.error_message} onPress={showErrorDetails} /> : null}
         </View>
     </TouchableOpacity>;
 }
@@ -99,7 +115,7 @@ function DiscordPresence(props: {
     const user_image_url = props.user ?
         props.user.avatar ? 'https://cdn.discordapp.com/avatars/' + props.user.id + '/' + props.user.avatar + '.png' :
         !props.user.discriminator || props.user.discriminator === '0' ?
-            'https://cdn.discordapp.com/embed/avatars/' + ((parseInt(props.user.id) >> 22) % 5) + '.png' :
+            'https://cdn.discordapp.com/embed/avatars/' + ((parseInt(props.user.id) >> 22) % 6) + '.png' :
         'https://cdn.discordapp.com/embed/avatars/' + (parseInt(props.user.discriminator) % 5) + '.png' : undefined;
 
     return <View style={styles.discordPresenceContainer}>
@@ -111,12 +127,26 @@ function DiscordPresence(props: {
         {props.user ? <View style={styles.discordUser}>
             <Image source={{uri: user_image_url, width: 18, height: 18}} style={styles.discordUserImage} />
             <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">
-                {props.user.username}<Text style={styles.discordUserDiscriminator}>#{props.user.discriminator}</Text>
+                {props.user.username}
+                {props.user.discriminator && props.user.discriminator !== '0' ?
+                    <Text style={styles.discordUserDiscriminator}>#{props.user.discriminator}</Text> : null}
             </Text>
         </View> : <View style={styles.discordUser}>
             <Text style={styles.discordUserText} numberOfLines={1} ellipsizeMode="tail">{t('discord_not_connected')}</Text>
         </View>}
     </View>;
+}
+
+function DiscordPresenceError(props: {
+    message: string;
+    onPress?: () => void;
+}) {
+    return <TouchableOpacity onPress={props.onPress} style={styles.errorTouchable}>
+        <View style={styles.error}>
+            <Text style={styles.icon}><Warning /></Text>
+            <Text style={styles.errorText} numberOfLines={1} ellipsizeMode="tail">{props.message}</Text>
+        </View>
+    </TouchableOpacity>;
 }
 
 const styles = StyleSheet.create({
@@ -171,5 +201,24 @@ const styles = StyleSheet.create({
     },
     discordUserDiscriminator: {
         opacity: 0.7,
+    },
+
+    errorTouchable: {
+        marginVertical: -16,
+        marginHorizontal: -20,
+        marginTop: 6,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+    error: {
+        flexDirection: 'row',
+    },
+    icon: {
+        marginRight: 10,
+        color: TEXT_COLOUR_DARK,
+    },
+    errorText: {
+        color: TEXT_COLOUR_DARK,
     },
 });

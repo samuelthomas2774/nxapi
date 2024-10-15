@@ -1,6 +1,6 @@
-import { Response } from 'node-fetch';
-import CoralApi, { CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralErrorResponse } from '../api/coral-types.js';
+import { Response } from 'undici';
+import CoralApi, { CoralApiInterface, CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
+import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralError } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
 import { checkUseLimit } from './util.js';
@@ -22,6 +22,7 @@ export default class Coral {
     expires_at = Date.now() + (2 * 60 * 60 * 1000);
 
     promise = new Map<string, Promise<void>>();
+    delay_retry_after_error_until: number | null = null;
 
     updated = {
         announcements: null as number | null,
@@ -29,13 +30,15 @@ export default class Coral {
         webservices: null as number | null,
         active_event: null as number | null,
     };
+
+    delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
     update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
     onUpdatedWebServices: ((webservices: Result<WebServices>) => void) | null = null;
 
     constructor(
-        public api: CoralApi,
+        public api: CoralApiInterface,
         public data: CoralAuthData,
         public announcements: Result<Announcements> | null = null,
         public friends: Result<Friends> | null = null,
@@ -50,10 +53,16 @@ export default class Coral {
 
     private update(key: keyof Coral['updated'], callback: () => Promise<void>, ttl: number) {
         if (((this.updated[key] ?? 0) + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? Promise.resolve().then(() => callback.call(null)).then(() => {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
+                const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
+
+                return delay_retry > 0 ? new Promise(rs => setTimeout(rs, delay_retry)) : null;
+            }).then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
+                this.delay_retry_after_error_until = null;
                 this.promise.delete(key);
             }).catch(err => {
+                this.delay_retry_after_error_until = Date.now() + this.delay_retry_after_error;
                 this.promise.delete(key);
                 throw err;
             });
@@ -115,6 +124,10 @@ export default class Coral {
     }
 
     async addFriend(nsa_id: string) {
+        if (!(this.api instanceof CoralApi)) {
+            throw new Error('Cannot send friend requests using Coral API proxy');
+        }
+
         if (nsa_id === this.data.nsoAccount.user.nsaId) {
             throw new Error('Cannot add self as a friend');
         }
@@ -177,7 +190,7 @@ export default class Coral {
             oidc.getToken(),
             oidc.getUser(),
         ]);
-    
+
         const {nso, data} = await CoralApi.createWithNintendoAccountToken(token, user);
 
         const auth_data: SavedToken = {
@@ -220,7 +233,7 @@ export default class Coral {
         return [nso, auth_data] as const;
     }
 
-    static async createWithCoralApi(coral: CoralApi, data: SavedToken, skip_fetch = false) {
+    static async createWithCoralApi(coral: CoralApiInterface, data: SavedToken, skip_fetch = false) {
         if (skip_fetch) {
             debug('Already authenticated, skip fetching coral data');
             return new Coral(coral, data, null, null, null, null);
@@ -258,7 +271,7 @@ function createTokenExpiredHandler(
     session: NintendoAccountSession<SavedToken>, coral: CoralApi,
     renew_token_data: {auth_data: SavedToken}, ratelimit = true
 ) {
-    return (data: CoralErrorResponse, response: Response) => {
+    return (data: CoralError, response: Response) => {
         debug('Token expired', renew_token_data.auth_data.user.id, data);
         return renewToken(session, coral, renew_token_data, ratelimit);
     };
@@ -269,7 +282,7 @@ async function renewToken(
     renew_token_data: {auth_data: SavedToken}, ratelimit = true
 ) {
     // if (ratelimit) {
-    //     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);    
+    //     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
     //     await checkUseLimit(storage, 'coral', jwt.payload.sub, ratelimit);
     // }
 

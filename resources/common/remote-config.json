@@ -1,12 +1,15 @@
 {
     "require_version": [],
     "coral": {
-        "znca_version": "2.5.1"
+        "znca_version": "2.7.0"
     },
     "coral_auth": {
-        "default": "imink",
+        "default": [
+            "nxapi",
+            "https:\/\/nxapi-znca-api.fancy.org.uk\/api\/znca"
+        ],
         "splatnet2statink": null,
-        "flapg": {},
+        "flapg": null,
         "imink": {}
     },
     "moon": {
@@ -17,8 +20,8 @@
         "blanco_version": "2.1.1"
     },
     "coral_gws_splatnet3": {
-        "app_ver": "4.0.0-e2ee936d",
+        "app_ver": "4.0.0-091d4283",
         "version": "4.0.0",
-        "revision": "e2ee936dbecad1fd8582c2a35c2603c63767263f"
+        "revision": "091d428399dc86fd3a7fc43d64bd33b8bd1e875d"
     }
 }

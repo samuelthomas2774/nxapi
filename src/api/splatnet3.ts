@@ -1,7 +1,7 @@
-import fetch, { Response } from 'node-fetch';
-import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
+import { fetch, Response } from 'undici';
+import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLError, GraphQLErrorResponse, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
 import { WebServiceToken } from './coral-types.js';
-import CoralApi from './coral.js';
+import { CoralApiInterface } from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { BulletToken } from './splatnet3-types.js';
 import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
@@ -27,15 +27,25 @@ const SPLATNET3_URL = SPLATNET3_WEBSERVICE_URL + '/api';
 const SHOULD_RENEW_TOKEN_AT = 300; // 5 minutes in seconds
 const TOKEN_EXPIRES_IN = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
+export enum SplatNet3AuthErrorCode {
+    USER_NOT_REGISTERED = 'USER_NOT_REGISTERED',
+    ERROR_INVALID_PARAMETERS = 'ERROR_INVALID_PARAMETERS',
+    ERROR_INVALID_GAME_WEB_TOKEN = 'ERROR_INVALID_GAME_WEB_TOKEN',
+    ERROR_OBSOLETE_VERSION = 'ERROR_OBSOLETE_VERSION',
+    ERROR_RATE_LIMIT = 'ERROR_RATE_LIMIT',
+    ERROR_SERVER = 'ERROR_SERVER',
+    ERROR_SERVER_MAINTENANCE = 'ERROR_SERVER_MAINTENANCE',
+}
+
 const AUTH_ERROR_CODES = {
-    204: 'USER_NOT_REGISTERED',
-    400: 'ERROR_INVALID_PARAMETERS',
-    401: 'ERROR_INVALID_GAME_WEB_TOKEN',
-    403: 'ERROR_OBSOLETE_VERSION',
-    429: 'ERROR_RATE_LIMIT',
-    500: 'ERROR_SERVER',
-    503: 'ERROR_SERVER_MAINTENANCE',
-    599: 'ERROR_SERVER',
+    204: SplatNet3AuthErrorCode.USER_NOT_REGISTERED,
+    400: SplatNet3AuthErrorCode.ERROR_INVALID_PARAMETERS,
+    401: SplatNet3AuthErrorCode.ERROR_INVALID_GAME_WEB_TOKEN,
+    403: SplatNet3AuthErrorCode.ERROR_OBSOLETE_VERSION,
+    429: SplatNet3AuthErrorCode.ERROR_RATE_LIMIT,
+    500: SplatNet3AuthErrorCode.ERROR_SERVER,
+    503: SplatNet3AuthErrorCode.ERROR_SERVER_MAINTENANCE,
+    599: SplatNet3AuthErrorCode.ERROR_SERVER,
 } as const;
 
 const REPLAY_CODE_REGEX = /^[A-Z0-9]{16}$/;
@@ -92,7 +102,7 @@ export default class SplatNet3Api {
     ) {}
 
     async fetch<T = unknown>(
-        url: string, method = 'GET', body?: string | FormData, headers?: object,
+        url: string, method = 'GET', body?: string, headers?: object,
         /** @internal */ _log?: string,
         /** @internal */ _attempt = 0,
     ): Promise<HasResponse<T, Response>> {
@@ -143,7 +153,7 @@ export default class SplatNet3Api {
         }
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet3] Non-200 status code', response, await response.text());
+            throw await SplatNet3ErrorResponse.fromResponse(response, '[splatnet3] Non-200 status code');
         }
 
         const remaining = parseInt(response.headers.get('x-bullettoken-remaining') ?? '0');
@@ -189,9 +199,9 @@ export default class SplatNet3Api {
         const data = await this.fetch<GraphQLResponse<_Result>>('/graphql', 'POST', JSON.stringify(req), undefined,
             'graphql query ' + id);
 
-        if (!('data' in data) || (this.graphql_strict && data.errors?.length)) {
-            throw new ErrorResponse('[splatnet3] GraphQL error: ' + data.errors!.map(e => e.message).join(', '),
-                data[ResponseSymbol], data);
+        if (data.errors && (!('data' in data) || this.graphql_strict)) {
+            throw SplatNet3GraphQLErrorResponse.from(data[ResponseSymbol], data as GraphQLResponseWithErrors,
+                id, variables);
         }
 
         for (const error of data.errors ?? []) {
@@ -377,7 +387,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.journey) {
-            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Journey not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
@@ -390,7 +400,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.journey) {
-            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Journey not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
@@ -403,7 +413,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.journey) {
-            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Journey not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
@@ -416,7 +426,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.journey) {
-            throw new ErrorResponse('[splatnet3] Journey not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Journey not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'journey'>;
@@ -450,7 +460,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.fest) {
-            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Fest not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
@@ -463,7 +473,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.fest) {
-            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Fest not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
@@ -476,7 +486,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.fest) {
-            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Fest not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
@@ -489,7 +499,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.fest) {
-            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Fest not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
@@ -509,7 +519,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.fest) {
-            throw new ErrorResponse('[splatnet3] Fest not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Fest not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'fest'>;
@@ -528,7 +538,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.node) {
-            throw new ErrorResponse('[splatnet3] FestTeam not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] FestTeam not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'node'>;
@@ -589,7 +599,7 @@ export default class SplatNet3Api {
                 null :
             null;
 
-        if (!query) throw new Error('Invalid leaderboard');
+        if (!query) throw new TypeError('Invalid leaderboard');
 
         return this.persistedQuery<{
             [XRankingLeaderboardType.X_RANKING]: {
@@ -633,7 +643,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.saleGear) {
-            throw new ErrorResponse('[splatnet3] Sale gear not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Sale gear not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'saleGear'>;
@@ -670,7 +680,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.myOutfit) {
-            throw new ErrorResponse('[splatnet3] My outfit not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] My outfit not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'myOutfit'>;
@@ -741,7 +751,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.replay) {
-            throw new ErrorResponse('[splatnet3] Replay not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Replay not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'replay'>;
@@ -842,7 +852,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.vsHistoryDetail) {
-            throw new ErrorResponse('[splatnet3] Battle history not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Battle history not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'vsHistoryDetail'>;
@@ -855,7 +865,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.vsHistoryDetail) {
-            throw new ErrorResponse('[splatnet3] Battle history not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Battle history not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'vsHistoryDetail'>;
@@ -901,7 +911,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.coopHistoryDetail) {
-            throw new ErrorResponse('[splatnet3] Co-op history not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Co-op history not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'coopHistoryDetail'>;
@@ -914,7 +924,7 @@ export default class SplatNet3Api {
         });
 
         if (!result.data.node) {
-            throw new ErrorResponse('[splatnet3] Co-op history not found', result[ResponseSymbol], result);
+            throw SplatNet3GraphQLResourceNotFoundResponse.from('[splatnet3] Co-op history not found', result);
         }
 
         return result as NotNullPersistedQueryResult<typeof result, 'node'>;
@@ -928,8 +938,8 @@ export default class SplatNet3Api {
     //
     //
 
-    async renewTokenWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await SplatNet3Api.loginWithCoral(nso, user);
+    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await SplatNet3Api.loginWithCoral(coral, user);
         this.setTokenWithSavedToken(data);
         return data;
     }
@@ -948,8 +958,8 @@ export default class SplatNet3Api {
         this._token_expired = false;
     }
 
-    static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await this.loginWithCoral(nso, user);
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await this.loginWithCoral(coral, user);
         return {splatnet: this.createWithSavedToken(data), data};
     }
 
@@ -977,11 +987,11 @@ export default class SplatNet3Api {
         );
     }
 
-    static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
         const { default: { coral_gws_splatnet3: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents SplatNet 3 authentication');
 
-        const webserviceToken = await nso.getWebServiceToken(SPLATNET3_WEBSERVICE_ID);
+        const webserviceToken = await coral.getWebServiceToken(SPLATNET3_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken, user);
     }
@@ -1019,11 +1029,11 @@ export default class SplatNet3Api {
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
-        const body = await response.text();
-
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet3] Non-200 status code', response, body);
+            throw await SplatNet3ErrorResponse.fromResponse(response, '[splatnet3] Non-200 status code');
         }
+
+        const body = await response.text();
 
         const cookies = response.headers.get('Set-Cookie');
 
@@ -1047,9 +1057,9 @@ export default class SplatNet3Api {
 
         debug('fetch %s %s, response %s', 'POST', '/bullet_tokens', response.status);
 
-        const error: string | undefined = AUTH_ERROR_CODES[tr.status as keyof typeof AUTH_ERROR_CODES];
-        if (error) throw new ErrorResponse('[splatnet3] ' + error, tr, await tr.text());
-        if (tr.status !== 201) throw new ErrorResponse('[splatnet3] Non-201 status code', tr, await tr.text());
+        const error: SplatNet3AuthErrorCode | undefined = AUTH_ERROR_CODES[tr.status as keyof typeof AUTH_ERROR_CODES];
+        if (error) throw await SplatNet3AuthErrorResponse.fromResponse(tr, '[splatnet3] ' + error);
+        if (tr.status !== 201) throw await SplatNet3ErrorResponse.fromResponse(tr, '[splatnet3] Non-201 status code');
 
         const bullet_token = await tr.json() as BulletToken;
         const created_at = Date.now();
@@ -1081,6 +1091,66 @@ function getMapPersistedQueriesModeFromEnvironment(): MapQueriesMode {
     if (process.env.NXAPI_SPLATNET3_UPGRADE_QUERIES === '3') return MapQueriesMode.ALL;
 
     return MapQueriesMode.ALL;
+}
+
+export class SplatNet3ErrorResponse<T = unknown> extends ErrorResponse<T> {}
+
+export class SplatNet3AuthErrorResponse extends SplatNet3ErrorResponse {
+    constructor(
+        message: string, response: Response | globalThis.Response,
+        body?: string | unknown | undefined,
+        readonly code = AUTH_ERROR_CODES[response.status as keyof typeof AUTH_ERROR_CODES] ??
+            SplatNet3AuthErrorCode.ERROR_SERVER,
+    ) {
+        super(message, response, body);
+    }
+}
+
+type GraphQLResponseWithErrors = (GraphQLSuccessResponse & {errors: GraphQLError[]}) | GraphQLErrorResponse;
+
+export class SplatNet3GraphQLErrorResponse<
+    Id extends string = string,
+    /** @private */
+    _Variables extends Id extends KnownRequestId ? VariablesTypes[Id] : unknown =
+        Id extends KnownRequestId ? VariablesTypes[Id] : unknown,
+> extends SplatNet3ErrorResponse<GraphQLResponseWithErrors> {
+    constructor(
+        message: string, response: Response | globalThis.Response,
+        body?: string | GraphQLResponseWithErrors | undefined,
+        readonly request_id?: Id | string,
+        readonly variables?: _Variables,
+    ) {
+        super(message, response, body);
+    }
+
+    static from(response: Response, data: GraphQLResponseWithErrors, id: string, variables: unknown) {
+        return new SplatNet3GraphQLErrorResponse('[splatnet3] GraphQL error: ' +
+            data.errors.map(e => e.message).join(', '), response, data, id, variables);
+    }
+}
+
+export class SplatNet3GraphQLResourceNotFoundResponse<
+    Id extends string = string,
+    /** @private */
+    _Result extends Id extends KnownRequestId ? ResultTypes[Id] : unknown =
+        Id extends KnownRequestId ? ResultTypes[Id] : unknown,
+    /** @private */
+    _Variables extends Id extends KnownRequestId ? VariablesTypes[Id] : unknown =
+        Id extends KnownRequestId ? VariablesTypes[Id] : unknown,
+> extends SplatNet3ErrorResponse<PersistedQueryResult<_Result>> {
+    constructor(
+        message: string, response: Response | globalThis.Response,
+        body?: string | PersistedQueryResult<_Result> | undefined,
+        readonly request_id?: Id | string,
+        readonly variables?: _Variables,
+    ) {
+        super(message, response, body);
+    }
+
+    static from(message: string, data: PersistedQueryResult<any>) {
+        return new SplatNet3GraphQLResourceNotFoundResponse<any, any>(
+            message, data[ResponseSymbol], data, data[RequestIdSymbol], data[VariablesSymbol]);
+    }
 }
 
 export interface SplatNet3AuthData {

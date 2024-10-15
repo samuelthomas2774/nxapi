@@ -1,6 +1,6 @@
 import * as path from 'node:path';
-import mkdirp from 'mkdirp';
-import type { Arguments as ParentArguments } from '../splatnet3.js';
+import * as fs from 'node:fs/promises';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -77,7 +77,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const directory = argv.directory ?? path.join(argv.dataPath, 'splatnet3');
 
-    await mkdirp(directory);
+    await fs.mkdir(directory, {recursive: true});
 
     let vs: (ReturnType<typeof dumpResults> extends Promise<infer T> ? T : never) | null = null;
     let coop: (ReturnType<typeof dumpCoopResults> extends Promise<infer T> ? T : never) | null = null;
@@ -158,7 +158,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     try {
         await new Promise(rs => sleep_timeout = setTimeout(sleep_resolve = rs, argv.updateInterval * 1000));
-        
+
         while (!should_exit) {
             updating = true;
             [vs, coop, album] = await update(argv, splatnet, directory, vs, coop, album);

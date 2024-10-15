@@ -6,6 +6,11 @@ export {
     RequestIdSymbol,
     VariablesSymbol,
 
+    SplatNet3ErrorResponse,
+    SplatNet3AuthErrorResponse,
+    SplatNet3GraphQLErrorResponse,
+    SplatNet3GraphQLResourceNotFoundResponse,
+
     XRankingRegion,
     XRankingLeaderboardType,
     XRankingLeaderboardRule,

@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, LoginItemSettingsOptions, Menu } from './electron.js';
+import { app, BrowserWindow, ipcMain, session, Settings } from 'electron';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
+import { setGlobalDispatcher } from 'undici';
 import * as persist from 'node-persist';
 import { i18n } from 'i18next';
 import MenuApp from './menu.js';
@@ -9,7 +10,7 @@ import { handleOpenWebServiceUri } from './webservices.js';
 import { EmbeddedPresenceMonitor, PresenceMonitorManager } from './monitor.js';
 import { createModalWindow, createWindow } from './windows.js';
 import { sendToAllWindows, setupIpc } from './ipc.js';
-import { askUserForUri } from './util.js';
+import { askUserForUri, buildElectronProxyAgent, showErrorDialog } from './util.js';
 import { setAppInstance, updateMenuLanguage } from './app-menu.js';
 import { handleAuthUri } from './na-auth.js';
 import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
@@ -22,6 +23,7 @@ import { dev, dir, git, release, version } from '../../util/product.js';
 import { addUserAgent } from '../../util/useragent.js';
 import { initStorage, paths } from '../../util/storage.js';
 import createI18n, { languages } from '../i18n/index.js';
+import { CoralApiInterface } from '../../api/coral.js';
 
 const debug = createDebug('app:main');
 
@@ -31,7 +33,7 @@ export const protocol_registration_options = dev && process.platform === 'win32'
         path.join(dir, 'dist', 'app', 'app-entry.cjs'),
     ],
 } : null;
-export const login_item_options: LoginItemSettingsOptions = {
+export const login_item_options: Settings = {
     path: process.execPath,
     args: dev ? [
         path.join(dir, 'dist', 'app', 'app-entry.cjs'),
@@ -164,6 +166,12 @@ export async function init() {
     addUserAgent('nxapi-app (Chromium ' + process.versions.chrome + '; Electron ' + process.versions.electron + ')');
 
     setAboutPanelOptions();
+
+    const agent = buildElectronProxyAgent({
+        session: session.defaultSession,
+    });
+    setGlobalDispatcher(agent);
+
     app.configureHostResolver({enableBuiltInResolver: false});
 
     const [storage, i18n] = await Promise.all([
@@ -319,7 +327,7 @@ interface SavedMonitorState {
 }
 
 export class Store extends EventEmitter {
-    readonly users: Users<CoralUser>;
+    readonly users: Users<CoralUser<CoralApiInterface>>;
 
     constructor(
         readonly app: App,
@@ -471,10 +479,9 @@ export class Store extends EventEmitter {
         } catch (err) {
             debug('Error restoring monitor for user %s', user.id, err);
 
-            const {response} = await dialog.showMessageBox({
+            const {response} = await showErrorDialog({
                 message: (err instanceof Error ? err.name : 'Error') + ' restoring monitor for user ' + user.id,
-                detail: err instanceof Error ? err.stack ?? err.message : err as any,
-                type: 'error',
+                error: err,
                 buttons: ['OK', 'Retry'],
                 defaultId: 1,
             });
@@ -500,10 +507,10 @@ export class Store extends EventEmitter {
         } catch (err) {
             debug('Error restoring monitor for presence URL %s', state.discord_presence.source.url, err);
 
-            const {response} = await dialog.showMessageBox({
-                message: (err instanceof Error ? err.name : 'Error') + ' restoring monitor for presence URL ' + state.discord_presence.source.url,
-                detail: err instanceof Error ? err.stack ?? err.message : err as any,
-                type: 'error',
+            const {response} = await showErrorDialog({
+                message: (err instanceof Error ? err.name : 'Error') + ' restoring monitor for presence URL ' +
+                    state.discord_presence.source.url,
+                error: err,
                 buttons: ['OK', 'Retry'],
                 defaultId: 1,
             });

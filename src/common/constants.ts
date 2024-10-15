@@ -6,7 +6,7 @@ export const USER_AGENT_INFO_URL = 'https://gitlab.fancy.org.uk/samuel/nxapi#use
 export const CONFIG_URL = 'https://fancy.org.uk/api/nxapi/config';
 
 export const LICENCE_NOTICE = `
-Copyright (c) 2022 Samuel Elliott
+Copyright (c) 2023 Samuel Elliott
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

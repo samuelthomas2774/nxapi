@@ -1,13 +1,11 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import persist from 'node-persist';
-import mkdirp from 'mkdirp';
-import SplatNet2Api from '../../api/splatnet2.js';
+import SplatNet2Api, { SplatNet2ErrorResponse } from '../../api/splatnet2.js';
 import { renewIksmToken } from '../auth/splatnet2.js';
-import { Records, Stages, WebServiceError } from '../../api/splatnet2-types.js';
+import { Records, Stages } from '../../api/splatnet2-types.js';
 import { dumpCoopResults, dumpResults } from './dump-results.js';
 import { dumpProfileImage, dumpRecords } from './dump-records.js';
-import { ErrorResponse } from '../../api/util.js';
 import createDebug from '../../util/debug.js';
 import Loop, { LoopResult } from '../../util/loop.js';
 
@@ -42,7 +40,7 @@ export class SplatNet2RecordsMonitor extends Loop {
     }
 
     async init() {
-        await mkdirp(this.directory);
+        await fs.mkdir(this.directory, {recursive: true});
     }
 
     async hasChanged(records: Records) {
@@ -90,8 +88,8 @@ export class SplatNet2RecordsMonitor extends Loop {
         }
     }
 
-    async handleError(err: Error | ErrorResponse<WebServiceError>): Promise<LoopResult> {
-        if ('response' in err && err.data?.code === 'AUTHENTICATION_ERROR') {
+    async handleError(err: Error): Promise<LoopResult> {
+        if (err instanceof SplatNet2ErrorResponse && err.data?.code === 'AUTHENTICATION_ERROR') {
             // Token expired
             debug('Renewing iksm_session cookie');
 

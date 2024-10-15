@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs/promises';
-import mkdirp from 'mkdirp';
 import createDebug from '../../util/debug.js';
 import { StorageProvider } from './index.js';
 
@@ -11,7 +10,7 @@ export class LocalStorageProvider implements StorageProvider {
     protected constructor(readonly path: string) {}
 
     async getSessionToken(na_id: string, client_id: string) {
-        await mkdirp(path.join(this.path, 'users', na_id));
+        await fs.mkdir(path.join(this.path, 'users', na_id), {recursive: true});
 
         try {
             debug('read', path.join('users', na_id, 'session-' + client_id));
@@ -25,14 +24,14 @@ export class LocalStorageProvider implements StorageProvider {
     }
 
     async setSessionToken(na_id: string, client_id: string, token: string) {
-        await mkdirp(path.join(this.path, 'users', na_id));
+        await fs.mkdir(path.join(this.path, 'users', na_id), {recursive: true});
 
         debug('write', path.join('users', na_id, 'session-' + client_id));
         await fs.writeFile(path.join(this.path, 'users', na_id, 'session-' + client_id), token, 'utf-8');
     }
 
     async getSessionItem(na_id: string, session_id: string, key: string) {
-        await mkdirp(path.join(this.path, 'sessions', na_id, session_id));
+        await fs.mkdir(path.join(this.path, 'sessions', na_id, session_id), {recursive: true});
 
         try {
             debug('read', path.join('sessions', na_id, session_id, key));
@@ -44,7 +43,7 @@ export class LocalStorageProvider implements StorageProvider {
     }
 
     async setSessionItem(na_id: string, session_id: string, key: string, value: string) {
-        await mkdirp(path.join(this.path, 'sessions', na_id, session_id));
+        await fs.mkdir(path.join(this.path, 'sessions', na_id, session_id), {recursive: true});
 
         debug('write', path.join('sessions', na_id, session_id, key));
         await fs.writeFile(path.join(this.path, 'sessions', na_id, session_id, key), value, 'utf-8');
@@ -53,7 +52,7 @@ export class LocalStorageProvider implements StorageProvider {
     static async create(path: string | URL) {
         if (path instanceof URL) path = fileURLToPath(path);
 
-        await mkdirp(path);
+        await fs.mkdir(path, {recursive: true});
 
         return new LocalStorageProvider(path);
     }

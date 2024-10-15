@@ -3,6 +3,8 @@ export {
     SplatNet2AuthData,
     SplatNet2CliTokenData,
 
+    SplatNet2ErrorResponse,
+
     LeagueType,
     LeagueRegion,
     ShareColour as ShareProfileColour,

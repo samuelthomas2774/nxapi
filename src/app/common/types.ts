@@ -48,6 +48,10 @@ export interface DiscordPresenceExternalMonitorsConfiguration {
     enable_splatnet3_monitoring?: boolean;
 }
 
+export interface DiscordStatus {
+    error_message: string | null;
+}
+
 export interface LoginItem {
     supported: boolean;
     startup_enabled: boolean;

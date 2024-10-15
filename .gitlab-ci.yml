@@ -27,7 +27,9 @@ build:
 
 build-docker:
   stage: build
+  image: node:20-alpine
   before_script:
+    - apk add docker git
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - |
       [ "$DH_REGISTRY_IMAGE" != "" ] && docker login -u "$DH_REGISTRY_USER" -p "$DH_REGISTRY_PASSWORD" "$DH_REGISTRY"
@@ -77,11 +79,8 @@ build-docker:
         docker tag "$CI_REGISTRY_IMAGE:ref-$CI_COMMIT_REF_SLUG" "$GH_REGISTRY_IMAGE:latest"
         docker push "$GH_REGISTRY_IMAGE:latest"
       fi
-  tags:
-    - docker
-  only:
-    variables:
-      - $BUILD_DOCKER_IMAGE == "true"
+  rules:
+    - if: $BUILD_DOCKER_IMAGE == "true"
   cache:
     policy: pull
 
@@ -101,9 +100,8 @@ build-app:
       - app/mac/**/*
       - app/mac-arm64/**/*
       - app/linux-unpacked/**/*
-  only:
-    variables:
-      - $BUILD_APP == "true"
+  rules:
+    - if: $BUILD_APP == "true"
   cache:
     paths:
       - node_modules/
@@ -124,9 +122,8 @@ build-windows:
       - app
     exclude:
       - app/win-unpacked/**/*
-  only:
-    variables:
-      - $BUILD_WINDOWS_APP == "true"
+  rules:
+    - if: $BUILD_WINDOWS_APP == "true"
   cache:
     paths:
       - node_modules/
@@ -141,13 +138,8 @@ publish-npm:
     - npm --color="always" publish
   needs:
     - build
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $NPM_TOKEN
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $NPM_TOKEN
   cache:
     paths:
       - node_modules/
@@ -163,14 +155,8 @@ publish-gitlab:
     - npm --color="always" --registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/ publish
   needs:
     - build
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $GITLAB_NPM_PUBLISH == "true"
-      - $GITLAB_NPM_PACKAGE_NAME
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $GITLAB_NPM_PUBLISH == "true" && $GITLAB_NPM_PACKAGE_NAME
   cache:
     paths:
       - node_modules/
@@ -186,15 +172,33 @@ publish-github:
     - npm --color="always" --registry=https://npm.pkg.github.com/ publish
   needs:
     - build
-  only:
-    refs:
-      - /^v.*$/
-    variables:
-      - $GITHUB_REPOSITORY
-      - $GITHUB_NPM_PACKAGE_NAME
-      - $GITHUB_NPM_TOKEN
-  except:
-    - branches
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $GITHUB_NPM_REPOSITORY && $GITHUB_NPM_PACKAGE_NAME && $GITHUB_NPM_TOKEN
+  cache:
+    paths:
+      - node_modules/
+    policy: pull
+
+publish-github-releases:
+  stage: deploy
+  image: alpine
+  before_script:
+    - apk add github-cli
+  script:
+    - gh release --repo "$GITHUB_REPOSITORY" view "$CI_COMMIT_TAG" --json id,url || gh release --repo "$GITHUB_REPOSITORY" create "$CI_COMMIT_TAG" --verify-tag --draft --generate-notes
+
+    - |
+      gh release --repo "$GITHUB_REPOSITORY" upload "$CI_COMMIT_TAG" \
+        "app/Nintendo\ Switch\ Online-*-mac.zip" \
+        "app/Nintendo\ Switch\ Online-*.AppImage" \
+        "app/nxapi-app_*.deb" \
+        "app/nxapi-app_*.snap" \
+        "app/Nintendo\ Switch\ Online\ Setup\ *.exe"
+  needs:
+    - build-app
+    - build-windows
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/ && $GITLAB_REPOSITORY && $GITHUB_TOKEN && $GITHUB_UPLOAD_RELEASE_ASSETS == "true"
   cache:
     paths:
       - node_modules/
@@ -233,9 +237,8 @@ publish-next:
       fi
   needs:
     - build
-  only:
-    refs:
-      - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   cache:
     paths:
       - node_modules/

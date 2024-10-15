@@ -1,9 +1,9 @@
-import { dialog, Notification } from './electron.js';
+import { Notification } from 'electron';
 import { i18n } from 'i18next';
 import { App } from './index.js';
-import { tryGetNativeImageFromUrl } from './util.js';
-import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource } from '../common/types.js';
-import { CurrentUser, Friend, Game, CoralErrorResponse } from '../../api/coral-types.js';
+import { showErrorDialog, tryGetNativeImageFromUrl } from './util.js';
+import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource, DiscordStatus } from '../common/types.js';
+import { CurrentUser, Friend, Game, CoralError } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
@@ -12,6 +12,10 @@ import { LoopResult } from '../../util/loop.js';
 import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../discord/types.js';
 import { DiscordRpcClient } from '../../discord/rpc.js';
 import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';
+import { ErrorDescription } from '../../util/errors.js';
+import { CoralErrorResponse } from '../../api/coral.js';
+import { NintendoAccountAuthErrorResponse, NintendoAccountErrorResponse } from '../../api/na.js';
+import { InvalidNintendoAccountTokenError } from '../../common/auth/na.js';
 
 const debug = createDebug('app:main:monitor');
 
@@ -54,10 +58,9 @@ export class PresenceMonitorManager {
             this.app.store.emit('update-discord-user', client?.user ?? null);
         };
         i.discord.onMonitorError = async (monitor, instance, err) => {
-            const {response} = await dialog.showMessageBox({
+            const {response} = await showErrorDialog({
                 message: err.name + ' in external monitor ' + monitor.name,
-                detail: err.stack ?? err.message,
-                type: 'error',
+                error: err,
                 buttons: ['OK', 'Retry', 'Stop'],
                 defaultId: 0,
             });
@@ -70,6 +73,19 @@ export class PresenceMonitorManager {
             }
 
             return ErrorResult.IGNORE;
+        };
+
+        i.discord.onUpdateError = err => {
+            const status: DiscordStatus = {
+                error_message: err instanceof Error ?
+                    err.name + ': ' + err.message :
+                    ErrorDescription.getErrorDescription(err),
+            };
+            this.app.store.emit('update-discord-status', status);
+        };
+        i.discord.onUpdateSuccess = () => {
+            const status: DiscordStatus = {error_message: null};
+            this.app.store.emit('update-discord-status', status);
         };
 
         i.onError = err => this.handleError(i, err);
@@ -99,6 +115,19 @@ export class PresenceMonitorManager {
         };
         i.discord.onUpdateClient = (client: DiscordRpcClient | null) => {
             this.app.store.emit('update-discord-user', client?.user ?? null);
+        };
+
+        i.discord.onUpdateError = err => {
+            const status: DiscordStatus = {
+                error_message: err instanceof Error ?
+                    err.name + ': ' + err.message :
+                    ErrorDescription.getErrorDescription(err),
+            };
+            this.app.store.emit('update-discord-status', status);
+        };
+        i.discord.onUpdateSuccess = () => {
+            const status: DiscordStatus = {error_message: null};
+            this.app.store.emit('update-discord-status', status);
         };
 
         i.onError = err => this.handleError(i, err);
@@ -321,6 +350,8 @@ export class PresenceMonitorManager {
             this.app.store.saveMonitorState(this);
             this.app.menu?.updateMenu();
             this.app.store.emit('update-discord-presence-source', source);
+        } else {
+            this.app.store.emit('update-discord-status', null);
         }
     }
 
@@ -349,12 +380,15 @@ export class PresenceMonitorManager {
 
     async handleError(
         monitor: EmbeddedPresenceMonitor | EmbeddedProxyPresenceMonitor,
-        err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException
+        err: ErrorResponse<CoralError> | NodeJS.ErrnoException
     ): Promise<LoopResult> {
-        const {response} = await dialog.showMessageBox({
+        if (monitor instanceof EmbeddedProxyPresenceMonitor || checkShouldIgnorePresenceMonitorError(err)) {
+            return LoopResult.OK;
+        }
+
+        const {response} = await showErrorDialog({
             message: err.name + ' updating presence monitor',
-            detail: err.stack ?? err.message,
-            type: 'error',
+            error: err,
             buttons: ['OK', 'Retry'],
             defaultId: 0,
         });
@@ -365,10 +399,33 @@ export class PresenceMonitorManager {
 
         return LoopResult.OK;
     }
+
+    async getDiscordStatus(): Promise<DiscordStatus | null> {
+        const monitor = this.getActiveDiscordPresenceMonitor();
+        if (!monitor) return null;
+
+        return {
+            error_message: monitor.discord.last_update_error ?
+                monitor.discord.last_update_error instanceof Error ?
+                    monitor.discord.last_update_error.name + ': ' + monitor.discord.last_update_error.message :
+                ErrorDescription.getErrorDescription(monitor.discord.last_update_error) : null,
+        };
+    }
+
+    async showDiscordPresenceLastUpdateError() {
+        const monitor = this.getActiveDiscordPresenceMonitor();
+        const error = monitor?.discord.last_update_error;
+        if (!error) return;
+
+        await showErrorDialog({
+            message: error.name + ' updating presence monitor',
+            error,
+        });
+    }
 }
 
 export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
-    onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
+    onError?: (error: ErrorResponse<CoralError> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
     enable() {
@@ -411,7 +468,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
         }
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
         } catch (err: any) {
@@ -427,7 +484,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
 export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
     notifications: NotificationManager | null = null;
-    onError?: (error: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException) =>
+    onError?: (error: ErrorResponse<CoralError> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
     enable() {
@@ -470,7 +527,7 @@ export class EmbeddedProxyPresenceMonitor extends ZncProxyDiscordPresence {
         }
     }
 
-    async handleError(err: ErrorResponse<CoralErrorResponse> | NodeJS.ErrnoException): Promise<LoopResult> {
+    async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
         try {
             return await super.handleError(err);
         } catch (err: any) {
@@ -533,4 +590,32 @@ export class ElectronNotificationManager extends NotificationManager {
             icon: await tryGetNativeImageFromUrl(friend.imageUri),
         }).show();
     }
+}
+
+function checkShouldIgnorePresenceMonitorError(err: Error): boolean {
+    // Invalid session token, the user needs to sign in again
+    if (err instanceof InvalidNintendoAccountTokenError) {
+        return false;
+    }
+
+    // Received error getting a Nintendo Account token; usually this means
+    // the session token is invalid and the user needs to sign in again
+    if (err instanceof NintendoAccountAuthErrorResponse && err.data) {
+        return false;
+    }
+
+    // Received error getting Nintendo Account user data
+    // This can only happen once when the app starts and there isn't a cached token
+    if (err instanceof NintendoAccountErrorResponse && err.data) {
+        return false;
+    }
+
+    // Received error from Coral (see CoralStatus in src/api/coral-types.ts)
+    // This usually should either not happen (e.g. BAD_REQUEST), is something the
+    // user needs to do (e.g. NSA_NOT_LINKED or UPGRADE_REQUIRED), or is permanent
+    if (err instanceof CoralErrorResponse && err.data) {
+        return false;
+    }
+
+    return true;
 }

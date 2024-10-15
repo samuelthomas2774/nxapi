@@ -1,12 +1,13 @@
-import fetch from 'node-fetch';
-import Table from '../util/table.js';
-import type { Arguments as ParentArguments } from '../nso.js';
+import { fetch } from 'undici';
+import Table from '../../util/table.js';
+import type { Arguments as ParentArguments } from './index.js';
 import { getToken } from '../../common/auth/coral.js';
 import { AuthPolicy, AuthToken } from '../../api/znc-proxy.js';
 import createDebug from '../../util/debug.js';
 import { Argv } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getUserAgent } from '../../util/useragent.js';
+import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('cli:nso:znc-proxy-tokens');
 
@@ -164,7 +165,7 @@ export function builder(yargs: Argv<ParentArguments>) {
         debug('fetch %s %s, response %d', 'DELETE', '/token', response.status);
 
         if (response.status !== 204) {
-            throw new Error('Unknown error ' + response.status);
+            throw await ErrorResponse.fromResponse(response, 'Non-204 status code');
         }
 
         console.warn('Deleted access token');

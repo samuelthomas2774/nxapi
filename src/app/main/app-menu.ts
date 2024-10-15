@@ -1,6 +1,6 @@
 import { i18n } from 'i18next';
 import { GITHUB_MIRROR_URL, GITLAB_URL, ISSUES_URL } from '../../common/constants.js';
-import { app, BrowserWindow, Menu, MenuItem, shell } from './electron.js';
+import { app, BrowserWindow, Menu, MenuItem, shell } from 'electron';
 import { App } from './index.js';
 
 let appinstance: App | null;

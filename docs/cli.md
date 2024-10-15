@@ -664,9 +664,46 @@ curl http://[::1]:12345/api/presence/0123456789abcdef
 # Fetch presence data for a specific user including Splatoon 3 presence using curl
 curl http://[::1]:12345/api/presence/0123456789abcdef?include-splatoon3=1
 
+# Fetch Splatoon 3 fest voting history for a specific user using curl
+curl http://[::1]:12345/api/presence/0123456789abcdef/splatoon3-fest-votes
+# Fetch Splatoon 3 fest voting history including all prevotes for a specific user using curl
+curl http://[::1]:12345/api/presence/0123456789abcdef/splatoon3-fest-votes?include-all=1
+
 # Watch for presence events
 curl --no-buffer http://[::1]:12345/api/presence/0123456789abcdef/events
 curl --no-buffer http://[::1]:12345/api/presence/0123456789abcdef/events?include-splatoon3=1
+
+# Save a user's current picture
+curl -L http://[::1]:12345/api/presence/0123456789abcdef/image > image.jpeg
+
+# Show the Nintendo eShop page for a user's current title
+#   http://[::1]:12345/api/presence/0123456789abcdef/title/redirect
+# Redirect to a friend code URL if not playing
+#   http://[::1]:12345/api/presence/0123456789abcdef/title/redirect?friend-code=0000-0000-0000&friend-code-hash=0000000000
+# Redirect to another URL if not playing
+#   http://[::1]:12345/api/presence/0123456789abcdef/title/redirect?fallback-url=https://example.com
+# Signal to the browser to cancel navigation if not playing
+#   http://[::1]:12345/api/presence/0123456789abcdef/title/redirect?fallback-prevent-navigation=1
+
+# Generate an SVG showing a user's presence
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed > embed.svg
+# Generate a PNG/JPEG/WEBP showing a user's presence
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed.png > embed.png
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed.jpeg > embed.jpeg
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed.webp > embed.webp
+# ... using a specific theme
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed?theme=light > embed.svg
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed?theme=dark > embed.svg
+# ... including a friend code
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed?friend-code=0000-0000-0000 > embed.svg
+# ... without a background and border
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed?transparent=1 > embed.svg
+# ... with a custom width (500 to 1500, or 440 to 1440 with transparency)
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed?width=800 > embed.svg
+# ... with Splatoon 3 presence
+curl http://[::1]:12345/api/presence/0123456789abcdef/embed?include-splatoon3=1 > embed.svg
+# ... with Splatoon 3 Splatfest team
+curl 'http://[::1]:12345/api/presence/0123456789abcdef/embed?include-splatoon3=1&show-splatoon3-fest-team=1' > embed.svg
 ```
 
 Example EventStream use:

@@ -34,14 +34,6 @@ export async function getIksmToken(
             throw new Error('No valid iksm_session cookie');
         }
 
-        if (ratelimit) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-            await checkUseLimit(storage, 'splatnet2', jwt.payload.sub);
-        }
-
-        console.warn('Authenticating to SplatNet 2');
-        debug('Authenticating to SplatNet 2');
-
         const {nso, data} = await getToken(storage, token, proxy_url);
 
         if (data[Login]) {
@@ -51,18 +43,33 @@ export async function getIksmToken(
             const activeevent = await nso.getActiveEvent();
         }
 
-        const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithCoral(nso, data.user);
-
-        await storage.setItem('IksmToken.' + token, existingToken);
-
-        if (!iksm_sessions.has(existingToken.iksm_session)) {
-            iksm_sessions.set(existingToken.iksm_session, [storage, token, null, null]);
+        let attempt;
+        if (ratelimit) {
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+            attempt = await checkUseLimit(storage, 'splatnet2', jwt.payload.sub);
         }
 
-        return {
-            splatnet: SplatNet2Api.createWithSavedToken(existingToken),
-            data: existingToken,
-        };
+        try {
+            console.warn('Authenticating to SplatNet 2');
+            debug('Authenticating to SplatNet 2');
+
+            const existingToken: SavedIksmSessionToken = await SplatNet2Api.loginWithCoral(nso, data.user);
+
+            await storage.setItem('IksmToken.' + token, existingToken);
+
+            if (!iksm_sessions.has(existingToken.iksm_session)) {
+                iksm_sessions.set(existingToken.iksm_session, [storage, token, null, null]);
+            }
+
+            return {
+                splatnet: SplatNet2Api.createWithSavedToken(existingToken),
+                data: existingToken,
+            };
+        } catch (err) {
+            await attempt?.recordError(err);
+
+            throw err;
+        }
     }
 
     debug('Using existing token');

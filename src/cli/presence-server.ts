@@ -2,14 +2,14 @@ import * as net from 'node:net';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { createHash } from 'node:crypto';
 import express, { Request, Response } from 'express';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import * as persist from 'node-persist';
-import mkdirp from 'mkdirp';
-import { BankaraMatchMode, BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, VsMode, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
-import StageScheduleQuery_730cd98 from 'splatnet3-types/graphql/730cd98e84f1030d3e9ac86b6f1aae13';
+import mimetypes from 'mime-types';
+import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
 import type { Arguments as ParentArguments } from '../cli.js';
-import { product, version } from '../util/product.js';
+import { git, product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
 import { Friend } from '../api/coral-types.js';
 import SplatNet3Api, { PersistedQueryResult, RequestIdSymbol } from '../api/splatnet3.js';
@@ -19,19 +19,30 @@ import createDebug from '../util/debug.js';
 import { initStorage } from '../util/storage.js';
 import { addCliFeatureUserAgent, getUserAgent } from '../util/useragent.js';
 import { parseListenAddress } from '../util/net.js';
-import { EventStreamResponse, HttpServer, ResponseError } from './util/http-server.js';
+import { EventStreamResponse, HttpServer, ResponseError } from '../util/http-server.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../util/yargs.js';
 import { getTitleIdFromEcUrl } from '../util/misc.js';
+import { getSettingForCoopRule, getSettingForVsMode } from '../discord/monitor/splatoon3.js';
+import { CoralApiInterface } from '../api/coral.js';
+import { PresenceEmbedFormat, getUserEmbedOptionsFromRequest, renderUserEmbedImage, renderUserEmbedSvg } from '../common/presence-embed.js';
 
 const debug = createDebug('cli:presence-server');
 const debugSplatnet3Proxy = createDebug('cli:presence-server:splatnet3-proxy');
+
+enum PresenceScope {
+    PRESENCE = 'presence',
+    PRESENCE_TIMESTAMPS = 'presence_timestamps',
+    PRESENCE_TITLE = 'title',
+    SPLATOON3_PRESENCE = 'splatoon3',
+    SPLATOON3_FEST_TEAM = 'splatoon3_fest_team',
+}
 
 interface AllUsersResult extends Friend {
     title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
     splatoon3_fest_team?: (FestTeam_schedule & FestTeam_votingStatus) | null;
 }
-interface PresenceResponse {
+export interface PresenceResponse {
     friend: Friend;
     title: TitleResult | null;
     splatoon3?: Friend_friendList | null;
@@ -227,6 +238,7 @@ abstract class SplatNet3User {
     fest_vote_status: GraphQLSuccessResponse<DetailVotingStatusResult> | null = null;
 
     promise = new Map<string, Promise<void>>();
+    delay_retry_after_error_until: number | null = null;
 
     updated = {
         friends: Date.now(),
@@ -235,6 +247,8 @@ abstract class SplatNet3User {
         current_fest: null as number | null,
         fest_vote_status: null as number | null,
     };
+
+    delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
     update_interval_schedules = 60 * 60 * 1000; // 60 minutes
     update_interval_fest_voting_status: number | null = null; // 10 seconds
@@ -245,10 +259,16 @@ abstract class SplatNet3User {
 
     protected async update(key: keyof SplatNet3User['updated'], callback: () => Promise<void>, ttl: number) {
         if (((this.updated[key] ?? 0) + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? callback.call(null).then(() => {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
+                const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
+
+                return delay_retry > 0 ? new Promise(rs => setTimeout(rs, delay_retry)) : null;
+            }).then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
+                this.delay_retry_after_error_until = null;
                 this.promise.delete(key);
             }).catch(err => {
+                this.delay_retry_after_error_until = Date.now() + this.delay_retry_after_error;
                 this.promise.delete(key);
                 throw err;
             });
@@ -424,7 +444,7 @@ class SplatNet3ApiUser extends SplatNet3User {
             fest: await this.getCurrentFest(),
         };
 
-        await mkdirp(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id));
+        await fs.mkdir(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id), {recursive: true});
         await fs.writeFile(path.join(this.record_fest_votes!.path, 'splatnet3-fest-votes-' + id, Date.now() + '.json'), JSON.stringify(record, null, 4) + '\n');
     }
 
@@ -520,11 +540,12 @@ class Server extends HttpServer {
     app: express.Express;
 
     titles = new Map</** NSA ID */ string, [TitleResult | null, /** updated */ number]>();
-    readonly promise_image = new Map<string, Promise<string>>();
+    readonly promise_image = new Map<string, Promise<string |
+        readonly [name: string, data: Uint8Array, type: string]>>();
 
     constructor(
         readonly storage: persist.LocalStorage,
-        readonly coral_users: Users<CoralUser>,
+        readonly coral_users: Users<CoralUser<CoralApiInterface>>,
         readonly splatnet3_users: Users<SplatNet3User> | null,
         readonly user_ids: string[],
         image_proxy_path?: {baas?: string; atum?: string; splatnet3?: string;},
@@ -555,6 +576,20 @@ class Server extends HttpServer {
             this.handleUserFestVotingStatusHistoryRequest(req, res, req.params.user)));
         app.get('/api/presence/:user/events', this.createApiRequestHandler((req, res) =>
             this.handlePresenceStreamRequest(req, res, req.params.user)));
+
+        app.get('/api/presence/:user/image', this.createApiRequestHandler((req, res) =>
+            this.handleUserImageRequest(req, res, req.params.user)));
+        app.get('/api/presence/:user/title/redirect', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceTitleRedirectRequest(req, res, req.params.user)));
+
+        app.get('/api/presence/:user/embed', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.SVG)));
+        app.get('/api/presence/:user/embed.png', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.PNG)));
+        app.get('/api/presence/:user/embed.jpeg', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.JPEG)));
+        app.get('/api/presence/:user/embed.webp', this.createApiRequestHandler((req, res) =>
+            this.handlePresenceEmbedRequest(req, res, req.params.user, PresenceEmbedFormat.WEBP)));
 
         if (image_proxy_path?.baas) {
             this.image_proxy_path_baas = image_proxy_path.baas;
@@ -631,9 +666,20 @@ class Server extends HttpServer {
         return user;
     }
 
+    getAccessScopeFromHeaders(req: Request) {
+        const headers = typeof req.headers['x-nxapi-auth-presence-scope'] === 'string' ?
+            [req.headers['x-nxapi-auth-presence-scope']] :
+            req.headers['x-nxapi-auth-presence-scope'] ?? [];
+
+        if (!headers.length) return null;
+
+        return headers.map(s => s.split(' ') as PresenceScope[])
+            .reduce((a, b) => a.filter(s => b.includes(s)));
+    }
+
     async handleAllUsersRequest(req: Request, res: Response) {
         if (!this.allow_all_users) {
-            throw new ResponseError(403, 'forbidden');
+            throw new ResponseError(403, 'unauthorised');
         }
 
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
@@ -695,7 +741,7 @@ class Server extends HttpServer {
                             }
 
                             if (match.splatoon3_fest_team) break;
-                            
+
                             for (const player of team.preVotes.nodes) {
                                 if (player.userIcon.url !== friend.userIcon.url) continue;
 
@@ -705,7 +751,7 @@ class Server extends HttpServer {
                                 };
                                 break;
                             }
-    
+
                             if (match.splatoon3_fest_team) break;
                         }
 
@@ -724,7 +770,10 @@ class Server extends HttpServer {
         return {result, [ResourceUrlMapSymbol]: images};
     }
 
-    async handlePresenceRequest(req: Request, res: Response | null, presence_user_nsaid: string, is_stream = false) {
+    async handlePresenceRequest(
+        req: Request, res: Response | null, presence_user_nsaid: string,
+        is_stream = false, scope = this.getAccessScopeFromHeaders(req),
+    ) {
         if (res && !is_stream) {
             const req_url = new URL(req.url, 'http://localhost');
             const stream_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid) + '/events', req_url);
@@ -734,9 +783,13 @@ class Server extends HttpServer {
 
         res?.setHeader('Access-Control-Allow-Origin', '*');
 
+        if (scope && !scope.includes(PresenceScope.PRESENCE)) {
+            throw new ResponseError(403, 'unauthorised', 'Missing required scope presence');
+        }
+
         const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
 
-        let match: [CoralUser, Friend, string] | null = null;
+        let match: [CoralUser<CoralApiInterface>, Friend, string] | null = null;
 
         for (const user_naid of this.user_ids) {
             const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);
@@ -770,10 +823,41 @@ class Server extends HttpServer {
             title,
         };
 
-        if (this.splatnet3_users && include_splatnet3) {
+        if (scope && !scope.includes(PresenceScope.PRESENCE_TIMESTAMPS)) {
+            response.friend = {
+                ...response.friend,
+                presence: {
+                    ...response.friend.presence,
+                    game: 'name' in response.friend.presence.game ? {
+                        ...response.friend.presence.game,
+                        firstPlayedAt: 0,
+                        totalPlayTime: 0,
+                    } : {},
+                    logoutAt: 0,
+                    updatedAt: 0,
+                },
+            };
+        }
+
+        if (scope && !scope.includes(PresenceScope.PRESENCE_TITLE)) {
+            response.friend = {
+                ...response.friend,
+                presence: {
+                    ...response.friend.presence,
+                    game: {},
+                },
+            };
+
+            response.title = null;
+        }
+
+        if (this.splatnet3_users && include_splatnet3 && (!scope ||
+            scope.includes(PresenceScope.SPLATOON3_PRESENCE) ||
+            scope.includes(PresenceScope.SPLATOON3_FEST_TEAM)
+        )) {
             const user = await this.getSplatNet3User(user_naid);
 
-            await this.handleSplatoon3Presence(friend, user, response);
+            await this.handleSplatoon3Presence(friend, user, response, scope);
         }
 
         const images = await this.downloadImages(response, this.getResourceBaseUrls(req));
@@ -802,7 +886,10 @@ class Server extends HttpServer {
         return title;
     }
 
-    async handleSplatoon3Presence(coral_friend: Friend, user: SplatNet3User, response: PresenceResponse) {
+    async handleSplatoon3Presence(
+        coral_friend: Friend, user: SplatNet3User, response: PresenceResponse,
+        scope: PresenceScope[] | null,
+    ) {
         const is_playing_splatoon3 = 'name' in coral_friend.presence.game ?
             getTitleIdFromEcUrl(coral_friend.presence.game.shopUri) === '0100c2500fc20000' : false;
 
@@ -821,9 +908,11 @@ class Server extends HttpServer {
 
         if (!friend) return;
 
-        response.splatoon3 = friend;
+        if (!scope || scope.includes(PresenceScope.SPLATOON3_PRESENCE)) {
+            response.splatoon3 = friend;
+        }
 
-        if (fest_vote_status) {
+        if (fest_vote_status && (!scope || scope.includes(PresenceScope.SPLATOON3_FEST_TEAM))) {
             const fest = await user.getCurrentFest();
 
             const fest_team = this.getFestTeamVotingStatus(fest_vote_status, fest, friend);
@@ -835,11 +924,27 @@ class Server extends HttpServer {
             }
         }
 
+        if (scope && !scope.includes(PresenceScope.PRESENCE_TITLE)) {
+            // Remove all information that could show if the user is playing Splatoon 3
+            response.splatoon3 = {
+                ...friend,
+                playerName: null,
+                isLocked: null,
+                isVcEnabled: null,
+                vsMode: null,
+                coopRule: null,
+                onlineState: friend.onlineState === FriendOnlineState.OFFLINE ?
+                    FriendOnlineState.OFFLINE : FriendOnlineState.ONLINE,
+            };
+
+            return;
+        }
+
         if ((friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ||
             friend.onlineState === FriendOnlineState.VS_MODE_FIGHTING) && friend.vsMode
         ) {
             const schedules = await user.getSchedules();
-            const vs_setting = this.getSettingForVsMode(schedules, friend.vsMode);
+            const vs_setting = getSettingForVsMode(schedules, friend.vsMode);
             const vs_stages = vs_setting?.vsStages.map(stage => ({
                 ...stage,
                 image: schedules.vsStages.nodes.find(s => s.id === stage.id)?.originalImage ?? stage.image,
@@ -858,11 +963,7 @@ class Server extends HttpServer {
             friend.onlineState === FriendOnlineState.COOP_MODE_FIGHTING
         ) {
             const schedules = await user.getSchedules();
-            const coop_schedules =
-                friend.coopRule === CoopRule.BIG_RUN ? schedules.coopGroupingSchedule.bigRunSchedules :
-                friend.coopRule === CoopRule.TEAM_CONTEST ? schedules.coopGroupingSchedule.teamContestSchedules :
-                schedules.coopGroupingSchedule.regularSchedules;
-            const coop_setting = getSchedule(coop_schedules)?.setting;
+            const coop_setting = getSettingForCoopRule(schedules.coopGroupingSchedule, friend.coopRule as CoopRule);
 
             response.splatoon3_coop_setting = coop_setting ?? null;
         }
@@ -896,31 +997,6 @@ class Server extends HttpServer {
             }
         }
 
-        return null;
-    }
-
-    getSettingForVsMode(schedules: StageScheduleResult, vs_mode: Pick<VsMode, 'id' | 'mode'>) {
-        if (vs_mode.mode === 'REGULAR') {
-            return getSchedule(schedules.regularSchedules)?.regularMatchSetting;
-        }
-        if (vs_mode.mode === 'BANKARA') {
-            const settings = getSchedule(schedules.bankaraSchedules)?.bankaraMatchSettings;
-            if (vs_mode.id === 'VnNNb2RlLTI=') {
-                return settings?.find(s => s.mode === BankaraMatchMode.CHALLENGE);
-            }
-            if (vs_mode.id === 'VnNNb2RlLTUx') {
-                return settings?.find(s => s.mode === BankaraMatchMode.OPEN);
-            }
-        }
-        if (vs_mode.mode === 'FEST') {
-            return getSchedule(schedules.festSchedules)?.festMatchSetting;
-        }
-        if (vs_mode.mode === 'LEAGUE' && 'leagueSchedules' in schedules) {
-            return getSchedule((schedules as StageScheduleQuery_730cd98).leagueSchedules)?.leagueMatchSetting;
-        }
-        if (vs_mode.mode === 'X_MATCH') {
-            return getSchedule(schedules.xSchedules)?.xMatchSetting;
-        }
         return null;
     }
 
@@ -1039,7 +1115,8 @@ class Server extends HttpServer {
 
         res.setHeader('Access-Control-Allow-Origin', '*');
 
-        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
+        const scope = this.getAccessScopeFromHeaders(req);
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true, scope);
 
         const stream = new EventStreamResponse(req, res);
         stream.json_replacer = replacer;
@@ -1072,10 +1149,10 @@ class Server extends HttpServer {
 
         let last_result = result;
 
-        while (!req.socket.closed) {
+        while (!req.socket.destroyed) {
             try {
                 debug('Updating data for event stream %d', stream.id);
-                const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true);
+                const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true, scope);
 
                 stream.sendEvent('update', 'debug: timestamp ' + new Date().toISOString());
 
@@ -1115,6 +1192,112 @@ class Server extends HttpServer {
                 break;
             }
         }
+    }
+
+    async handleUserImageRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
+
+        const url_map = await this.downloadImages({
+            url: result.friend.imageUri,
+        }, this.getResourceBaseUrls(req));
+
+        const image_url = url_map[result.friend.imageUri];
+
+        res.statusCode = 303;
+        res.setHeader('Location', image_url);
+        res.setHeader('Content-Type', 'text/plain');
+        res.write('Redirecting to ' + image_url + '\n');
+        res.end();
+    }
+
+    async handlePresenceTitleRedirectRequest(req: Request, res: Response, presence_user_nsaid: string) {
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
+
+        let redirect_url = result.title?.url;
+
+        if (!redirect_url) {
+            const req_url = new URL(req.url, 'http://localhost');
+            const fallback_url = req_url.searchParams.get('fallback-url');
+            const friend_code = req_url.searchParams.get('friend-code');
+            const friend_code_hash = req_url.searchParams.get('friend-code-hash');
+
+            if (friend_code || friend_code_hash) {
+                if (!friend_code?.match(/^\d{4}-\d{4}-\d{4}$/)) {
+                    throw new ResponseError(400, 'invalid_request', 'Invalid friend code');
+                }
+                if (!friend_code_hash?.match(/^[0-9a-z]{10}$/i)) {
+                    throw new ResponseError(400, 'invalid_request', 'Invalid friend code hash');
+                }
+
+                redirect_url = 'https://lounge.nintendo.com/friendcode/' + friend_code + '/' + friend_code_hash;
+            } else if (fallback_url) {
+                try {
+                    const fallback_url_parsed = new URL(fallback_url);
+
+                    if (fallback_url_parsed.protocol !== 'https:') {
+                        throw new ResponseError(400, 'invalid_request', 'Unacceptable fallback URL protocol');
+                    }
+
+                    redirect_url = fallback_url;
+                } catch (err) {
+                    if (err instanceof TypeError) {
+                        throw new ResponseError(400, 'invalid_request', 'Invalid fallback URL');
+                    }
+
+                    throw err;
+                }
+            } else if (req_url.searchParams.get('fallback-prevent-navigation') === '1') {
+                res.statusCode = 204;
+                res.end();
+                return;
+            } else {
+                throw new ResponseError(404, 'not_found', 'No active title');
+            }
+        }
+
+        res.statusCode = 303;
+        res.setHeader('Location', redirect_url);
+        res.setHeader('Content-Type', 'text/plain');
+        res.write('Redirecting to ' + redirect_url + '\n');
+        res.end();
+    }
+
+    async handlePresenceEmbedRequest(req: Request, res: Response, presence_user_nsaid: string, format = PresenceEmbedFormat.SVG) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
+
+        const {theme, friend_code, transparent, width, scale: req_scale, options} = getUserEmbedOptionsFromRequest(req);
+        const scale = format === PresenceEmbedFormat.SVG ? 1 : req_scale;
+
+        const etag = createHash('sha256').update(JSON.stringify({
+            result,
+            theme,
+            friend_code,
+            transparent,
+            width,
+            scale,
+            options,
+            v: version + '-' + git?.revision,
+        })).digest('base64url');
+
+        if (req.headers['if-none-match'] === '"' + etag + '"' || req.headers['if-none-match'] === 'W/"' + etag + '"') {
+            res.statusCode = 304;
+            res.end();
+            return;
+        }
+
+        const url_map = await this.getImages(result, this.getResourceBaseUrls(req));
+
+        const svg = renderUserEmbedSvg(result, url_map, theme, friend_code, options, scale, transparent, width);
+        const [image, type] = await renderUserEmbedImage(svg, format);
+
+        res.setHeader('Content-Type', type);
+        res.setHeader('Cache-Control', 'public, no-cache'); // no-cache means store but revalidate
+        res.setHeader('Etag', '"' + etag + '"');
+        res.end(image);
     }
 
     async handleSplatNet3ProxyFriends(req: Request, res: Response) {
@@ -1174,6 +1357,37 @@ class Server extends HttpServer {
         atum: string | null;
         splatnet3: string | null;
     }): Promise<Record<string, string>> {
+        const image_urls = this.getImageUrls(data, base_url);
+        const url_map: Record<string, string> = {};
+
+        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
+            url_map[url] = new URL(await this.downloadImage(url, dir), base_url).toString();
+        }));
+
+        return url_map;
+    }
+
+    async getImages(data: unknown, base_url: {
+        baas: string | null;
+        atum: string | null;
+        splatnet3: string | null;
+    }): Promise<Record<string, readonly [name: string, data: Uint8Array, type: string]>> {
+        const image_urls = this.getImageUrls(data, base_url);
+        const url_map: Record<string, readonly [name: string, data: Uint8Array, type: string]> = {};
+
+        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
+            const [name, data, type] = await this.downloadImage(url, dir, true);
+            url_map[url] = [new URL(name, base_url).toString(), data, type];
+        }));
+
+        return url_map;
+    }
+
+    getImageUrls(data: unknown, base_url: {
+        baas: string | null;
+        atum: string | null;
+        splatnet3: string | null;
+    }) {
         const image_urls: [url: string, dir: string, base_url: string][] = [];
 
         // Use JSON.stringify to iterate over everything in the response
@@ -1205,13 +1419,7 @@ class Server extends HttpServer {
             return value;
         });
 
-        const url_map: Record<string, string> = {};
-
-        await Promise.all(image_urls.map(async ([url, dir, base_url]) => {
-            url_map[url] = new URL(await this.downloadImage(url, dir), base_url).toString();
-        }));
-
-        return url_map;
+        return image_urls;
     }
 
     getResourceBaseUrls(req: Request) {
@@ -1226,15 +1434,25 @@ class Server extends HttpServer {
         };
     }
 
-    downloadImage(url: string, dir: string) {
+    downloadImage(url: string, dir: string, return_image_data: true): Promise<readonly [name: string, data: Uint8Array, type: string]>
+    downloadImage(url: string, dir: string, return_image_data?: false): Promise<string>
+    downloadImage(url: string, dir: string, return_image_data?: boolean): Promise<string | readonly [name: string, data: Uint8Array, type: string]>
+    downloadImage(url: string, dir: string, return_image_data?: boolean) {
         const pathname = new URL(url).pathname;
         const name = pathname.substr(1).toLowerCase()
             .replace(/^resources\//g, '')
             .replace(/(\/|^)\.\.(\/|$)/g, '$1...$2') +
             (path.extname(pathname) ? '' : '.jpeg');
 
+        const type = (mimetypes.lookup(path.extname(pathname) || '.jpeg') || 'image/jpeg').split(';')[0];
+
         const promise = this.promise_image.get(dir + '/' + name) ?? Promise.resolve().then(async () => {
             try {
+                if (return_image_data) {
+                    const data = await fs.readFile(path.join(dir, name));
+                    return [name, data, type] as const;
+                }
+
                 await fs.stat(path.join(dir, name));
                 return name;
             } catch (err) {}
@@ -1245,10 +1463,14 @@ class Server extends HttpServer {
 
             if (!response.ok) throw new ErrorResponse('Unable to download resource ' + name, response, data.toString());
 
-            await mkdirp(path.dirname(path.join(dir, name)));
+            await fs.mkdir(path.dirname(path.join(dir, name)), {recursive: true});
             await fs.writeFile(path.join(dir, name), data);
 
             debug('Downloaded image %s', name);
+
+            if (return_image_data) {
+                return [name, data, type] as const;
+            }
 
             return name;
         }).then(result => {
@@ -1316,28 +1538,4 @@ function replacer(key: string, value: any, data: unknown) {
     }
 
     return value;
-}
-
-function getSplatoon3inkUrl(image_url: string) {
-    const url = new URL(image_url);
-    if (!url.hostname.endsWith('.nintendo.net')) return image_url;
-    const path = url.pathname.replace(/^\/resources\/prod\//, '/');
-    return 'https://splatoon3.ink/assets/splatnet' + path;
-}
-
-function getSchedule<T extends {startTime: string; endTime: string;}>(schedules: T[] | {nodes: T[]}): T | null {
-    if ('nodes' in schedules) schedules = schedules.nodes;
-    const now = Date.now();
-
-    for (const schedule of schedules) {
-        const start = new Date(schedule.startTime);
-        const end = new Date(schedule.endTime);
-
-        if (start.getTime() >= now) continue;
-        if (end.getTime() < now) continue;
-
-        return schedule;
-    }
-
-    return null;
 }

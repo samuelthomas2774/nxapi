@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import persist from 'node-persist';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
 import createDebug from './debug.js';
 import { timeoutSignal } from './misc.js';
 

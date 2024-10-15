@@ -22,6 +22,7 @@
     ],
     "exports": {
         ".": "./dist/exports/index.js",
+        "./nintendo-account": "./dist/exports/nintendo-account.js",
         "./coral": "./dist/exports/coral.js",
         "./moon": "./dist/exports/moon.js",
         "./splatnet2": "./dist/exports/splatnet2.js",
@@ -35,64 +36,61 @@
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
-        "body-parser": "^1.20.1",
+        "body-parser": "^1.20.2",
         "cli-table": "^0.3.11",
         "debug": "^4.3.4",
         "discord-rpc": "^4.0.1",
-        "dotenv": "^16.0.3",
-        "dotenv-expand": "^9.0.0",
+        "dotenv": "^16.4.5",
+        "dotenv-expand": "^11.0.6",
         "env-paths": "^3.0.0",
-        "eventsource": "^2.0.2",
-        "express": "^4.18.2",
-        "mkdirp": "^1.0.4",
-        "node-fetch": "^3.3.0",
+        "express": "^4.19.2",
         "node-notifier": "^10.0.1",
-        "node-persist": "^3.1.0",
-        "read": "^1.0.7",
-        "splatnet3-types": "^0.2.20230601143335",
-        "supports-color": "^8.1.1",
-        "tslib": "^2.4.1",
-        "uuid": "^8.3.2",
-        "yargs": "^17.6.2"
+        "node-persist": "^3.1.3",
+        "read": "^3.0.1",
+        "sharp": "^0.33.3",
+        "splatnet3-types": "^0.2.20231119210145",
+        "supports-color": "^9.4.0",
+        "tslib": "^2.6.2",
+        "undici": "^6.15.0",
+        "yargs": "^17.7.2"
     },
     "devDependencies": {
-        "@rollup/plugin-alias": "^3.1.9",
-        "@rollup/plugin-commonjs": "^22.0.2",
-        "@rollup/plugin-html": "^0.2.4",
-        "@rollup/plugin-json": "^4.1.0",
-        "@rollup/plugin-node-resolve": "^14.1.0",
-        "@rollup/plugin-replace": "^4.0.0",
-        "@types/body-parser": "^1.19.2",
-        "@types/cli-table": "^0.3.1",
-        "@types/debug": "^4.1.7",
-        "@types/discord-rpc": "^4.0.3",
-        "@types/eventsource": "^1.1.10",
-        "@types/express": "^4.17.14",
-        "@types/mkdirp": "^1.0.2",
-        "@types/node": "^18.11.9",
-        "@types/node-notifier": "^8.0.2",
-        "@types/node-persist": "^3.1.3",
-        "@types/react": "^17.0.45",
-        "@types/react-native": "^0.67.7",
-        "@types/read": "^0.0.29",
-        "@types/uuid": "^8.3.4",
-        "@types/yargs": "^17.0.14",
-        "electron": "^21.3.1",
-        "electron-builder": "^23.6.0",
+        "@rollup/plugin-alias": "^5.1.0",
+        "@rollup/plugin-commonjs": "^25.0.7",
+        "@rollup/plugin-html": "^1.0.3",
+        "@rollup/plugin-json": "^6.1.0",
+        "@rollup/plugin-node-resolve": "^15.2.3",
+        "@rollup/plugin-replace": "^5.0.5",
+        "@types/body-parser": "^1.19.5",
+        "@types/cli-table": "^0.3.4",
+        "@types/debug": "^4.1.12",
+        "@types/discord-rpc": "^4.0.8",
+        "@types/eventsource": "^1.1.15",
+        "@types/express": "^4.17.21",
+        "@types/mime-types": "^2.1.4",
+        "@types/node": "^20.12.7",
+        "@types/node-notifier": "^8.0.5",
+        "@types/node-persist": "^3.1.8",
+        "@types/react": "^18.3.1",
+        "@types/react-native": "^0.72.6",
+        "@types/yargs": "^17.0.32",
+        "electron": "^30.0.1",
+        "electron-builder": "^24.13.3",
+        "mime-types": "^2.1.35",
         "i18next": "^22.4.6",
-        "react": "^17.0.2",
-        "react-dom": "^17.0.2",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
         "react-i18next": "^12.1.1",
-        "react-native-web": "^0.17.7",
-        "rollup": "^2.79.1",
-        "rollup-plugin-polyfill-node": "^0.10.2",
-        "ts-json-schema-generator": "^1.1.2",
-        "typescript": "^4.9.3"
+        "react-native-web": "^0.19.11",
+        "rollup": "^4.17.2",
+        "rollup-plugin-polyfill-node": "^0.13.0",
+        "ts-json-schema-generator": "^2.1.1",
+        "typescript": "^5.4.5"
     },
     "build": {
         "appId": "uk.org.fancy.nxapi.app",
         "productName": "Nintendo Switch Online",
-        "copyright": "Copyright © 2022 Samuel Elliott",
+        "copyright": "Copyright © 2023 Samuel Elliott",
         "npmRebuild": false,
         "files": [
             "dist/app/bundle",
@@ -101,7 +99,8 @@
             "!**/node_modules/**/*",
             "resources/app",
             "resources/common",
-            "!resources/common/remote-config.json"
+            "!resources/common/remote-config.json",
+            "resources/cli"
         ],
         "asar": false,
         "extraMetadata": {
@@ -134,8 +133,28 @@
                 ]
             }
         ],
+        "publish": [],
         "mac": {
+            "extraFiles": [
+                {
+                    "from": "resources/build/app/cli-macos.sh",
+                    "to": "bin/nxapi"
+                }
+            ],
             "identity": null
+        },
+        "linux": {
+            "category": "Utility",
+            "extraFiles": [
+                {
+                    "from": "resources/build/app/cli-linux.sh",
+                    "to": "nxapi"
+                }
+            ]
+        },
+        "deb": {
+            "afterInstall": "resources/build/app/deb/postinst",
+            "afterRemove": "resources/build/app/deb/postrm"
         }
     }
 }

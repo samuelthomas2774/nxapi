@@ -1,5 +1,5 @@
 import * as persist from 'node-persist';
-import Table from './util/table.js';
+import Table from '../util/table.js';
 import type { Arguments as ParentArguments } from '../cli.js';
 import createDebug from '../util/debug.js';
 import { Argv } from '../util/yargs.js';

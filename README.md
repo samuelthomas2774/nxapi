@@ -1,9 +1,9 @@
 nxapi
 ===
 
-JavaScript library and command line and Electron app for accessing the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Show your Nintendo Switch presence in Discord, get friend notifications on desktop, and download and access SplatNet 2, NookLink, SplatNet 3 and Parental Controls data.
+JavaScript library, command line tool and Electron app for accessing the Nintendo Switch Online and Nintendo Switch Parental Controls app APIs. Show your Nintendo Switch presence on Discord, get friend notifications on desktop, and download and access SplatNet 2, NookLink, SplatNet 3 and Parental Controls data.
 
-[![Discord](https://img.shields.io/discord/998657768594608138?color=5865f2&label=Discord)](https://discord.com/invite/4D82rFkXRv)
+[![Discord server](https://img.shields.io/discord/998657768594608138?color=5865f2&label=Discord)](https://discord.com/invite/4D82rFkXRv)
 
 ### Features
 
@@ -64,17 +64,25 @@ nxapi includes an Electron app, which can be downloaded [here](https://github.co
 
 ![Screenshot of the menu bar app with SplatNet 2 and NookLink open in the background](resources/menu-app.png)
 
-The app includes the nxapi command line at `dist/bundle/cli-bundle.js`. Node.js must be installed separately to use this.
+The app includes the nxapi command line at `dist/bundle/cli-bundle.js`.
 
 ```sh
 # macOS
-node Nintendo\ Switch\ Online.app/Contents/Resources/app/dist/bundle/cli-bundle.js ...
-
-# Windows
-node 'Nintendo Switch Online/resources/app/dist/bundle/cli-bundle.js' ...
+Nintendo\ Switch\ Online.app/Contents/bin/nxapi
 
 # Linux, installed via dpkg
-node /opt/Nintendo\ Switch\ Online/resources/app/dist/bundle/cli-bundle.js ...
+# This is linked as /usr/bin/nxapi
+/opt/Nintendo\ Switch\ Online/bin/nxapi
+```
+
+On Windows, Node.js must be installed separately.
+
+```powershell
+# PowerShell
+node $env:LOCALAPPDATA\Programs\nxapi-app\resources\app\dist\bundle\cli-bundle.js ...
+
+# Command Prompt
+node %localappdata%\Programs\nxapi-app\resources\app\dist\bundle\cli-bundle.js ...
 ```
 
 #### Do I need a Nintendo Switch Online membership?
@@ -86,6 +94,16 @@ The only requirement to use this is that your Nintendo Account is linked to a Ne
 You will need to have an online membership (free trial is ok) to use any game-specific services if you want to access those. SplatNet 2 can be used without an active membership, but NookLink and Smash World both require an active membership just to open them.
 
 For Parental Controls data, you don't need to have linked your account to a console. You will need to use Nintendo's app to add a console to your account though, as this isn't supported in nxapi and the Parental Controls API is a bit useless without doing this.
+
+#### The Electron app does not connect to Discord on Linux
+
+The Electron app, Discord, or both, may be sandboxed depending on how they're installed.
+
+The dpkg and AppImage nxapi packages are not sandboxed. The official dpkg Discord package and tar release are not sandboxed.
+
+The snap packages of nxapi and Discord are sandboxed and cannot support Discord Rich Presence.
+
+The Flatpak Discord package is sandboxed, but can be used by linking the IPC socket outside of the app directory: https://github.com/flathub/com.discordapp.Discord/wiki/Rich-Precense-(discord-rpc).
 
 #### Will my Nintendo Switch console be banned for using this?
 
@@ -100,6 +118,19 @@ It's extremely unlikely:
 - Nintendo can't stop you watching their app's network activity, which is all the reverse engineering required to develop this.
 
 A secondary account is required for Discord Rich Presence; you don't need to sign in to your main account.
+
+##### Update 08/09/2023
+
+> Nintendo has banned a small number of users from accessing SplatNet 3. Nintendo has not sent any notification to affected users. This is only known to have affected users of one application unrelated to nxapi.
+>
+> SplatNet 3 returns `401 Unauthorized` (`ERROR_INVALID_GAME_WEB_TOKEN`... which causes the official app to retry repeatedly); there is no specific error message for banned users. No other Nintendo services are affected.
+>
+> If you only use nxapi for Discord Rich Presence, your main account is safe, because nxapi does not use it to fetch presence data. nxapi requires a secondary account to fetch your main account's presence data, so even if that account was banned you could just create another one without losing anything.
+>
+> More information:
+>
+> - https://tkgstrator.work/article/2023/09/announcement.html
+> - https://github.com/frozenpandaman/s3s/issues/146
 
 #### Why is a token sent to one/two different non-Nintendo servers?
 

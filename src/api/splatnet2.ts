@@ -1,9 +1,9 @@
-import fetch from 'node-fetch';
-import { v4 as uuidgen } from 'uuid';
+import { randomUUID } from 'node:crypto';
+import { Cookie, fetch, FormData, getSetCookies } from 'undici';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
-import CoralApi from './coral.js';
+import { CoralApiInterface } from './coral.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, LeagueMatchRankings, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingRecords, XPowerRankingSummary } from './splatnet2-types.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -63,7 +63,7 @@ export default class SplatNet2Api {
         }
 
         if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet2] Non-200 status code', response, await response.text());
+            throw await SplatNet2ErrorResponse.fromResponse(response, '[splatnet2] Non-200 status code');
         }
 
         updateIksmSessionLastUsed.handler?.call(null, this.iksm_session);
@@ -71,7 +71,7 @@ export default class SplatNet2Api {
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse<WebServiceError>('[splatnet2] ' + data.message, response, data);
+            throw new SplatNet2ErrorResponse('[splatnet2] ' + data.message, response, data);
         }
 
         return defineResponse(data, response);
@@ -193,7 +193,7 @@ export default class SplatNet2Api {
     }
 
     async shareProfile(stage: string, colour: ShareColour) {
-        const boundary = uuidgen();
+        const boundary = randomUUID();
 
         const data = `--${boundary}
 Content-Disposition: form-data; name="stage"
@@ -240,8 +240,8 @@ ${colour}
         });
     }
 
-    static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await this.loginWithCoral(nso, user);
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await this.loginWithCoral(coral, user);
         return {splatnet: this.createWithSavedToken(data), data};
     }
 
@@ -269,8 +269,8 @@ ${colour}
         );
     }
 
-    static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const webserviceToken = await nso.getWebServiceToken(SPLATNET2_WEBSERVICE_ID);
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const webserviceToken = await coral.getWebServiceToken(SPLATNET2_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken, user);
     }
@@ -302,27 +302,22 @@ ${colour}
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
+        if (response.status !== 200) {
+            throw await SplatNet2ErrorResponse.fromResponse(response, '[splatnet2] Non-200 status code');
+        }
+
         const body = await response.text();
 
-        if (response.status !== 200) {
-            throw new ErrorResponse('[splatnet2] Non-200 status code', response, body);
+        const cookies = getSetCookies(response.headers);
+        const iksm_session = cookies.find(c => c.name === 'iksm_session');
+
+        if (!iksm_session) {
+            throw new SplatNet2ErrorResponse('[splatnet2] Response didn\'t include iksm_session cookie', response, body);
         }
 
-        const cookies = response.headers.get('Set-Cookie');
-        const match = cookies?.match(/\biksm_session=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);
+        const expires_at: number = (iksm_session.expires as Date)?.getTime() ?? Date.now() + 24 * 60 * 60 * 1000;
 
-        if (!match) {
-            throw new ErrorResponse('[splatnet2] Response didn\'t include iksm_session cookie', response, body);
-        }
-
-        const iksm_session = decodeURIComponent(match[1]);
-        // Nintendo sets the expires field to an invalid timestamp - browsers don't care but Data.parse does
-        const expires = decodeURIComponent(match[8] || '')
-            .replace(/(\b)(\d{1,2})-([a-z]{3})-(\d{4})(\b)/gi, '$1$2 $3 $4$5');
-
-        debug('iksm_session %s, expires %s', iksm_session.replace(/^(.{6}).*/, '$1****'), expires);
-
-        const expires_at = expires ? Date.parse(expires) : Date.now() + 24 * 60 * 60 * 1000;
+        debug('iksm_session %s, expires %s', iksm_session.value.replace(/^(.{6}).*/, '$1****'), iksm_session.expires);
 
         const ml = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+lang=(?:"([^"]*)"|([^\s>]*))/i);
         const mr = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-region=(?:"([^"]*)"|([^\s>]*))/i);
@@ -330,10 +325,10 @@ ${colour}
         const mn = body.match(/<html(?:\s+[a-z0-9-]+(?:=(?:"[^"]*"|[^\s>]*))?)*\s+data-nsa-id=(?:"([^"]*)"|([^\s>]*))/i);
         const [language, region, user_id, nsa_id] = [ml, mr, mu, mn].map(m => m?.[1] || m?.[2] || null);
 
-        if (!language) throw new Error('[splatnet2] Invalid language in response');
-        if (!region) throw new Error('[splatnet2] Invalid region in response');
-        if (!user_id) throw new Error('[splatnet2] Invalid unique player ID in response');
-        if (!nsa_id) throw new Error('[splatnet2] Invalid NSA ID in response');
+        if (!language) throw new ErrorResponse('[splatnet2] Invalid language in response', response, body);
+        if (!region) throw new ErrorResponse('[splatnet2] Invalid region in response', response, body);
+        if (!user_id) throw new ErrorResponse('[splatnet2] Invalid unique player ID in response', response, body);
+        if (!nsa_id) throw new ErrorResponse('[splatnet2] Invalid NSA ID in response', response, body);
 
         debug('SplatNet 2 user', {
             language,
@@ -345,24 +340,26 @@ ${colour}
         return {
             webserviceToken,
             url: url.toString(),
-            cookies: cookies!,
+            cookies,
             body,
             language,
             region,
             user_id,
             nsa_id,
 
-            iksm_session,
+            iksm_session: iksm_session.value,
             expires_at,
             useragent: SPLATNET2_WEBSERVICE_USERAGENT,
         };
     }
 }
 
+export class SplatNet2ErrorResponse extends ErrorResponse<WebServiceError> {}
+
 export interface SplatNet2AuthData {
     webserviceToken: WebServiceToken;
     url: string;
-    cookies: string;
+    cookies: string | Cookie[];
     body: string;
 
     language: string;

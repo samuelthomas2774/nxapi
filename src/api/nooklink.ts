@@ -1,8 +1,8 @@
-import fetch, { Response } from 'node-fetch';
+import { fetch, FormData, Response } from 'undici';
 import { WebServiceToken } from './coral-types.js';
 import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
-import CoralApi from './coral.js';
+import { CoralApiInterface } from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -80,14 +80,14 @@ export default class NooklinkApi {
             return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
         }
 
-        if (response.status !== 200 && response.status !== 201) {
-            throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
+        if (!response.ok) {
+            throw await NooklinkErrorResponse.fromResponse(response, '[nooklink] Non-2xx status code');
         }
 
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse<WebServiceError>('[nooklink] Error ' + data.code, response, data);
+            throw new NooklinkErrorResponse('[nooklink] Error ' + data.code, response, data);
         }
 
         return defineResponse(data, response);
@@ -107,8 +107,8 @@ export default class NooklinkApi {
         return NooklinkUserApi._createWithNooklinkApi(this, user_id);
     }
 
-    async renewTokenWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await NooklinkApi.loginWithCoral(nso, user);
+    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await NooklinkApi.loginWithCoral(coral, user);
         this.setTokenWithSavedToken(data);
         return data;
     }
@@ -124,8 +124,8 @@ export default class NooklinkApi {
         this._token_expired = false;
     }
 
-    static async createWithCoral(nso: CoralApi, user: NintendoAccountUser) {
-        const data = await this.loginWithCoral(nso, user);
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+        const data = await this.loginWithCoral(coral, user);
         return {nooklink: this.createWithSavedToken(data), data};
     }
 
@@ -133,11 +133,11 @@ export default class NooklinkApi {
         return new this(data.gtoken, data.useragent);
     }
 
-    static async loginWithCoral(nso: CoralApi, user: NintendoAccountUser) {
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
         const { default: { coral_gws_nooklink: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents NookLink authentication');
 
-        const webserviceToken = await nso.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
+        const webserviceToken = await coral.getWebServiceToken(NOOKLINK_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken, user);
     }
@@ -172,17 +172,17 @@ export default class NooklinkApi {
 
         debug('fetch %s %s, response %s', 'GET', url, response.status);
 
-        const body = await response.text();
-
         if (response.status !== 200) {
-            throw new ErrorResponse('[nooklink] Non-200 status code', response, body);
+            throw await NooklinkErrorResponse.fromResponse(response, '[nooklink] Non-200 status code');
         }
+
+        const body = await response.text();
 
         const cookies = response.headers.get('Set-Cookie');
         const match = cookies?.match(/\b_gtoken=([^;]*)(;(\s*((?!expires)[a-z]+=([^;]*));?)*(\s*(expires=([^;]*));?)?|$)/i);
 
         if (!match) {
-            throw new ErrorResponse('[nooklink] Response didn\'t include _gtoken cookie', response, body);
+            throw new NooklinkErrorResponse('[nooklink] Response didn\'t include _gtoken cookie', response, body);
         }
 
         const gtoken = decodeURIComponent(match[1]);
@@ -275,14 +275,14 @@ export class NooklinkUserApi {
             return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
         }
 
-        if (response.status !== 200 && response.status !== 201) {
-            throw new ErrorResponse('[nooklink] Non-200/201 status code', response, await response.text());
+        if (!response.ok) {
+            throw new NooklinkErrorResponse('[nooklink] Non-2xx status code', response, await response.text());
         }
 
         const data = await response.json() as T | WebServiceError;
 
         if ('code' in data) {
-            throw new ErrorResponse<WebServiceError>('[nooklink] Error ' + data.code, response, data);
+            throw new NooklinkErrorResponse('[nooklink] Error ' + data.code, response, data);
         }
 
         return defineResponse(data, response);
@@ -390,6 +390,8 @@ export class NooklinkUserApi {
         );
     }
 }
+
+export class NooklinkErrorResponse extends ErrorResponse<WebServiceError> {}
 
 export interface NooklinkAuthData {
     webserviceToken: WebServiceToken;

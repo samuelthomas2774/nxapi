@@ -1,10 +1,16 @@
 export {
     default,
+    CoralApiInterface,
+
     CoralAuthData,
     PartialCoralAuthData,
 
     ResponseDataSymbol,
     CorrelationIdSymbol,
+
+    CoralErrorResponse,
+
+    NintendoAccountSessionAuthorisationCoral,
 } from '../api/coral.js';
 
 export * from '../api/coral-types.js';

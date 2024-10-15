@@ -1,12 +1,11 @@
 import persist from 'node-persist';
-import { Response } from 'node-fetch';
+import { Response } from 'undici';
 import { getToken, Login, SavedToken } from './coral.js';
-import SplatNet3Api, { SplatNet3AuthData } from '../../api/splatnet3.js';
-import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import SplatNet3Api, { SplatNet3AuthData, SplatNet3AuthErrorCode, SplatNet3AuthErrorResponse } from '../../api/splatnet3.js';
+import { checkMembershipActive, checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
-import { ErrorResponse } from '../../api/util.js';
 
 const debug = createDebug('nxapi:auth:splatnet3');
 
@@ -31,14 +30,6 @@ export async function getBulletToken(
         const { default: { coral_gws_splatnet3: config } } = await import('../remote-config.js');
         if (!config) throw new Error('Remote configuration prevents SplatNet 3 authentication');
 
-        if (ratelimit) {
-            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
-            await checkUseLimit(storage, 'splatnet3', jwt.payload.sub);
-        }
-
-        console.warn('Authenticating to SplatNet 3');
-        debug('Authenticating to SplatNet 3');
-
         const {nso, data} = await getToken(storage, token, proxy_url);
 
         if (data[Login]) {
@@ -48,17 +39,34 @@ export async function getBulletToken(
             const activeevent = await nso.getActiveEvent();
         }
 
-        const existingToken: SavedBulletToken = await SplatNet3Api.loginWithCoral(nso, data.user);
+        checkMembershipActive(data);
 
-        await storage.setItem('BulletToken.' + token, existingToken);
+        let attempt;
+        if (ratelimit) {
+            const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+            attempt = await checkUseLimit(storage, 'splatnet3', jwt.payload.sub);
+        }
 
-        const splatnet = SplatNet3Api.createWithSavedToken(existingToken);
+        try {
+            console.warn('Authenticating to SplatNet 3');
+            debug('Authenticating to SplatNet 3');
 
-        const renew_token_data = {existingToken, znc_proxy_url: proxy_url};
-        splatnet.onTokenExpired = createTokenExpiredHandler(storage, token, splatnet, renew_token_data);
-        splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(storage, token, splatnet, renew_token_data);
+            const existingToken: SavedBulletToken = await SplatNet3Api.loginWithCoral(nso, data.user);
 
-        return {splatnet, data: existingToken};
+            await storage.setItem('BulletToken.' + token, existingToken);
+
+            const splatnet = SplatNet3Api.createWithSavedToken(existingToken);
+
+            const renew_token_data = {existingToken, znc_proxy_url: proxy_url};
+            splatnet.onTokenExpired = createTokenExpiredHandler(storage, token, splatnet, renew_token_data);
+            splatnet.onTokenShouldRenew = createTokenShouldRenewHandler(storage, token, splatnet, renew_token_data);
+
+            return {splatnet, data: existingToken};
+        } catch (err) {
+            await attempt?.recordError(err);
+
+            throw err;
+        }
     }
 
     debug('Using existing token');
@@ -121,7 +129,7 @@ async function renewToken(
             debug('Unable to renew bullet token with saved web services token - cached data for this session token doesn\'t exist??');
         }
     } catch (err) {
-        if (err instanceof ErrorResponse && err.response.status === 401) {
+        if (err instanceof SplatNet3AuthErrorResponse && err.code === SplatNet3AuthErrorCode.ERROR_INVALID_GAME_WEB_TOKEN) {
             // Web service token invalid/expired...
             debug('Web service token expired, authenticating with new token', err);
         } else {

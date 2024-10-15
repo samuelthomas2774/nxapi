@@ -1203,18 +1203,89 @@ export const titles: Title[] = [
         showActiveEvent: true,
     },
 
-    // {
-    //     // Pikmin 4
-    //     id: '',
-    //     client: '1107033455755264010',
-    //     showPlayingOnline: true,
-    //     showActiveEvent: true,
-    // },
+    {
+        // Pikmin 4
+        id: '0100b7c00933a000',
+        client: '1107033455755264010',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Pikmin 4 Demo
+        id: '0100e0b019974000',
+        client: '1107033455755264010',
+        largeImageText: 'Demo',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
 
     {
         // Metroid Prime Remastered
         id: '010012101468c000',
         client: '1107120929953284150',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Pikmin 1
+        id: '0100aa80194b0000',
+        client: '1121121911229927476',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+    {
+        // Pikmin 2
+        id: '0100d680194b2000',
+        client: '1121122602782576640',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Everybody 1-2-Switch!
+        id: '01006f900bf8e000',
+        client: '1121122719019323413',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Super Mario Bros. Wonder
+        id: '010015100b514000',
+        client: '1121122895519813642',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // WarioWare: Move It!
+        id: '010045b018ec2000',
+        client: '1121123023961985054',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Super Mario RPG
+        id: '0100bc0018138000',
+        client: '1121123106942095522',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // Detective Pikachu Returns
+        id: '010007500f27c000',
+        client: '1121123195882307604',
+        showPlayingOnline: true,
+        showActiveEvent: true,
+    },
+
+    {
+        // F-ZERO 99
+        id: '0100ccf019c8c000',
+        client: '1167145130294255637',
         showPlayingOnline: true,
         showActiveEvent: true,
     },

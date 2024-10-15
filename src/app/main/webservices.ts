@@ -1,27 +1,28 @@
-import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from './electron.js';
+import { app, BrowserWindow, clipboard, dialog, IpcMainInvokeEvent, nativeImage, nativeTheme, Notification, ShareMenu, shell, WebContents } from 'electron';
 import * as path from 'node:path';
 import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import * as util from 'node:util';
-import fetch from 'node-fetch';
+import { fetch } from 'undici';
+import mimetypes from 'mime-types';
 import { App, Store } from './index.js';
 import { createWebServiceWindow } from './windows.js';
-import { askUserForUri } from './util.js';
+import { askUserForUri, showErrorDialog } from './util.js';
 import type { DownloadImagesRequest, NativeShareRequest, NativeShareUrlRequest, QrCodeReaderCameraOptions, QrCodeReaderCheckinOptions, QrCodeReaderCheckinResult, QrCodeReaderPhotoLibraryOptions, SendMessageOptions } from '../preload-webservice/znca-js-api.js';
 import createDebug from '../../util/debug.js';
-import CoralApi from '../../api/coral.js';
-import { CurrentUser, WebService, WebServiceToken } from '../../api/coral-types.js';
-import { NintendoAccountUser } from '../../api/na.js';
+import { CoralApiInterface, CoralAuthData } from '../../api/coral.js';
+import { WebService, WebServiceToken } from '../../api/coral-types.js';
 import { SavedToken } from '../../common/auth/coral.js';
+import { checkMembershipActive } from '../../common/auth/util.js';
 
 const debug = createDebug('app:main:webservices');
 
 const windows = new Map<string, BrowserWindow>();
-const windowapi = new WeakMap<WebContents, [Store, string, CoralApi, SavedToken, WebService]>();
+const windowapi = new WeakMap<WebContents, [Store, string, CoralApiInterface, SavedToken, WebService]>();
 
 export default async function openWebService(
-    store: Store, token: string, nso: CoralApi, data: SavedToken,
+    store: Store, token: string, coral: CoralApiInterface, data: SavedToken,
     webservice: WebService, qs?: string
 ) {
     const windowid = data.nsoAccount.user.nsaId + ':' + webservice.id;
@@ -41,12 +42,7 @@ export default async function openWebService(
     }
 
     const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
-
-    if (verifymembership?.attrValue === 'true') {
-        const membership = data.nsoAccount.user.links.nintendoAccount.membership;
-        const active = typeof membership.active === 'object' ? membership.active.active : membership.active;
-        if (!active) throw new WebServiceValidationError('Nintendo Switch Online membership required');
-    }
+    if (verifymembership?.attrValue === 'true') checkMembershipActive(data);
 
     const user_title_prefix = '[' + data.user.nickname +
         (data.nsoAccount.user.name !== data.user.nickname ? '/' + data.nsoAccount.user.name : '') + '] ';
@@ -54,7 +50,7 @@ export default async function openWebService(
     const window = createWebServiceWindow(data.nsoAccount.user.nsaId, webservice, user_title_prefix);
 
     windows.set(windowid, window);
-    windowapi.set(window.webContents, [store, token, nso, data, webservice]);
+    windowapi.set(window.webContents, [store, token, coral, data, webservice]);
 
     window.on('closed', () => {
         windows.delete(windowid);
@@ -85,7 +81,7 @@ export default async function openWebService(
         return {action: 'deny'};
     });
 
-    const webserviceToken = await getWebServiceToken(nso, webservice, data.user, data.nsoAccount.user, window);
+    const webserviceToken = await getWebServiceToken(coral, webservice, qs, data, window);
 
     const url = new URL(webservice.uri);
     url.search = new URLSearchParams({
@@ -120,31 +116,19 @@ export default async function openWebService(
 export class WebServiceValidationError extends Error {}
 
 async function getWebServiceToken(
-    nso: CoralApi, webservice: WebService,
-    user: NintendoAccountUser, nsoAccount: CurrentUser,
-    window: BrowserWindow
+    coral: CoralApiInterface,
+    webservice: WebService, qs: string | undefined,
+    auth_data: CoralAuthData,
+    window: BrowserWindow,
 ): Promise<WebServiceToken> {
     try {
-        return await nso.getWebServiceToken(webservice.id);
+        return await coral.getWebServiceToken(webservice.id);
     } catch (err) {
-        const result = await dialog.showMessageBox(window, {
-            type: 'error',
-            message: (err instanceof Error ? err.name : 'Error') + ' requesting web service token',
-            detail: (err instanceof Error ? err.stack ?? err.message : err) + '\n\n' + util.inspect({
-                webservice: {
-                    id: webservice.id,
-                    name: webservice.name,
-                    uri: webservice.uri,
-                },
-                user_na_id: user.id,
-                user_nsa_id: nsoAccount.nsaId,
-                user_coral_id: nsoAccount.id,
-            }, {compact: true}),
-            buttons: ['Retry', 'Close ' + webservice.name, 'Ignore'],
-        });
+        const result = await handleOpenWebServiceError(err, webservice, qs, auth_data, window,
+            ['Retry', 'Close ' + webservice.name, 'Ignore']);
 
         if (result.response === 0) {
-            return getWebServiceToken(nso, webservice, user, nsoAccount, window);
+            return getWebServiceToken(coral, webservice, qs, auth_data, window);
         }
         if (result.response === 1) {
             window.close();
@@ -160,13 +144,19 @@ function isWebServiceUrlAllowed(webservice: WebService, url: string | URL) {
 
     if (typeof url === 'string') url = new URL(url);
 
-    for (const host of webservice.whiteList) {
+    for (const allowed of webservice.whiteList) {
+        const host = allowed.includes('/') ? allowed.substr(0, allowed.indexOf('/')) : allowed;
+        const path = allowed.includes('/') ? allowed.substr(allowed.indexOf('/')) : null;
+
+        if (path && url.pathname !== path && !url.pathname.startsWith(path + '/')) continue;
+
         if (host.startsWith('*.')) {
-            return url.hostname === host.substr(2) ||
-                url.hostname.endsWith(host.substr(1));
+            if (url.hostname === host.substr(2) ||
+                url.hostname.endsWith(host.substr(1))
+            ) return true;
         }
 
-        return url.hostname === host;
+        if (url.hostname === host) return true;
     }
 
     return false;
@@ -199,6 +189,32 @@ function askUserForWebServiceUri(app: App, uri: string) {
     return askUserForUri(app, uri, app.i18n.t('handle_uri:web_service_select'));
 }
 
+export async function handleOpenWebServiceError(
+    err: unknown,
+    webservice: WebService, qs?: string, auth_data?: CoralAuthData,
+    window?: BrowserWindow, buttons?: string[],
+) {
+    const data = {
+        webservice: {
+            id: webservice.id,
+            name: webservice.name,
+            uri: webservice.uri,
+        },
+        qs,
+        user_na_id: auth_data?.user.id,
+        user_nsa_id: auth_data?.nsoAccount.user.nsaId,
+        user_coral_id: auth_data?.nsoAccount.user.id,
+    };
+
+    return showErrorDialog({
+        message: (err instanceof Error ? err.name : 'Error') + ' opening web service',
+        error: err,
+        detail: util.inspect(data, {compact: true}),
+        buttons,
+        window,
+    });
+}
+
 export interface WebServiceData {
     webservice: WebService;
     url: string;
@@ -225,6 +241,7 @@ export class WebServiceIpc {
             store: data[0],
             token: data[1],
             nso: data[2],
+            data: data[3],
             nintendoAccountToken: data[3].nintendoAccountToken,
             user: data[3].user,
             nsoAccount: data[3].nsoAccount,
@@ -273,16 +290,8 @@ export class WebServiceIpc {
         const dir = app.getPath('downloads');
         const basename = path.basename(new URL(image_url).pathname);
         const extname = path.extname(basename);
-        let filename;
-        let i = 0;
 
-        do {
-            i++;
-
-            filename = i === 1 ? basename : basename.substr(0, basename.length - extname.length) + ' ' + i + extname;
-        } while (await this.pathExists(path.join(dir, filename)));
-
-        debug('Downloading image %s to %s as %s', image_url, dir, filename);
+        debug('Downloading image %s to %s', image_url, dir);
 
         const response = await fetch(image_url, {
             headers: {
@@ -290,6 +299,22 @@ export class WebServiceIpc {
             },
         });
         const image = await response.arrayBuffer();
+
+        const type = response.headers.get('Content-Type');
+        const ext = type ? mimetypes.extension(type) : null;
+
+        let filename;
+        let i = 0;
+
+        do {
+            i++;
+
+            filename = basename.substr(0, basename.length - extname.length) +
+                (i === 1 ? basename : ' ' + i) +
+                (ext ? '.' + ext : extname);
+        } while (await this.pathExists(path.join(dir, filename)));
+
+        debug('Writing image %s to %s as %s', image_url, dir, filename);
         await fs.writeFile(path.join(dir, filename), Buffer.from(image));
 
         return path.join(dir, filename);
@@ -321,12 +346,12 @@ export class WebServiceIpc {
     }
 
     async requestGameWebToken(event: IpcMainInvokeEvent): Promise<string> {
-        const {nso, user, nsoAccount, webservice} = this.getWindowData(event.sender);
+        const {nso, data, nsoAccount, webservice} = this.getWindowData(event.sender);
         const window = BrowserWindow.fromWebContents(event.sender)!;
 
         debug('Web service %s, user %s, called requestGameWebToken', webservice.name, nsoAccount.user.name);
 
-        const webserviceToken = await getWebServiceToken(nso, webservice, user, nsoAccount.user, window);
+        const webserviceToken = await getWebServiceToken(nso, webservice, undefined, data, window);
 
         return webserviceToken.accessToken;
     }
@@ -432,5 +457,11 @@ export class WebServiceIpc {
         const {nsoAccount, webservice} = this.getWindowData(event.sender);
 
         debug('Web service %s, user %s, called completeLoading', webservice.name, nsoAccount.user.name);
+    }
+
+    async clearUnreadFlag(event: IpcMainInvokeEvent): Promise<void> {
+        const {nsoAccount, webservice} = this.getWindowData(event.sender);
+
+        debug('Web service %s, user %s, called clearUnreadFlag', webservice.name, nsoAccount.user.name);
     }
 }

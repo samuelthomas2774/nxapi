@@ -1,9 +1,10 @@
 import * as crypto from 'node:crypto';
 import * as persist from 'node-persist';
+import { Response } from 'undici';
 import createDebug from '../util/debug.js';
-import CoralApi, { Result } from '../api/coral.js';
+import CoralApi, { CoralApiInterface, Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices } from '../api/coral-types.js';
+import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices, CoralError } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
 import type { Store } from '../app/main/index.js';
 import { NintendoAccountUser } from '../api/na.js';
@@ -52,7 +53,8 @@ export default class Users<T extends UserData> {
     }
 
     static coral(store: Store | persist.LocalStorage, znc_proxy_url: string, ratelimit?: boolean): Users<CoralUser<ZncProxyApi>>
-    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser>
+    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: undefined, ratelimit?: boolean): Users<CoralUser<CoralApi>>
+    static coral(store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean): Users<CoralUser<CoralApiInterface>>
     static coral(_store: Store | persist.LocalStorage, znc_proxy_url?: string, ratelimit?: boolean) {
         const store = 'storage' in _store ? _store : null;
         const storage = 'storage' in _store ? _store.storage : _store;
@@ -71,6 +73,16 @@ export default class Users<T extends UserData> {
 
             const user = new CoralUser(nso, data, announcements, friends, webservices, active_event);
 
+            if (nso instanceof CoralApi && nso.onTokenExpired) {
+                const renewToken = nso.onTokenExpired;
+
+                nso.onTokenExpired = async (error?: CoralError, response?: Response) => {
+                    const auth_data = await renewToken(error, response) as SavedToken;
+                    user.data = auth_data;
+                    return auth_data;
+                };
+            }
+
             if (store) {
                 await maybeUpdateWebServicesListCache(cached_webservices, store, data.user, webservices);
                 user.onUpdatedWebServices = webservices => {
@@ -83,7 +95,7 @@ export default class Users<T extends UserData> {
     }
 }
 
-export interface CoralUserData<T extends CoralApi = CoralApi> extends UserData {
+export interface CoralUserData<T extends CoralApiInterface = CoralApi> extends UserData {
     nso: T;
     data: SavedToken;
     announcements: CoralSuccessResponse<Announcements>;
@@ -92,11 +104,12 @@ export interface CoralUserData<T extends CoralApi = CoralApi> extends UserData {
     active_event: CoralSuccessResponse<GetActiveEventResult>;
 }
 
-export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T> {
+export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralUserData<T> {
     created_at = Date.now();
     expires_at = Infinity;
 
     promise = new Map<string, Promise<void>>();
+    delay_retry_after_error_until: number | null = null;
 
     updated = {
         announcements: Date.now(),
@@ -104,6 +117,8 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
         webservices: Date.now(),
         active_event: Date.now(),
     };
+
+    delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
     update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
@@ -120,10 +135,16 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
 
     private async update(key: keyof CoralUser['updated'], callback: () => Promise<void>, ttl: number) {
         if ((this.updated[key] + ttl) < Date.now()) {
-            const promise = this.promise.get(key) ?? callback.call(null).then(() => {
+            const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
+                const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
+
+                return delay_retry > 0 ? new Promise(rs => setTimeout(rs, delay_retry)) : null;
+            }).then(() => callback.call(null)).then(() => {
                 this.updated[key] = Date.now();
+                this.delay_retry_after_error_until = null;
                 this.promise.delete(key);
             }).catch(err => {
+                this.delay_retry_after_error_until = Date.now() + this.delay_retry_after_error;
                 this.promise.delete(key);
                 throw err;
             });
@@ -171,6 +192,10 @@ export class CoralUser<T extends CoralApi = CoralApi> implements CoralUserData<T
     }
 
     async addFriend(nsa_id: string) {
+        if (!(this.nso instanceof CoralApi)) {
+            throw new Error('Cannot send friend requests using Coral API proxy');
+        }
+
         if (nsa_id === this.data.nsoAccount.user.nsaId) {
             throw new Error('Cannot add self as a friend');
         }
