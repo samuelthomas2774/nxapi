@@ -56,7 +56,7 @@ export default function AddFriendWindow(props: AddFriendProps) {
 
     if (!user || !token || (!show_friendcode_field && lookup_state === RequestState.LOADING)) {
         return <Root
-            title={i18n => i18n.t('addfriend_window.title')} titleUser={user ?? undefined} autoresize={!!user}
+            title={i18n => i18n.t('addfriend_window:title')} titleUser={user ?? undefined} autoresize={!!user}
             i18nNamespace="addfriend_window"
         >
             <View style={styles.loading}>
@@ -66,7 +66,7 @@ export default function AddFriendWindow(props: AddFriendProps) {
     }
 
     return <Root
-        title={i18n => i18n.t('addfriend_window.title')} titleUser={user} autoresize
+        title={i18n => i18n.t('addfriend_window:title')} titleUser={user} autoresize
         i18nNamespace="addfriend_window"
     >
         <AddFriend
