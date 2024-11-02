@@ -176,8 +176,6 @@ export const main_window = {
 
         add_user: 'User hinzufügen',
         discord_setup: 'Discord Rich Presence einrichten',
-
-        enable_auto_refresh: 'Automatisch aktualisieren',
     },
 
     update: {

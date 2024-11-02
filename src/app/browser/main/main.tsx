@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import ipc, { events } from '../ipc.js';
@@ -28,11 +28,15 @@ export default function Main(props: {
     const [active_event, active_event_error, active_event_state, forceRefreshActiveEvent] = useAsync(useCallback(() => props.user.nsotoken ?
         ipc.getCoralActiveEvent(props.user.nsotoken) : Promise.resolve(null), [ipc, props.user.nsotoken]));
 
+    const [last_refresh_at, setLastRefreshAt] = useState(() => Date.now());
+
     const loading = announcements_state === RequestState.LOADING ||
         friends_state === RequestState.LOADING ||
         webservices_state === RequestState.LOADING ||
         active_event_state === RequestState.LOADING;
+
     const refresh = useCallback(() => Promise.all([
+        setLastRefreshAt(Date.now()),
         forceRefreshFriends(), forceRefreshWebServices(), forceRefreshActiveEvent(),
     ]), [forceRefreshFriends, forceRefreshWebServices, forceRefreshActiveEvent]);
 
@@ -41,6 +45,13 @@ export default function Main(props: {
         const timeout = setTimeout(refresh, props.autoRefresh);
         return () => clearTimeout(timeout);
     }, [ipc, props.user.nsotoken, loading, props.autoRefresh]);
+
+    useEffect(() => {
+        if (loading || !props.autoRefresh) return;
+
+        // When enabling auto refresh, update now if we haven't updated within the interval
+        if (last_refresh_at + props.autoRefresh < Date.now()) refresh();
+    }, [ipc, props.autoRefresh]);
 
     useEventListener(events, 'window:refresh', refresh, []);
 

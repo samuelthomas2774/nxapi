@@ -100,6 +100,7 @@ const ipc = {
 
     getLanguage: () => language,
     getAccentColour: () => accent_colour,
+    getWindowFocused: () => focused,
 
     platform: process.platform,
 };
@@ -124,5 +125,9 @@ ipcRenderer.on('nxapi:systemPreferences:accent-colour', (event, c: string) => {
     accent_colour = c;
     events.emit('systemPreferences:accent-colour', c);
 });
+
+let focused: boolean = invSync('window:focused');
+window.addEventListener('focus', () => (focused = true, events.emit('window:focused', focused)));
+window.addEventListener('blur', () => (focused = false, events.emit('window:focused', focused)));
 
 contextBridge.exposeInMainWorld('nxapiElectronIpc', ipc);

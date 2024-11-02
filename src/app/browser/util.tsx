@@ -30,17 +30,8 @@ export function Root(props: React.PropsWithChildren<{
     const [accent_colour, setAccentColour] = React.useState(() => ipc.getAccentColour());
     useEventListener(events, 'systemPreferences:accent-colour', setAccentColour, []);
 
-    const [window_focused, setWindowFocus] = useState(true);
-
-    useEffect(() => {
-        const handler = (event: FocusEvent) => setWindowFocus(event.type === 'focus');
-        window.addEventListener('focus', handler);
-        window.addEventListener('blur', handler);
-        return () => {
-            window.removeEventListener('focus', handler);
-            window.removeEventListener('blur', handler);
-        };
-    }, []);
+    const [window_focused, setWindowFocused] = useState(ipc.getWindowFocused());
+    useEventListener(events, 'window:focused', setWindowFocused, []);
 
     const [i18n, i18n_error] = useAsync(useCallback(async () => {
         const i18n = createI18n();
