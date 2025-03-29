@@ -5,6 +5,7 @@ import { defineResponse, ErrorResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
+import { ZNCA_VERSION } from './coral.js';
 
 const debugFlapg = createDebug('nxapi:api:flapg');
 const debugImink = createDebug('nxapi:api:imink');
@@ -219,6 +220,7 @@ export async function genf(
     });
     if (app?.platform) headers.append('X-znca-Platform', app.platform);
     if (app?.version) headers.append('X-znca-Version', app.version);
+    if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
 
     const [signal, cancel] = timeoutSignal();
     const response = await fetch(url, {
@@ -271,16 +273,17 @@ export class ZncaApiNxapi extends ZncaApi {
     }
 
     async genf(token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string}) {
-        const request_id = randomUUID();
+        // const request_id = randomUUID();
 
-        const result = await genf(this.url + '/f', hash_method, token, undefined, request_id,
+        const result = await genf(this.url + '/f', hash_method, token, undefined, undefined,
             user, this.app, this.useragent);
 
         return {
             provider: 'nxapi' as const,
             url: this.url + '/f',
-            hash_method, token, request_id,
+            hash_method, token,
             timestamp: result.timestamp!, // will be included as not sent in request
+            request_id: result.request_id!,
             f: result.f,
             user,
             result,

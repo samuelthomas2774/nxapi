@@ -15,7 +15,7 @@ const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '8.0.0';
-const ZNCA_VERSION = '2.2.0';
+export const ZNCA_VERSION = '2.12.0';
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
@@ -295,7 +295,14 @@ export default class CoralApi implements CoralApiInterface {
         };
 
         try {
-            return await this.call<WebServiceToken>('/v2/Game/GetWebServiceToken', req, false);
+            const uuid = randomUUID();
+
+            return this.fetch<WebServiceToken>('/v2/Game/GetWebServiceToken', 'POST', JSON.stringify({
+                parameter: req,
+                requestId: uuid,
+            }), {
+                'X-IntegrityTokenError': 'NETWORK_ERROR',
+            }, false);
         } catch (err) {
             if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
                 debug('Error getting web service token, renewing token before retrying', err);
@@ -336,7 +343,14 @@ export default class CoralApi implements CoralApiInterface {
             naIdToken: nintendoAccountToken.id_token,
         };
 
-        const data = await this.call<AccountToken>('/v3/Account/GetToken', req, false);
+        const uuid = randomUUID();
+
+        const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
+            parameter: req,
+            requestId: uuid,
+        }), {
+            'X-IntegrityTokenError': 'NETWORK_ERROR',
+        }, false);
 
         return {
             nintendoAccountToken,
@@ -438,6 +452,7 @@ export default class CoralApi implements CoralApiInterface {
             headers: {
                 'X-Platform': ZNCA_PLATFORM,
                 'X-ProductVersion': config.znca_version,
+                'X-IntegrityTokenError': 'NETWORK_ERROR',
                 'Content-Type': 'application/json; charset=utf-8',
                 'User-Agent': znca_useragent,
             },
