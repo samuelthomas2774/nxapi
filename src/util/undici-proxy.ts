@@ -1,5 +1,6 @@
 import { Agent, buildConnector, Dispatcher, errors } from 'undici';
 import createDebug from './debug.js';
+import { docker } from './product.js';
 
 const debug = createDebug('nxapi:util:undici-proxy');
 
@@ -81,7 +82,12 @@ export function buildEnvironmentProxyAgent(options?: ProxyAgentOptions) {
 }
 
 export async function resolveProxyFromEnvironment(origin: string) {
-    const { protocol } = new URL(origin);
+    const { protocol, hostname } = new URL(origin);
+
+    // Never proxy connections to other containers
+    if (docker && !hostname.includes('.')) return null;
+
+    if (process.env.NO_PROXY?.split(',').find(h => h.trim() === hostname)) return null;
 
     if (protocol === 'http:' && process.env.HTTP_PROXY) {
         return new URL(process.env.HTTP_PROXY);
