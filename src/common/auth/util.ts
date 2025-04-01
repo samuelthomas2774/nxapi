@@ -119,7 +119,7 @@ export class RateLimitError extends Error implements HasErrorDescription {
 
 export function checkMembershipActive(data: SavedToken) {
     const membership = data.nsoAccount.user.links.nintendoAccount.membership;
-    const active = typeof membership.active === 'object' ? membership.active.active : membership.active;
+    const active = typeof membership.active === 'object' ? (membership.active as typeof membership).active : membership.active;
 
     if (!active) throw new MembershipRequiredError('Nintendo Switch Online membership required');
 }

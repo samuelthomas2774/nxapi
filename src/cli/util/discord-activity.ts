@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { fetch } from 'undici';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
-import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState } from '../../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, Presence, PresenceGame, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from './index.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime } from '../../discord/types.js';
@@ -122,7 +122,7 @@ async function getPresenceFromJson(json: string) {
         data.state === 'INACTIVE' ? PresenceState.INACTIVE :
         PresenceState.OFFLINE;
 
-    const game: Game | null = data.game && 'name' in data.game ? {
+    const game: PresenceGame | null = data.game && 'name' in data.game ? {
         name: typeof data.game.name === 'string' ? data.game.name : 'undefined',
         imageUri: typeof data.game.imageUri === 'string' ? data.game.imageUrl : null,
         shopUri: typeof data.game.shopUri === 'string' ? data.game.shopUri : null,

@@ -108,16 +108,53 @@ export interface Friends {
     friends: Friend[];
 }
 
+/** /v4/Friend/List */
+export interface Friends_4 {
+    friends: Friend_4[];
+    extractFriendsIds: string[];
+}
+
 export interface Friend {
     id: number;
     nsaId: string;
     imageUri: string;
+    image2Uri: string;
     name: string;
     isFriend: boolean;
     isFavoriteFriend: boolean;
     isServiceUser: boolean;
+    isNew: boolean;
     friendCreatedAt: number;
-    presence: Presence;
+    route: FriendRoute;
+    presence: Presence | PresenceOnline | PresenceOffline;
+}
+
+/** /v4/Friend/Show */
+export interface Friend_4 extends Friend {
+    isOnlineNotificationEnabled: boolean;
+    presence: PresenceOnline_4 | PresenceOffline;
+}
+
+export interface FriendRoute {
+    appName: string;
+    /** In-game player name */
+    userName: string;
+    shopUri: string;
+    imageUri: string;
+    // if not IN_APP all other properties are empty strings
+    channel: FriendRouteChannel;
+}
+
+export enum FriendRouteChannel {
+    /** Added from friend code lookup on a Switch console or using coral */
+    FRIEND_CODE = 'FRIEND_CODE',
+    /** Added from users you've played with */
+    IN_APP = 'IN_APP',
+    /** Added from search for local users */
+    NX_FACED = 'NX_FACED',
+    '3DS' = '3DS',
+
+    // Wii U, Facebook, Twitter suggestions?
 }
 
 export interface Presence {
@@ -128,7 +165,19 @@ export interface Presence {
      */
     updatedAt: number;
     logoutAt: number;
-    game: Game | {};
+    game: PresenceGame | {};
+}
+
+export interface PresenceOnline extends Presence {
+    state: PresenceState.ONLINE | PresenceState.PLAYING;
+    game: PresenceGame;
+}
+export interface PresenceOnline_4 extends PresenceOnline {
+    platform: PresencePlatform;
+}
+export interface PresenceOffline extends Presence {
+    state: PresenceState.OFFLINE | PresenceState.INACTIVE;
+    game: {};
 }
 
 export enum PresenceState {
@@ -146,6 +195,10 @@ export enum PresenceState {
     PLAYING = 'PLAYING',
 }
 
+export enum PresencePlatform {
+    NINTENDO_SWITCH = 1,
+}
+
 export interface Game {
     name: string;
     imageUri: string;
@@ -153,6 +206,9 @@ export interface Game {
     totalPlayTime: number;
     /** 0 if never played before */
     firstPlayedAt: number;
+}
+
+export interface PresenceGame extends Game {
     sysDescription: string;
 }
 
@@ -167,7 +223,9 @@ export interface FriendCodeUser {
     id: number;
     nsaId: string;
     imageUri: string;
+    image2Uri: string;
     name: string;
+    isBlocking: boolean;
     extras: {};
 }
 
@@ -240,14 +298,16 @@ export interface User {
     id: number;
     nsaId: string;
     imageUri: string;
+    image2Uri: string;
     name: string;
 }
 
-/** /v3/User/ShowSelf */
+/** /v4/User/ShowSelf */
 export interface CurrentUser {
     id: number;
     nsaId: string;
     imageUri: string;
+    image2Uri: string;
     name: string;
     supportId: string;
     isChildRestricted: boolean;
@@ -255,9 +315,7 @@ export interface CurrentUser {
     links: {
         nintendoAccount: {
             membership: {
-                active: {
-                    active: boolean;
-                } | boolean;
+                active: boolean;
             };
         };
         friendCode: {
@@ -267,11 +325,19 @@ export interface CurrentUser {
         };
     };
     permissions: {
+        playLog: PlayLogPermissions;
         presence: PresencePermissions;
+        friendRequestReception: boolean;
     };
-    presence: Presence;
+    presence: PresenceOnline_4 | PresenceOffline;
 }
 
+export enum PlayLogPermissions {
+    EVERYONE = 'EVERYONE',
+    FRIENDS = 'FRIENDS',
+    FAVORITE_FRIENDS = 'FAVORITE_FRIENDS',
+    SELF = 'SELF',
+}
 export enum PresencePermissions {
     FRIENDS = 'FRIENDS',
     FAVORITE_FRIENDS = 'FAVORITE_FRIENDS',
@@ -282,7 +348,9 @@ export enum PresencePermissions {
 export interface CurrentUserPermissions {
     etag: string;
     permissions: {
+        playLog: PlayLogPermissions;
         presence: PresencePermissions;
+        friendRequestReception: boolean;
     };
 }
 
@@ -294,4 +362,22 @@ export interface UpdateCurrentUserPermissionsParameter {
         };
     };
     etag: string;
+}
+
+/** /v4/User/PlayLog/Show */
+export type UserPlayLog = Game[];
+
+/** /v4/FriendRequest/Received/List */
+export interface ReceivedFriendRequests {
+    friendRequests: unknown[];
+}
+
+/** /v4/FriendRequest/Sent/List */
+export interface SentFriendRequests {
+    friendRequests: unknown[];
+}
+
+/** /v3/User/Block/List */
+export interface BlockingUsers {
+    blockingUsers: unknown[];
 }

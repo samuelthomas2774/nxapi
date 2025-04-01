@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { CoopRule, FestVoteState, FriendOnlineState, StageScheduleResult } from 'splatnet3-types/splatnet3';
 import { dir } from '../util/product.js';
 import createDebug from '../util/debug.js';
-import { Game, PresenceState } from '../api/coral-types.js';
+import { PresenceGame, PresenceState } from '../api/coral-types.js';
 import { RawValueSymbol, htmlentities } from '../util/misc.js';
 import { PresenceResponse } from '../cli/presence-server.js';
 
@@ -216,7 +216,7 @@ export function renderUserEmbedSvg(
 }
 
 function renderUserTitleEmbedPartialSvg(
-    game: Game, description: string | null | undefined,
+    game: PresenceGame, description: string | null | undefined,
     colours: PresenceEmbedThemeColours, font_family: string,
 ) {
     if (typeof description !== 'string') description = game.sysDescription;

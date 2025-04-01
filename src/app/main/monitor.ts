@@ -3,7 +3,7 @@ import { i18n } from 'i18next';
 import { App } from './index.js';
 import { showErrorDialog, tryGetNativeImageFromUrl } from './util.js';
 import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource, DiscordStatus } from '../common/types.js';
-import { CurrentUser, Friend, Game, CoralError } from '../../api/coral-types.js';
+import { CurrentUser, Friend, CoralError, PresenceGame } from '../../api/coral-types.js';
 import { ErrorResponse } from '../../api/util.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import { NotificationManager } from '../../common/notify.js';
@@ -551,7 +551,7 @@ export class ElectronNotificationManager extends NotificationManager {
     }
 
     async onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
+        const currenttitle = friend.presence.game as PresenceGame;
 
         new Notification({
             title: friend.name,
@@ -570,7 +570,7 @@ export class ElectronNotificationManager extends NotificationManager {
     }
 
     async onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
+        const currenttitle = friend.presence.game as PresenceGame;
 
         new Notification({
             title: friend.name,
@@ -581,7 +581,7 @@ export class ElectronNotificationManager extends NotificationManager {
     }
 
     async onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
+        const currenttitle = friend.presence.game as PresenceGame;
 
         new Notification({
             title: friend.name,

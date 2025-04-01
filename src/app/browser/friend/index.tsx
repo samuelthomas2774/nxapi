@@ -4,7 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CheckBox } from 'react-native-web';
-import { Friend, Game, Presence, PresencePermissions, PresenceState } from '../../../api/coral-types.js';
+import { Friend, Presence, PresenceGame, PresencePermissions, PresenceState } from '../../../api/coral-types.js';
 import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
@@ -174,7 +174,7 @@ function FriendPresence(props: {
 }
 
 function FriendPresenceGame(props: {
-    game: Game;
+    game: PresenceGame;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
     const accent_colour = useAccentColour();

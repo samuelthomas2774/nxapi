@@ -7,7 +7,7 @@ import { initStorage } from '../../util/storage.js';
 import { getToken } from '../../common/auth/coral.js';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { EmbeddedSplatNet2Monitor, NotificationManager, ZncNotifications } from '../../common/notify.js';
-import { CurrentUser, Friend, Game } from '../../api/coral-types.js';
+import { CurrentUser, Friend, PresenceGame } from '../../api/coral-types.js';
 
 const debug = createDebug('cli:nso:notify');
 
@@ -133,7 +133,7 @@ export class TerminalNotificationManager extends NotificationManager {
     }
 
     onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
+        const currenttitle = friend.presence.game as PresenceGame;
 
         this.notifier.notify({
             title: friend.name,
@@ -153,7 +153,7 @@ export class TerminalNotificationManager extends NotificationManager {
     }
 
     onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
+        const currenttitle = friend.presence.game as PresenceGame;
 
         this.notifier.notify({
             title: friend.name,
@@ -165,7 +165,7 @@ export class TerminalNotificationManager extends NotificationManager {
     }
 
     onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
-        const currenttitle = friend.presence.game as Game;
+        const currenttitle = friend.presence.game as PresenceGame;
 
         this.notifier.notify({
             title: friend.name,

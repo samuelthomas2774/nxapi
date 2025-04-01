@@ -1,6 +1,6 @@
 import persist from 'node-persist';
 import { CoralApiInterface } from '../api/coral.js';
-import { ActiveEvent, Announcements, CurrentUser, Friend, Game, Presence, PresenceState, WebServices, CoralError, GetActiveEventResult } from '../api/coral-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Friend, Presence, PresenceState, WebServices, CoralError, GetActiveEventResult, FriendRouteChannel, PresenceGame } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
@@ -71,11 +71,20 @@ export class ZncNotifications extends Loop {
                         id: 0,
                         nsaId: r.friend,
                         imageUri: '',
+                        image2Uri: '',
                         name: '',
                         isFriend: true,
                         isFavoriteFriend: false,
                         isServiceUser: false,
+                        isNew: false,
                         friendCreatedAt: 0,
+                        route: {
+                            appName: '',
+                            userName: '',
+                            shopUri: '',
+                            imageUri: '',
+                            channel: FriendRouteChannel.FRIEND_CODE,
+                        },
                         presence: await nso.fetch<Presence>('/friend/' + r.friend + '/presence'),
                     };
 
@@ -145,7 +154,7 @@ export class ZncNotifications extends Loop {
         const monitor = this.splatnet2_monitors.get(nsa_id);
 
         if (playing && monitor) {
-            const currenttitle = presence.game as Game;
+            const currenttitle = presence.game as PresenceGame;
             const titleid = getTitleIdFromEcUrl(currenttitle.shopUri);
 
             if (titleid && EmbeddedSplatNet2Monitor.title_ids.includes(titleid)) {
@@ -233,7 +242,7 @@ export class NotificationManager {
                 type = PresenceEvent.STATE_CHANGE;
                 callback = 'onFriendOnline';
 
-                const currenttitle = friend.presence.game as Game;
+                const currenttitle = friend.presence.game as PresenceGame;
 
                 debugFriends('%s is now online%s%s, title %s %s - played for %s since %s', friend.name,
                     friend.presence.state === PresenceState.ONLINE ? '' : ' (' + friend.presence.state + ')',
@@ -250,7 +259,7 @@ export class NotificationManager {
                 type = PresenceEvent.STATE_CHANGE;
                 callback = 'onFriendOffline';
 
-                const lasttitle = lastpresence.game as Game;
+                const lasttitle = lastpresence.game as PresenceGame;
 
                 debugFriends('%s is now offline%s, was playing title %s %s, logout time %s', friend.name,
                     friend.presence.state !== PresenceState.OFFLINE ? ' (console still online)' : '',
@@ -262,8 +271,8 @@ export class NotificationManager {
                 }
             } else if (wasonline && online) {
                 // Friend is still online
-                const lasttitle = lastpresence.game as Game;
-                const currenttitle = friend.presence.game as Game;
+                const lasttitle = lastpresence.game as PresenceGame;
+                const currenttitle = friend.presence.game as PresenceGame;
 
                 if (getTitleIdFromEcUrl(lasttitle.shopUri) !== getTitleIdFromEcUrl(currenttitle.shopUri)) {
                     // Friend is playing a different title

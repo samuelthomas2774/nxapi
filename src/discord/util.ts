@@ -1,5 +1,5 @@
 import DiscordRPC from 'discord-rpc';
-import { Game, PresenceState } from '../api/coral-types.js';
+import { PresenceGame, PresenceState } from '../api/coral-types.js';
 import { defaultTitle, titles } from './titles.js';
 import createDebug from '../util/debug.js';
 import { product, version } from '../util/product.js';
@@ -9,7 +9,7 @@ import { DiscordPresence, DiscordPresenceContext, DiscordPresencePlayTime } from
 const debug = createDebug('nxapi:discord');
 
 export function getDiscordPresence(
-    state: PresenceState, game: Game, context?: DiscordPresenceContext
+    state: PresenceState, game: PresenceGame, context?: DiscordPresenceContext
 ): DiscordPresence {
     const titleid = getTitleIdFromEcUrl(game.shopUri);
     const title = titles.find(t => t.id === titleid) || defaultTitle;
@@ -80,7 +80,7 @@ export function getDiscordPresence(
     };
 }
 
-function getPlayTimeText(type: DiscordPresencePlayTime, game: Game) {
+function getPlayTimeText(type: DiscordPresencePlayTime, game: PresenceGame) {
     if (type === DiscordPresencePlayTime.NINTENDO) {
         const days = Math.floor(Date.now() / 1000 / 86400) - Math.floor(game.firstPlayedAt / 86400);
         if (days <= 10) return getFirstPlayedText(game.firstPlayedAt);
@@ -154,7 +154,7 @@ export function getInactiveDiscordPresence(
     };
 }
 
-export function getTitleConfiguration(game: Game, id: string) {
+export function getTitleConfiguration(game: PresenceGame, id: string) {
     return titles.find(title => {
         if (title.id !== id) return false;
 
