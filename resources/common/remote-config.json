@@ -1,5 +1,6 @@
 {
     "require_version": [],
+    "log_encryption_key": "E2Sii_7drCzK-68RsEoArmopiAIlZD_6TMA2F_UAAU0",
     "coral": {
         "znca_version": "2.12.0"
     },

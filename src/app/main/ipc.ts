@@ -205,7 +205,7 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                 new MenuItem({label: t('discord_disable')!,
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
             ] : monitor?.presence_user ? [
-                new MenuItem({label: t('discord_enabled_for', {name: 
+                new MenuItem({label: t('discord_enabled_for', {name:
                     monitor.user?.friends.result.friends.find(f => f.nsaId === monitor.presence_user)?.name ??
                         monitor.presence_user})!,
                     enabled: false}),

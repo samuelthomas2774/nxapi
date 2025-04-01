@@ -2,6 +2,7 @@ import { i18n } from 'i18next';
 import { GITHUB_MIRROR_URL, GITLAB_URL, ISSUES_URL } from '../../common/constants.js';
 import { app, BrowserWindow, Menu, MenuItem, shell } from 'electron';
 import { App } from './index.js';
+import { createLogArchive } from './support.js';
 
 let appinstance: App | null;
 
@@ -57,6 +58,12 @@ function createAppMenuItems(i18n?: i18n) {
                 label: i18n?.t('app_menu:search_issues') ?? 'Search Issues',
                 click: async () => {
                     await shell.openExternal(ISSUES_URL);
+                },
+            },
+            {
+                label: i18n?.t('app_menu:export_logs') ?? 'Export Logs',
+                click: () => {
+                    createLogArchive();
                 },
             },
         ],

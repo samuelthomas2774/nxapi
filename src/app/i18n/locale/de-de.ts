@@ -69,7 +69,7 @@ export const menus = {
     friend: {
         presence_online: 'Online',
         game_first_played: 'Zuerst gespielt: {{date, datetime}}',
-        
+
         game_play_time_h: 'Spielzeit: $t(friend.hours, {"count": {{hours}}})',
         game_play_time_hm: 'Spielzeit: $t(friend.hours, {"count": {{hours}}}), $t(friend.minutes, {"count": {{minutes}}})',
         game_play_time_m: 'Spielzeit: $t(friend.minutes, {"count": {{minutes}}})',
@@ -109,7 +109,7 @@ export const na_auth = {
 
         text: `Um Zugriff auf die API der Nintendo Switch Online App zu erhalten, muss nxapi einige Daten an Drittanbieter-APIs senden. Dieser Schritt wird benötigt, um Daten zu generieren, damit Nintendo denkt, dass du die echte Nintendo Switch Online App verwendest.
 Standardmäßig wird nxapi-znca-api.fancy.org.uk oder api.imink.app benutzt. Ein anderer Service kann ebenfalls benutzt werden, indem eine Umgebungsvariable gesetzt wird. Die standardmäßige API könnte sich jederzeit ohne Hinweis ändern, wenn du keinen spezifischen Service erzwingst.
-        
+
 Die gesendeten Daten beinhalten:
 
 - Deine Nintendo Account ID

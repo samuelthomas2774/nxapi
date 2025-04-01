@@ -36,6 +36,7 @@
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
+        "@samuelthomas2774/saltpack": "^0.4.0",
         "body-parser": "^1.20.2",
         "cli-table": "^0.3.11",
         "debug": "^4.3.4",
@@ -50,6 +51,7 @@
         "sharp": "^0.33.3",
         "splatnet3-types": "^0.2.20231119210145",
         "supports-color": "^9.4.0",
+        "tar": "^7.4.3",
         "tslib": "^2.6.2",
         "undici": "^6.15.0",
         "yargs": "^17.7.2"
@@ -76,8 +78,8 @@
         "@types/yargs": "^17.0.32",
         "electron": "^30.0.1",
         "electron-builder": "^24.13.3",
-        "mime-types": "^2.1.35",
         "i18next": "^22.4.6",
+        "mime-types": "^2.1.35",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "react-i18next": "^12.1.1",

@@ -14,6 +14,7 @@ export const app_menu = {
     learn_more: 'Learn More',
     learn_more_github: 'Learn More (GitHub)',
     search_issues: 'Search Issues',
+    export_logs: 'Export Logs',
 
     refresh: 'Refresh',
 };

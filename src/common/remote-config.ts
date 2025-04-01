@@ -251,6 +251,8 @@ export interface NxapiRemoteConfig {
      */
     require_version: string[];
 
+    log_encryption_key?: string;
+
     // If null the API should not be used
     coral: CoralRemoteConfig | null;
     coral_auth: {

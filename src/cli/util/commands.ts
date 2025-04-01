@@ -7,3 +7,5 @@ export * as remoteConfig from './remote-config.js';
 export * as storage from './storage.js';
 export * as presenceEmbedRender from './presence-embed-render.js';
 export * as presenceEmbedServer from './presence-embed-server.js';
+export * as logArchive from './log-archive.js';
+export * as decryptLogArchive from './decrypt-log-archive.js';
