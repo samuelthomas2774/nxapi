@@ -110,6 +110,7 @@ const main = {
         'node-notifier',
         'register-scheme',
         'bindings',
+        'node:string_decoder/',
     ],
     watch,
 };

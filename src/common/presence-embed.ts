@@ -279,7 +279,7 @@ function renderUserSplatoon3EmbedPartialSvg(
                 ' - ' + setting.vsRule.name : '') +
             (result.splatoon3.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
 
-        if (result.splatoon3.vsMode.id === 'VnNNb2RlLTg=' && result.splatoon3_fest) {
+        if (result.splatoon3.vsMode.id === 'VnNNb2RlLTg=' && result.splatoon3_fest?.tricolorStage) {
             const stage = result.splatoon3_fest.tricolorStage;
 
             return [htmlentities`

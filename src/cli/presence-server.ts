@@ -7,7 +7,8 @@ import express, { Request, Response } from 'express';
 import { fetch } from 'undici';
 import * as persist from 'node-persist';
 import mimetypes from 'mime-types';
-import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestRecordResult, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
+import { BankaraMatchSetting_schedule, CoopRule, CoopSetting_schedule, DetailFestRecordDetailResult, DetailVotingStatusResult, FestMatchSetting_schedule, FestState, FestTeam_schedule, FestTeam_votingStatus, FestVoteState, Fest_schedule, FriendListResult, FriendOnlineState, Friend_friendList, GraphQLSuccessResponse, KnownRequestId, LeagueMatchSetting_schedule, RegularMatchSetting_schedule, StageScheduleResult, XMatchSetting_schedule } from 'splatnet3-types/splatnet3';
+import FestRecordQuery_c8660a6 from 'splatnet3-types/graphql/c8660a636e73dcbf55c12932bc301b1c9db2aa9a78939ff61bf77a0ea8ff0a88';
 import type { Arguments as ParentArguments } from '../cli.js';
 import { git, product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
@@ -36,6 +37,16 @@ enum PresenceScope {
     SPLATOON3_PRESENCE = 'splatoon3',
     SPLATOON3_FEST_TEAM = 'splatoon3_fest_team',
 }
+
+interface FestRecordResult_c8660a63 {
+    currentPlayer: FestRecordQuery_c8660a6['currentPlayer'];
+    festRecords: {
+        edges: {
+            node: FestRecordQuery_c8660a6['festRecords']['nodes'][0];
+        }[];
+    };
+}
+type FestRecordResult = FestRecordResult_c8660a63;
 
 interface AllUsersResult extends Friend {
     title: TitleResult | null;
@@ -387,11 +398,11 @@ class SplatNet3ApiUser extends SplatNet3User {
         }
 
         await this.update('fest_records', async () => {
-            this.fest_records = await this.splatnet.getFestRecords();
+            this.fest_records = await this.splatnet.persistedQuery<FestRecordResult>('c8660a636e73dcbf55c12932bc301b1c9db2aa9a78939ff61bf77a0ea8ff0a88', {});
         }, this.update_interval_schedules);
 
-        const current_or_upcoming_fest = this.fest_records!.data.festRecords.nodes.find(fest =>
-            new Date(fest.endTime).getTime() >= Date.now());
+        const current_or_upcoming_fest = this.fest_records!.data.festRecords.edges.find(edge =>
+            new Date(edge.node.endTime).getTime() >= Date.now())?.node;
         if (!current_or_upcoming_fest) return null;
 
         const fest_detail = await this.getFestDetailData(current_or_upcoming_fest.id);

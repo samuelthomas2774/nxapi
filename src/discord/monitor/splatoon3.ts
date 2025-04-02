@@ -342,7 +342,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
                 ' - ' + setting.vsRule.name : '') +
             (friend.onlineState === FriendOnlineState.VS_MODE_MATCHING ? ' (matching)' : '');
 
-        if (friend.vsMode.id === 'VnNNb2RlLTg=' && fest) {
+        if (friend.vsMode.id === 'VnNNb2RlLTg=' && fest?.tricolorStage) {
             const tricolour_stage_image = new URL(fest.tricolorStage.image.url);
             const match = tricolour_stage_image.pathname.match(/^\/resources\/prod\/(.+)$/);
             const proxy_stage_image =
