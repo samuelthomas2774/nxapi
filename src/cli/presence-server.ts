@@ -398,7 +398,7 @@ class SplatNet3ApiUser extends SplatNet3User {
         }
 
         await this.update('fest_records', async () => {
-            this.fest_records = await this.splatnet.persistedQuery<FestRecordResult>('c8660a636e73dcbf55c12932bc301b1c9db2aa9a78939ff61bf77a0ea8ff0a88', {});
+            this.fest_records = await this.splatnet.persistedQuery<FestRecordResult>('2e2faf16315ace9e4bc83cf11d5a2598292d36c9192a7ab1bf758d2f8fee2870', {});
         }, this.update_interval_schedules);
 
         const current_or_upcoming_fest = this.fest_records!.data.festRecords.edges.find(edge =>
