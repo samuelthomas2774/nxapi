@@ -96,6 +96,7 @@ const main = {
         json(),
         alias({
             entries: [
+                {find: 'string_decoder/', replacement: 'node:string_decoder'},
                 ...Module.builtinModules.map(m => ({find: m, replacement: 'node:' + m})),
             ],
         }),
@@ -110,7 +111,6 @@ const main = {
         'node-notifier',
         'register-scheme',
         'bindings',
-        'node:string_decoder/',
     ],
     watch,
 };
