@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+
+contact_links:
+
+  - name: Discussions
+    about: Suggest new features and ask questions.
+    url: https://github.com/samuelthomas2774/nxapi/discussions
+
+  - name: Discord
+    url: https://discord.com/invite/4D82rFkXRv
+
+  - name: nxapi Service Status
+    abort: Check the status of services used by nxapi. Issues may take a few minutes to appear here.
+    url: https://nxapi-status.fancy.org.uk

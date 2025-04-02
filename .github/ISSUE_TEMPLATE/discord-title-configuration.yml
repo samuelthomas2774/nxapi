@@ -8,6 +8,13 @@ assignees:
   - samuelthomas2774
 
 body:
+
+  - type: markdown
+    attributes:
+      value: |
+        > [!NOTE]
+        > I paused adding new titles a while ago after requesting access to Discord's activities API, which would allow sending any activity name, meaning new titles only need to be added for special configuration such as in Splatoon 3. Although Discord did not allow nxapi to use this API I didn't resume adding new titles. Please do still suggest new titles as I will likely resume adding titles in the future if I cannot use the activities API instead.
+
   - type: input
     id: title-name
     attributes:

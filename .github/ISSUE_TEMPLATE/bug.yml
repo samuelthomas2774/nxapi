@@ -1,0 +1,55 @@
+name: Bug
+description: Report something that isn't working as expected
+
+labels:
+  - bug
+
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        Please remember to search other issues before opening an issue, but make sure it is the same as the issue you have before commenting on other issues, for example make sure any error messages are the same.
+
+        Not all issues are bugs - some error messages may indicate a different problem, for example, the error code `ENOTFOUND` may mean there is a problem with your network. Make sure your Internet connection is working and there are no [known service issues](https://nxapi-status.fancy.org.uk).
+
+        Make sure you test the latest development build as the issue may have already been fixed: [macOS/Linux](https://gitlab.fancy.org.uk/samuel/nxapi/-/jobs/artifacts/main/browse/app?job=build-app), [Windows](https://gitlab.fancy.org.uk/samuel/nxapi/-/jobs/artifacts/main/browse/app?job=build-windows).
+
+        > [!IMPORTANT]
+        > The latest release of nxapi no longer works due to changes by Nintendo. If you are using nxapi 1.6.1 or before and do not update to the latest development build you will see an error message from the f-generation API as the `X-znca-Client-Version` header is not sent.
+
+  - type: textarea
+    id: what-you-did
+    attributes:
+      label: What did you try to do?
+      description: |
+        Describe the steps you took to reproduce the issue. You can upload screenshots or screen recordings. Please don't add links to files or take photos of your screen using a phone or camera.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-should-happen
+    attributes:
+      label: What should happen?
+      description: |
+        Describe what you expected to happen.
+
+  - type: textarea
+    id: what-did-happen
+    attributes:
+      label: What did happen?
+      description: |
+        Describe what actually happened instead of what you expected. You can upload screenshots or screen recordings. Please don't add links to files or take photos of your screen using a phone or camera.
+    validations:
+      required: true
+
+  - type: textarea
+    id: other-information
+    attributes:
+      label: Other information
+      description: |
+        Include any other relevant information, such as when the problem started, or if it only happens sometimes, and information about your system such as your operating system and nxapi version.
+
+        You can upload log files from nxapi by selecting export logs in the help menu. On Windows/Linux, press the <kbd>Alt</kbd> key in the main window to temporarily show the application menus. This will generate a file containing nxapi's debug logs, which are stored on your computer for 14 days. Log files may contain sensitive information, but the export logs option encrypts the saved logs so only @samuelthomas2774 can read them. You can also use the `nxapi util log-archive` command to generate an encrypted log archive.
+    validations:
+      required: true
