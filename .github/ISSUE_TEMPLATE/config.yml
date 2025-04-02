@@ -7,8 +7,9 @@ contact_links:
     url: https://github.com/samuelthomas2774/nxapi/discussions
 
   - name: Discord
+    about: https://discord.com/invite/4D82rFkXRv
     url: https://discord.com/invite/4D82rFkXRv
 
   - name: nxapi Service Status
-    abort: Check the status of services used by nxapi. Issues may take a few minutes to appear here.
+    about: Check the status of services used by nxapi. Issues may take a few minutes to appear here.
     url: https://nxapi-status.fancy.org.uk
