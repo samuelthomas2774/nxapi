@@ -369,13 +369,42 @@ export type UserPlayLog = Game[];
 
 /** /v4/FriendRequest/Received/List */
 export interface ReceivedFriendRequests {
-    friendRequests: unknown[];
+    friendRequests: ReceivedFriendRequest[];
 }
+
+export interface ReceivedFriendRequest {
+    /**
+     * 16 hex digits, similar to NSA IDs, but this is not the sender's NSA ID.
+     * Matches the sender's SentFriendRequest.id.
+     */
+    id: string;
+    route: FriendRoute;
+    createdAt: number;
+    updatedAt: number;
+    sender: FriendRequestSender;
+    hasRead: boolean;
+}
+
+export type FriendRequestSender = User;
 
 /** /v4/FriendRequest/Sent/List */
 export interface SentFriendRequests {
     friendRequests: unknown[];
 }
+
+export interface SentFriendRequest {
+    /**
+     * 16 hex digits, similar to NSA IDs, but this is not the recipient's NSA ID.
+     * Matches the recipient's ReceivedFriendRequest.id.
+     */
+    id: string;
+    route: FriendRoute;
+    createdAt: number;
+    updatedAt: number;
+    receiver: FriendRequestReceiver;
+}
+
+export type FriendRequestReceiver = User;
 
 /** /v3/User/Block/List */
 export interface BlockingUsers {
