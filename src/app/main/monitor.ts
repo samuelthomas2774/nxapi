@@ -63,6 +63,7 @@ export class PresenceMonitorManager {
                 error: err,
                 buttons: ['OK', 'Retry', 'Stop'],
                 defaultId: 0,
+                app: this.app,
             });
 
             if (response === 1) {
@@ -391,6 +392,7 @@ export class PresenceMonitorManager {
             error: err,
             buttons: ['OK', 'Retry'],
             defaultId: 0,
+            app: this.app,
         });
 
         if (response === 1) {
@@ -420,6 +422,7 @@ export class PresenceMonitorManager {
         await showErrorDialog({
             message: error.name + ' updating presence monitor',
             error,
+            app: this.app,
         });
     }
 }

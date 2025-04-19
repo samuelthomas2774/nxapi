@@ -484,6 +484,7 @@ export class Store extends EventEmitter {
                 error: err,
                 buttons: ['OK', 'Retry'],
                 defaultId: 1,
+                app: this.app,
             });
 
             if (response === 1) {
@@ -513,6 +514,7 @@ export class Store extends EventEmitter {
                 error: err,
                 buttons: ['OK', 'Retry'],
                 defaultId: 1,
+                app: this.app,
             });
 
             if (response === 1) {

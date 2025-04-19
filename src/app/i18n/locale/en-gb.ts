@@ -290,6 +290,12 @@ export const preferences_window = {
         discord_help_1: 'Uses SplatNet 3 to retrieve additional presence information while playing Splatoon 3. You must be using a secondary Nintendo Account that is friends with your main account to fetch your presence, and the secondary account must be able to access SplatNet 3.',
         discord_help_2: 'When using a presence URL that returns Splatoon 3 data additional presence information will be shown regardless of this setting.',
     },
+
+    miscellaneous: {
+        heading: 'Miscellaneous',
+        show_error_alerts: 'Show error alerts',
+        show_error_alerts_help: 'This will show a popup when an error occurs while loading data. This is useful for debugging, but can be annoying if you are not interested in the errors.',
+    }
 };
 
 export const friend_window = {
