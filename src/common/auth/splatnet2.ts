@@ -1,5 +1,6 @@
 import process from 'node:process';
 import * as fs from 'node:fs';
+import { setTimeout } from 'node:timers';
 import persist from 'node-persist';
 import { getToken, Login } from './coral.js';
 import SplatNet2Api, { SplatNet2AuthData, updateIksmSessionLastUsed } from '../../api/splatnet2.js';

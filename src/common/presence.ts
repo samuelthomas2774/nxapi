@@ -1,3 +1,4 @@
+import { setTimeout } from 'node:timers';
 import { errors } from 'undici';
 import EventSource, { ErrorEvent } from '../util/eventsource.js';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';

@@ -236,7 +236,7 @@ export interface DiscordApplicationRpc {
 }
 
 export async function getDiscordApplicationRpc(id: string) {
-    if (!id.match(/^\d{18}$/)) {
+    if (!id.match(/^\d{18,}$/)) {
         throw new Error('Invalid Discord application ID');
     }
 

@@ -64,7 +64,6 @@ const styles_mac = StyleSheet.create({
     },
     buttonLight: {
         backgroundColor: '#ffffff',
-        // @ts-expect-error react-native-web
         boxShadow: '#0000008a 0px 0px 1px',
     },
 

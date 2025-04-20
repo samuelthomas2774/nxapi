@@ -87,3 +87,7 @@ declare module 'react-native-web' {
         type Item<T = number | string> = PickerItem<T>;
     }
 }
+
+declare module 'node:timers' {
+    function setTimeout(callback: (_: void) => void, delay?: number): NodeJS.Timeout;
+}

@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { setTimeout } from 'node:timers';
 import { fetch, Headers, Response } from 'undici';
 import createDebug from './debug.js';
 import { ErrorResponse } from '../api/util.js';
