@@ -1,5 +1,4 @@
 import persist from 'node-persist';
-import DiscordRPC from 'discord-rpc';
 import { BankaraMatchMode, CoopRule, CoopSetting_schedule, DetailVotingStatusResult, FestMatchMode, FestTeam_schedule, FestTeam_votingStatus, Fest_schedule, FriendListResult, FriendOnlineState, GraphQLSuccessResponse, StageScheduleResult, VsMode, VsSchedule_regular } from 'splatnet3-types/splatnet3';
 import { Game } from '../../api/coral-types.js';
 import SplatNet3Api, { SplatNet3GraphQLErrorResponse } from '../../api/splatnet3.js';
@@ -10,8 +9,8 @@ import { ExternalMonitorPresenceInterface } from '../../common/presence.js';
 import createDebug from '../../util/debug.js';
 import { EmbeddedLoop, LoopResult } from '../../util/loop.js';
 import { ArgumentsCamelCase } from '../../util/yargs.js';
-import { product } from '../../util/product.js';
 import { DiscordPresenceContext, ErrorResult } from '../types.js';
+import { DiscordActivity } from '../util.js';
 
 const debug = createDebug('nxapi:discord:splatnet3');
 
@@ -299,7 +298,7 @@ interface PresenceUrlResponse {
     splatoon3_fest?: Fest_schedule | null;
 }
 
-export function callback(activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext) {
+export function callback(activity: DiscordActivity, game: Game, context?: DiscordPresenceContext) {
     const monitor = context?.monitors?.find(m => m instanceof SplatNet3Monitor) as SplatNet3Monitor | undefined;
     const presence_proxy_data = context?.proxy_response ? context.proxy_response as PresenceUrlResponse : null;
 
@@ -351,9 +350,7 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
                 null;
 
             if (proxy_stage_image) {
-                activity.largeImageKey = proxy_stage_image;
-                activity.largeImageText = fest.tricolorStage.name +
-                    ' | ' + product;
+                activity.setLargeImage(proxy_stage_image, fest.tricolorStage.name);
             }
         }
 
@@ -366,15 +363,12 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             //     (friend.vsMode.id === 'VnNNb2RlLTg=')
             // );
 
-            activity.largeImageKey = 'https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
+            activity.setLargeImage('https://fancy.org.uk/api/nxapi/s3/image?' + new URLSearchParams({
                 a: setting.vsStages[0].id,
                 b: setting.vsStages[1].id,
                 // ...(possibly_tricolour ? {t: fest?.tricolorStage.id} : {}),
                 v: '2022092400',
-            }).toString();
-            activity.largeImageText = setting.vsStages.map(s => s.name).join('/') +
-                // (possibly_tricolour ? '/' + fest?.tricolorStage.name : '') +
-                ' | ' + product;
+            }).toString(), setting.vsStages.map(s => s.name).join('/'));
         }
 
         // REGULAR, BANKARA, X_MATCH, LEAGUE, PRIVATE, FEST
@@ -391,8 +385,9 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
             friend.vsMode.mode === 'PRIVATE' ? 'mode-vs-private-1' :
             undefined;
 
-        activity.smallImageKey = mode_image;
-        activity.smallImageText = mode_name ?? friend.vsMode.name;
+        if (mode_image) {
+            activity.setSmallImage(mode_image, mode_name ?? friend.vsMode.name);
+        }
     }
 
     if (friend.onlineState === FriendOnlineState.COOP_MODE_MATCHING ||
@@ -415,23 +410,18 @@ export function callback(activity: DiscordRPC.Presence, game: Game, context?: Di
                 null;
 
             if (proxy_stage_image) {
-                activity.largeImageKey = proxy_stage_image;
-                activity.largeImageText = setting.coopStage.name +
-                    ' | ' + product;
+                activity.setLargeImage(proxy_stage_image, setting.coopStage.name);
             }
         }
 
         if (friend.coopRule === CoopRule.REGULAR) {
-            activity.smallImageKey = 'mode-coop-regular-1';
-            activity.smallImageText = 'Salmon Run';
+            activity.setSmallImage('mode-coop-regular-1', 'Salmon Run');
         }
         if (friend.coopRule === CoopRule.BIG_RUN) {
-            activity.smallImageKey = 'mode-coop-bigrun-1';
-            activity.smallImageText = 'Big Run';
+            activity.setSmallImage('mode-coop-bigrun-1', 'Big Run');
         }
         if (friend.coopRule === CoopRule.TEAM_CONTEST) {
-            activity.smallImageKey = 'mode-coop-teamcontest-1';
-            activity.smallImageText = 'Eggstra Work';
+            activity.setSmallImage('mode-coop-teamcontest-1', 'Eggstra Work');
         }
     }
 

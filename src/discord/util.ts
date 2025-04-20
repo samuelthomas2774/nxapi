@@ -1,6 +1,6 @@
 import DiscordRPC from 'discord-rpc';
 import { PresenceGame, PresenceState } from '../api/coral-types.js';
-import { defaultTitle, titles } from './titles.js';
+import { defaultTitle, platform_clients, titles } from './titles.js';
 import createDebug from '../util/debug.js';
 import { product, version } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
@@ -42,24 +42,28 @@ export function getDiscordPresence(
     const nintendo_eshop_redirect_url = titleid ?
         'https://fancy.org.uk/api/nxapi/title/' + titleid + '/redirect?source=nxapi-' + version + '-discord' : null;
 
-    const activity: DiscordRPC.Presence = {
-        details: text[0],
-        state: text[1],
-        largeImageKey: title.largeImageKey ?? game.imageUri,
-        largeImageText: title.largeImageText ? title.largeImageText + ' | ' + product : product,
-        smallImageKey: title.smallImageKey || (context?.friendcode ? context?.user?.imageUri : undefined),
-        smallImageText: title.smallImageKey ? title.smallImageText :
-            context?.friendcode && context?.user?.imageUri ? 'SW-' + context.friendcode.id : undefined,
-        buttons: game.shopUri ? [
-            {
-                label: 'Nintendo eShop',
-                url: nintendo_eshop_redirect_url ?? game.shopUri,
-            },
-        ] : [],
-    };
+    const activity = new DiscordActivity();
+
+    activity.details = text[0];
+    activity.state = text[1];
+
+    activity.setLargeImage(title.largeImageKey ?? game.imageUri, title.largeImageText);
+
+    if (title.smallImageKey) {
+        activity.setSmallImage(title.smallImageKey, title.smallImageText);
+    } else if (context?.friendcode && context.user?.imageUri) {
+        activity.setSmallImage(context.user.imageUri, 'SW-' + context.friendcode.id);
+    }
+
+    if (game.shopUri) {
+        activity.buttons.push({
+            label: 'Nintendo eShop',
+            url: nintendo_eshop_redirect_url ?? game.shopUri,
+        });
+    }
 
     if (online && title.showActiveEvent) {
-        activity.buttons!.push({
+        activity.buttons.push({
             label: context?.activeevent?.shareUri ? 'Join' : 'Join via Nintendo Switch',
             url: context?.activeevent?.shareUri ?? 'https://lounge.nintendo.com',
         });
@@ -72,12 +76,38 @@ export function getDiscordPresence(
     }
 
     return {
-        id: title.client || defaultTitle.client,
+        id: title.client ||
+            (typeof context?.platform !== 'undefined' && platform_clients[context.platform]) ||
+            defaultTitle.client,
         title: titleid,
         config: title,
         activity,
         showTimestamp: title.showTimestamp ?? true,
     };
+}
+
+export class DiscordActivity implements DiscordRPC.Presence {
+    details?: string = undefined;
+    state?: string = undefined;
+    largeImageKey?: string = undefined;
+    largeImageText?: string = undefined;
+    smallImageKey?: string = undefined;
+    smallImageText?: string = undefined;
+    buttons: { label: string; url: string; }[] = [];
+
+    constructor() {
+        //
+    }
+
+    setLargeImage(key: string, text?: string) {
+        this.largeImageKey = key;
+        this.largeImageText = text ? text + ' | ' + product : product;
+    }
+
+    setSmallImage(key: string, text?: string) {
+        this.smallImageKey = key;
+        this.smallImageText = text;
+    }
 }
 
 function getPlayTimeText(type: DiscordPresencePlayTime, game: PresenceGame) {

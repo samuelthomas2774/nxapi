@@ -119,6 +119,7 @@ class ZncDiscordPresenceClient {
             monitors: [...this.monitors.values()],
             nsaid: this.m.presence_user!,
             user,
+            // platform: presence.platform,
         };
 
         const discord_presence = 'name' in presence.game ?

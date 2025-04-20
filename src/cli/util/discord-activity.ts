@@ -209,6 +209,7 @@ function getActivityFromPresence(
         proxy_response,
         nsaid: argv.friendNsaid ?? user?.nsaId,
         user,
+        // platform: presence.platform,
     };
 
     const discordpresence = 'name' in presence.game ?

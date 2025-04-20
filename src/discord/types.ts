@@ -1,7 +1,8 @@
 import DiscordRPC from 'discord-rpc';
-import { ActiveEvent, CurrentUser, Friend, Game } from '../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, PresencePlatform } from '../api/coral-types.js';
 import { ExternalMonitorPresenceInterface, ZncDiscordPresence, ZncProxyDiscordPresence } from '../common/presence.js';
 import { EmbeddedLoop } from '../util/loop.js';
+import { DiscordActivity } from './util.js';
 
 export interface DiscordPresenceContext {
     friendcode?: CurrentUser['links']['friendCode'];
@@ -12,6 +13,7 @@ export interface DiscordPresenceContext {
     monitors?: ExternalMonitor[];
     nsaid?: string;
     user?: CurrentUser | Friend;
+    platform?: PresencePlatform;
 }
 
 export interface DiscordPresence {
@@ -104,7 +106,7 @@ export interface Title<M extends ExternalMonitor = ExternalMonitor> {
     /**
      * A function to call to customise the Discord activity.
      */
-    callback?: (activity: DiscordRPC.Presence, game: Game, context?: DiscordPresenceContext, monitor?: M) => void;
+    callback?: (activity: DiscordActivity, game: Game, context?: DiscordPresenceContext, monitor?: M) => void;
 }
 
 export enum DiscordPresencePlayTime {
