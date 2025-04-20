@@ -9,3 +9,4 @@ export * as presenceEmbedRender from './presence-embed-render.js';
 export * as presenceEmbedServer from './presence-embed-server.js';
 export * as logArchive from './log-archive.js';
 export * as decryptLogArchive from './decrypt-log-archive.js';
+export * as status from './status.js';

@@ -1,11 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { useAccentColour, useEventListener } from '../util.js';
 import type { UpdateCacheData } from '../../../common/update.js';
-import { TEXT_COLOUR_DARK, UPDATE_COLOUR } from '../constants.js';
+import type { StatusUpdate } from '../../../common/status.js';
+import { BORDER_COLOUR_SECONDARY_DARK, TEXT_COLOUR_DARK, UPDATE_COLOUR } from '../constants.js';
 import { Button } from '../components/index.js';
+
+enum StatusUpdateFlag {
+    SUPPRESS_UPDATE_BANNER = 1,
+}
 
 export default function Update() {
     const accent_colour = useAccentColour();
@@ -15,7 +20,15 @@ export default function Update() {
     useEffect(() => (ipc.getUpdateData().then(setUpdateData), undefined), [ipc]);
     useEventListener(ipc.events, 'nxapi:update:latest', setUpdateData, [ipc.events]);
 
-    return update && 'update_available' in update && update.update_available ? <View style={styles.container}>
+    const [status_updates, setStatusUpdateData] = useState<StatusUpdate[] | null>(null);
+    useEffect(() => (ipc.getStatusUpdateData().then(setStatusUpdateData), undefined), [ipc]);
+    useEventListener(ipc.events, 'status-updates', setStatusUpdateData, [ipc.events]);
+
+    const status_update_suppress_update_banner = useMemo(() =>
+        status_updates?.find(s => s.flags & (1 << StatusUpdateFlag.SUPPRESS_UPDATE_BANNER)),
+        [status_updates]);
+
+    return update && 'update_available' in update && update.update_available && !status_update_suppress_update_banner ? <View style={styles.container}>
         <Text style={styles.updateText}>{t('update_available', {name: update.latest.name})}</Text>
         <View style={styles.updateButton}>
             <Button title={t('download')}
@@ -35,6 +48,8 @@ export default function Update() {
 const styles = StyleSheet.create({
     container: {
         backgroundColor: UPDATE_COLOUR,
+        borderBottomWidth: 1,
+        borderBottomColor: BORDER_COLOUR_SECONDARY_DARK,
         paddingVertical: 8,
         paddingHorizontal: 20,
         flexDirection: 'row',

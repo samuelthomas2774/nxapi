@@ -6,6 +6,7 @@ import type { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus
 import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
+import type { StatusUpdate } from '../../common/status.js';
 import type { Announcements, CoralSuccessResponse, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';
 import type { DiscordPresence } from '../../discord/types.js';
 import type { NintendoAccountUser } from '../../api/na.js';
@@ -49,6 +50,8 @@ const ipc = {
 
     getUpdateData: () => inv<UpdateCacheData | null>('update:get'),
     checkUpdates: () => inv<UpdateCacheData | null>('update:check'),
+    getStatusUpdateData: () => inv<StatusUpdate[] | null>('statusupdates:get'),
+    forceUpdateStatusUpdates: () => inv<StatusUpdate[] | null>('statusupdates:refresh'),
 
     listNintendoAccounts: () => inv<string[] | undefined>('accounts:list'),
     addCoralAccount: () => inv<string>('accounts:add-coral'),
@@ -108,6 +111,7 @@ const ipc = {
 export type NxapiElectronIpc = typeof ipc;
 
 ipcRenderer.on('nxapi:window:refresh', () => events.emit('window:refresh') || location.reload());
+ipcRenderer.on('nxapi:statusupdates', (e, s: StatusUpdate[]) => events.emit('status-updates', s));
 ipcRenderer.on('nxapi:accounts:shouldrefresh', () => events.emit('update-nintendo-accounts'));
 ipcRenderer.on('nxapi:discord:shouldrefresh', () => events.emit('update-discord-presence-source'));
 ipcRenderer.on('nxapi:discord:presence', (e, p: DiscordPresence) => events.emit('update-discord-presence', p));

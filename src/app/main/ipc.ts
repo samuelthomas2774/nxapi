@@ -66,6 +66,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
 
     handle('update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
     handle('update:check', () => appinstance.updater.check());
+    handle('statusupdates:get', () => appinstance.statusupdates.cache ?? []);
+    handle('statusupdates:refresh', () => appinstance.statusupdates.forceUpdate());
 
     setTimeout(async () => {
         const update = await appinstance.updater.check();

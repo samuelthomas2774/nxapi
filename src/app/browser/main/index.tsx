@@ -6,6 +6,7 @@ import Sidebar from './sidebar.js';
 import Update from './update.js';
 import Main from './main.js';
 import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, BACKGROUND_COLOUR_SECONDARY_DARK, BACKGROUND_COLOUR_SECONDARY_LIGHT, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
+import StatusUpdates from './status-updates.js';
 
 const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
@@ -45,6 +46,7 @@ export default function App(props: AppProps) {
 
         <View style={[styles.main, theme.main]}>
             <ScrollView style={styles.scroller} contentContainerStyle={styles.scrollerContent}>
+                <StatusUpdates />
                 <Update />
 
                 {selectedUser ? <Main key={selectedUser.user.id} user={selectedUser}

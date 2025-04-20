@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, Settings } from 'electron';
+import { app, BrowserWindow, ipcMain, Notification, session, Settings } from 'electron';
 import process from 'node:process';
 import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -24,6 +24,7 @@ import { addUserAgent } from '../../util/useragent.js';
 import { initStorage, paths } from '../../util/storage.js';
 import createI18n, { languages } from '../i18n/index.js';
 import { CoralApiInterface } from '../../api/coral.js';
+import { StatusUpdateIdentifierSymbol, StatusUpdateMonitor, StatusUpdateNotify, StatusUpdateResult, StatusUpdateSubscriber } from '../../common/status.js';
 
 const debug = createDebug('app:main');
 
@@ -60,6 +61,7 @@ export class App {
     readonly store: Store;
     readonly monitors: PresenceMonitorManager;
     readonly updater = new Updater();
+    readonly statusupdates = new StatusUpdateMonitor();
     menu: MenuApp | null = null;
 
     constructor(storage: persist.LocalStorage, readonly i18n: i18n) {
@@ -192,6 +194,12 @@ export async function init() {
         app.setAppUserModelId('uk.org.fancy.nxapi.app');
     }
 
+    appinstance.statusupdates.subscribe({
+        onUpdate: data => sendToAllWindows('nxapi:statusupdates', data),
+    });
+
+    appinstance.statusupdates.subscribe(new StatusUpdateNotificationSubscriber(appinstance));
+
     appinstance.store.restoreMonitorState(appinstance.monitors);
 
     const menu = new MenuApp(appinstance);
@@ -292,6 +300,65 @@ export async function handleOpenFriendCodeUri(app: App, uri: string) {
         user: selected_user[1].user.id,
         friendcode,
     });
+}
+
+interface StatusUpdateNotificationsCache {
+    notified: {
+        id: string;
+        notified_at: number;
+    }[];
+}
+
+class StatusUpdateNotificationSubscriber implements StatusUpdateSubscriber {
+    constructor(readonly app: App) {
+        //
+    }
+    
+    _cache: StatusUpdateNotificationsCache | null = null;
+    _cache_updated = false;
+    _load_cache: Promise<StatusUpdateNotificationsCache> | null = null;
+
+    async getNotificationsCache() {
+        if (this._cache) return this._cache;
+        if (this._load_cache) return this._load_cache;
+
+        return this._load_cache = this.app.store.storage.getItem('StatusUpdateNotifications')
+            .then(c => this._cache = (c as StatusUpdateNotificationsCache ?? {notified: []}))
+            .finally(() => this._load_cache = null);
+    }
+
+    async onUpdate(data: StatusUpdateResult) {
+        if (this._cache && this._cache_updated) {
+            await this.app.store.storage.setItem('StatusUpdateNotifications', this._cache);
+        }
+    }
+
+    async onInitialUpdate(data: StatusUpdateResult) {
+        await Promise.all(data.map(s => this.onNewStatusUpdate(s)));
+    }
+
+    async onNewStatusUpdate(status_update: StatusUpdateResult[0]) {
+        if (status_update.notify === StatusUpdateNotify.NO) return;
+        
+        const cache = await this.getNotificationsCache();
+        const id = status_update[StatusUpdateIdentifierSymbol];
+
+        if (cache.notified.find(s => s.id === id)) {
+            debug('skipping status update notification, already notified', id);
+            return;
+        }
+
+        const notification = new Notification({
+            title: status_update.title,
+            body: status_update.notification_content ?? status_update.content,
+            silent: status_update.notify === StatusUpdateNotify.SILENT,
+        });
+
+        notification.show();
+
+        cache.notified.push({id, notified_at: Date.now()});
+        this._cache_updated = true;
+    }
 }
 
 class Updater {
