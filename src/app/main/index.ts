@@ -194,6 +194,13 @@ export async function init() {
         app.setAppUserModelId('uk.org.fancy.nxapi.app');
     }
 
+    import('../../common/remote-config.js').then(m => {
+        if (!m.default.status_update_url) return;
+        appinstance.statusupdates.addSource(m.default.status_update_url);
+    }).catch(err => {
+        debug('error adding status update source from remote config', err);
+    });
+
     appinstance.statusupdates.subscribe({
         onUpdate: data => sendToAllWindows('nxapi:statusupdates', data),
     });

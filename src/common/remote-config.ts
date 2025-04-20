@@ -251,6 +251,7 @@ export interface NxapiRemoteConfig {
      */
     require_version: string[];
 
+    status_update_url?: string;
     log_encryption_key?: string;
 
     // If null the API should not be used

@@ -12,6 +12,10 @@ export function builder(yargs: Argv<ParentArguments>) {
     return yargs.option('url', {
         describe: 'Additional status update source',
         type: 'array',
+    }).option('use-config', {
+        describe: 'Use the status update source from nxapi\'s remote configuration',
+        type: 'boolean',
+        default: true,
     }).option('json', {
         describe: 'Output raw JSON',
         type: 'boolean',
@@ -24,9 +28,12 @@ export function builder(yargs: Argv<ParentArguments>) {
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    // const { default: config } = await import('../../common/remote-config.js');
-
     const status = new StatusUpdateMonitor();
+
+    if (argv.useConfig) {
+        const { default: config } = await import('../../common/remote-config.js');
+        if (config.status_update_url) status.addSource(config.status_update_url);
+    }
 
     for (const url of argv.url ?? []) {
         status.addSource(url.toString());
