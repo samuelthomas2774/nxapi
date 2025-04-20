@@ -1,6 +1,6 @@
 import { setTimeout } from 'node:timers';
 import { errors } from 'undici';
-import EventSource, { ErrorEvent } from '../util/eventsource.js';
+import EventSource, { ErrorEvent, EventSourceErrorResponse } from '../util/eventsource.js';
 import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
@@ -14,6 +14,7 @@ import { parseLinkHeader } from '../util/http.js';
 import { getUserAgent } from '../util/useragent.js';
 import { getTitleIdFromEcUrl, TemporaryErrorSymbol } from '../util/misc.js';
 import { handleError } from '../util/errors.js';
+import { StatusUpdateMonitor, StatusUpdateSourceHandle } from './status.js';
 
 const debug = createDebug('nxapi:nso:presence');
 const debugEventStream = createDebug('nxapi:nso:presence:sse');
@@ -545,6 +546,9 @@ export class ZncProxyDiscordPresence extends Loop {
 
     readonly discord = new ZncDiscordPresenceClient(this);
 
+    status_updates: StatusUpdateMonitor | null = null;
+    status_update_source: StatusUpdateSourceHandle | null = null;
+
     is_first_request = true;
     is_sse = false;
     eventstream_url: string | null = null;
@@ -581,9 +585,12 @@ export class ZncProxyDiscordPresence extends Loop {
             await this.discord.updatePresenceForDiscord(presence, user);
             await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
 
+            const link_header = result[ResponseSymbol].headers.get('Link');
+            const links = link_header ? parseLinkHeader(link_header) : [];
+
+            this.updateStatusUpdateSource(links);
+
             if (this.is_first_request) {
-                const link_header = result[ResponseSymbol].headers.get('Link');
-                const links = link_header ? parseLinkHeader(link_header) : [];
                 debug('presence links', links);
                 const eventstream_link = links.find(l => l.rel.includes('alternate') && l.type === 'text/event-stream');
 
@@ -600,6 +607,11 @@ export class ZncProxyDiscordPresence extends Loop {
             }
         } catch (err) {
             if (err instanceof ErrorResponse) {
+                const link_header = err.response.headers.get('Link');
+                const links = link_header ? parseLinkHeader(link_header) : [];
+
+                this.updateStatusUpdateSource(links, false);
+
                 if (!this.is_sse && err.response.headers.get('Content-Type')?.match(/^text\/event-stream(;|$)/)) {
                     this.is_sse = true;
                     debug('Presence URL responded with an event stream');
@@ -627,6 +639,29 @@ export class ZncProxyDiscordPresence extends Loop {
         }
     }
 
+    updateStatusUpdateSource(links: ReturnType<typeof parseLinkHeader>, remove = true) {
+        if (!this.status_updates) {
+            if (this.status_update_source) {
+                this.status_update_source.cancel();
+                this.status_update_source = null;
+            }
+            return;
+        }
+
+        const status_updates_link = links.find(l => l.rel.includes('https://fancy.org.uk/nxapi/status-update-source'));
+
+        if (!status_updates_link && !remove) return;
+
+        if (!status_updates_link || this.status_update_source?.url !== status_updates_link.uri) {
+            this.status_update_source?.cancel();
+            this.status_update_source = null;
+        }
+
+        if (status_updates_link && !this.status_update_source) {
+            this.status_update_source = this.status_updates.addSource(status_updates_link.uri);
+        }
+    }
+
     events: EventSource | null = null;
 
     useEventStream() {
@@ -650,6 +685,11 @@ export class ZncProxyDiscordPresence extends Loop {
         events.onopen = event => {
             debugEventStream('EventSource connected', event);
             timeout = setTimeout(ontimeout, timeout_interval);
+
+            const link_header = events.response?.headers.get('Link');
+            const links = link_header ? parseLinkHeader(link_header) : [];
+
+            this.updateStatusUpdateSource(links);
         };
 
         let user: CurrentUser | Friend | undefined = undefined;
@@ -707,6 +747,13 @@ export class ZncProxyDiscordPresence extends Loop {
             events.onerror = (event: ErrorEvent | MessageEvent) => {
                 debugEventStream('EventSource error', event);
                 events.close();
+
+                if (event instanceof ErrorEvent && event.error instanceof EventSourceErrorResponse) {
+                    const link_header = event.error.response.headers.get('Link');
+                    const links = link_header ? parseLinkHeader(link_header) : [];
+
+                    this.updateStatusUpdateSource(links, false);
+                }
 
                 if (event instanceof MessageEvent) {
                     rj(new ErrorResponse('Received error in event stream', events.response!, event.data));

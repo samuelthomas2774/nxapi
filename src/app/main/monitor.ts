@@ -107,6 +107,7 @@ export class PresenceMonitorManager {
 
         const i = new EmbeddedProxyPresenceMonitor(presence_url);
 
+        i.status_updates = this.app.statusupdates;
         i.notifications = this.notifications;
         i.discord_preconnect = true;
 
@@ -152,6 +153,11 @@ export class PresenceMonitorManager {
             i.disable();
 
             if (i instanceof EmbeddedPresenceMonitor) this.notifications.removeAccount(id);
+
+            if (i instanceof EmbeddedProxyPresenceMonitor) {
+                i.status_update_source?.cancel();
+                i.status_update_source = null;
+            }
         }
     }
 

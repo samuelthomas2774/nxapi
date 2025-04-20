@@ -40,7 +40,8 @@ export interface StatusUpdateSubscriber {
     onError?(err: unknown): void;
 }
 
-interface StatusUpdateSourceHandle {
+export interface StatusUpdateSourceHandle {
+    url: string;
     cancel(): void;
 }
 
@@ -53,11 +54,14 @@ export class StatusUpdateMonitor {
 
     addSource(url: string) {
         const handle: StatusUpdateSourceHandle = {
+            url,
             cancel: () => this.removeSource(handle),
         };
 
         this.sources.push([url, handle]);
         if (this._timeout) this.forceUpdate();
+
+        return handle;
     }
 
     removeSource(handle: StatusUpdateSourceHandle) {
