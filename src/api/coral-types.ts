@@ -367,7 +367,7 @@ export interface UpdateCurrentUserPermissionsParameter {
 /** /v4/User/PlayLog/Show */
 export type UserPlayLog = Game[];
 
-/** /v4/FriendRequest/Received/List */
+/** /v3/FriendRequest/Received/List, /v4/FriendRequest/Received/List */
 export interface ReceivedFriendRequests {
     friendRequests: ReceivedFriendRequest[];
 }
@@ -387,7 +387,7 @@ export interface ReceivedFriendRequest {
 
 export type FriendRequestSender = User;
 
-/** /v4/FriendRequest/Sent/List */
+/** /v3/FriendRequest/Sent/List */
 export interface SentFriendRequests {
     friendRequests: unknown[];
 }
@@ -408,5 +408,13 @@ export type FriendRequestReceiver = User;
 
 /** /v3/User/Block/List */
 export interface BlockingUsers {
-    blockingUsers: unknown[];
+    blockingUsers: BlockedUser[];
+}
+
+export interface BlockedUser {
+    nsaId: string;
+    name: string;
+    imageUri: string;
+    image2Uri: string;
+    blockedAt: number;
 }
