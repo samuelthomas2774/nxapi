@@ -11,8 +11,8 @@ export const defaultTitle: Title = {
 };
 
 export const platform_clients: Record<PresencePlatform, string> = {
-    [PresencePlatform.NINTENDO_SWITCH]: '950883021165330493',
-    // [PresencePlatform.NINTENDO_SWITCH_2]: '1358060657957928970',
+    [PresencePlatform.NX]: '950883021165330493',
+    [PresencePlatform.OUNCE]: '1358060657957928970',
 };
 
 export const titles: Title[] = [];

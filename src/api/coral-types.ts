@@ -103,6 +103,42 @@ export interface Announcement {
     linkText?: string;
 }
 
+/** /v4/Announcement/List */
+export type Announcements_4 = Announcement_4[];
+
+export interface AnnouncementBase_4 {
+    id: string;
+    type: AnnouncementType;
+    title: string;
+    deliversAt: number;
+    imageUrl: string;
+    image2Url?: string;
+    hasRead: boolean;
+}
+
+export enum AnnouncementType {
+    OPERATION = 'OPERATION',
+    FRIEND_REQUEST = 'FRIEND_REQUEST',
+}
+
+export type Announcement_4 = AnnouncementOperation | AnnouncementFriendRequest;
+
+export interface AnnouncementOperation extends AnnouncementBase_4 {
+    type: AnnouncementType.OPERATION;
+    operation: AnnouncementOperationContents;
+}
+export interface AnnouncementOperationContents {
+    contents: string;
+}
+export interface AnnouncementFriendRequest extends AnnouncementBase_4 {
+    type: AnnouncementType.OPERATION;
+    friendRequest: AnnouncementFriendRequestContents;
+}
+export interface AnnouncementFriendRequestContents {
+    nsaId: string;
+    friendRequestId: string;
+}
+
 /** /v3/Friend/List */
 export interface Friends {
     friends: Friend[];
@@ -187,16 +223,15 @@ export enum PresenceState {
     INACTIVE = 'INACTIVE',
     /** The user is selected in an application */
     ONLINE = 'ONLINE',
-    /**
-     * The user is selected in an application and playing online.
-     * (Is this set by Nintendo's servers if the user is in a session on Nintendo's servers, or by the application
-     * running on the console?)
-     */
+    /** The user is selected in an application and playing online */
     PLAYING = 'PLAYING',
 }
 
 export enum PresencePlatform {
-    NINTENDO_SWITCH = 1,
+    /** Nintendo Switch */
+    NX = 1,
+    /** Nintendo Switch 2 */
+    OUNCE = 2,
 }
 
 export interface Game {
@@ -232,6 +267,9 @@ export interface FriendCodeUser {
 /** /v1/Game/ListWebServices */
 export type WebServices = WebService[];
 
+/** /v4/GameWebService/List */
+export type WebServices_4 = WebService_4[];
+
 export interface WebService {
     id: number;
     uri: string;
@@ -239,6 +277,12 @@ export interface WebService {
     whiteList: string[];
     name: string;
     imageUri: string;
+}
+
+export interface WebService_4 extends WebService {
+    startDate: number;
+    isNotificationSupported: boolean;
+    isNotificationAllowed: boolean;
 }
 
 export interface WebServiceAttribute {
@@ -254,7 +298,7 @@ export interface WebServiceTokenParameter {
     f: string;
 }
 
-/** /v2/Game/GetWebServiceToken, /v2/Extension/Game/GetWebServiceToken */
+/** /v2/Game/GetWebServiceToken, /v2/Extension/Game/GetWebServiceToken, /v4/Game/GetWebServiceToken */
 export interface WebServiceToken {
     accessToken: string;
     expiresIn: number;
@@ -417,4 +461,122 @@ export interface BlockedUser {
     imageUri: string;
     image2Uri: string;
     blockedAt: number;
+}
+
+/** /v4/Media/List */
+export interface ListMedia {
+    media: Media[];
+}
+
+export interface MediaBase {
+    id: string;
+    type: MediaType;
+    applicationId: string;
+    platformId: MediaPlatform;
+    contentUri: string;
+    contentLength: number;
+    /** 320x180 JPEG image */
+    thumbnailUri: string;
+    /** For system titles, this is an empty string */
+    appName: string;
+    orientation: number;
+    acdIndex: number;
+    extraData: string;
+    capturedAt: number;
+    expiresAt: number;
+    uploadedAt: number;
+}
+
+export type Media = MediaImage | MediaVideo;
+
+export interface MediaImage extends MediaBase {
+    type: MediaType.IMAGE;
+}
+export interface MediaVideo extends MediaBase {
+    type: MediaType.VIDEO;
+    /** Video duration (ms) */
+    videoDuration: number;
+}
+
+export enum MediaType {
+    IMAGE = 'image',
+    VIDEO = 'video',
+}
+export enum MediaPlatform {
+    NINTENDO_SWITCH_2 = 1,
+}
+
+export interface ListMediaParameter {
+    count: 100;
+}
+
+/** /v5/Hashtag/List */
+export interface ListHashtag {
+    /** Plain text to prefill share dialog text, e.g. "#NintendoSwitch2 #MarioKartWorld" */
+    tags: string;
+}
+
+export interface ListHashtagParameter {
+    applications: ListHashtagParameterApplication[];
+}
+export interface ListHashtagParameterApplication {
+    platformId: MediaPlatform;
+    acdIndex: number;
+    extraData: string;
+    applicationId: string;
+}
+
+/** /v5/PushNotification/Settings/List */
+export interface ListPushNotificationSettings {
+    playInvitation: PushNotificationPlayInvitationScope;
+    chatInvitation: boolean;
+    friendRequest: boolean;
+}
+
+export enum PushNotificationPlayInvitationScope {
+    FRIENDS = 'FRIENDS',
+    FAVORITE_FRIENDS = 'FAVORITE_FRIENDS',
+    NONE = 'NONE',
+}
+
+/** /v5/PushNotification/Settings/Update */
+export type UpdatePushNotificationSettingsParameter = UpdatePushNotificationSettingsParameterItem[];
+
+export type UpdatePushNotificationSettingsParameterItem =
+    UpdatePushNotificationSettingsParameterFriendRequest |
+    UpdatePushNotificationSettingsParameterChatInvitation |
+    UpdatePushNotificationSettingsParameterPlayInvitation |
+    UpdatePushNotificationSettingsParameterGameWebService |
+    UpdatePushNotificationSettingsParameterFriendOnline;
+
+export interface UpdatePushNotificationSettingsParameterFriendRequest {
+    value: boolean;
+    type: 'friendRequest';
+}
+export interface UpdatePushNotificationSettingsParameterChatInvitation {
+    type: 'chatInvitation';
+    value: boolean;
+}
+export interface UpdatePushNotificationSettingsParameterPlayInvitation {
+    type: 'playInvitation';
+    scope: PushNotificationPlayInvitationScope;
+}
+export interface UpdatePushNotificationSettingsParameterGameWebService {
+    value: boolean;
+    gwsId: number;
+    type: 'gws';
+}
+export interface UpdatePushNotificationSettingsParameterFriendOnline {
+    /** NSA ID */
+    friendId: string;
+    type: 'friendOnline';
+    value: boolean;
+}
+
+/** /v4/NA/User/LoginFactor/Show */
+export interface ShowUserLogin {
+    /** Coral user ID */
+    userId: number;
+    /** Nintendo Account email */
+    email: string;
 }
