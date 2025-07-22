@@ -12,6 +12,7 @@ import { AccountLoginParameter, AccountTokenParameter, WebServiceTokenParameter 
 const debugFlapg = createDebug('nxapi:api:flapg');
 const debugImink = createDebug('nxapi:api:imink');
 const debugZncaApi = createDebug('nxapi:api:znca-api');
+const debugZncaAuth = createDebug('nxapi:api:znca-auth');
 
 export abstract class ZncaApi {
     constructor(
@@ -311,25 +312,19 @@ export interface ResourceData {
 }
 
 export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
-    client_assertion_provider: ClientAssertionProviderInterface | null = null;
-    client_credentials:
-        { assertion: string; assertion_type: string; } |
-        { id: string; secret: string; } |
-        null = null;
-
-    token: TokenData | null = null;
-    refresh_token: string | null = null;
-
-    protected_resource: ResourceData | null = null;
+    readonly auth: NxapiZncaAuth | null;
 
     headers = new Headers();
 
     constructor(
         readonly url: string,
+        auth: NxapiZncaAuth | null,
         readonly app?: {platform?: string; version?: string;},
         useragent?: string,
     ) {
         super(useragent);
+
+        this.auth = auth;
 
         this.headers.set('User-Agent', getUserAgent(useragent));
     }
@@ -339,31 +334,16 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         app?: {platform?: string; version?: string;},
         useragent?: string,
     ) {
-        const provider = new ZncaApiNxapi(url, app, useragent);
+        const auth = NxapiZncaAuth.create(url, useragent);
 
-        if (process.env.NXAPI_ZNCA_API_CLIENT_ID && process.env.NXAPI_ZNCA_API_CLIENT_SECRET) {
-            provider.client_credentials = {
-                id: process.env.NXAPI_ZNCA_API_CLIENT_ID,
-                secret: process.env.NXAPI_ZNCA_API_CLIENT_SECRET,
-            };
-        } else if (process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION) {
-            provider.client_credentials = {
-                assertion: process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION,
-                assertion_type: process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION_TYPE ??
-                    'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-            };
-        } else {
-            provider.client_assertion_provider = client_assertion_provider;
-        }
-
-        return provider;
+        return new ZncaApiNxapi(url, auth, app, useragent);
     }
 
     async genf(
         token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string},
         encrypt_token_request?: EncryptRequestOptions,
     ): Promise<FResult> {
-        if (!this.token) await this.authenticate();
+        if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
         debugZncaApi('Getting f parameter', {
             url: this.url + '/f', hash_method, token, timestamp: undefined, request_id: undefined, user,
@@ -384,7 +364,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
         if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
-        if (this.token) headers.append('Authorization', 'Bearer ' + this.token.token);
+        if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(this.url + '/f', {
@@ -397,8 +377,8 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (err.data?.error === 'invalid_token') {
-                this.token = null;
+            if (this.auth && err.data?.error === 'invalid_token') {
+                this.auth.token = null;
 
                 return this.genf(token, hash_method, user, encrypt_token_request);
             }
@@ -431,7 +411,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     }
 
     async encryptRequest(url: string, token: string | null, data: string): Promise<EncryptRequestResult> {
-        if (!this.token) await this.authenticate();
+        if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
         debugZncaApi('encrypting request', { url, data });
 
@@ -447,7 +427,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
         if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
-        if (this.token) headers.append('Authorization', 'Bearer ' + this.token);
+        if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(this.url + '/encrypt-request', {
@@ -460,8 +440,8 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (err.data?.error === 'invalid_token') {
-                this.token = null;
+            if (this.auth && err.data?.error === 'invalid_token') {
+                this.auth.token = null;
 
                 return this.encryptRequest(url, token, data);
             }
@@ -479,7 +459,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     }
 
     async decryptResponse(data: Uint8Array): Promise<DecryptResponseResult> {
-        if (!this.has_valid_token) await this.authenticate();
+        if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
         debugZncaApi('decrypting response', data);
 
@@ -493,7 +473,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
         if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
-        if (this.token) headers.append('Authorization', 'Bearer ' + this.token.token);
+        if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(this.url + '/decrypt-response', {
@@ -506,8 +486,8 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (err.data?.error === 'invalid_token') {
-                this.token = null;
+            if (this.auth && err.data?.error === 'invalid_token') {
+                this.auth.token = null;
 
                 return this.decryptResponse(data);
             }
@@ -523,6 +503,53 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
             // @ts-expect-error
             response,
         };
+    }
+}
+
+export class NxapiZncaAuth {
+    client_assertion_provider: ClientAssertionProviderInterface | null = null;
+    client_credentials:
+        { assertion: string; assertion_type: string; } |
+        { id: string; secret: string; } |
+        null = null;
+
+    token: TokenData | null = null;
+    refresh_token: string | null = null;
+
+    protected_resource: ResourceData | null = null;
+
+    headers = new Headers();
+
+    constructor(
+        readonly resource: string,
+        useragent?: string,
+    ) {
+        this.headers.set('User-Agent', getUserAgent(useragent));
+    }
+
+    static create(url: string, useragent?: string) {
+        const resource = new URL(url).origin;
+
+        const auth = new NxapiZncaAuth(resource, useragent);
+
+        if (process.env.NXAPI_ZNCA_API_CLIENT_ID && process.env.NXAPI_ZNCA_API_CLIENT_SECRET) {
+            auth.client_credentials = {
+                id: process.env.NXAPI_ZNCA_API_CLIENT_ID,
+                secret: process.env.NXAPI_ZNCA_API_CLIENT_SECRET,
+            };
+        } else if (process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION) {
+            auth.client_credentials = {
+                assertion: process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION,
+                assertion_type: process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION_TYPE ??
+                    'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+            };
+        } else if (client_assertion_provider) {
+            auth.client_assertion_provider = client_assertion_provider;
+        } else {
+            debugZncaAuth('client authentication not configured');
+        }
+
+        return auth;
     }
 
     private _authenticate: Promise<void> | null = null;
@@ -551,7 +578,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         const resource = this.protected_resource ?? (this.protected_resource = await this.getProtectedResource());
         const refresh_token = this.refresh_token;
 
-        debugZncaApi('fetching nxapi-znca-api token');
+        debugZncaAuth('fetching nxapi-znca-api token');
 
         const headers = new Headers(this.headers);
         headers.set('Accept', 'application/json');
@@ -561,23 +588,24 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (refresh_token) {
             body.append('grant_type', 'refresh_token');
             body.append('refresh_token', refresh_token);
-        } else if (this.client_credentials && 'secret' in this.client_credentials) {
+        } else {
             body.append('grant_type', 'client_credentials');
+            body.append('scope', 'ca:gf ca:er ca:dr');
+        }
+
+        if (this.client_credentials && 'secret' in this.client_credentials) {
             body.append('client_id', this.client_credentials.id);
             body.append('client_secret', this.client_credentials.secret);
-            body.append('scope', 'ca:gf ca:er ca:dr');
         } else if (this.client_credentials && 'assertion' in this.client_credentials) {
-            body.append('grant_type', 'client_credentials');
             body.append('client_assertion_type', this.client_credentials.assertion_type);
             body.append('client_assertion', this.client_credentials.assertion);
-            body.append('scope', 'ca:gf ca:er ca:dr');
+        } else if (this.client_credentials && 'id' in this.client_credentials) {
+            body.append('client_id', this.client_credentials.id);
         } else if (this.client_assertion_provider) {
             const { assertion, type } = await this.client_assertion_provider.create(resource.client_assertion_aud);
 
-            body.append('grant_type', 'client_credentials');
             body.append('client_assertion_type', type);
             body.append('client_assertion', assertion);
-            body.append('scope', 'ca:gf ca:er ca:dr');
         } else {
             if (resource.resource_metadata.resource_documentation) {
                 throw new TypeError('Client authentication not configured\n\n' +
@@ -611,21 +639,19 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
 
         const result = defineResponse(data, response);
 
-        debugZncaApi('token', result);
+        debugZncaAuth('token', result);
 
         return result;
     }
 
     async getProtectedResource() {
-        const resource = new URL(this.url).origin;
-
-        const resource_metadata = await this.getProtectedResourceMetadata(resource);
+        const resource_metadata = await this.getProtectedResourceMetadata(this.resource);
 
         if (!resource_metadata.authorization_servers?.length) {
             throw new TypeError('Unable to find authorisation server');
         }
         if (resource_metadata.authorization_servers.length > 1) {
-            debugZncaApi('multiple authorisation servers returned for %s, using first', resource);
+            debugZncaAuth('multiple authorisation servers returned for %s, using first', this.resource);
         }
 
         const authorisation_server = resource_metadata.authorization_servers[0];
@@ -648,10 +674,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     async getProtectedResourceMetadata(resource: URL | string) {
         if (typeof resource === 'string') resource = new URL(resource);
 
-        if (resource.search) debugZncaApi('resource identifier contains search parameters');
+        if (resource.search) debugZncaAuth('resource identifier contains search parameters');
         if (resource.hash) throw new TypeError('Resource identifier contains fragment');
 
-        debugZncaApi('fetching protected resource metadata for %s', resource.href);
+        debugZncaAuth('fetching protected resource metadata for %s', resource.href);
 
         const metadata_url = new URL(resource);
 
@@ -667,6 +693,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
             signal,
         }).finally(cancel);
 
+        if (response.status !== 200) {
+            throw await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
+        }
+
         const data = await response.json() as ProtectedResourceMetadata;
 
         const result = defineResponse(data, response);
@@ -677,10 +707,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     async getAuthorisationServerMetadata(issuer: URL | string) {
         if (typeof issuer === 'string') issuer = new URL(issuer);
 
-        if (issuer.search) debugZncaApi('issuer identifier contains search parameters');
+        if (issuer.search) debugZncaAuth('issuer identifier contains search parameters');
         if (issuer.hash) throw new TypeError('Issuer identifier contains fragment');
 
-        debugZncaApi('fetching authorisation server metadata for %s', issuer.href);
+        debugZncaAuth('fetching authorisation server metadata for %s', issuer.href);
 
         const metadata_url = new URL(issuer);
 
@@ -695,6 +725,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
             headers,
             signal,
         }).finally(cancel);
+
+        if (response.status !== 200) {
+            throw await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
+        }
 
         const data = await response.json() as AuthorisationServerMetadata;
 
