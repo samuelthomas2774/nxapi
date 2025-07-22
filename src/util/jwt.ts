@@ -1,4 +1,4 @@
-import * as crypto from 'node:crypto';
+import { createHmac, createSign, createVerify, KeyLike, timingSafeEqual } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import persist from 'node-persist';
 import { fetch } from 'undici';
@@ -21,6 +21,7 @@ export interface JwtHeader {
 }
 export enum JwtAlgorithm {
     RS256 = 'RS256',
+    HS256 = 'HS256',
 }
 
 export interface JwtPayload {
@@ -40,7 +41,8 @@ export interface JwtPayload {
     typ: string;
 }
 
-type JwtVerifier = (data: Buffer, signature: Buffer, key: string) => boolean;
+type JwtVerifier = (data: Buffer, signature: Buffer, key: KeyLike) => boolean;
+type JwtSigner = (data: Buffer, key: KeyLike) => Buffer;
 
 export class Jwt<T = JwtPayload, H extends JwtHeader = JwtHeader> {
     constructor(
@@ -63,7 +65,7 @@ export class Jwt<T = JwtPayload, H extends JwtHeader = JwtHeader> {
         return [jwt, signature] as const;
     }
 
-    verify(signature: Buffer, key: string, verifier?: JwtVerifier) {
+    verify(signature: Buffer, key: KeyLike, verifier?: JwtVerifier) {
         const header_str = Buffer.from(JSON.stringify(this.header)).toString('base64url');
         const payload_str = Buffer.from(JSON.stringify(this.payload)).toString('base64url');
         const sign_data = header_str + '.' + payload_str;
@@ -81,9 +83,44 @@ export class Jwt<T = JwtPayload, H extends JwtHeader = JwtHeader> {
 
     static verifiers: Record<JwtAlgorithm, JwtVerifier> = {
         [JwtAlgorithm.RS256]: (data, signature, key) => {
-            const verify = crypto.createVerify('RSA-SHA256');
-            verify.end(data);
+            const verify = createVerify('RSA-SHA256');
+            verify.update(data);
             return verify.verify(key, signature);
+        },
+        [JwtAlgorithm.HS256]: (data, signature, key) => {
+            const hmac = createHmac('sha256', key);
+            hmac.update(data);
+            return timingSafeEqual(signature, hmac.digest());
+        },
+    };
+
+    sign(key: KeyLike, signer?: JwtSigner) {
+        const header_str = Buffer.from(JSON.stringify(this.header)).toString('base64url');
+        const payload_str = Buffer.from(JSON.stringify(this.payload)).toString('base64url');
+        const sign_data = header_str + '.' + payload_str;
+
+        if (!signer) {
+            if (!(this.header.alg in Jwt.signers) || !Jwt.signers[this.header.alg]) {
+                throw new Error('Unknown algorithm');
+            }
+
+            signer = Jwt.signers[this.header.alg];
+        }
+
+        const signature = signer.call(null, Buffer.from(sign_data), key);
+        return sign_data + '.' + signature.toString('base64url');
+    }
+
+    static signers: Record<JwtAlgorithm, JwtSigner> = {
+        [JwtAlgorithm.RS256]: (data, key) => {
+            const sign = createSign('RSA-SHA256');
+            sign.update(data);
+            return sign.sign(key);
+        },
+        [JwtAlgorithm.HS256]: (data, key) => {
+            const hmac = createHmac('sha256', key);
+            hmac.update(data);
+            return hmac.digest();
         },
     };
 }

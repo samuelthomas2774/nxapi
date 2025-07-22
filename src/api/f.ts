@@ -312,18 +312,26 @@ export interface ResourceData {
 }
 
 export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
+    readonly url: URL;
     readonly auth: NxapiZncaAuth | null;
 
     headers = new Headers();
 
     constructor(
-        readonly url: string,
+        url: URL | string,
         auth: NxapiZncaAuth | null,
         readonly app?: {platform?: string; version?: string;},
         useragent?: string,
     ) {
         super(useragent);
 
+        if (typeof url === 'string') {
+            url = new URL(url);
+
+            if (!url.pathname.endsWith('/')) url.pathname += '/';
+        }
+
+        this.url = url;
         this.auth = auth;
 
         this.headers.set('User-Agent', getUserAgent(useragent));
@@ -345,8 +353,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     ): Promise<FResult> {
         if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
+        const url = new URL('f', this.url);
+
         debugZncaApi('Getting f parameter', {
-            url: this.url + '/f', hash_method, token, timestamp: undefined, request_id: undefined, user,
+            url: url.href, hash_method, token, timestamp: undefined, request_id: undefined, user,
             znca_platform: this.app?.platform, znca_version: this.app?.version,
             encrypt_token_request,
         });
@@ -367,7 +377,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(this.url + '/f', {
+        const response = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(req),
@@ -399,7 +409,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
 
         return {
             provider: 'nxapi' as const,
-            url: this.url + '/f',
+            url: url.href,
             hash_method, token,
             timestamp: result.timestamp!, // will be included as not sent in request
             request_id: result.request_id!,
@@ -430,7 +440,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(this.url + '/encrypt-request', {
+        const response = await fetch(new URL('encrypt-request', this.url), {
             method: 'POST',
             headers,
             body: JSON.stringify(req),
@@ -476,7 +486,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(this.url + '/decrypt-response', {
+        const response = await fetch(new URL('decrypt-response', this.url), {
             method: 'POST',
             headers,
             body: JSON.stringify(req),
@@ -511,6 +521,7 @@ export class NxapiZncaAuth {
     client_credentials:
         { assertion: string; assertion_type: string; } |
         { id: string; secret: string; } |
+        { id: string; } |
         null = null;
 
     token: TokenData | null = null;
@@ -542,6 +553,10 @@ export class NxapiZncaAuth {
                 assertion: process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION,
                 assertion_type: process.env.NXAPI_ZNCA_API_CLIENT_ASSERTION_TYPE ??
                     'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+            };
+        } else if (process.env.NXAPI_ZNCA_API_CLIENT_ID) {
+            auth.client_credentials = {
+                id: process.env.NXAPI_ZNCA_API_CLIENT_ID,
             };
         } else if (client_assertion_provider) {
             auth.client_assertion_provider = client_assertion_provider;
@@ -677,7 +692,7 @@ export class NxapiZncaAuth {
         if (resource.search) debugZncaAuth('resource identifier contains search parameters');
         if (resource.hash) throw new TypeError('Resource identifier contains fragment');
 
-        debugZncaAuth('fetching protected resource metadata for %s', resource.href);
+        debugZncaAuth('fetching protected resource metadata for %s', this.getIssuerFromUrl(resource));
 
         const metadata_url = new URL(resource);
 
@@ -710,7 +725,7 @@ export class NxapiZncaAuth {
         if (issuer.search) debugZncaAuth('issuer identifier contains search parameters');
         if (issuer.hash) throw new TypeError('Issuer identifier contains fragment');
 
-        debugZncaAuth('fetching authorisation server metadata for %s', issuer.href);
+        debugZncaAuth('fetching authorisation server metadata for %s', this.getIssuerFromUrl(issuer));
 
         const metadata_url = new URL(issuer);
 
@@ -735,6 +750,12 @@ export class NxapiZncaAuth {
         const result = defineResponse(data, response);
 
         return result;
+    }
+
+    getIssuerFromUrl(issuer: URL) {
+        if (issuer.search || issuer.hash) return issuer.href;
+        if (issuer.pathname !== '/') return issuer.href;
+        return issuer.origin;
     }
 }
 

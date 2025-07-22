@@ -21,9 +21,9 @@ export { default as ZncProxyApi } from '../api/znc-proxy.js';
 export {
     ZncaApi,
     HashMethod,
+    createZncaApi,
     getPreferredZncaApiFromEnvironment,
     getDefaultZncaApi,
-    f,
 
     ZncaApiFlapg,
     FlapgIid,

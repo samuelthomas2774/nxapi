@@ -11,6 +11,7 @@ import { addUserAgent } from './util/useragent.js';
 import { USER_AGENT_INFO_URL } from './common/constants.js';
 import { init as initGlobals } from './common/globals.js';
 import { buildEnvironmentProxyAgent } from './util/undici-proxy.js';
+import { ClientAssertionProvider, NXAPI_AUTH_CLI_CLIENT_ID, setClientAssertionProvider } from './util/nxapi-auth.js';
 
 const debug = createDebug('cli');
 
@@ -57,6 +58,8 @@ export async function main(argv = process.argv.slice(2)) {
         console.warn('[warn] The nxapi command is not running in a terminal. If using the nxapi command in a script or other program, the NXAPI_USER_AGENT environment variable should be set. See ' + USER_AGENT_INFO_URL + '.');
         addUserAgent('unidentified-script');
     }
+
+    setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID));
 
     const yargs = createYargs(argv);
 
