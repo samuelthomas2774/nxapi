@@ -68,6 +68,10 @@ export function builder(yargs: Argv<ParentArguments>) {
             describe: 'Restrict allowed actions',
             type: 'boolean',
             default: true,
+        }).option('policy-api-call', {
+            describe: 'Allow access to /call - this allows full access to the Coral API',
+            type: 'boolean',
+            default: false,
         }).option('policy-announcements', {
             describe: 'Allow access to /announcements',
             type: 'boolean',
@@ -124,6 +128,8 @@ export function builder(yargs: Argv<ParentArguments>) {
         const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
         const policy: AuthPolicy | null = argv.policy ? {
+            api: argv.policyApiCall,
+
             announcements: argv.policyAnnouncements,
             list_friends: argv.policyListFriends,
             list_friends_presence: argv.policyListFriendsPresence,

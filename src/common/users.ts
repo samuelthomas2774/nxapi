@@ -4,7 +4,7 @@ import { Response } from 'undici';
 import createDebug from '../util/debug.js';
 import CoralApi, { CoralApiInterface, NintendoAccountUserCoral, Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices, CoralError, Announcements_4, Friends_4, WebServices_4, ListMedia, ListChat, WebService_4, CurrentUser } from '../api/coral-types.js';
+import { Friend, GetActiveEventResult, CoralSuccessResponse, WebService, CoralError, Announcements_4, Friends_4, WebServices_4, ListMedia, ListChat, WebService_4, CurrentUser } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
 import type { Store } from '../app/main/index.js';
 

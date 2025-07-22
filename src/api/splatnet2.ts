@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Cookie, fetch, FormData, getSetCookies } from 'undici';
 import { WebServiceToken } from './coral-types.js';
-import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse } from './util.js';
-import { CoralApiInterface } from './coral.js';
+import { CoralApiInterface, NintendoAccountUserCoral } from './coral.js';
 import { ActiveFestivals, CoopResult, CoopResults, CoopSchedules, HeroRecords, LeagueMatchRankings, NicknameAndIcons, PastFestivals, Records, Result, Results, Schedules, ShareResponse, ShopMerchandises, Stages, Timeline, WebServiceError, XPowerRankingRecords, XPowerRankingSummary } from './splatnet2-types.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -240,7 +239,7 @@ ${colour}
         });
     }
 
-    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const data = await this.loginWithCoral(coral, user);
         return {splatnet: this.createWithSavedToken(data), data};
     }
@@ -269,14 +268,14 @@ ${colour}
         );
     }
 
-    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const webserviceToken = await coral.getWebServiceToken(SPLATNET2_WEBSERVICE_ID);
 
         return this.loginWithWebServiceToken(webserviceToken, user);
     }
 
     static async loginWithWebServiceToken(
-        webserviceToken: WebServiceToken, user: NintendoAccountUser
+        webserviceToken: WebServiceToken, user: NintendoAccountUserCoral
     ): Promise<SplatNet2AuthData> {
         const url = new URL(SPLATNET2_WEBSERVICE_URL);
         url.search = new URLSearchParams({

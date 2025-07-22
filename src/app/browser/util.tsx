@@ -243,9 +243,15 @@ export function useColourScheme() {
     return React.useContext(ColourSchemeContext);
 }
 
-export interface User {
-    user: NintendoAccountUserCoral | NintendoAccountUserMoon;
-    nso: SavedToken | null;
+export interface User<IsCoral extends boolean = boolean> {
+    user:
+        IsCoral extends true ? NintendoAccountUserCoral :
+        IsCoral extends false ? NintendoAccountUserMoon :
+        NintendoAccountUserCoral | NintendoAccountUserMoon;
+    nso:
+        IsCoral extends true ? SavedToken :
+        IsCoral extends true ? null :
+        SavedToken | null;
     nsotoken: string | undefined;
     moon: SavedMoonToken | null;
     moontoken: string | undefined;

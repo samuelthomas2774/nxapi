@@ -1,6 +1,7 @@
 import { Response } from 'undici';
 import CoralApi, { CoralApiInterface, CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
 import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralError } from '../api/coral-types.js';
+import { NintendoAccountScope } from '../api/na.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
 import { checkUseLimit } from './util.js';
@@ -11,6 +12,13 @@ import NintendoAccountOIDC from './na.js';
 import Users from './users.js';
 
 const debug = createDebug('nxapi:client:coral');
+
+type NintendoAccountScopeCoral = NintendoAccountScope.USER | NintendoAccountScope.USER_BIRTHDAY | NintendoAccountScope.USER_SCREENNAME;
+
+export type NintendoAccountOIDCCoral =
+    NintendoAccountOIDC<NintendoAccountScopeCoral> |
+    // Nintendo Account session token obtained before 3.0.1
+    NintendoAccountOIDC<NintendoAccountScope.USER | NintendoAccountScope.USER_BIRTHDAY | NintendoAccountScope.USER_MII | NintendoAccountScope.USER_SCREENNAME>;
 
 export interface SavedToken extends CoralAuthData {
     expires_at: number;
@@ -163,12 +171,12 @@ export default class Coral {
             return this.createWithProxy(session, proxy_url);
         }
 
-        const oidc = await NintendoAccountOIDC.createWithSession(session, false);
+        const oidc = await NintendoAccountOIDC.createWithSession<NintendoAccountScopeCoral>(session, false);
 
         return this.createWithSession(session, oidc);
     }
 
-    static async createWithSession(session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDC) {
+    static async createWithSession(session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDCCoral) {
         const cached_auth_data = await session.getAuthenticationData();
 
         const [coral, auth_data, skip_fetch] = cached_auth_data && cached_auth_data.expires_at > Date.now() ?
@@ -179,7 +187,7 @@ export default class Coral {
     }
 
     private static async createWithSessionAuthenticate(
-        session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDC, ratelimit = true
+        session: NintendoAccountSession<SavedToken>, oidc: NintendoAccountOIDCCoral, ratelimit = true
     ) {
         await checkUseLimit(session, 'coral', ratelimit);
 
@@ -261,7 +269,7 @@ export default class Coral {
         }
 
         // const oidc = await users.get(NintendoAccountOIDC, id, false);
-        const oidc = await NintendoAccountOIDC.createWithSession(session, false);
+        const oidc = await NintendoAccountOIDC.createWithSession<NintendoAccountScopeCoral>(session, false);
 
         return Coral.createWithSession(session, oidc);
     }

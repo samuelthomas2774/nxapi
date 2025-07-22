@@ -13,6 +13,8 @@ import type { NintendoAccountUser } from '../../api/na.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
+import { NintendoAccountUserCoral } from '../../api/coral.js';
+import { NintendoAccountUserMoon } from '../../api/moon.js';
 
 // In sandboxed renderers the process object contains a very limited set of APIs
 // https://www.electronjs.org/docs/latest/api/process#sandbox
@@ -93,10 +95,10 @@ const ipc = {
     openExternalUrl: (url: string) => inv('misc:open-url', url),
     share: (item: SharingItem) => inv('misc:share', item),
 
-    showUserMenu: (user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean) => inv('menu:user', user, nso, moon),
+    showUserMenu: (user: NintendoAccountUserCoral | NintendoAccountUserMoon, nso?: CurrentUser, moon?: boolean) => inv('menu:user', user, nso, moon),
     showAddUserMenu: () => inv('menu:add-user'),
     showFriendCodeMenu: (fc: CurrentUser['links']['friendCode']) => inv('menu:friend-code', fc),
-    showFriendMenu: (user: NintendoAccountUser, nso: CurrentUser, friend: Friend) => inv('menu:friend', user, nso, friend),
+    showFriendMenu: (user: NintendoAccountUserCoral, nso: CurrentUser, friend: Friend) => inv('menu:friend', user, nso, friend),
 
     registerEventListener: (event: string, listener: (args: any[]) => void) => events.on(event, listener),
     removeEventListener: (event: string, listener: (args: any[]) => void) => events.removeListener(event, listener),

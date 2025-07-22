@@ -51,7 +51,7 @@ export function builder(yargs: Argv<ParentArguments>) {
 
             table.push([
                 user.id + (selected === user.id ? ' *' : ''),
-                user.screenName,
+                user.screenName ?? 'Unknown',
                 user.nickname,
                 user.country,
                 nsoCache?.nsoAccount.user.nsaId ?? 'Not signed in',

@@ -1,6 +1,6 @@
 import persist from 'node-persist';
 import { CoralApiInterface } from '../api/coral.js';
-import { ActiveEvent, Announcements, CurrentUser, Friend, Presence, PresenceState, WebServices, CoralError, GetActiveEventResult, FriendRouteChannel, PresenceGame } from '../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, CoralError, GetActiveEventResult, FriendRouteChannel, PresenceGame, Announcements_4, Friend_4, WebServices_4, PresenceOnline_4, PresenceOffline } from '../api/coral-types.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
@@ -37,9 +37,9 @@ export class ZncNotifications extends Loop {
         'announcements' | 'friends' | {friend: string; presence?: boolean} | 'webservices' | 'event' | 'user' | null
     )[]) {
         const result: Partial<{
-            announcements: Announcements;
-            friends: Friend[];
-            webservices: WebServices;
+            announcements: Announcements_4;
+            friends: Friend_4[];
+            webservices: WebServices_4;
             activeevent: ActiveEvent;
             user: CurrentUser;
         }> = {};
@@ -67,7 +67,7 @@ export class ZncNotifications extends Loop {
                 const nso = this.nso as unknown as ZncProxyApi;
 
                 if (r.presence) {
-                    const friend: Friend = {
+                    const friend: Friend_4 = {
                         id: 0,
                         nsaId: r.friend,
                         imageUri: '',
@@ -85,13 +85,14 @@ export class ZncNotifications extends Loop {
                             imageUri: '',
                             channel: FriendRouteChannel.FRIEND_CODE,
                         },
-                        presence: await nso.fetchProxyApi<Presence>('/friend/' + r.friend + '/presence'),
+                        isOnlineNotificationEnabled: false,
+                        presence: await nso.fetchProxyApi<PresenceOnline_4 | PresenceOffline>('/friend/' + r.friend + '/presence'),
                     };
 
                     return friend;
                 }
 
-                return (await nso.fetchProxyApi<{friend: Friend}>('/friend/' + r.friend)).friend;
+                return (await nso.fetchProxyApi<{friend: Friend_4}>('/friend/' + r.friend)).friend;
             }));
         }
         if (req.includes('webservices')) {

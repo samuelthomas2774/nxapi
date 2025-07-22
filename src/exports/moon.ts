@@ -5,6 +5,7 @@ export {
 
     MoonErrorResponse,
 
+    NintendoAccountUserMoon,
     NintendoAccountSessionAuthorisationMoon,
 } from '../api/moon.js';
 

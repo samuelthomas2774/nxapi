@@ -1,5 +1,5 @@
 import { fetch, Response } from 'undici';
-import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4 } from './coral-types.js';
+import { ActiveEvent, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4 } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
 import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, Result } from './coral.js';
 import { NintendoAccountToken, NintendoAccountUser } from './na.js';

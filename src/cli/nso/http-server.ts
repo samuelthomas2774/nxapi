@@ -7,7 +7,7 @@ import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from './index.js';
 import CoralApi, { CoralApiInterface, CoralErrorResponse, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestId, RequestFlagRequestIdSymbol, RequestFlags } from '../../api/coral.js';
-import { Announcement, Announcement_4, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
+import { Announcement_4, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
 import ZncProxyApi, { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';

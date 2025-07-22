@@ -1,8 +1,7 @@
 import { fetch, FormData, Response } from 'undici';
 import { WebServiceToken } from './coral-types.js';
-import { NintendoAccountUser } from './na.js';
 import { defineResponse, ErrorResponse, HasResponse } from './util.js';
-import { CoralApiInterface } from './coral.js';
+import { CoralApiInterface, NintendoAccountUserCoral } from './coral.js';
 import { WebServiceError, Users, AuthToken, UserProfile, Newspapers, Newspaper, Emoticons, Reaction, IslandProfile } from './nooklink-types.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -107,13 +106,13 @@ export default class NooklinkApi {
         return NooklinkUserApi._createWithNooklinkApi(this, user_id);
     }
 
-    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const data = await NooklinkApi.loginWithCoral(coral, user);
         this.setTokenWithSavedToken(data);
         return data;
     }
 
-    async renewTokenWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser) {
+    async renewTokenWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUserCoral) {
         const data = await NooklinkApi.loginWithWebServiceToken(webserviceToken, user);
         this.setTokenWithSavedToken(data);
         return data;
@@ -124,7 +123,7 @@ export default class NooklinkApi {
         this._token_expired = false;
     }
 
-    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const data = await this.loginWithCoral(coral, user);
         return {nooklink: this.createWithSavedToken(data), data};
     }
@@ -133,7 +132,7 @@ export default class NooklinkApi {
         return new this(data.gtoken, data.useragent);
     }
 
-    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const { default: { coral_gws_nooklink: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents NookLink authentication');
 
@@ -143,7 +142,7 @@ export default class NooklinkApi {
     }
 
     static async loginWithWebServiceToken(
-        webserviceToken: WebServiceToken, user: NintendoAccountUser
+        webserviceToken: WebServiceToken, user: NintendoAccountUserCoral
     ): Promise<NooklinkAuthData> {
         const { default: { coral_gws_nooklink: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents NookLink authentication');

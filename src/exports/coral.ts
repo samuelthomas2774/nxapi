@@ -10,6 +10,7 @@ export {
 
     CoralErrorResponse,
 
+    NintendoAccountUserCoral,
     NintendoAccountSessionAuthorisationCoral,
 } from '../api/coral.js';
 
@@ -38,5 +39,6 @@ export {
 } from '../api/f.js';
 
 export {
+    /** @internal Testing */
     default as Coral,
 } from '../client/coral.js';

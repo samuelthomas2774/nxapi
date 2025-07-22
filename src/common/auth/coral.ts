@@ -3,7 +3,7 @@ import { Response } from 'undici';
 import CoralApi, { CoralAuthData, ZNCA_CLIENT_ID } from '../../api/coral.js';
 import { CoralError } from '../../api/coral-types.js';
 import ZncProxyApi from '../../api/znc-proxy.js';
-import { getNintendoAccountUser, NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
+import { getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
@@ -115,7 +115,7 @@ async function createWithSessionToken(
     storage: persist.LocalStorage, na_session_token: string, ratelimit = true
 ) {
     const na_token = await getNaToken(storage, na_session_token, ZNCA_CLIENT_ID, ratelimit);
-    const user = await getNintendoAccountUser(na_token.token);
+    const user = await getNintendoAccountUser<NintendoAccountScope.USER_BIRTHDAY | NintendoAccountScope.USER_MII | NintendoAccountScope.USER_SCREENNAME>(na_token.token);
 
     debug('Authenticating to coral');
 

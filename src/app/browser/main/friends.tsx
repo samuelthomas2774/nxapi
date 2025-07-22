@@ -53,7 +53,7 @@ export default function Friends(props: {
 
 function Friend(props: {
     friend: Friend;
-    user?: User;
+    user?: User<true>;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;
 

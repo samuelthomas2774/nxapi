@@ -1,6 +1,6 @@
 import createDebug from '../util/debug.js';
 import { NintendoAccountSession } from './storage/index.js';
-import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountToken, NintendoAccountUser } from '../api/na.js';
+import { getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountToken, NintendoAccountUser } from '../api/na.js';
 
 const debug = createDebug('nxapi:client:na');
 
@@ -10,7 +10,7 @@ export interface SavedToken {
     expires_at: number;
 }
 
-export default class NintendoAccountOIDC {
+export default class NintendoAccountOIDC<S extends NintendoAccountScope = never> {
     created_at = Date.now();
     expires_at = Infinity;
 
@@ -22,7 +22,7 @@ export default class NintendoAccountOIDC {
     };
     update_interval = 10 * 1000; // 10 seconds
 
-    user: NintendoAccountUser | null = null;
+    user: NintendoAccountUser<S> | null = null;
 
     onUpdateSavedToken: ((data: SavedToken) => Promise<void>) | null = null;
 
@@ -73,17 +73,17 @@ export default class NintendoAccountOIDC {
     async getUser() {
         await this.update('user', async () => {
             const token = await this.getToken();
-            this.user = await getNintendoAccountUser(token);
+            this.user = await getNintendoAccountUser<S>(token);
         }, this.update_interval);
 
         return this.user!;
     }
 
-    static async createWithSession(session: NintendoAccountSession<unknown>, renew_token = true) {
+    static async createWithSession<S extends NintendoAccountScope>(session: NintendoAccountSession<unknown>, renew_token = true) {
         const cached_auth_data = await session.getNintendoAccountToken();
 
         if (cached_auth_data && (cached_auth_data.expires_at > Date.now() || !renew_token)) {
-            const client = new NintendoAccountOIDC(session.token, session.client_id, cached_auth_data);
+            const client = new NintendoAccountOIDC<S>(session.token, session.client_id, cached_auth_data);
             client.onUpdateSavedToken = data => session.setNintendoAccountToken(data);
             return client;
         }
@@ -98,7 +98,7 @@ export default class NintendoAccountOIDC {
 
         await session.setNintendoAccountToken(auth_data);
 
-        const client = new NintendoAccountOIDC(session.token, session.client_id, auth_data);
+        const client = new NintendoAccountOIDC<S>(session.token, session.client_id, auth_data);
         client.onUpdateSavedToken = data => session.setNintendoAccountToken(data);
         return client;
     }

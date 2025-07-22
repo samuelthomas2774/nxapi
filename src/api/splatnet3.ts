@@ -1,7 +1,7 @@
 import { fetch, Response } from 'undici';
 import { BankaraBattleHistoriesRefetchResult, BankaraBattleHistoriesRefetchVariables, GraphQLError, GraphQLErrorResponse, GraphQLRequest, GraphQLResponse, GraphQLSuccessResponse, KnownRequestId, LatestBattleHistoriesRefetchResult, LatestBattleHistoriesRefetchVariables, MyOutfitInput, PagerUpdateBattleHistoriesByVsModeResult, PagerUpdateBattleHistoriesByVsModeVariables, PrivateBattleHistoriesRefetchResult, PrivateBattleHistoriesRefetchVariables, RegularBattleHistoriesRefetchResult, RegularBattleHistoriesRefetchVariables, RequestId, ResultTypes, VariablesTypes, XBattleHistoriesRefetchResult, XBattleHistoriesRefetchVariables } from 'splatnet3-types/splatnet3';
 import { WebServiceToken } from './coral-types.js';
-import { CoralApiInterface } from './coral.js';
+import { CoralApiInterface, NintendoAccountUserCoral } from './coral.js';
 import { NintendoAccountUser } from './na.js';
 import { BulletToken } from './splatnet3-types.js';
 import { defineResponse, ErrorResponse, HasResponse, ResponseSymbol } from './util.js';
@@ -938,13 +938,13 @@ export default class SplatNet3Api {
     //
     //
 
-    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    async renewTokenWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const data = await SplatNet3Api.loginWithCoral(coral, user);
         this.setTokenWithSavedToken(data);
         return data;
     }
 
-    async renewTokenWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUser) {
+    async renewTokenWithWebServiceToken(webserviceToken: WebServiceToken, user: NintendoAccountUserCoral) {
         const data = await SplatNet3Api.loginWithWebServiceToken(webserviceToken, user);
         this.setTokenWithSavedToken(data);
         return data;
@@ -958,7 +958,7 @@ export default class SplatNet3Api {
         this._token_expired = false;
     }
 
-    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    static async createWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const data = await this.loginWithCoral(coral, user);
         return {splatnet: this.createWithSavedToken(data), data};
     }
@@ -987,7 +987,7 @@ export default class SplatNet3Api {
         );
     }
 
-    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUser) {
+    static async loginWithCoral(coral: CoralApiInterface, user: NintendoAccountUserCoral) {
         const { default: { coral_gws_splatnet3: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents SplatNet 3 authentication');
 
@@ -997,7 +997,7 @@ export default class SplatNet3Api {
     }
 
     static async loginWithWebServiceToken(
-        webserviceToken: WebServiceToken, user: NintendoAccountUser
+        webserviceToken: WebServiceToken, user: NintendoAccountUserCoral
     ): Promise<SplatNet3AuthData> {
         const { default: { coral_gws_splatnet3: config } } = await import('../common/remote-config.js');
         if (!config) throw new Error('Remote configuration prevents SplatNet 3 authentication');

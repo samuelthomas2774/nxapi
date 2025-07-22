@@ -165,7 +165,7 @@ export default class MoonApi {
         const nintendoAccountToken = await getNintendoAccountToken(token, ZNMA_CLIENT_ID);
 
         // Nintendo Account user data
-        const user = await getNintendoAccountUser(nintendoAccountToken);
+        const user = await getNintendoAccountUser<never>(nintendoAccountToken);
 
         return {
             nintendoAccountToken,

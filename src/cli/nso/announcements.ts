@@ -55,20 +55,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const table = new Table({
         head: [
             'ID',
+            'Type',
             'Title',
-            'Priority',
+            'Contents',
             'Date',
-            'Display end date',
         ],
     });
 
     for (const announcement of announcements) {
         table.push([
-            announcement.announcementId,
+            announcement.id,
+            announcement.type,
             announcement.title.substr(0, 60),
-            announcement.priority,
-            new Date(announcement.distributionDate * 1000).toISOString(),
-            new Date(announcement.forceDisplayEndDate * 1000).toISOString(),
+            'operation' in announcement ? announcement.operation.contents.substr(0, 40) + '...' :
+                'friendRequest' in announcement ? 'NSA ID: ' + announcement.friendRequest.nsaId : '',
+            new Date(announcement.deliversAt * 1000).toISOString(),
         ]);
     }
 
