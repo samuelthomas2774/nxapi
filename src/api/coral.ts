@@ -329,12 +329,13 @@ const NintendoAccountIdSymbol = Symbol('NintendoAccountId');
 const ZncaApiSymbol = Symbol('ZncaApi');
 const ZncaApiPromiseSymbol = Symbol('ZncaApiPromise');
 
-export const RequestFlagAddProductVersionSymbol = Symbol('RequestFlagAddProductVersionSymbol');
-export const RequestFlagAddPlatformSymbol = Symbol('RequestFlagAddPlatformSymbol');
-export const RequestFlagNoAuthenticationSymbol = Symbol('RequestFlagNoAuthenticationSymbol');
-export const RequestFlagNoEncryptionSymbol = Symbol('RequestFlagNoEncryptionSymbol');
-export const RequestFlagNoParameterSymbol = Symbol('RequestFlagNoParameterSymbol');
-export const RequestFlagRequestIdSymbol = Symbol('RequestFlagRequestIdSymbol');
+export const RequestFlagAddProductVersionSymbol = Symbol('RequestFlagAddProductVersion');
+export const RequestFlagAddPlatformSymbol = Symbol('RequestFlagAddPlatform');
+export const RequestFlagNoAuthenticationSymbol = Symbol('RequestFlagNoAuthentication');
+export const RequestFlagNoEncryptionSymbol = Symbol('RequestFlagNoEncryption');
+export const RequestFlagNoParameterSymbol = Symbol('RequestFlagNoParameter');
+export const RequestFlagRequestIdSymbol = Symbol('RequestFlagRequestId');
+export const RequestFlagNoAutoRenewTokenSymbol = Symbol('RequestFlagNoAutoRenewToken');
 
 export interface RequestFlags {
     [RequestFlagAddProductVersionSymbol]: boolean;
@@ -343,6 +344,7 @@ export interface RequestFlags {
     [RequestFlagNoEncryptionSymbol]: boolean;
     [RequestFlagNoParameterSymbol]: boolean;
     [RequestFlagRequestIdSymbol]: RequestFlagRequestId;
+    [RequestFlagNoAutoRenewTokenSymbol]: boolean;
 }
 export enum RequestFlagRequestId {
     NONE,
@@ -431,16 +433,14 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
     async fetch<T = unknown>(
         url: URL | string, method = 'GET', body?: string | Uint8Array | EncryptedRequestBody, _headers?: HeadersInit,
         flags: Partial<RequestFlags> = {},
-        /** @internal */ _autoRenewToken = true,
     ): Promise<Result<T>> {
         if (!this[ZncaApiSymbol]) await this.initZncaApi();
 
-        return (new CoralApiRequest<T>(this, url, method, body, _headers, flags, _autoRenewToken)).fetch();
+        return (new CoralApiRequest<T>(this, url, method, body, _headers, flags)).fetch();
     }
 
     async call<T extends {}, R extends {}>(
         url: string, parameter: R & Partial<RequestFlags> = {} as R,
-        /** @internal */ _autoRenewToken = true,
     ) {
         const body = {} as any;
 
@@ -456,7 +456,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
 
         if (ri !== RequestFlagRequestId.AFTER && !parameter[RequestFlagNoParameterSymbol]) body.parameter = parameter;
 
-        return this.fetch<T>(url, 'POST', JSON.stringify(body), {}, parameter, _autoRenewToken);
+        return this.fetch<T>(url, 'POST', JSON.stringify(body), {}, parameter);
     }
 
     async getCurrentUser() {
@@ -509,7 +509,8 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
             return await this.fetch<WebServiceToken>('/v4/Game/GetWebServiceToken', 'POST', body, undefined, {
                 [RequestFlagAddPlatformSymbol]: true,
                 [RequestFlagAddProductVersionSymbol]: true,
-            }, false);
+                [RequestFlagNoAutoRenewTokenSymbol]: true,
+            });
         } catch (err) {
             if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
                 debug('Error getting web service token, renewing token before retrying', err);
@@ -576,7 +577,8 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
             [RequestFlagAddPlatformSymbol]: true,
             [RequestFlagAddProductVersionSymbol]: true,
             [RequestFlagNoAuthenticationSymbol]: true,
-        }, false);
+            [RequestFlagNoAutoRenewTokenSymbol]: true,
+        });
 
         return {
             nintendoAccountToken,
@@ -764,11 +766,10 @@ class CoralApiRequest<T = unknown> {
         readonly body: string | Uint8Array | EncryptedRequestBody | undefined,
         readonly headers: HeadersInit | undefined,
         readonly flags: Partial<RequestFlags>,
-        readonly auto_renew_token: boolean,
     ) {}
 
     async fetch(_attempt = 0): Promise<Result<T>> {
-        if (this.auto_renew_token) {
+        if (!this.flags[RequestFlagNoAutoRenewTokenSymbol]) {
             if (this.coral._token_expired && !this.coral._renewToken) {
                 if (!this.coral.onTokenExpired || _attempt) throw new Error('Token expired');
 
@@ -909,7 +910,7 @@ class CoralApiRequest<T = unknown> {
         debug('fetch %s %s, response %s, status %d %s, correlationId %s', this.method, this.url, response.status,
             data.status, CoralStatus[data.status], data?.correlationId);
 
-        if (data.status === CoralStatus.TOKEN_EXPIRED && this.auto_renew_token && !_attempt && this.coral.onTokenExpired) {
+        if (data.status === CoralStatus.TOKEN_EXPIRED && !this.flags[RequestFlagNoAutoRenewTokenSymbol] && !_attempt && this.coral.onTokenExpired) {
             this.coral._token_expired = true;
             // _renewToken will be awaited when calling fetch
             this.coral._renewToken = this.coral._renewToken ?? this.coral.onTokenExpired.call(null, data, response).then(data => {

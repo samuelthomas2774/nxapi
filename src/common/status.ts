@@ -81,7 +81,7 @@ export class StatusUpdateMonitor {
 
     start(now = true) {
         if (this._timeout) return;
-        
+
         if (now) {
             this._timeout = setTimeout(() => {}, 0);
             this._checkStatusUpdatesInterval();
@@ -120,7 +120,7 @@ export class StatusUpdateMonitor {
             this.subscribers.splice(index, 1);
             removed++;
         }
-        
+
         if (!removed) {
             debug('attempted to unsubscribe but already not subscribed');
             return;
@@ -146,7 +146,7 @@ export class StatusUpdateMonitor {
                 const updated = result.map(s => {
                     const existing = this.cache!.find(a =>
                         s[StatusUpdateIdentifierSymbol] === a[StatusUpdateIdentifierSymbol]);
-                    
+
                     return existing && JSON.stringify(s) === JSON.stringify(existing) ?
                         [s, existing] as const : null as never;
                 }).filter(s => s);
@@ -202,7 +202,7 @@ export class StatusUpdateMonitor {
 
             const subscribers = [...this.subscribers];
             debug('notifying %d subscribers of result', subscribers.length);
-            
+
             for (const subscriber of subscribers) {
                 Promise.resolve()
                     .then(() => subscriber.onUpdate.call(subscriber, result))

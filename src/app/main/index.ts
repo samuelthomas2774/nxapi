@@ -320,7 +320,7 @@ class StatusUpdateNotificationSubscriber implements StatusUpdateSubscriber {
     constructor(readonly app: App) {
         //
     }
-    
+
     _cache: StatusUpdateNotificationsCache | null = null;
     _cache_updated = false;
     _load_cache: Promise<StatusUpdateNotificationsCache> | null = null;
@@ -346,7 +346,7 @@ class StatusUpdateNotificationSubscriber implements StatusUpdateSubscriber {
 
     async onNewStatusUpdate(status_update: StatusUpdateResult[0]) {
         if (status_update.notify === StatusUpdateNotify.NO) return;
-        
+
         const cache = await this.getNotificationsCache();
         const id = status_update[StatusUpdateIdentifierSymbol];
 
