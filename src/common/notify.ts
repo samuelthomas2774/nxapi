@@ -85,13 +85,13 @@ export class ZncNotifications extends Loop {
                             imageUri: '',
                             channel: FriendRouteChannel.FRIEND_CODE,
                         },
-                        presence: await nso.fetch<Presence>('/friend/' + r.friend + '/presence'),
+                        presence: await nso.fetchProxyApi<Presence>('/friend/' + r.friend + '/presence'),
                     };
 
                     return friend;
                 }
 
-                return (await nso.fetch<{friend: Friend}>('/friend/' + r.friend)).friend;
+                return (await nso.fetchProxyApi<{friend: Friend}>('/friend/' + r.friend)).friend;
             }));
         }
         if (req.includes('webservices')) {

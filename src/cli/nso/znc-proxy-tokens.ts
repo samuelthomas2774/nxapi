@@ -39,7 +39,7 @@ export function builder(yargs: Argv<ParentArguments>) {
             await storage.getItem('NintendoAccountToken.' + usernsid);
         const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-        const tokens = await nso.fetch<AuthTokens>('/tokens');
+        const tokens = await nso.fetchProxyApi<AuthTokens>('/tokens');
 
         const table = new Table({
             head: [
@@ -138,7 +138,7 @@ export function builder(yargs: Argv<ParentArguments>) {
             friends_presence: argv.policyFriendsPresence as string[] | undefined,
         } : null;
 
-        const auth = await nso.fetch<{token: string;} & AuthToken>('/tokens', 'POST', JSON.stringify({policy}), {
+        const auth = await nso.fetchProxyApi<{token: string;} & AuthToken>('/tokens', 'POST', JSON.stringify({policy}), {
             'Content-Type': 'application/json',
         });
 

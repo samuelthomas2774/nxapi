@@ -311,6 +311,7 @@ export type FResult = {
     f: string;
     user?: {na_id: string; coral_user_id?: string;};
     result: unknown;
+    encrypt_request_result?: Uint8Array;
 } & ({
     provider: 'flapg';
     result: FlapgApiResponse;
@@ -328,6 +329,15 @@ interface ZncaApiOptions {
     platform?: string;
     version?: string;
     user?: {na_id: string; coral_user_id?: string;};
+    encrypt_request?: EncryptRequestOptions;
+}
+interface EncryptRequestOptions {
+    url: string;
+    parameter: AccountLoginParameter | AccountTokenParameter | WebServiceTokenParameter;
+}
+
+export async function createZncaApi(options?: ZncaApiOptions) {
+    return getPreferredZncaApiFromEnvironment(options) ?? await getDefaultZncaApi(options);
 }
 
 export function getPreferredZncaApiFromEnvironment(options?: ZncaApiOptions): ZncaApi | null;

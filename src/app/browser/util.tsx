@@ -4,12 +4,13 @@ import { ColorSchemeName, LayoutChangeEvent, Platform, StyleProp, StyleSheet, us
 import { i18n, TFunction } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import type { User as DiscordUser } from 'discord-rpc';
+import { NintendoAccountUserCoral } from '../../api/coral.js';
+import { NintendoAccountUserMoon } from '../../api/moon.js';
 import { ErrorResponse } from '../../api/util.js';
-import { DiscordPresence } from '../../discord/types.js';
-import ipc, { events } from './ipc.js';
-import { NintendoAccountUser } from '../../api/na.js';
 import { SavedToken } from '../../common/auth/coral.js';
 import { SavedMoonToken } from '../../common/auth/moon.js';
+import { DiscordPresence } from '../../discord/types.js';
+import ipc, { events } from './ipc.js';
 import { BACKGROUND_COLOUR_MAIN_DARK, BACKGROUND_COLOUR_MAIN_LIGHT, DEFAULT_ACCENT_COLOUR } from './constants.js';
 import createI18n from '../i18n/index.js';
 
@@ -243,7 +244,7 @@ export function useColourScheme() {
 }
 
 export interface User {
-    user: NintendoAccountUser;
+    user: NintendoAccountUserCoral | NintendoAccountUserMoon;
     nso: SavedToken | null;
     nsotoken: string | undefined;
     moon: SavedMoonToken | null;

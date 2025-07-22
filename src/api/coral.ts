@@ -5,17 +5,17 @@ import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
-import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, FriendCodeUrl, FriendCodeUser, Friends, GetActiveEventResult, PresencePermissions, User, WebServices, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
-import { f, FResult, HashMethod } from './f.js';
-import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
+import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, Friends, Friends_4, GetActiveEventResult, ListChat, ListMedia, ListMediaParameter, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { createZncaApi, FResult, getDefaultZncaApi, getPreferredZncaApiFromEnvironment, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
+import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
 import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
 
 const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
-const ZNCA_PLATFORM_VERSION = '8.0.0';
-export const ZNCA_VERSION = '2.12.0';
+const ZNCA_PLATFORM_VERSION = '12';
+export const ZNCA_VERSION = '3.0.2';
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
@@ -43,11 +43,13 @@ export interface ResultData<T> {
 }
 
 export interface CoralApiInterface {
-    getAnnouncements(): Promise<Result<Announcements>>;
-    getFriendList(): Promise<Result<Friends>>;
+    getAnnouncements(): Promise<Result<Announcements_4>>;
+    getFriendList(): Promise<Result<Friends_4>>;
     addFavouriteFriend(nsa_id: string): Promise<Result<{}>>;
     removeFavouriteFriend(nsa_id: string): Promise<Result<{}>>;
-    getWebServices(): Promise<Result<WebServices>>;
+    getWebServices(): Promise<Result<WebServices_4>>;
+    getChats(): Promise<Result<ListChat>>;
+    getMedia(): Promise<Result<ListMedia>>;
     getActiveEvent(): Promise<Result<GetActiveEventResult>>;
     getEvent(id: number): Promise<Result<Event>>;
     getUser(id: number): Promise<Result<User>>;
@@ -56,6 +58,262 @@ export interface CoralApiInterface {
     getFriendCodeUrl(): Promise<Result<FriendCodeUrl>>;
     getCurrentUserPermissions(): Promise<Result<CurrentUserPermissions>>;
     getWebServiceToken(id: number): Promise<Result<WebServiceToken>>;
+}
+
+export abstract class AbstractCoralApi {
+    abstract call<T extends {}, R extends {} = {}>(
+        url: string, parameter?: R & Partial<RequestFlags>,
+    ): Promise<Result<T>>;
+
+    async getAnnouncements() {
+        return this.call<Announcements_4>('/v4/Announcement/List', {
+            [RequestFlagAddPlatformSymbol]: true,
+        });
+    }
+
+    async getWebServices() {
+        return this.call<WebServices_4>('/v4/GameWebService/List', {
+            [RequestFlagRequestIdSymbol]: RequestFlagRequestId.AFTER,
+        });
+    }
+
+    async getChats() {
+        return this.call<ListChat>('/v5/Chat/List');
+    }
+
+    async getMedia() {
+        return this.call<ListMedia, ListMediaParameter>('/v4/Media/List', {
+            count: 100,
+        });
+    }
+
+    async getActiveEvent() {
+        return this.call<GetActiveEventResult>('/v1/Event/GetActiveEvent');
+    }
+
+    async getEvent(id: number) {
+        return this.call<Event, {id: number}>('/v1/Event/Show', {
+            id,
+        });
+    }
+
+    async getUser(id: number) {
+        return this.call<User, {id: number}>('/v3/User/Show', {
+            id,
+        });
+    }
+
+    async getFriendList() {
+        return this.call<Friends_4>('/v4/Friend/List', {
+            [RequestFlagAddPlatformSymbol]: true,
+        });
+    }
+
+    async addFavouriteFriend(nsa_id: string) {
+        return this.call('/v3/Friend/Favorite/Create', {
+            nsaId: nsa_id,
+
+            [RequestFlagAddPlatformSymbol]: true,
+        });
+    }
+
+    async removeFavouriteFriend(nsa_id: string) {
+        return this.call('/v3/Friend/Favorite/Delete', {
+            nsaId: nsa_id,
+
+            [RequestFlagAddPlatformSymbol]: true,
+        });
+    }
+
+    /** unused */
+    async getFriend(nsa_id: string) {
+        return this.call<Friend_4, {nsaId: string}>('/v4/Friend/Show', {
+            nsaId: nsa_id,
+        });
+    }
+
+    async getPlayLog(nsa_id: string) {
+        return this.call<UserPlayLog, {nsaId: string}>('/v4/User/PlayLog/Show', {
+            nsaId: nsa_id,
+        });
+    }
+
+    async deleteFriend(nsa_id: string) {
+        return this.call<{}, {nsaId: string}>('/v3/Friend/Delete', {
+            nsaId: nsa_id,
+        });
+    }
+
+    async getUserByFriendCode(friend_code: string, hash?: string) {
+        if (!FRIEND_CODE.test(friend_code)) throw new Error('Invalid friend code');
+        if (hash && !FRIEND_CODE_HASH.test(hash)) throw new Error('Invalid friend code hash');
+
+        return hash ? this.call<FriendCodeUser, {friendCode: string; friendCodeHash: string}>('/v3/Friend/GetUserByFriendCodeHash', {
+            friendCode: friend_code,
+            friendCodeHash: hash,
+        }) : this.call<FriendCodeUser, {friendCode: string}>('/v3/Friend/GetUserByFriendCode', {
+            friendCode: friend_code,
+        });
+    }
+
+    async sendFriendRequest(nsa_id: string) {
+        return this.call('/v3/FriendRequest/Create', {
+            nsaId: nsa_id,
+        });
+    }
+
+    async getReceivedFriendRequests() {
+        return this.call<ReceivedFriendRequests>('/v4/FriendRequest/Received/List');
+    }
+
+    async getReceivedFriendRequest(friend_request_id: string) {
+        return this.call<ReceivedFriendRequest, {id: string}>('/v4/FriendRequest/Received/Show', {
+            id: friend_request_id,
+        });
+    }
+
+    async setReceivedFriendRequestRead(friend_request_id: string) {
+        return this.call('/v4/FriendRequest/Received/MarkAsRead', {
+            id: friend_request_id,
+        });
+    }
+
+    async acceptFriendRequest(friend_request_id: string) {
+        return this.call('/v3/FriendRequest/Accept', {
+            id: friend_request_id,
+        });
+    }
+
+    async rejectFriendRequest(friend_request_id: string) {
+        return this.call('/v3/FriendRequest/Reject', {
+            id: friend_request_id,
+        });
+    }
+
+    async getSentFriendRequests() {
+        return this.call<SentFriendRequests>('/v3/FriendRequest/Sent/List');
+    }
+
+    async cancelFriendRequest(friend_request_id: string) {
+        return this.call('/v3/FriendRequest/Cancel', {
+            id: friend_request_id,
+        });
+    }
+
+    async getBlockedUsers() {
+        return this.call<BlockingUsers>('/v3/User/Block/List');
+    }
+
+    async addBlockedUser(nsa_id: string) {
+        return this.call('/v3/User/Block/Create', {
+            nsaId: nsa_id,
+        });
+    }
+
+    async removeBlockedUser(nsa_id: string) {
+        return this.call('/v3/User/Block/Delete', {
+            nsaId: nsa_id,
+        });
+    }
+
+    async setAnnouncementRead(id: string) {
+        return this.call('/v4/Announcement/MarkAsRead', {
+            id,
+
+            [RequestFlagAddPlatformSymbol]: true,
+        });
+    }
+
+    abstract getCurrentUser(): Promise<Result<CurrentUser>>;
+
+    async getFriendCodeUrl() {
+        return this.call<FriendCodeUrl>('/v3/Friend/CreateFriendCodeUrl', {
+            [RequestFlagNoParameterSymbol]: true,
+        });
+    }
+
+    async getCurrentUserPermissions() {
+        return this.call<CurrentUserPermissions>('/v3/User/Permissions/ShowSelf', {
+            [RequestFlagNoParameterSymbol]: true,
+            [RequestFlagRequestIdSymbol]: RequestFlagRequestId.AFTER,
+        });
+    }
+
+    /** @deprecated Use updateUserPresencePermissions */
+    updateCurrentUserPermissions(to: PresencePermissions, from: PresencePermissions, etag: string): Promise<Result<{}>> {
+        return this.updateUserPresencePermissions(to);
+    }
+
+    async updateUserPresencePermissions(value: PresencePermissions) {
+        return this.call('/v4/User/Permissions/UpdateSelf', {
+            permissions: {
+                presence: value,
+            },
+        });
+    }
+
+    async updateUserPlayLogPermissions(value: PlayLogPermissions) {
+        return this.call('/v4/User/Permissions/UpdateSelf', {
+            permissions: {
+                playLog: value,
+            },
+        });
+    }
+
+    async updateUserFriendRequestPermissions(value: boolean) {
+        return this.call('/v4/User/Permissions/UpdateSelf', {
+            permissions: {
+                friendRequestReception: value,
+            },
+        });
+    }
+
+    async updateNotificationSetting(item: UpdatePushNotificationSettingsParameterItem) {
+        return this.call<{}, UpdatePushNotificationSettingsParameter>('/v5/PushNotification/Settings/Update', [
+            item,
+        ]);
+    }
+
+    async updateFriendRequestNotificationSettings(value: boolean) {
+        return this.updateNotificationSetting({
+            type: 'friendRequest',
+            value,
+        });
+    }
+
+    async updateChatInvitationNotificationSettings(value: boolean) {
+        return this.updateNotificationSetting({
+            type: 'chatInvitation',
+            value,
+        });
+    }
+
+    async updatePlayInvitationNotificationSettings(scope: PushNotificationPlayInvitationScope) {
+        return this.updateNotificationSetting({
+            type: 'playInvitation',
+            scope,
+        });
+    }
+
+    async updateWebServiceNotificationSettings(id: number, value: boolean) {
+        return this.updateNotificationSetting({
+            type: 'gws',
+            gwsId: id,
+            value,
+        });
+    }
+
+    async updateFriendOnlineNotificationSettings(nsa_id: string, value: boolean) {
+        return this.updateNotificationSetting({
+            type: 'friendOnline',
+            value,
+            friendId: nsa_id,
+        });
+    }
+
+    async getUserLoginFactor() {
+        return this.call<ShowUserLogin>('/v4/NA/User/LoginFactor/Show');
+    }
 }
 
 export interface ClientInfo {
@@ -68,12 +326,47 @@ const RemoteConfigSymbol = Symbol('RemoteConfigSymbol');
 const ClientInfoSymbol = Symbol('CoralClientInfo');
 const CoralUserIdSymbol = Symbol('CoralUserId');
 const NintendoAccountIdSymbol = Symbol('NintendoAccountId');
+const ZncaApiSymbol = Symbol('ZncaApi');
+const ZncaApiPromiseSymbol = Symbol('ZncaApiPromise');
 
-export default class CoralApi implements CoralApiInterface {
+export const RequestFlagAddProductVersionSymbol = Symbol('RequestFlagAddProductVersionSymbol');
+export const RequestFlagAddPlatformSymbol = Symbol('RequestFlagAddPlatformSymbol');
+export const RequestFlagNoAuthenticationSymbol = Symbol('RequestFlagNoAuthenticationSymbol');
+export const RequestFlagNoEncryptionSymbol = Symbol('RequestFlagNoEncryptionSymbol');
+export const RequestFlagNoParameterSymbol = Symbol('RequestFlagNoParameterSymbol');
+export const RequestFlagRequestIdSymbol = Symbol('RequestFlagRequestIdSymbol');
+
+export interface RequestFlags {
+    [RequestFlagAddProductVersionSymbol]: boolean;
+    [RequestFlagAddPlatformSymbol]: boolean;
+    [RequestFlagNoAuthenticationSymbol]: boolean;
+    [RequestFlagNoEncryptionSymbol]: boolean;
+    [RequestFlagNoParameterSymbol]: boolean;
+    [RequestFlagRequestIdSymbol]: RequestFlagRequestId;
+}
+export enum RequestFlagRequestId {
+    NONE,
+    AFTER,
+    BEFORE,
+}
+
+class EncryptedRequestBody<T = unknown> {
+    constructor(
+        readonly request_encryption: RequestEncryptionProvider,
+        readonly encrypted: Uint8Array,
+        readonly data: T | null = null,
+    ) {}
+}
+
+export default class CoralApi extends AbstractCoralApi implements CoralApiInterface {
     [RemoteConfigSymbol]!: CoralRemoteConfig | null;
     [ClientInfoSymbol]: ClientInfo;
-    [CoralUserIdSymbol]: string;
+    [CoralUserIdSymbol]: number;
     [NintendoAccountIdSymbol]: string;
+    [ZncaApiSymbol]: ZncaApi | null;
+    [ZncaApiPromiseSymbol]: Promise<ZncaApi> | null;
+
+    request_encryption: RequestEncryptionProvider | null = null;
 
     onTokenExpired: ((data?: CoralError, res?: Response) => Promise<CoralAuthData | void>) | null = null;
     /** @internal */
@@ -84,15 +377,24 @@ export default class CoralApi implements CoralApiInterface {
     protected constructor(
         public token: string,
         public useragent: string | null = getAdditionalUserAgents(),
-        coral_user_id: string,
+        coral_user_id: number,
         na_id: string,
         znca_version = ZNCA_VERSION,
         znca_useragent = ZNCA_USER_AGENT,
+        znca_api?: ZncaApi | null,
         config?: CoralRemoteConfig,
     ) {
+        super();
+
         this[ClientInfoSymbol] = {platform: ZNCA_PLATFORM, version: znca_version, useragent: znca_useragent};
         this[CoralUserIdSymbol] = coral_user_id;
         this[NintendoAccountIdSymbol] = na_id;
+        this[ZncaApiSymbol] = znca_api ?? null;
+        this[ZncaApiPromiseSymbol] = null;
+
+        if (znca_api?.supportsEncryption()) {
+            this.request_encryption = znca_api;
+        }
 
         Object.defineProperty(this, RemoteConfigSymbol, {enumerable: false, value: config ?? null});
         Object.defineProperty(this, 'token', {enumerable: false, value: this.token});
@@ -109,57 +411,512 @@ export default class CoralApi implements CoralApiInterface {
         return this[ClientInfoSymbol].useragent;
     }
 
+    initZncaApi() {
+        if (this[ZncaApiPromiseSymbol]) return this[ZncaApiPromiseSymbol];
+
+        return this[ZncaApiPromiseSymbol] = createZncaApi({
+            ...this[ClientInfoSymbol],
+            useragent: this.useragent ?? getAdditionalUserAgents(),
+        }).then(provider => {
+            this[ZncaApiSymbol] = provider;
+
+            if (provider.supportsEncryption()) {
+                this.request_encryption = provider;
+            }
+
+            return provider;
+        }).finally(() => this[ZncaApiPromiseSymbol] = null);
+    }
+
     async fetch<T = unknown>(
-        url: string, method = 'GET', body?: string, headers?: object,
+        url: URL | string, method = 'GET', body?: string | Uint8Array | EncryptedRequestBody, _headers?: HeadersInit,
+        flags: Partial<RequestFlags> = {},
         /** @internal */ _autoRenewToken = true,
-        /** @internal */ _attempt = 0,
     ): Promise<Result<T>> {
-        if (this._token_expired && _autoRenewToken && !this._renewToken) {
-            if (!this.onTokenExpired || _attempt) throw new Error('Token expired');
+        if (!this[ZncaApiSymbol]) await this.initZncaApi();
 
-            this._renewToken = this.onTokenExpired.call(null).then(data => {
-                if (data) this.setTokenWithSavedToken(data);
-            }).finally(() => {
-                this._renewToken = null;
+        return (new CoralApiRequest<T>(this, url, method, body, _headers, flags, _autoRenewToken)).fetch();
+    }
+
+    async call<T extends {}, R extends {}>(
+        url: string, parameter: R & Partial<RequestFlags> = {} as R,
+        /** @internal */ _autoRenewToken = true,
+    ) {
+        const body = {} as any;
+
+        const ri = parameter[RequestFlagRequestIdSymbol] ?? RequestFlagRequestId.NONE;
+
+        if (ri === RequestFlagRequestId.AFTER) body.parameter = parameter;
+
+        if (ri !== RequestFlagRequestId.NONE) {
+            // Android - lowercase, iOS - uppercase
+            const uuid = randomUUID();
+            body.requestId = uuid;
+        }
+
+        if (ri !== RequestFlagRequestId.AFTER && !parameter[RequestFlagNoParameterSymbol]) body.parameter = parameter;
+
+        return this.fetch<T>(url, 'POST', JSON.stringify(body), {}, parameter, _autoRenewToken);
+    }
+
+    async getCurrentUser() {
+        return this.call<CurrentUser, {id: number}>('/v4/User/ShowSelf', {
+            id: this[CoralUserIdSymbol],
+        });
+    }
+
+    async getWebServiceToken(id: number, /** @internal */ _attempt = 0): Promise<Result<WebServiceToken>> {
+        await this._renewToken;
+
+        const parameter: WebServiceTokenParameter = {
+            id,
+            registrationToken: '',
+            f: '',
+            requestId: '',
+            timestamp: 0,
+        };
+
+        const provider = this[ZncaApiSymbol] ?? await this.initZncaApi();
+
+        const fdata = await provider.genf(this.token, HashMethod.WEB_SERVICE, {
+            na_id: this[NintendoAccountIdSymbol], coral_user_id: '' + this[CoralUserIdSymbol],
+        }, provider.supportsEncryption() ? {
+            url: ZNC_URL + '/v4/Game/GetWebServiceToken',
+            parameter,
+        } : undefined);
+
+        let body;
+
+        if (provider.supportsEncryption() && fdata.encrypt_request_result) {
+            body = new EncryptedRequestBody(provider, fdata.encrypt_request_result);
+        } else {
+            parameter.f = fdata.f;
+            parameter.requestId = fdata.request_id;
+            parameter.timestamp = fdata.timestamp;
+
+            body = JSON.stringify({
+                parameter,
             });
+
+            if (provider.supportsEncryption()) {
+                const result = await provider.encryptRequest(ZNC_URL + '/v4/Game/GetWebServiceToken', null, body);
+
+                body = new EncryptedRequestBody(provider, result.data, body);
+            }
         }
 
-        if (this._renewToken && _autoRenewToken) {
-            await this._renewToken;
+        try {
+            return await this.fetch<WebServiceToken>('/v4/Game/GetWebServiceToken', 'POST', body, undefined, {
+                [RequestFlagAddPlatformSymbol]: true,
+                [RequestFlagAddProductVersionSymbol]: true,
+            }, false);
+        } catch (err) {
+            if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
+                debug('Error getting web service token, renewing token before retrying', err);
+                // _renewToken will be awaited when calling getWebServiceToken
+                this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).then(data => {
+                    if (data) this.setTokenWithSavedToken(data);
+                }).finally(() => {
+                    this._renewToken = null;
+                });
+                return this.getWebServiceToken(id, _attempt + 1);
+            } else {
+                throw err;
+            }
         }
+    }
+
+    async getToken(token: string, user: NintendoAccountUserCoral): Promise<PartialCoralAuthData> {
+        const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
+
+        return this.getTokenWithNintendoAccountToken(nintendoAccountToken, user);
+    }
+
+    async getTokenWithNintendoAccountToken(
+        nintendoAccountToken: NintendoAccountToken, user: NintendoAccountUserCoral,
+    ): Promise<PartialCoralAuthData> {
+        const parameter: AccountTokenParameter = {
+            naBirthday: user.birthday,
+            timestamp: 0,
+            f: '',
+            requestId: '',
+            naIdToken: nintendoAccountToken.id_token,
+        };
+
+        const provider = this[ZncaApiSymbol] ?? await this.initZncaApi();
+
+        const fdata = await provider.genf(nintendoAccountToken.id_token, HashMethod.CORAL, {
+            na_id: user.id, coral_user_id: '' + this[CoralUserIdSymbol],
+        }, provider.supportsEncryption() ? {
+            url: ZNC_URL + '/v3/Account/GetToken',
+            parameter,
+        } : undefined);
+
+        let body;
+
+        if (provider.supportsEncryption() && fdata.encrypt_request_result) {
+            body = new EncryptedRequestBody(provider, fdata.encrypt_request_result);
+        } else {
+            parameter.timestamp = fdata.timestamp;
+            parameter.f = fdata.f;
+            parameter.requestId = fdata.request_id;
+
+            body = JSON.stringify({
+                parameter,
+            });
+
+            if (provider.supportsEncryption()) {
+                const result = await provider.encryptRequest(ZNC_URL + '/v3/Account/GetToken', null, body);
+
+                body = new EncryptedRequestBody(provider, result.data, body);
+            }
+        }
+
+        const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', body, undefined, {
+            [RequestFlagAddPlatformSymbol]: true,
+            [RequestFlagAddProductVersionSymbol]: true,
+            [RequestFlagNoAuthenticationSymbol]: true,
+        }, false);
+
+        return {
+            nintendoAccountToken,
+            // user,
+            f: fdata,
+            nsoAccount: data,
+            credential: data.webApiServerCredential,
+        };
+    }
+
+    async renewToken(token: string, user: NintendoAccountUserCoral) {
+        const data = await this.getToken(token, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    async renewTokenWithNintendoAccountToken(token: NintendoAccountToken, user: NintendoAccountUserCoral) {
+        const data = await this.getTokenWithNintendoAccountToken(token, user);
+        this.setTokenWithSavedToken(data);
+        return data;
+    }
+
+    protected setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
+        this.token = data.credential.accessToken;
+        this[CoralUserIdSymbol] = data.nsoAccount.user.id;
+        if ('user' in data) this[NintendoAccountIdSymbol] = data.user.id;
+        this._token_expired = false;
+    }
+
+    static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
+        const data = await this.loginWithSessionToken(token, useragent);
+        return {nso: this.createWithSavedToken(data, useragent), data};
+    }
+
+    static async createWithNintendoAccountToken(
+        token: NintendoAccountToken, user: NintendoAccountUserCoral,
+        useragent = getAdditionalUserAgents()
+    ) {
+        const data = await this.loginWithNintendoAccountToken(token, user, useragent);
+        return {nso: this.createWithSavedToken(data, useragent), data};
+    }
+
+    static createWithSavedToken(data: CoralAuthData, useragent = getAdditionalUserAgents()) {
+        return new this(
+            data.credential.accessToken,
+            useragent,
+            data.nsoAccount.user.id,
+            data.user.id,
+            data.znca_version,
+            data.znca_useragent,
+            data[ZncaApiSymbol] ?? null,
+        );
+    }
+
+    static async loginWithSessionToken(token: string, useragent = getAdditionalUserAgents()): Promise<CoralAuthData> {
+        const { default: { coral: config } } = await import('../common/remote-config.js');
+        if (!config) throw new Error('Remote configuration prevents Coral authentication');
+
+        // Nintendo Account token
+        const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
+
+        // Nintendo Account user data
+        const user = await getNintendoAccountUser<NintendoAccountScope.USER_BIRTHDAY | NintendoAccountScope.USER_SCREENNAME>(nintendoAccountToken);
+
+        return this.loginWithNintendoAccountToken(nintendoAccountToken, user, useragent);
+    }
+
+    static async loginWithNintendoAccountToken(
+        nintendoAccountToken: NintendoAccountToken,
+        user: NintendoAccountUserCoral,
+        useragent = getAdditionalUserAgents(),
+    ) {
+        const { default: { coral: config } } = await import('../common/remote-config.js');
+
+        if (!config) throw new Error('Remote configuration prevents Coral authentication');
+        const znca_useragent = `com.nintendo.znca/${config.znca_version}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
+
+        const provider = await createZncaApi({
+            platform: ZNCA_PLATFORM,
+            version: config.znca_version,
+            useragent,
+        });
+
+        const parameter: AccountLoginParameter = {
+            naIdToken: nintendoAccountToken.id_token,
+            naBirthday: user.birthday,
+            naCountry: user.country,
+            language: user.language,
+
+            // These fields will be filled by the f-generation API when encrypting the request data
+            timestamp: 0,
+            requestId: '',
+            f: '',
+        };
+
+        const fdata = await provider.genf(nintendoAccountToken.id_token, HashMethod.CORAL, {
+            na_id: user.id,
+        }, provider.supportsEncryption() ? {
+            url: ZNC_URL + '/v3/Account/Login',
+            parameter,
+        } : undefined);
+
+        debug('fdata', fdata);
+
+        debug('Getting Nintendo Switch Online app token');
+
+        let encrypted: [RequestEncryptionProvider] | null = null;
+        let body;
+
+        if (provider.supportsEncryption() && fdata.encrypt_request_result) {
+            encrypted = [provider];
+            body = fdata.encrypt_request_result;
+        } else {
+            parameter.timestamp = fdata.timestamp;
+            parameter.requestId = fdata.request_id;
+            parameter.f = fdata.f;
+
+            body = JSON.stringify({
+                parameter,
+            });
+
+            if (provider.supportsEncryption()) {
+                const result = await provider.encryptRequest(ZNC_URL + '/v3/Account/Login', null, body);
+
+                encrypted = [provider];
+                body = result.data;
+            }
+        }
+
+        const headers = new Headers({
+            'X-Platform': ZNCA_PLATFORM,
+            'X-ProductVersion': config.znca_version,
+            'Content-Type': encrypted ? 'application/octet-stream' : 'application/json; charset=utf-8',
+            'Accept': (encrypted ? 'application/octet-stream,' : '') + 'application/json',
+            'User-Agent': znca_useragent,
+        });
 
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(ZNC_URL + url, {
-            method,
-            headers: Object.assign({
-                'X-Platform': this[ClientInfoSymbol].platform,
-                'X-ProductVersion': this[ClientInfoSymbol].version,
-                'Authorization': 'Bearer ' + this.token,
-                'Content-Type': 'application/json; charset=utf-8',
-                'User-Agent': this[ClientInfoSymbol].useragent,
-            }, headers),
+        const response = await fetch(ZNC_URL + '/v3/Account/Login', {
+            method: 'POST',
+            headers,
             body,
             signal,
         }).finally(cancel);
 
-        const data = await response.json().catch(err => null) as CoralResponse<T> | null;
+        debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
 
-        debug('fetch %s %s, response %s, status %d %s, correlationId %s', method, url, response.status,
-            data?.status, CoralStatus[data?.status!], data?.correlationId);
-
-        if (response.status !== 200 || !data) {
-            throw new CoralErrorResponse('[znc] Non-200 status code', response, data as CoralError);
+        if (response.status !== 200) {
+            throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
         }
 
-        if (data.status === CoralStatus.TOKEN_EXPIRED && _autoRenewToken && !_attempt && this.onTokenExpired) {
-            this._token_expired = true;
-            // _renewToken will be awaited when calling fetch
-            this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, data, response).then(data => {
-                if (data) this.setTokenWithSavedToken(data);
+        const data: CoralResponse<AccountLogin> = encrypted ?
+            JSON.parse((await encrypted[0].decryptResponse(new Uint8Array(await response.arrayBuffer()))).data) :
+            await response.json() as CoralResponse<AccountLogin>;
+
+        if ('errorMessage' in data) {
+            throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
+        }
+        if (data.status !== CoralStatus.OK) {
+            throw new CoralErrorResponse('[znc] Unknown error', response, data);
+        }
+
+        debug('Got Nintendo Switch Online app token', data);
+
+        return {
+            nintendoAccountToken,
+            user,
+            f: fdata,
+            nsoAccount: data.result,
+            credential: data.result.webApiServerCredential,
+            znca_version: config.znca_version,
+            znca_useragent,
+
+            [ZncaApiSymbol]: provider,
+        };
+    }
+}
+
+class CoralApiRequest<T = unknown> {
+    constructor(
+        readonly coral: CoralApi,
+
+        readonly url: URL | string,
+        readonly method: string,
+        readonly body: string | Uint8Array | EncryptedRequestBody | undefined,
+        readonly headers: HeadersInit | undefined,
+        readonly flags: Partial<RequestFlags>,
+        readonly auto_renew_token: boolean,
+    ) {}
+
+    async fetch(_attempt = 0): Promise<Result<T>> {
+        if (this.coral._token_expired && this.auto_renew_token && !this.coral._renewToken) {
+            if (!this.coral.onTokenExpired || _attempt) throw new Error('Token expired');
+
+            this.coral._renewToken = this.coral.onTokenExpired.call(null).then(data => {
+                // @ts-expect-error
+                if (data) this.coral.setTokenWithSavedToken(data);
             }).finally(() => {
-                this._renewToken = null;
+                this.coral._renewToken = null;
             });
-            return this.fetch(url, method, body, headers, _autoRenewToken, _attempt + 1);
+        }
+
+        if (this.coral._renewToken && this.auto_renew_token) {
+            await this.coral._renewToken;
+        }
+
+        const headers = new Headers(this.headers);
+
+        headers.append('Content-Type', 'application/json');
+        headers.append('Accept-Language', 'en-GB');
+
+        if (this.flags[RequestFlagAddProductVersionSymbol]) {
+            headers.append('X-ProductVersion', this.coral[ClientInfoSymbol].version);
+        }
+
+        headers.append('Accept', 'application/json');
+
+        headers.append('User-Agent', this.coral[ClientInfoSymbol].useragent);
+
+        if (!this.flags[RequestFlagNoAuthenticationSymbol] && this.coral.token) {
+            headers.append('Authorization', 'Bearer ' + this.coral.token);
+        }
+
+        if (this.flags[RequestFlagAddPlatformSymbol]) {
+            headers.append('X-Platform', this.coral[ClientInfoSymbol].platform);
+        }
+
+        headers.append('Pragma', 'no-cache');
+        headers.append('Cache-Control', 'no-cache');
+
+        let body = this.body;
+        let encrypted: [RequestEncryptionProvider] | null = null;
+
+        if (this.coral.request_encryption && typeof this.body === 'string' && !this.flags[RequestFlagNoEncryptionSymbol]) {
+            const result = await this.coral.request_encryption.encryptRequest(
+                new URL(this.url, ZNC_URL).href,
+                !this.flags[RequestFlagNoAuthenticationSymbol] && this.coral.token ? this.coral.token : null,
+                this.body,
+            );
+
+            headers.set('Content-Type', 'application/octet-stream');
+            headers.set('Accept', 'application/octet-stream,application/json');
+
+            body = result.data;
+            encrypted = [this.coral.request_encryption];
+        }
+
+        if (body instanceof EncryptedRequestBody) {
+            const result = body;
+
+            headers.set('Content-Type', 'application/octet-stream');
+            headers.set('Accept', 'application/octet-stream,application/json');
+
+            body = result.encrypted;
+            encrypted = [result.request_encryption];
+        }
+
+        const [signal, cancel] = timeoutSignal();
+        const response = await fetch(new URL(this.url, ZNC_URL), {
+            method: this.method,
+            headers,
+            body,
+            signal,
+        }).finally(cancel);
+
+        return this.handleResponse(response, encrypted?.[0], _attempt);
+    }
+
+    async handleResponse(
+        response: Response, request_encryption: RequestEncryptionProvider | undefined,
+        /** @internal */ _attempt: number,
+    ) {
+        const data = new Uint8Array(await response.arrayBuffer());
+
+        if (response.headers.get('Content-Type')?.match(/^application\/json($|;)/i)) {
+            if (request_encryption) {
+                return this.handleEncryptedJsonResponse(response, data, request_encryption, _attempt);
+            }
+
+            return this.decodeJsonResponse(response, data, _attempt);
+        }
+
+        if (!response.ok) {
+            throw new CoralErrorResponse('[znc] Non-200 status code', response, data);
+        }
+
+        throw new CoralErrorResponse('[znc] Unacceptable response type', response, data);
+    }
+
+    private async handleEncryptedJsonResponse(
+        response: Response, data: Uint8Array,
+        request_encryption: RequestEncryptionProvider,
+        /** @internal */ _attempt: number,
+    ) {
+        const decrypted = await request_encryption.decryptResponse(data);
+
+        return this.decodeJsonResponse(response, decrypted.data, _attempt);
+    }
+
+    private async decodeJsonResponse(
+        response: Response, data: string | Uint8Array,
+        /** @internal */ _attempt: number,
+    ) {
+        let json: CoralResponse<T>;
+
+        try {
+            const decoded = typeof data === 'string' ? data : (new TextDecoder()).decode(data);
+            json = JSON.parse(decoded);
+        } catch (err) {
+            if (!response.ok) {
+                throw new CoralErrorResponse('[znc] Non-200 status code', response, data);
+            }
+
+            throw new CoralErrorResponse('Error parsing JSON response', response, data);
+        }
+
+        if (!response.ok) {
+            throw new CoralErrorResponse('[znc] Non-200 status code', response, json as CoralError);
+        }
+
+        return this.handleJsonResponse(response, json, _attempt);
+    }
+
+    private async handleJsonResponse(
+        response: Response, data: CoralResponse<T>,
+        /** @internal */ _attempt: number,
+    ) {
+        debug('fetch %s %s, response %s, status %d %s, correlationId %s', this.method, this.url, response.status,
+            data.status, CoralStatus[data.status], data?.correlationId);
+
+        if (data.status === CoralStatus.TOKEN_EXPIRED && this.auto_renew_token && !_attempt && this.coral.onTokenExpired) {
+            this.coral._token_expired = true;
+            // _renewToken will be awaited when calling fetch
+            this.coral._renewToken = this.coral._renewToken ?? this.coral.onTokenExpired.call(null, data, response).then(data => {
+                // @ts-expect-error
+                if (data) this.coral.setTokenWithSavedToken(data);
+            }).finally(() => {
+                this.coral._renewToken = null;
+            });
+            return this.fetch(_attempt + 1);
         }
 
         if ('errorMessage' in data) {
@@ -180,314 +937,6 @@ export default class CoralApi implements CoralApiInterface {
         Object.defineProperty(result, 'correlationId', {enumerable: false, value: data.correlationId});
 
         return result as Result<T>;
-    }
-
-    async call<T = unknown>(
-        url: string, parameter = {},
-        /** @internal */ _autoRenewToken = true
-    ) {
-        const uuid = randomUUID();
-
-        return this.fetch<T>(url, 'POST', JSON.stringify({
-            parameter,
-            requestId: uuid,
-        }), {}, _autoRenewToken);
-    }
-
-    async getAnnouncements() {
-        return this.call<Announcements>('/v1/Announcement/List');
-    }
-
-    async getFriendList() {
-        return this.call<Friends>('/v3/Friend/List');
-    }
-
-    async addFavouriteFriend(nsa_id: string) {
-        return this.call<{}>('/v3/Friend/Favorite/Create', {
-            nsaId: nsa_id,
-        });
-    }
-
-    async removeFavouriteFriend(nsa_id: string) {
-        return this.call<{}>('/v3/Friend/Favorite/Delete', {
-            nsaId: nsa_id,
-        });
-    }
-
-    async getWebServices() {
-        return this.call<WebServices>('/v1/Game/ListWebServices');
-    }
-
-    async getActiveEvent() {
-        return this.call<GetActiveEventResult>('/v1/Event/GetActiveEvent');
-    }
-
-    async getEvent(id: number) {
-        return this.call<Event>('/v1/Event/Show', {
-            id,
-        });
-    }
-
-    async getUser(id: number) {
-        return this.call<User>('/v3/User/Show', {
-            id,
-        });
-    }
-
-    async getUserByFriendCode(friend_code: string, hash?: string) {
-        if (!FRIEND_CODE.test(friend_code)) throw new Error('Invalid friend code');
-        if (hash && !FRIEND_CODE_HASH.test(hash)) throw new Error('Invalid friend code hash');
-
-        return hash ? this.call<FriendCodeUser>('/v3/Friend/GetUserByFriendCodeHash', {
-            friendCode: friend_code,
-            friendCodeHash: hash,
-        }) : this.call<FriendCodeUser>('/v3/Friend/GetUserByFriendCode', {
-            friendCode: friend_code,
-        });
-    }
-
-    async sendFriendRequest(nsa_id: string) {
-        return this.call<{}>('/v3/FriendRequest/Create', {
-            nsaId: nsa_id,
-        });
-    }
-
-    async getCurrentUser() {
-        return this.call<CurrentUser>('/v3/User/ShowSelf');
-    }
-
-    async getFriendCodeUrl() {
-        return this.call<FriendCodeUrl>('/v3/Friend/CreateFriendCodeUrl');
-    }
-
-    async getCurrentUserPermissions() {
-        return this.call<CurrentUserPermissions>('/v3/User/Permissions/ShowSelf');
-    }
-
-    async updateCurrentUserPermissions(to: PresencePermissions, from: PresencePermissions, etag: string) {
-        return this.call<{}>('/v3/User/Permissions/UpdateSelf', {
-            permissions: {
-                presence: {
-                    toValue: to,
-                    fromValue: from,
-                },
-            },
-            etag,
-        });
-    }
-
-    async getWebServiceToken(id: number, /** @internal */ _attempt = 0): Promise<Result<WebServiceToken>> {
-        await this._renewToken;
-
-        const data = await f(this.token, HashMethod.WEB_SERVICE, {
-            platform: this[ClientInfoSymbol].platform,
-            version: this[ClientInfoSymbol].version,
-            useragent: this.useragent ?? getAdditionalUserAgents(),
-            user: {na_id: this[NintendoAccountIdSymbol], coral_user_id: this[CoralUserIdSymbol]},
-        });
-
-        const req: WebServiceTokenParameter = {
-            id,
-            registrationToken: '',
-            f: data.f,
-            requestId: data.request_id,
-            timestamp: data.timestamp,
-        };
-
-        try {
-            const uuid = randomUUID();
-
-            return this.fetch<WebServiceToken>('/v2/Game/GetWebServiceToken', 'POST', JSON.stringify({
-                parameter: req,
-                requestId: uuid,
-            }), {
-                'X-IntegrityTokenError': 'NETWORK_ERROR',
-            }, false);
-        } catch (err) {
-            if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
-                debug('Error getting web service token, renewing token before retrying', err);
-                // _renewToken will be awaited when calling getWebServiceToken
-                this._renewToken = this._renewToken ?? this.onTokenExpired.call(null, err.data, err.response as Response).then(data => {
-                    if (data) this.setTokenWithSavedToken(data);
-                }).finally(() => {
-                    this._renewToken = null;
-                });
-                return this.getWebServiceToken(id, _attempt + 1);
-            } else {
-                throw err;
-            }
-        }
-    }
-
-    async getToken(token: string, user: NintendoAccountUser): Promise<PartialCoralAuthData> {
-        const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
-
-        return this.getTokenWithNintendoAccountToken(nintendoAccountToken, user);
-    }
-
-    async getTokenWithNintendoAccountToken(
-        nintendoAccountToken: NintendoAccountToken, user: NintendoAccountUser,
-    ): Promise<PartialCoralAuthData> {
-        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
-            platform: this[ClientInfoSymbol].platform,
-            version: this[ClientInfoSymbol].version,
-            useragent: this.useragent ?? getAdditionalUserAgents(),
-            user: {na_id: user.id, coral_user_id: this[CoralUserIdSymbol]},
-        });
-
-        const req: AccountTokenParameter = {
-            naBirthday: user.birthday,
-            timestamp: fdata.timestamp,
-            f: fdata.f,
-            requestId: fdata.request_id,
-            naIdToken: nintendoAccountToken.id_token,
-        };
-
-        const uuid = randomUUID();
-
-        const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', JSON.stringify({
-            parameter: req,
-            requestId: uuid,
-        }), {
-            'X-IntegrityTokenError': 'NETWORK_ERROR',
-        }, false);
-
-        return {
-            nintendoAccountToken,
-            // user,
-            f: fdata,
-            nsoAccount: data,
-            credential: data.webApiServerCredential,
-        };
-    }
-
-    async renewToken(token: string, user: NintendoAccountUser) {
-        const data = await this.getToken(token, user);
-        this.setTokenWithSavedToken(data);
-        return data;
-    }
-
-    async renewTokenWithNintendoAccountToken(token: NintendoAccountToken, user: NintendoAccountUser) {
-        const data = await this.getTokenWithNintendoAccountToken(token, user);
-        this.setTokenWithSavedToken(data);
-        return data;
-    }
-
-    protected setTokenWithSavedToken(data: CoralAuthData | PartialCoralAuthData) {
-        this.token = data.credential.accessToken;
-        this[CoralUserIdSymbol] = '' + data.nsoAccount.user.id;
-        if ('user' in data) this[NintendoAccountIdSymbol] = data.user.id;
-        this._token_expired = false;
-    }
-
-    static async createWithSessionToken(token: string, useragent = getAdditionalUserAgents()) {
-        const data = await this.loginWithSessionToken(token, useragent);
-        return {nso: this.createWithSavedToken(data, useragent), data};
-    }
-
-    static async createWithNintendoAccountToken(
-        token: NintendoAccountToken, user: NintendoAccountUser,
-        useragent = getAdditionalUserAgents()
-    ) {
-        const data = await this.loginWithNintendoAccountToken(token, user, useragent);
-        return {nso: this.createWithSavedToken(data, useragent), data};
-    }
-
-    static createWithSavedToken(data: CoralAuthData, useragent = getAdditionalUserAgents()) {
-        return new this(
-            data.credential.accessToken,
-            useragent,
-            '' + data.nsoAccount.user.id,
-            data.user.id,
-            data.znca_version,
-            data.znca_useragent,
-        );
-    }
-
-    static async loginWithSessionToken(token: string, useragent = getAdditionalUserAgents()): Promise<CoralAuthData> {
-        const { default: { coral: config } } = await import('../common/remote-config.js');
-        if (!config) throw new Error('Remote configuration prevents Coral authentication');
-
-        // Nintendo Account token
-        const nintendoAccountToken = await getNintendoAccountToken(token, ZNCA_CLIENT_ID);
-
-        // Nintendo Account user data
-        const user = await getNintendoAccountUser(nintendoAccountToken);
-
-        return this.loginWithNintendoAccountToken(nintendoAccountToken, user, useragent);
-    }
-
-    static async loginWithNintendoAccountToken(
-        nintendoAccountToken: NintendoAccountToken,
-        user: NintendoAccountUser,
-        useragent = getAdditionalUserAgents(),
-    ) {
-        const { default: { coral: config } } = await import('../common/remote-config.js');
-
-        if (!config) throw new Error('Remote configuration prevents Coral authentication');
-        const znca_useragent = `com.nintendo.znca/${config.znca_version}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
-
-        const fdata = await f(nintendoAccountToken.id_token, HashMethod.CORAL, {
-            platform: ZNCA_PLATFORM,
-            version: config.znca_version,
-            useragent,
-            user: {na_id: user.id},
-        });
-
-        debug('Getting Nintendo Switch Online app token');
-
-        const parameter: AccountLoginParameter = {
-            naIdToken: nintendoAccountToken.id_token,
-            naBirthday: user.birthday,
-            naCountry: user.country,
-            language: user.language,
-            timestamp: fdata.timestamp,
-            requestId: fdata.request_id,
-            f: fdata.f,
-        };
-
-        const [signal, cancel] = timeoutSignal();
-        const response = await fetch(ZNC_URL + '/v3/Account/Login', {
-            method: 'POST',
-            headers: {
-                'X-Platform': ZNCA_PLATFORM,
-                'X-ProductVersion': config.znca_version,
-                'X-IntegrityTokenError': 'NETWORK_ERROR',
-                'Content-Type': 'application/json; charset=utf-8',
-                'User-Agent': znca_useragent,
-            },
-            body: JSON.stringify({
-                parameter,
-            }),
-            signal,
-        }).finally(cancel);
-
-        debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
-
-        if (response.status !== 200) {
-            throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
-        }
-
-        const data = await response.json() as CoralResponse<AccountLogin>;
-
-        if ('errorMessage' in data) {
-            throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
-        }
-        if (data.status !== CoralStatus.OK) {
-            throw new CoralErrorResponse('[znc] Unknown error', response, data);
-        }
-
-        debug('Got Nintendo Switch Online app token', data);
-
-        return {
-            nintendoAccountToken,
-            user,
-            f: fdata,
-            nsoAccount: data.result,
-            credential: data.result.webApiServerCredential,
-            znca_version: config.znca_version,
-            znca_useragent,
-        };
     }
 }
 
@@ -510,8 +959,13 @@ export class CoralErrorResponse extends ErrorResponse<CoralError> implements Has
 
 const na_client_settings = {
     client_id: ZNCA_CLIENT_ID,
-    scope: 'openid user user.birthday user.mii user.screenName',
+    scope: 'openid user user.birthday user.screenName',
 };
+
+export type NintendoAccountUserCoral =
+    NintendoAccountUser<NintendoAccountScope.USER | NintendoAccountScope.USER_BIRTHDAY | NintendoAccountScope.USER_SCREENNAME> |
+    // Nintendo Account session token obtained before 3.0.1
+    NintendoAccountUser<NintendoAccountScope.USER | NintendoAccountScope.USER_BIRTHDAY | NintendoAccountScope.USER_MII | NintendoAccountScope.USER_SCREENNAME>;
 
 export class NintendoAccountSessionAuthorisationCoral extends NintendoAccountSessionAuthorisation {
     protected constructor(
@@ -535,12 +989,14 @@ export class NintendoAccountSessionAuthorisationCoral extends NintendoAccountSes
 
 export interface CoralAuthData {
     nintendoAccountToken: NintendoAccountToken;
-    user: NintendoAccountUser;
+    user: NintendoAccountUserCoral;
     f: FResult;
     nsoAccount: AccountLogin;
     credential: AccountLogin['webApiServerCredential'];
     znca_version: string;
     znca_useragent: string;
+
+    [ZncaApiSymbol]?: ZncaApi;
 }
 
 export type PartialCoralAuthData =

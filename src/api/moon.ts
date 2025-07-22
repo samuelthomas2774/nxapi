@@ -198,6 +198,8 @@ const na_client_settings = {
     ].join(' '),
 };
 
+export type NintendoAccountUserMoon = NintendoAccountUser;
+
 export class NintendoAccountSessionAuthorisationMoon extends NintendoAccountSessionAuthorisation {
     protected constructor(
         authorise_url: string,
@@ -220,7 +222,7 @@ export class NintendoAccountSessionAuthorisationMoon extends NintendoAccountSess
 
 export interface MoonAuthData {
     nintendoAccountToken: NintendoAccountToken;
-    user: NintendoAccountUser;
+    user: NintendoAccountUserMoon;
     znma_version: string;
     znma_build: string;
     znma_useragent: string;

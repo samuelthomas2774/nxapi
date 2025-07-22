@@ -2,12 +2,11 @@ import * as crypto from 'node:crypto';
 import * as persist from 'node-persist';
 import { Response } from 'undici';
 import createDebug from '../util/debug.js';
-import CoralApi, { CoralApiInterface, Result } from '../api/coral.js';
+import CoralApi, { CoralApiInterface, NintendoAccountUserCoral, Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices, CoralError } from '../api/coral-types.js';
+import { Announcements, Friends, Friend, GetActiveEventResult, CoralSuccessResponse, WebService, WebServices, CoralError, Announcements_4, Friends_4, WebServices_4, ListMedia, ListChat, WebService_4, CurrentUser } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
 import type { Store } from '../app/main/index.js';
-import { NintendoAccountUser } from '../api/na.js';
 
 const debug = createDebug('nxapi:users');
 
@@ -64,14 +63,20 @@ export default class Users<T extends UserData> {
         return new Users(async token => {
             const {nso, data} = await getToken(storage, token, znc_proxy_url, ratelimit);
 
-            const [announcements, friends, webservices, active_event] = await Promise.all([
+            const [announcements, friends, webservices, chats, media, active_event, coral_user] = await Promise.all([
                 nso.getAnnouncements(),
                 nso.getFriendList(),
                 nso.getWebServices(),
+                nso.getChats(),
+                nso.getMedia(),
                 nso.getActiveEvent(),
+                nso.getCurrentUser(),
             ]);
 
-            const user = new CoralUser(nso, data, announcements, friends, webservices, active_event);
+            const user = new CoralUser(
+                nso, data,
+                announcements, friends, webservices, chats, media, active_event, coral_user,
+            );
 
             if (nso instanceof CoralApi && nso.onTokenExpired) {
                 const renewToken = nso.onTokenExpired;
@@ -98,10 +103,13 @@ export default class Users<T extends UserData> {
 export interface CoralUserData<T extends CoralApiInterface = CoralApi> extends UserData {
     nso: T;
     data: SavedToken;
-    announcements: CoralSuccessResponse<Announcements>;
-    friends: CoralSuccessResponse<Friends>;
-    webservices: CoralSuccessResponse<WebServices>;
+    announcements: CoralSuccessResponse<Announcements_4>;
+    friends: CoralSuccessResponse<Friends_4>;
+    webservices: CoralSuccessResponse<WebServices_4>;
+    chats: CoralSuccessResponse<ListChat>;
+    media: CoralSuccessResponse<ListMedia>;
     active_event: CoralSuccessResponse<GetActiveEventResult>;
+    user: CoralSuccessResponse<CurrentUser>;
 }
 
 export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralUserData<T> {
@@ -115,22 +123,27 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
         announcements: Date.now(),
         friends: Date.now(),
         webservices: Date.now(),
+        chats: Date.now(),
+        media: Date.now(),
         active_event: Date.now(),
+        user: Date.now(),
     };
 
     delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
-    update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
-    onUpdatedWebServices: ((webservices: Result<WebServices>) => void) | null = null;
+    onUpdatedWebServices: ((webservices: Result<WebServices_4>) => void) | null = null;
 
     constructor(
         public nso: T,
         public data: SavedToken,
-        public announcements: CoralSuccessResponse<Announcements>,
-        public friends: CoralSuccessResponse<Friends>,
-        public webservices: CoralSuccessResponse<WebServices>,
+        public announcements: CoralSuccessResponse<Announcements_4>,
+        public friends: CoralSuccessResponse<Friends_4>,
+        public webservices: CoralSuccessResponse<WebServices_4>,
+        public chats: CoralSuccessResponse<ListChat>,
+        public media: CoralSuccessResponse<ListMedia>,
         public active_event: CoralSuccessResponse<GetActiveEventResult>,
+        public user: CoralSuccessResponse<CurrentUser>,
     ) {}
 
     private async update(key: keyof CoralUser['updated'], callback: () => Promise<void>, ttl: number) {
@@ -159,14 +172,19 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
 
     async getAnnouncements() {
         await this.update('announcements', async () => {
+            // Always requested together when refreshing notifications page
+            this.getWebServices();
+
             this.announcements = await this.nso.getAnnouncements();
-        }, this.update_interval_announcements);
+        }, this.update_interval);
 
         return this.announcements.result;
     }
 
     async getFriends() {
         await this.update('friends', async () => {
+            // No simultaneous requests when refreshing friend list page
+
             this.friends = await this.nso.getFriendList();
         }, this.update_interval);
 
@@ -175,6 +193,9 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
 
     async getWebServices() {
         await this.update('webservices', async () => {
+            // Always requested together when refreshing notifications page
+            this.getAnnouncements();
+
             const webservices = this.webservices = await this.nso.getWebServices();
 
             this.onUpdatedWebServices?.call(null, webservices);
@@ -183,12 +204,67 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
         return this.webservices.result;
     }
 
+    async getChats() {
+        await this.update('chats', async () => {
+            // Always requested together when refreshing main page
+            Promise.all([
+                this.getAnnouncements(),
+                this.getFriends(),
+                this.getWebServices(),
+                this.getMedia(),
+                this.getActiveEvent(),
+            ]);
+
+            this.chats = await this.nso.getChats();
+        }, this.update_interval);
+
+        return this.chats.result;
+    }
+
+    async getMedia() {
+        await this.update('media', async () => {
+            // No simultaneous requests when refreshing media page
+
+            this.media = await this.nso.getMedia();
+        }, this.update_interval);
+
+        return this.media.result.media;
+    }
+
     async getActiveEvent() {
         await this.update('active_event', async () => {
+            // Always requested together when refreshing main page
+            Promise.all([
+                this.getAnnouncements(),
+                this.getFriends(),
+                this.getWebServices(),
+                this.getChats(),
+                this.getMedia(),
+            ]);
+
             this.active_event = await this.nso.getActiveEvent();
         }, this.update_interval);
 
         return this.active_event.result;
+    }
+
+    async getCurrentUser() {
+        await this.update('user', async () => {
+            // Always requested together when refreshing main page
+            Promise.all([
+                this.getAnnouncements(),
+                this.getFriends(),
+                this.getWebServices(),
+                this.getChats(),
+                this.getMedia(),
+            ]);
+
+            // or, then user page requests /v4/User/ShowSelf, /v3/User/Permissions/ShowSelf, /v4/User/PlayLog/Show
+
+            this.user = await this.nso.getCurrentUser();
+        }, this.update_interval);
+
+        return this.user.result;
     }
 
     async addFriend(nsa_id: string) {
@@ -233,7 +309,7 @@ export interface CachedWebServicesList {
 
 async function maybeUpdateWebServicesListCache(
     cached_webservices: Map<string, string>, store: Store, // storage: persist.LocalStorage,
-    user: NintendoAccountUser, webservices: WebService[]
+    user: NintendoAccountUserCoral, webservices: WebService_4[]
 ) {
     const webservices_hash = crypto.createHash('sha256').update(JSON.stringify(webservices)).digest('hex');
     if (cached_webservices.get(user.language) === webservices_hash) return;

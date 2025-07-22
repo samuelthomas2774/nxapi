@@ -1,7 +1,7 @@
 import { fetch, Response } from 'undici';
-import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl } from './coral-types.js';
+import { ActiveEvent, Announcements, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebService, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4 } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
-import { CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, ResponseDataSymbol, Result } from './coral.js';
+import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, Result } from './coral.js';
 import { NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import createDebug from '../util/debug.js';
@@ -10,18 +10,25 @@ import { getAdditionalUserAgents, getUserAgent } from '../util/useragent.js';
 
 const debug = createDebug('nxapi:api:znc-proxy');
 
-export default class ZncProxyApi implements CoralApiInterface {
+export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInterface {
     constructor(
-        private url: string,
+        private url: URL | string,
         // ZncApi uses the NSO token (valid for a few hours)
         // ZncProxyApi uses the Nintendo Account session token (valid for two years)
         public token: string,
         public useragent = getAdditionalUserAgents()
-    ) {}
+    ) {
+        super();
+    }
 
-    async fetch<T = unknown>(url: string, method = 'GET', body?: string, headers?: object) {
+    async fetchProxyApi<T = unknown>(url: URL | string, method = 'GET', body?: string, headers?: object) {
+        if (typeof url === 'string' && url.startsWith('/')) url = url.substring(1);
+
+        const base_url = typeof this.url === 'string' ? new URL(this.url) : this.url;
+        if (typeof this.url === 'string' && !base_url.pathname.endsWith('/')) base_url.pathname += '/';
+
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(this.url + url, {
+        const response = await fetch(new URL(url, this.url), {
             method,
             headers: Object.assign({
                 'Authorization': 'na ' + this.token,
@@ -31,7 +38,8 @@ export default class ZncProxyApi implements CoralApiInterface {
             signal,
         }).finally(cancel);
 
-        debug('fetch %s %s, response %s', method, url, response.status);
+        const debug_url = typeof url === 'string' ? '/' + url : url.toString();
+        debug('fetch %s %s, response %s', method, debug_url, response.status);
 
         if (!response.ok) {
             throw await ZncProxyErrorResponse.fromResponse(response, '[zncproxy] Non-2xx status code');
@@ -42,70 +50,97 @@ export default class ZncProxyApi implements CoralApiInterface {
         return defineResponse(data, response);
     }
 
-    async call<T = unknown>(url: string, parameter = {}): Promise<Result<T>> {
-        throw new Error('Not supported in ZncProxyApi');
+    async call<T extends {}, R extends {}>(url: string, parameter: R & Partial<RequestFlags> = {} as R): Promise<Result<T>> {
+        const options: [string, unknown][] = [];
+
+        if (parameter[RequestFlagAddPlatformSymbol]) options.push(['add_platform', true]);
+        if (parameter[RequestFlagAddProductVersionSymbol]) options.push(['add_version', true]);
+        if (parameter[RequestFlagNoParameterSymbol]) options.push(['no_parameter', true]);
+        if (RequestFlagRequestIdSymbol in parameter) options.push(['request_id', parameter[RequestFlagRequestIdSymbol]]);
+
+        const result = await this.fetchProxyApi<{result: T}>('call', 'POST', JSON.stringify({
+            url,
+            parameter,
+
+            options: options.length ? Object.fromEntries(options) : undefined,
+        }));
+
+        return createResult(result, result.result);
     }
 
     async getAnnouncements() {
-        const result = await this.fetch<{announcements: Announcements}>('/announcements');
+        const result = await this.fetchProxyApi<{announcements: Announcements_4}>('announcements');
         return createResult(result, result.announcements);
     }
 
     async getFriendList() {
-        const result = await this.fetch<{friends: Friend[]}>('/friends');
-        return createResult(result, result);
+        const result = await this.fetchProxyApi<{friends: Friend_4[]; extract_ids?: string[]}>('friends');
+
+        return createResult(result, Object.assign(result, {
+            extractFriendsIds: result.extract_ids ?? result.friends.slice(0, 10).map(f => f.nsaId),
+        }));
     }
 
     async addFavouriteFriend(nsa_id: string) {
-        const result = await this.fetch('/friend/' + nsa_id, 'POST', JSON.stringify({
+        const result = await this.fetchProxyApi('friend/' + nsa_id, 'PATCH', JSON.stringify({
             isFavoriteFriend: true,
         }));
         return createResult(result, {});
     }
 
     async removeFavouriteFriend(nsa_id: string) {
-        const result = await this.fetch('/friend/' + nsa_id, 'POST', JSON.stringify({
+        const result = await this.fetchProxyApi('friend/' + nsa_id, 'PATCH', JSON.stringify({
             isFavoriteFriend: false,
         }));
         return createResult(result, {});
     }
 
     async getWebServices() {
-        const result = await this.fetch<{webservices: WebService[]}>('/webservices');
+        const result = await this.fetchProxyApi<{webservices: WebService_4[]}>('webservices');
         return createResult(result, result.webservices);
     }
 
+    async getChats() {
+        const result = await this.fetchProxyApi<{chats: unknown[]}>('chats');
+        return createResult(result, result.chats);
+    }
+
+    async getMedia() {
+        const result = await this.fetchProxyApi<{media: Media[]}>('media');
+        return createResult(result, result);
+    }
+
     async getActiveEvent() {
-        const result = await this.fetch<{activeevent: ActiveEvent}>('/activeevent');
+        const result = await this.fetchProxyApi<{activeevent: ActiveEvent}>('activeevent');
         return createResult(result, result.activeevent);
     }
 
     async getEvent(id: number) {
-        const result = await this.fetch<{event: Event}>('/event/' + id);
+        const result = await this.fetchProxyApi<{event: Event}>('event/' + id);
         return createResult(result, result.event);
     }
 
     async getUser(id: number) {
-        const result = await this.fetch<{user: User}>('/user/' + id);
+        const result = await this.fetchProxyApi<{user: User}>('user/' + id);
         return createResult(result, result.user);
     }
 
     async getUserByFriendCode(friend_code: string, hash?: string) {
-        const result = await this.fetch<{user: FriendCodeUser}>('/friendcode/' + friend_code);
+        const result = await this.fetchProxyApi<{user: FriendCodeUser}>('friendcode/' + friend_code);
         return createResult(result, result.user);
     }
 
-    async sendFriendRequest(nsa_id: string): Promise<Result<{}>> {
-        throw new Error('Not supported in ZncProxyApi');
-    }
+    // async sendFriendRequest(nsa_id: string): Promise<Result<{}>> {
+    //     throw new Error('Not supported in ZncProxyApi');
+    // }
 
     async getCurrentUser() {
-        const result = await this.fetch<{user: CurrentUser}>('/user');
+        const result = await this.fetchProxyApi<{user: CurrentUser}>('user');
         return createResult(result, result.user);
     }
 
     async getFriendCodeUrl() {
-        const result = await this.fetch<{friendcode: FriendCodeUrl}>('/friendcode');
+        const result = await this.fetchProxyApi<{friendcode: FriendCodeUrl}>('friendcode');
         return createResult(result, result.friendcode);
     }
 
@@ -118,14 +153,14 @@ export default class ZncProxyApi implements CoralApiInterface {
         });
     }
 
-    async updateCurrentUserPermissions(
-        to: PresencePermissions, from: PresencePermissions, etag: string
-    ): Promise<Result<{}>> {
-        throw new Error('Not supported in ZncProxyApi');
-    }
+    // async updateCurrentUserPermissions(
+    //     to: PresencePermissions, from: PresencePermissions, etag: string
+    // ): Promise<Result<{}>> {
+    //     throw new Error('Not supported in ZncProxyApi');
+    // }
 
     async getWebServiceToken(id: number) {
-        const result = await this.fetch<{token: WebServiceToken}>('/webservice/' + id + '/token');
+        const result = await this.fetchProxyApi<{token: WebServiceToken}>('webservice/' + id + '/token');
         return createResult(result, result.token);
     }
 
@@ -140,8 +175,8 @@ export default class ZncProxyApi implements CoralApiInterface {
     }
 
     async renewToken() {
-        const data = await this.fetch<SavedToken>('/auth');
-        data.proxy_url = this.url;
+        const data = await this.fetchProxyApi<SavedToken>('auth');
+        data.proxy_url = this.url.toString();
         return data;
     }
 
@@ -157,7 +192,7 @@ export default class ZncProxyApi implements CoralApiInterface {
 
     static async createWithSessionToken(url: string, token: string) {
         const nso = new this(url, token);
-        const data = await nso.fetch<SavedToken>('/auth');
+        const data = await nso.fetchProxyApi<SavedToken>('auth');
         data.proxy_url = url;
 
         return {nso, data};
@@ -190,6 +225,8 @@ export interface AuthToken {
     created_at: number;
 }
 export interface AuthPolicy {
+    api?: boolean;
+
     announcements?: boolean;
     list_friends?: boolean;
     list_friends_presence?: boolean;

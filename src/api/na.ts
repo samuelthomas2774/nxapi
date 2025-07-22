@@ -11,6 +11,8 @@ const debug = createDebug('nxapi:api:na');
 export class NintendoAccountSessionAuthorisation {
     readonly scope: string;
 
+    result: NintendoAccountSessionAuthorisationResult | null = null;
+
     protected constructor(
         readonly client_id: string,
         scope: string | string[],
@@ -20,13 +22,23 @@ export class NintendoAccountSessionAuthorisation {
         readonly redirect_uri = 'npf' + client_id + '://auth',
     ) {
         this.scope = typeof scope === 'string' ? scope : scope.join(' ');
+
+        Object.defineProperty(this, 'result', {enumerable: false});
     }
 
     async getSessionToken(code: string, state?: string): Promise<HasResponse<NintendoAccountSessionToken, Response>>
     async getSessionToken(params: URLSearchParams): Promise<HasResponse<NintendoAccountSessionToken, Response>>
     async getSessionToken(code: string | URLSearchParams | null, state?: string | null) {
+        if (this.result) {
+            throw new Error('NintendoAccountSessionAuthorisation already completed');
+        }
+
+        let result_state = state;
+
         if (code instanceof URLSearchParams) {
-            if (code.get('state') !== this.state) {
+            const result_state = code.get('state');
+
+            if (result_state !== this.state) {
                 throw new TypeError('Invalid state');
             }
 
@@ -46,6 +58,8 @@ export class NintendoAccountSessionAuthorisation {
             throw new TypeError('Invalid code');
         }
 
+        Object.defineProperty(this, 'result', {value: {state: result_state, code}, writable: false});
+
         return getNintendoAccountSessionToken(code, this.verifier, this.client_id);
     }
 
@@ -61,6 +75,11 @@ export class NintendoAccountSessionAuthorisation {
         return new NintendoAccountSessionAuthorisation(client_id, scope,
             auth_data.url, auth_data.state, auth_data.verifier, redirect_uri);
     }
+}
+
+interface NintendoAccountSessionAuthorisationResult {
+    state: string | null | undefined;
+    code: string;
 }
 
 export class NintendoAccountSessionAuthorisationError extends Error {
@@ -182,7 +201,7 @@ export async function getNintendoAccountToken(token: string, client_id: string) 
     return defineResponse(nintendoAccountToken, response);
 }
 
-export async function getNintendoAccountUser(token: NintendoAccountToken) {
+export async function getNintendoAccountUser<S extends NintendoAccountScope>(token: NintendoAccountToken) {
     debug('Getting Nintendo Account user info');
 
     const [signal, cancel] = timeoutSignal();
@@ -201,7 +220,7 @@ export async function getNintendoAccountUser(token: NintendoAccountToken) {
         throw await NintendoAccountErrorResponse.fromResponse(response, '[na] Non-200 status code');
     }
 
-    const user = await response.json() as NintendoAccountUser | NintendoAccountError;
+    const user = await response.json() as NintendoAccountUser<S> | NintendoAccountError;
 
     if ('errorCode' in user) {
         throw new NintendoAccountErrorResponse('[na] ' + user.detail, response, user);
@@ -221,7 +240,7 @@ export interface NintendoAccountSessionTokenJwtPayload extends JwtPayload {
     typ: 'session_token';
     iss: 'https://accounts.nintendo.com';
     /** Unknown - scopes the token is valid for? */
-    'st:scp': number[];
+    'st:scp': NintendoAccountJwtScope[];
     /** Subject (Nintendo Account ID) */
     sub: string;
     exp: number;
@@ -231,7 +250,7 @@ export interface NintendoAccountSessionTokenJwtPayload extends JwtPayload {
 }
 
 export interface NintendoAccountToken {
-    scope: string[];
+    scope: NintendoAccountScope[];
     token_type: 'Bearer';
     id_token: string;
     access_token?: string;
@@ -246,7 +265,7 @@ export interface NintendoAccountIdTokenJwtPayload extends JwtPayload {
     aud: string;
     iss: 'https://accounts.nintendo.com';
     jti: string;
-    at_hash: string; // ??
+    at_hash: string;
     typ: 'id_token';
     country: string;
 }
@@ -258,7 +277,7 @@ export interface NintendoAccountAccessTokenJwtPayload extends JwtPayload {
     sub: string;
     iat: number;
     'ac:grt': number; // ??
-    'ac:scp': number[]; // ??
+    'ac:scp': NintendoAccountJwtScope[];
     exp: number;
     /** Audience (client ID) */
     aud: string;
@@ -329,70 +348,121 @@ export enum NintendoAccountJwtScope {
     // 'userNotificationMessage:anyClients:write' = -1,
 }
 
-export interface NintendoAccountUser {
-    emailOptedIn: boolean;
-    language: string;
-    country: string;
-    timezone: {
-        name: string;
-        id: string;
-        utcOffsetSeconds: number;
-        utcOffset: string;
-    };
-    region: null;
+export interface NintendoAccountUser<S extends NintendoAccountScope = never> {
+    id: string;
     nickname: string;
-    clientFriendsOptedIn: boolean;
-    mii: Mii | null;
+    iconUri: string;
+    /** requires scope user.screenName */
+    screenName: NintendoAccountScope.USER_SCREENNAME extends S ? string : undefined;
+    /** requires scope user.birthday */
+    birthday: NintendoAccountScope.USER_BIRTHDAY extends S ? string : undefined;
     isChild: boolean;
-    eachEmailOptedIn: {
-        survey: {
-            updatedAt: number;
-            optedIn: boolean;
-        };
-        deals: {
-            updatedAt: number;
-            optedIn: boolean;
-        };
-    };
+    gender: NintendoAccountGender;
+    /** requires scope user.email */
+    email: NintendoAccountScope.USER_EMAIL extends S ? string : undefined;
+    emailVerified: boolean;
+    phoneNumberEnabled: boolean;
+    /** requires scope user.links[].id/user.links.*.id */
+    links:
+        NintendoAccountScope.USER_LINKS extends S ?
+            Partial<Record<NintendoAccountLinkType, NintendoAccountLink | null>> | null :
+        Partial<Record<NintendoAccountLinkTypes<S>, NintendoAccountLink | null>> | null | undefined;
+    country: string;
+    region: null;
+    language: string;
+    timezone: NintendoAccountTimezone;
+    /** requires scope user.mii */
+    mii: NintendoAccountScope.USER_MII extends S ? Mii | null : undefined;
+    /** requires scope user.mii */
+    candidateMiis: NintendoAccountScope.USER_MII extends S ? unknown[] : undefined;
+    emailOptedIn: boolean;
+    emailOptedInUpdatedAt: number;
+    eachEmailOptedIn: Record<NintendoAccountEmailType, NintendoAccountEmailOptedIn>;
+    clientFriendsOptedIn: boolean;
+    clientFriendsOptedInUpdatedAt: number;
+    analyticsOptedIn: boolean;
+    analyticsOptedInUpdatedAt: number;
+    analyticsPermissions: Record<NintendoAccountAnalyticsType, NintendoAccountAnalyticsPermission>;
+    createdAt: number;
     updatedAt: number;
-    candidateMiis: unknown[];
+}
+
+enum NintendoAccountGender {
+    UNKNOWN = 'unknown',
+    FEMALE = 'female',
+    MALE = 'male',
+}
+
+enum NintendoAccountLinkType {
+    NINTENDO_NETWORK = 'nintendoNetwork',
+    APPLE = 'apple',
+    GOOGLE = 'google',
+}
+interface NintendoAccountLink {
     id: string;
     createdAt: number;
-    emailVerified: boolean;
-    analyticsPermissions: {
-        internalAnalysis: {
-            updatedAt: number;
-            permitted: boolean;
-        };
-        targetMarketing: {
-            updatedAt: number;
-            permitted: boolean;
-        };
-    };
-    emailOptedInUpdatedAt: number;
-    birthday: string;
-    screenName: string;
-    gender: string;
-    analyticsOptedInUpdatedAt: number;
-    analyticsOptedIn: boolean;
-    clientFriendsOptedInUpdatedAt: number;
+}
+
+type NintendoAccountLinkScope = {
+    [NintendoAccountScope.USER_LINKS_NNID]: NintendoAccountLinkType.NINTENDO_NETWORK;
+};
+type NintendoAccountLinkTypes<S extends NintendoAccountScope = NintendoAccountScope.USER_LINKS> =
+    S extends keyof NintendoAccountLinkScope ? NintendoAccountLinkScope[S] : never;
+
+interface NintendoAccountTimezone {
+    id: string;
+    name: string;
+    utcOffset: string;
+    utcOffsetSeconds: number;
+}
+
+enum NintendoAccountEmailType {
+    SURVEY = 'survey',
+    DEALS = 'deals',
+}
+interface NintendoAccountEmailOptedIn {
+    optedIn: boolean;
+    updatedAt: number;
+}
+
+enum NintendoAccountAnalyticsType {
+    INTERNAL_ANALYSIS = 'internalAnalysis',
+    TARGET_MARKETING = 'targetMarketing',
+}
+interface NintendoAccountAnalyticsPermission {
+    updatedAt: number;
+    permitted: boolean;
 }
 
 export interface Mii {
-    favoriteColor: string;
     id: string;
-    updatedAt: number;
+    clientId: '1cfe3a55ed8924d9';
+    type: 'profile';
+    favoriteColor: MiiColour;
     coreData: {
         '4': string;
     };
-    clientId: '1cfe3a55ed8924d9';
-    imageUriTemplate: string;
     storeData: {
         '3': string;
     };
+    imageUriTemplate: string;
     imageOrigin: string;
     etag: string;
-    type: 'profile';
+    updatedAt: number;
+}
+export enum MiiColour {
+    RED = 'red',
+    ORANGE = 'orange',
+    YELLOW = 'yellow',
+    YELLOWGREEN = 'yellowgreen',
+    GREEN = 'green',
+    BLUE = 'blue',
+    SKYBLUE = 'skyblue',
+    PINK = 'pink',
+    PURPLE = 'purple',
+    BROWN = 'brown',
+    WHITE = 'white',
+    BLACK = 'black',
 }
 
 export interface NintendoAccountAuthError {

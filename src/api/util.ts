@@ -55,10 +55,10 @@ export class ErrorResponse<T = unknown> extends Error {
         });
     }
 
-    static async fromResponse(response: UndiciResponse, message: string) {
+    static async fromResponse<T>(response: UndiciResponse, message: string) {
         const body = await response.arrayBuffer();
 
-        return new this(message, response, body);
+        return new this<T>(message, response, body);
     }
 }
 

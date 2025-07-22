@@ -6,8 +6,8 @@ import * as persist from 'node-persist';
 import express, { Request, RequestHandler, Response } from 'express';
 import bodyParser from 'body-parser';
 import type { Arguments as ParentArguments } from './index.js';
-import CoralApi, { CoralApiInterface, CoralErrorResponse } from '../../api/coral.js';
-import { Announcement, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
+import CoralApi, { CoralApiInterface, CoralErrorResponse, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestId, RequestFlagRequestIdSymbol, RequestFlags } from '../../api/coral.js';
+import { Announcement, Announcement_4, CoralStatus, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, Presence } from '../../api/coral-types.js';
 import ZncProxyApi, { AuthPolicy, AuthToken, ZncPresenceEventStreamEvent } from '../../api/znc-proxy.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -134,6 +134,9 @@ class Server extends HttpServer {
         app.post('/api/znc/tokens', bodyParser.json(),
             this.createProxyRequestHandler(r => this.handleCreateTokenRequest(r), true));
 
+        app.post('/api/znc/call', this.authTokenMiddleware, bodyParser.json(),
+            this.createProxyRequestHandler(r => this.handleApiCallRequest(r)));
+
         app.get('/api/znc/announcements', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleAnnouncementsRequest(r), true));
 
@@ -154,6 +157,8 @@ class Server extends HttpServer {
         app.get('/api/znc/friend/:nsaid', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleFriendRequest(r, r.req.params.nsaid)));
         app.post('/api/znc/friend/:nsaid', bodyParser.json(),
+            this.createProxyRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid), true));
+        app.patch('/api/znc/friend/:nsaid', bodyParser.json(),
             this.createProxyRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid), true));
         app.get('/api/znc/friend/:nsaid/presence', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleFriendPresenceRequest(r, r.req.params.nsaid)));
@@ -321,7 +326,7 @@ class Server extends HttpServer {
 
     async handleAuthRequest({user}: RequestDataWithUser) {
         if (user.nso instanceof ZncProxyApi) {
-            return user.nso.fetch('/auth');
+            return user.nso.fetchProxyApi('/auth');
         } else {
             return user.data;
         }
@@ -387,6 +392,56 @@ class Server extends HttpServer {
     }
 
     //
+    // Coral API call
+    //
+
+    async handleApiCallRequest({req, policy}: RequestData) {
+        if (policy && !policy.api) {
+            throw new ResponseError(403, 'token_unauthorised');
+        }
+
+        const flags: Partial<RequestFlags> = {};
+
+        if (req.body.options?.add_platform) flags[RequestFlagAddPlatformSymbol] = true;
+        if (req.body.options?.add_version) flags[RequestFlagAddProductVersionSymbol] = true;
+        if (req.body.options?.no_parameter) flags[RequestFlagNoParameterSymbol] = true;
+
+        if (req.body.options && 'request_id' in req.body.options) {
+            if (typeof req.body.options.request_id !== 'number' || !RequestFlagRequestId[req.body.options.request_id]) {
+                throw new ResponseError(400, 'invalid_request', 'Invalid options.request_id');
+            }
+
+            flags[RequestFlagRequestIdSymbol] = req.body.options.request_id;
+        }
+
+        if (typeof req.body.url !== 'string') {
+            throw new ResponseError(400, 'invalid_request', 'Invalid url field');
+        }
+
+        if (!('parameter' in req.body) && flags[RequestFlagNoParameterSymbol]) {
+            // parameter is excluded for /v3/User/Permissions/ShowSelf
+            // parameter is excluded for /v3/Friend/CreateFriendCodeUrl
+            // allow just not providing it
+        } else if (typeof req.body.parameter !== 'object' || !req.body.parameter) {
+            // parameter is an array for /v5/PushNotification/Settings/Update
+            throw new ResponseError(400, 'invalid_request', 'Invalid parameter field');
+        }
+
+        const user = await this.getCoralUser(req);
+
+        if (!(user.nso instanceof CoralApi) && !(user.nso instanceof ZncProxyApi)) {
+            throw new ResponseError(500, 'unknown_error');
+        }
+
+        const result = await user.nso.call(req.body.url, {
+            ...req.body.parameter ?? null,
+            ...flags,
+        });
+
+        return result;
+    }
+
+    //
     // Announcements
     // This is cached for all users.
     //
@@ -398,7 +453,7 @@ class Server extends HttpServer {
 
         const user = await this.getCoralUser(req);
 
-        const announcements: Announcement[] = user.announcements.result;
+        const announcements: Announcement_4[] = user.announcements.result;
         return {announcements};
     }
 
@@ -451,6 +506,7 @@ class Server extends HttpServer {
         const user = await this.getCoralUser(req);
 
         const friends = await user.getFriends();
+        const extract_ids = user.friends.result.extractFriendsIds;
         const updated = user.updated.friends;
 
         res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
@@ -458,6 +514,8 @@ class Server extends HttpServer {
         return {
             friends: policy?.friends ?
                 friends.filter(f => policy.friends!.includes(f.nsaId)) : friends,
+            extract_ids: policy?.friends ?
+                extract_ids.filter(id => policy.friends!.includes(id)) : extract_ids,
             updated,
         };
     }
