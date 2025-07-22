@@ -111,8 +111,8 @@ export interface AnnouncementBase_4 {
     type: AnnouncementType;
     title: string;
     deliversAt: number;
-    imageUrl: string;
-    image2Url?: string;
+    imageUri: string;
+    image2Uri?: string;
     hasRead: boolean;
 }
 
@@ -131,7 +131,7 @@ export interface AnnouncementOperationContents {
     contents: string;
 }
 export interface AnnouncementFriendRequest extends AnnouncementBase_4 {
-    type: AnnouncementType.OPERATION;
+    type: AnnouncementType.FRIEND_REQUEST;
     friendRequest: AnnouncementFriendRequestContents;
 }
 export interface AnnouncementFriendRequestContents {
@@ -526,6 +526,9 @@ export interface ListHashtagParameterApplication {
     applicationId: string;
 }
 
+/** /v5/Chat/List */
+export type ListChat = {} & unknown;
+
 /** /v5/PushNotification/Settings/List */
 export interface ListPushNotificationSettings {
     playInvitation: PushNotificationPlayInvitationScope;
@@ -578,5 +581,21 @@ export interface ShowUserLogin {
     /** Coral user ID */
     userId: number;
     /** Nintendo Account email */
-    email: string;
+    email?: string;
+    /** Nintendo Account sign-in ID */
+    loginId?: string;
+}
+
+/** /v1/Support/SendOpinion */
+export interface SendOpinionParameter {
+    message: string;
+    category: FeedbackTopic;
+}
+export enum FeedbackTopic {
+    ABOUT_GAME_SPECIFIC_SERVICES = 4,
+    FRIEND_FEATURES = 9,
+    THE_ALBUM_FEATURE = 10,
+    FEATURES_YOUD_LIKE_TO_SEE = 6,
+    APP_PROBLEMS = 8,
+    OTHER = 0,
 }
