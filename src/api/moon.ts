@@ -10,7 +10,7 @@ const debug = createDebug('nxapi:api:moon');
 const MOON_URL = 'https://api-lp1.pctl.srv.nintendo.net/moon';
 export const ZNMA_CLIENT_ID = '54789befb391a838';
 
-const ZNMA_VERSION = '1.17.0';
+export const ZNMA_VERSION = '1.17.0';
 const ZNMA_BUILD = '261';
 const ZNMA_USER_AGENT = 'moon_ANDROID/' + ZNMA_VERSION + ' (com.nintendo.znma; build:' + ZNMA_BUILD +
     '; ANDROID 26)';

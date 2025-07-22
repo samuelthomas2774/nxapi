@@ -2,6 +2,8 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { fetch } from 'undici';
+import { ZNCA_VERSION } from '../api/coral.js';
+import { ZNMA_VERSION } from '../api/moon.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
@@ -53,6 +55,10 @@ async function loadRemoteConfig() {
             expires_at: Date.now(),
             version,
             revision: git?.revision ?? null,
+            compatible_versions: {
+                znca: ZNCA_VERSION,
+                znma: ZNMA_VERSION,
+            },
             url: url_parsed.toString(),
             headers: {},
             data: config,
@@ -122,6 +128,10 @@ async function loadRemoteConfig() {
             expires_at,
             version,
             revision: git?.revision ?? null,
+            compatible_versions: {
+                znca: ZNCA_VERSION,
+                znma: ZNMA_VERSION,
+            },
             url: response.url,
             headers: Object.fromEntries(response.headers.entries()),
             data: config,
@@ -147,6 +157,8 @@ async function getRemoteConfig(url: string, useragent?: string, cache?: {
             'User-Agent': getUserAgent(),
             'X-nxapi-Version': version,
             'X-nxapi-Revision': git?.revision ?? undefined!,
+            'X-znca-Compatible-Version': ZNCA_VERSION,
+            'X-znma-Compatible-Version': ZNMA_VERSION,
             'If-Modified-Since': cache ? cache.updated_at.toUTCString() : undefined!,
             'If-None-Match': cache?.etag ?? undefined!,
         },
@@ -239,6 +251,7 @@ export interface RemoteConfigCacheData {
     expires_at: number;
     version: string;
     revision: string | null;
+    compatible_versions?: Partial<Record<'znca' | 'znma', string>>;
     url: string;
     headers: Record<string, string> | Record<string, string[]>;
     data: NxapiRemoteConfig;
