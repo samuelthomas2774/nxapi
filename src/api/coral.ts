@@ -768,19 +768,21 @@ class CoralApiRequest<T = unknown> {
     ) {}
 
     async fetch(_attempt = 0): Promise<Result<T>> {
-        if (this.coral._token_expired && this.auto_renew_token && !this.coral._renewToken) {
-            if (!this.coral.onTokenExpired || _attempt) throw new Error('Token expired');
+        if (this.auto_renew_token) {
+            if (this.coral._token_expired && !this.coral._renewToken) {
+                if (!this.coral.onTokenExpired || _attempt) throw new Error('Token expired');
 
-            this.coral._renewToken = this.coral.onTokenExpired.call(null).then(data => {
-                // @ts-expect-error
-                if (data) this.coral.setTokenWithSavedToken(data);
-            }).finally(() => {
-                this.coral._renewToken = null;
-            });
-        }
+                this.coral._renewToken = this.coral.onTokenExpired.call(null).then(data => {
+                    // @ts-expect-error
+                    if (data) this.coral.setTokenWithSavedToken(data);
+                }).finally(() => {
+                    this.coral._renewToken = null;
+                });
+            }
 
-        if (this.coral._renewToken && this.auto_renew_token) {
-            await this.coral._renewToken;
+            if (this.coral._renewToken) {
+                await this.coral._renewToken;
+            }
         }
 
         const headers = new Headers(this.headers);
