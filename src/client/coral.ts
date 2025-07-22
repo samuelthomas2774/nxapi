@@ -1,6 +1,6 @@
 import { Response } from 'undici';
 import CoralApi, { CoralApiInterface, CoralAuthData, Result, ZNCA_CLIENT_ID } from '../api/coral.js';
-import { Announcements, Friends, Friend, GetActiveEventResult, WebServices, CoralError } from '../api/coral-types.js';
+import { Friend, GetActiveEventResult, CoralError, Announcements_4, WebServices_4, CurrentUser, ListMedia, ListChat, Friends_4 } from '../api/coral-types.js';
 import { NintendoAccountScope } from '../api/na.js';
 import ZncProxyApi from '../api/znc-proxy.js';
 import { NintendoAccountSession, Storage } from './storage/index.js';
@@ -36,27 +36,35 @@ export default class Coral {
         announcements: null as number | null,
         friends: null as number | null,
         webservices: null as number | null,
+        chats: null as number | null,
+        media: null as number | null,
         active_event: null as number | null,
+        current_user: null as number | null,
     };
 
     delay_retry_after_error = 5 * 1000; // 5 seconds
     update_interval = 10 * 1000; // 10 seconds
-    update_interval_announcements = 30 * 60 * 1000; // 30 minutes
 
-    onUpdatedWebServices: ((webservices: Result<WebServices>) => void) | null = null;
+    onUpdatedWebServices: ((webservices: Result<WebServices_4>) => void) | null = null;
 
     constructor(
         public api: CoralApiInterface,
         public data: CoralAuthData,
-        public announcements: Result<Announcements> | null = null,
-        public friends: Result<Friends> | null = null,
-        public webservices: Result<WebServices> | null = null,
+        public announcements: Result<Announcements_4> | null = null,
+        public friends: Result<Friends_4> | null = null,
+        public webservices: Result<WebServices_4> | null = null,
+        public chats: Result<ListChat> | null = null,
+        public media: Result<ListMedia> | null = null,
         public active_event: Result<GetActiveEventResult> | null = null,
+        public current_user: Result<CurrentUser> | null = null,
     ) {
         if (announcements) this.updated.announcements = Date.now();
         if (friends) this.updated.friends = Date.now();
         if (webservices) this.updated.webservices = Date.now();
+        if (chats) this.updated.chats = Date.now();
+        if (media) this.updated.media = Date.now();
         if (active_event) this.updated.active_event = Date.now();
+        if (current_user) this.updated.current_user = Date.now();
     }
 
     private update(key: keyof Coral['updated'], callback: () => Promise<void>, ttl: number) {
@@ -84,23 +92,24 @@ export default class Coral {
     }
 
     get user() {
-        return this.data.nsoAccount.user;
+        return this.current_user ?? this.data.nsoAccount.user;
     }
 
     async getAnnouncements() {
         await this.update('announcements', async () => {
-            this.getFriends();
+            // Always requested together when refreshing notifications page
             this.getWebServices();
-            this.getActiveEvent();
 
             this.announcements = await this.api.getAnnouncements();
-        }, this.update_interval_announcements);
+        }, this.update_interval);
 
         return this.announcements!;
     }
 
     async getFriends() {
         await this.update('friends', async () => {
+            // No simultaneous requests when refreshing friend list page
+
             this.friends = await this.api.getFriendList();
         }, this.update_interval);
 
@@ -109,8 +118,8 @@ export default class Coral {
 
     async getWebServices() {
         await this.update('webservices', async () => {
-            this.getFriends();
-            this.getActiveEvent();
+            // Always requested together when refreshing notifications page
+            this.getAnnouncements();
 
             const webservices = this.webservices = await this.api.getWebServices();
 
@@ -120,15 +129,63 @@ export default class Coral {
         return this.webservices!;
     }
 
+    async getChats() {
+        await this.update('chats', async () => {
+            // Always requested together when refreshing main page
+            Promise.all([
+                this.getAnnouncements(),
+                this.getFriends(),
+                this.getWebServices(),
+                this.getMedia(),
+                this.getActiveEvent(),
+            ]);
+
+            this.chats = await this.api.getChats();
+        }, this.update_interval);
+
+        return this.chats!;
+    }
+
+    async getMedia() {
+        await this.update('media', async () => {
+            // No simultaneous requests when refreshing media page
+
+            this.media = await this.api.getMedia();
+        }, this.update_interval);
+
+        return this.media!.media;
+    }
+
     async getActiveEvent() {
         await this.update('active_event', async () => {
+            // Always requested together when refreshing main page
+            this.getAnnouncements();
             this.getFriends();
             this.getWebServices();
+            this.getChats();
+            this.getMedia();
 
             this.active_event = await this.api.getActiveEvent();
         }, this.update_interval);
 
         return 'id' in this.active_event! ? this.active_event : null;
+    }
+
+    async getCurrentUser() {
+        await this.update('current_user', async () => {
+            // Always requested together when refreshing main page
+            this.getAnnouncements();
+            this.getFriends();
+            this.getWebServices();
+            this.getChats();
+            this.getMedia();
+
+            // or, then user page requests /v4/User/ShowSelf, /v3/User/Permissions/ShowSelf, /v4/User/PlayLog/Show
+
+            this.current_user = await this.api.getCurrentUser();
+        }, this.update_interval);
+
+        return this.current_user;
     }
 
     async addFriend(nsa_id: string) {
