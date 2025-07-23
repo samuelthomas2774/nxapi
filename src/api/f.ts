@@ -350,6 +350,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     async genf(
         token: string, hash_method: HashMethod, user?: {na_id: string; coral_user_id?: string},
         encrypt_token_request?: EncryptRequestOptions,
+        /** @internal */ _attempt = 0,
     ): Promise<FResult> {
         if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
@@ -387,10 +388,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (this.auth && err.data?.error === 'invalid_token') {
+            if (this.auth && err.data?.error === 'invalid_token' && _attempt) {
                 this.auth.token = null;
 
-                return this.genf(token, hash_method, user, encrypt_token_request);
+                return this.genf(token, hash_method, user, encrypt_token_request, _attempt + 1);
             }
 
             throw err;
@@ -420,7 +421,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         };
     }
 
-    async encryptRequest(url: string, token: string | null, data: string): Promise<EncryptRequestResult> {
+    async encryptRequest(
+        url: string, token: string | null, data: string,
+        /** @internal */ _attempt = 0,
+    ): Promise<EncryptRequestResult> {
         if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
         debugZncaApi('encrypting request', { url, data });
@@ -450,10 +454,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (this.auth && err.data?.error === 'invalid_token') {
+            if (this.auth && err.data?.error === 'invalid_token' && !_attempt) {
                 this.auth.token = null;
 
-                return this.encryptRequest(url, token, data);
+                return this.encryptRequest(url, token, data, _attempt + 1);
             }
 
             throw err;
@@ -468,7 +472,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         };
     }
 
-    async decryptResponse(data: Uint8Array): Promise<DecryptResponseResult> {
+    async decryptResponse(
+        data: Uint8Array,
+        /** @internal */ _attempt = 0,
+    ): Promise<DecryptResponseResult> {
         if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
         debugZncaApi('decrypting response', data);
@@ -496,10 +503,10 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (this.auth && err.data?.error === 'invalid_token') {
+            if (this.auth && err.data?.error === 'invalid_token' && !_attempt) {
                 this.auth.token = null;
 
-                return this.decryptResponse(data);
+                return this.decryptResponse(data, _attempt + 1);
             }
 
             throw err;
