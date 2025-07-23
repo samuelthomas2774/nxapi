@@ -3,7 +3,7 @@ import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken } from '../../common/auth/coral.js';
+import { getToken, Login } from '../../common/auth/coral.js';
 
 const debug = createDebug('cli:nso:announcements');
 
@@ -38,10 +38,18 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    const announcements = await nso.getAnnouncements();
-    const friends = await nso.getFriendList();
-    const webservices = await nso.getWebServices();
-    const activeevent = await nso.getActiveEvent();
+    const [announcements, webservices, [friends, chats, activeevent, media, current_user]] = await Promise.all([
+        nso.getAnnouncements(),
+        nso.getWebServices(),
+
+        data[Login] || true ? Promise.all([
+            nso.getFriendList(),
+            nso.getChats(),
+            nso.getActiveEvent(),
+            nso.getMedia(),
+            nso.getCurrentUser(),
+        ]) : [],
+    ]);
 
     if (argv.jsonPrettyPrint) {
         console.log(JSON.stringify(announcements, null, 4));

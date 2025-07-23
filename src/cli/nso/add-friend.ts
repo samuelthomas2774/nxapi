@@ -10,7 +10,7 @@ export const command = 'add-friend <id>';
 export const desc = 'Send a friend request using a user\'s friend code or NSA ID';
 
 export function builder(yargs: Argv<ParentArguments>) {
-    return yargs.option('id', {
+    return yargs.positional('id', {
         describe: 'Friend code or NSA ID',
         type: 'string',
         demandOption: true,
@@ -53,7 +53,9 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         throw new Error('Cannot send a friend request to yourself');
     }
 
-    await nso.sendFriendRequest(nsa_id);
+    const result = await nso.sendFriendRequest(nsa_id);
+
+    debug('result', result);
 
     // Check if the user is now friends
     // This means the other user had already sent this user a friend request,
@@ -62,6 +64,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const friend = friends.friends.find(f => f.nsaId === nsa_id);
 
     if (friend) {
+        const play_log = await nso.getPlayLog(friend.nsaId);
+
         console.log('You are now friends with %s.', friend.name);
     } else {
         console.log('Friend request sent');

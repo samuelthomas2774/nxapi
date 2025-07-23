@@ -1017,6 +1017,7 @@ export default class SplatNet3Api {
             headers: {
                 'Upgrade-Insecure-Requests': '1',
                 'User-Agent': SPLATNET3_WEBSERVICE_USERAGENT,
+                'x-appplatform': 'android',
                 'x-appcolorscheme': 'DARK',
                 'x-gamewebtoken': webserviceToken.accessToken,
                 'dnt': '1',

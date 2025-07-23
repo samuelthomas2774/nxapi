@@ -34,7 +34,8 @@ export class ZncNotifications extends Loop {
     }
 
     async fetch(req: (
-        'announcements' | 'friends' | {friend: string; presence?: boolean} | 'webservices' | 'event' | 'user' | null
+        'announcements' | 'friends' | {friend: string; presence?: boolean} | 'webservices' |
+        'event' | 'chats' | 'media' | 'user' | null
     )[]) {
         const result: Partial<{
             announcements: Announcements_4;
@@ -48,9 +49,11 @@ export class ZncNotifications extends Loop {
             {friend: string; presence?: boolean}[];
 
         if (!(this.nso instanceof ZncProxyApi)) {
-            if (req.includes('announcements')) req.push('friends', 'webservices', 'event');
-            if (req.includes('webservices')) req.push('friends', 'event');
-            if (req.includes('event')) req.push('friends', 'webservices');
+            if (req.includes('announcements')) req.push('webservices');
+            if (req.includes('webservices')) req.push('announcements');
+            if (req.includes('event')) req.push('friends', 'webservices', 'chats', 'media', 'announcements', 'user');
+            if (req.includes('user')) req.push('friends', 'webservices', 'chats', 'media', 'announcements', 'event');
+            if (req.includes('chats')) req.push('friends', 'webservices', 'media', 'announcements', 'event', 'user');
         }
 
         if (req.includes('announcements')) {

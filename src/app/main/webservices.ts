@@ -105,6 +105,7 @@ export default async function openWebService(
 
     window.loadURL(url.toString(), {
         extraHeaders: Object.entries({
+            'x-appplatform': 'android',
             'x-appcolorscheme': nativeTheme.shouldUseDarkColors ? 'DARK' : 'LIGHT',
             'x-gamewebtoken': webserviceToken.accessToken,
             'dnt': '1',

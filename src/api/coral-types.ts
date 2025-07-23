@@ -599,3 +599,32 @@ export enum FeedbackTopic {
     APP_PROBLEMS = 8,
     OTHER = 0,
 }
+
+//
+// Unsupported API calls:
+//
+// - /v1/Support/SendOpinion
+// - /v1/Support/ReportUser
+// - /v3/Extension/Account/GetToken
+// - /v2/Extension/Game/GetWebServiceToken
+//
+// Needs request/response data/types:
+//
+// - /v1/Notification/RegisterDevice
+// - /v1/Notification/UnregisterDevice
+// - /v4/Announcement/Delete
+// - /v4/Announcement/FriendRequestAccepted/Delete
+// - /v4/Announcement/GameWebService/Delete
+// - /v1/Event/Notify/ActivatedUsers
+// - /v4/Friend/IsNew/Delete
+// - /v3/Voip/GetChannelId
+// - /v1/Voip/GetConfig
+// - /v3/Voip/Join
+// - /v1/Voip/Leave
+// - /v1/Voip/Mute
+// - /v5/Chat/Show
+// - /v5/Chat/List
+// - /v1/Support/ReportUser
+//
+//   Also, announcement types other than OPERATION and FRIEND_REQUEST
+//

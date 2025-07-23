@@ -35,12 +35,21 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    if (data[Login]) {
-        const announcements = await nso.getAnnouncements();
-        const friends = await nso.getFriendList();
-        const webservices = await nso.getWebServices();
-        const activeevent = await nso.getActiveEvent();
-    }
+    const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || true ? await Promise.all([
+        nso.getFriendList(),
+        nso.getChats(),
+        nso.getWebServices(),
+        nso.getActiveEvent(),
+        nso.getMedia(),
+        nso.getAnnouncements(),
+        nso.getCurrentUser(),
+    ]) : [];
+
+    const [current_user_2, play_log, permissions] = await Promise.all([
+        nso.getCurrentUser(),
+        nso.getPlayLog(data.nsoAccount.user.nsaId),
+        nso.getCurrentUserPermissions(),
+    ]);
 
     const friendcodeurl = await nso.getFriendCodeUrl();
 

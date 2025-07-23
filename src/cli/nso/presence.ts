@@ -203,8 +203,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncDiscordPresence(storage, token, nso, data);
 
-    const notifier = (await import('node-notifier')).default;
-    i.notifications = new TerminalNotificationManager(notifier);
+    i.notifications = await TerminalNotificationManager.create();
     i.user_notifications = argv.userNotifications;
     i.friend_notifications = argv.friendNotifications;
     i.update_interval = argv.updateInterval;

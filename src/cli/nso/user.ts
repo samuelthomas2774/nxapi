@@ -33,20 +33,16 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    if (data[Login]) {
-        const announcements = await nso.getAnnouncements();
-        const friends = await nso.getFriendList();
-        const webservices = await nso.getWebServices();
-        const activeevent = await nso.getActiveEvent();
-    }
+    const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || argv.forceRefresh ? await Promise.all([
+        nso.getFriendList(),
+        nso.getChats(),
+        nso.getWebServices(),
+        nso.getActiveEvent(),
+        nso.getMedia(),
+        nso.getAnnouncements(),
+        nso.getCurrentUser(),
+    ]) : [];
 
-    if (argv.forceRefresh && !data[Login]) {
-        const user = await nso.getCurrentUser();
-
-        console.log('Nintendo Account', data.user);
-        console.log('Nintendo Switch user', user);
-    } else {
-        console.log('Nintendo Account', data.user);
-        console.log('Nintendo Switch user', data.nsoAccount.user);
-    }
+    console.log('Nintendo Account', data.user);
+    console.log('Nintendo Switch user', current_user ?? data.nsoAccount.user);
 }

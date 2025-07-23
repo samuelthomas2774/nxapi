@@ -5,7 +5,7 @@ import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
-import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, Friends, Friends_4, GetActiveEventResult, ListChat, ListMedia, ListMediaParameter, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, Friends, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListMediaParameter, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
 import { createZncaApi, FResult, getDefaultZncaApi, getPreferredZncaApiFromEnvironment, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
@@ -84,6 +84,19 @@ export abstract class AbstractCoralApi {
     async getMedia() {
         return this.call<ListMedia, ListMediaParameter>('/v4/Media/List', {
             count: 100,
+        });
+    }
+
+    async getHashtags(media: Media) {
+        return this.call<ListHashtag, ListHashtagParameter>('/v5/Hashtag/List', {
+            applications: [
+                {
+                    platformId: media.platformId,
+                    acdIndex: media.acdIndex,
+                    extraData: media.extraData,
+                    applicationId: media.applicationId,
+                },
+            ],
         });
     }
 
@@ -216,6 +229,11 @@ export abstract class AbstractCoralApi {
         });
     }
 
+    /**
+     * For announcement types:
+     *
+     * - OPERATION
+     */
     async setAnnouncementRead(id: string) {
         return this.call('/v4/Announcement/MarkAsRead', {
             id,
@@ -266,6 +284,10 @@ export abstract class AbstractCoralApi {
                 friendRequestReception: value,
             },
         });
+    }
+
+    async getNotificationSetting(item: UpdatePushNotificationSettingsParameterItem) {
+        return this.call<ListPushNotificationSettings>('/v5/PushNotification/Settings/List');
     }
 
     async updateNotificationSetting(item: UpdatePushNotificationSettingsParameterItem) {
@@ -446,7 +468,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
 
         const ri = parameter[RequestFlagRequestIdSymbol] ?? RequestFlagRequestId.NONE;
 
-        if (ri === RequestFlagRequestId.AFTER) body.parameter = parameter;
+        if (ri === RequestFlagRequestId.AFTER && !parameter[RequestFlagNoParameterSymbol]) body.parameter = parameter;
 
         if (ri !== RequestFlagRequestId.NONE) {
             // Android - lowercase, iOS - uppercase

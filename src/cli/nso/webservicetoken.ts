@@ -40,13 +40,18 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    if (data[Login]) {
-        const announcements = await nso.getAnnouncements();
-    }
+    const [webservices, announcements, [friends, chats, activeevent, media, current_user]] = await Promise.all([
+        nso.getWebServices(),
+        nso.getAnnouncements(),
 
-    const friends = await nso.getFriendList();
-    const webservices = await nso.getWebServices();
-    const activeevent = await nso.getActiveEvent();
+        data[Login] || true ? Promise.all([
+            nso.getFriendList(),
+            nso.getChats(),
+            nso.getActiveEvent(),
+            nso.getMedia(),
+            nso.getCurrentUser(),
+        ]) : [],
+    ]);
 
     const webservice = webservices.find(w => '' + w.id === argv.id);
 

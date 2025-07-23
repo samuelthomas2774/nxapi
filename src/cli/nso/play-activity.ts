@@ -4,11 +4,12 @@ import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
 import { getToken, Login } from '../../common/auth/coral.js';
+import { getTitleIdFromEcUrl, hrduration } from '../../util/misc.js';
 
-const debug = createDebug('cli:nso:webservices');
+const debug = createDebug('cli:nso:play-activity');
 
-export const command = 'webservices';
-export const desc = 'List Nintendo Switch Online web services';
+export const command = 'play-activity';
+export const desc = 'Show your play activity';
 
 export function builder(yargs: Argv<ParentArguments>) {
     return yargs.option('user', {
@@ -23,14 +24,15 @@ export function builder(yargs: Argv<ParentArguments>) {
     }).option('json-pretty-print', {
         describe: 'Output pretty-printed JSON',
         type: 'boolean',
+    }).option('friend-nsaid', {
+        describe: 'Friend NSA ID',
+        type: 'string',
     });
 }
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
-    console.warn('Listing web services');
-
     const storage = await initStorage(argv.dataPath);
 
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
@@ -38,45 +40,51 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    const [webservices, announcements, [friends, chats, activeevent, media, current_user]] = await Promise.all([
-        nso.getWebServices(),
-        nso.getAnnouncements(),
+    const [friends, [chats, webservices, activeevent, media, announcements, current_user]] = await Promise.all([
+        nso.getFriendList(),
 
-        data[Login] || true ? Promise.all([
-            nso.getFriendList(),
+        data[Login] || 1 ? Promise.all([
             nso.getChats(),
+            nso.getWebServices(),
             nso.getActiveEvent(),
             nso.getMedia(),
+            nso.getAnnouncements(),
             nso.getCurrentUser(),
         ]) : [],
     ]);
 
-    if (argv.jsonPrettyPrint) {
-        console.log(JSON.stringify(webservices, null, 4));
-        return;
+    const friend = argv.friendNsaid ? friends.friends.find(f => f.nsaId === argv.friendNsaid) : null;
+
+    if (argv.friendNsaid && !friend) {
+        throw new Error('Unknown friend ' + argv.friendNsaid);
     }
-    if (argv.json) {
-        console.log(JSON.stringify(webservices));
-        return;
-    }
+
+    const [play_log, [current_user_2, permissions]] = await Promise.all([
+        nso.getPlayLog(friend?.nsaId ?? data.nsoAccount.user.nsaId),
+
+        !friend ? Promise.all([
+            nso.getCurrentUser(),
+            nso.getCurrentUserPermissions(),
+        ]) : [],
+    ]);
 
     const table = new Table({
         head: [
-            'ID',
+            'Title ID',
             'Name',
-            'Notifications',
-            'URL',
+            'First played at',
+            'Total play time',
         ],
     });
 
-    for (const webservice of webservices) {
+    for (const game of play_log) {
+        const title_id = getTitleIdFromEcUrl(game.shopUri);
+
         table.push([
-            webservice.id,
-            webservice.name,
-            webservice.isNotificationSupported ?
-                webservice.isNotificationAllowed ? 'Allowed' : 'Not allowed' :
-                'Not supported',
-            webservice.uri,
+            title_id ?? '',
+            game.name,
+            new Date(game.firstPlayedAt * 1000).toISOString(),
+            hrduration(game.totalPlayTime),
         ]);
     }
 

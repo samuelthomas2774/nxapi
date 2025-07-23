@@ -104,8 +104,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const i = new ZncNotifications(storage, token, nso, data);
 
-    const notifier = (await import('node-notifier')).default;
-    i.notifications = new TerminalNotificationManager(notifier);
+    i.notifications = await TerminalNotificationManager.create();
     i.user_notifications = argv.userNotifications;
     i.friend_notifications = argv.friendNotifications;
     i.update_interval = argv.updateInterval;
@@ -174,6 +173,12 @@ export class TerminalNotificationManager extends NotificationManager {
             // icon: currenttitle.imageUri,
             icon: friend.imageUri,
         });
+    }
+
+    static async create() {
+        const notifier = (await import('node-notifier')).default;
+
+        return new TerminalNotificationManager(notifier);
     }
 }
 

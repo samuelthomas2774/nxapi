@@ -40,13 +40,18 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    if (data[Login]) {
-        const announcements = await nso.getAnnouncements();
-        const webservices = await nso.getWebServices();
-        const activeevent = await nso.getActiveEvent();
-    }
+    const [friends, [chats, webservices, activeevent, media, announcements, current_user]] = await Promise.all([
+        nso.getFriendList(),
 
-    const friends = await nso.getFriendList();
+        data[Login] || true ? Promise.all([
+            nso.getChats(),
+            nso.getWebServices(),
+            nso.getActiveEvent(),
+            nso.getMedia(),
+            nso.getAnnouncements(),
+            nso.getCurrentUser(),
+        ]) : [],
+    ]);
 
     if (argv.jsonPrettyPrint) {
         console.log(JSON.stringify(friends.friends, null, 4));
@@ -87,7 +92,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                         '; last seen ' + new Date(friend.presence.logoutAt * 1000).toISOString() : '') :
                 friend.presence.logoutAt ?
                     'Last seen ' + new Date(friend.presence.logoutAt * 1000).toISOString() :
-                    'Offline',
+                'Offline',
             friend.isFavoriteFriend ? 'Yes' : 'No',
             new Date(friend.friendCreatedAt * 1000).toISOString(),
         ]);

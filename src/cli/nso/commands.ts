@@ -14,3 +14,4 @@ export * as zncProxyTokens from './znc-proxy-tokens.js';
 export * as friendcode from './friendcode.js';
 export * as lookup from './lookup.js';
 export * as addFriend from './add-friend.js';
+export * as playActivity from './play-activity.js';

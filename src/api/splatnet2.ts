@@ -289,6 +289,7 @@ ${colour}
             headers: {
                 'Upgrade-Insecure-Requests': '1',
                 'User-Agent': SPLATNET2_WEBSERVICE_USERAGENT,
+                'x-appplatform': 'android',
                 'x-appcolorscheme': 'DARK',
                 'x-gamewebtoken': webserviceToken.accessToken,
                 'dnt': '1',
