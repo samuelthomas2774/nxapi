@@ -162,7 +162,7 @@ export interface Friend {
     isNew: boolean;
     friendCreatedAt: number;
     route: FriendRoute;
-    presence: Presence | PresenceOnline | PresenceOffline;
+    presence: PresenceOnline | PresenceOffline;
 }
 
 /** /v4/Friend/Show */

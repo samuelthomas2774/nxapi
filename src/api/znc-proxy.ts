@@ -1,5 +1,5 @@
 import { fetch, Response } from 'undici';
-import { ActiveEvent, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4 } from './coral-types.js';
+import { ActiveEvent, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4, PresenceOnline_4, PresenceOnline, PresenceOffline } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
 import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, Result } from './coral.js';
 import { NintendoAccountToken, NintendoAccountUser } from './na.js';
@@ -250,7 +250,8 @@ export enum ZncPresenceEventStreamEvent {
 }
 
 export type PresenceUrlResponse =
-    Presence | {presence: Presence} |
+    PresenceOnline | PresenceOnline_4 | PresenceOffline |
+    {presence: PresenceOnline | PresenceOnline_4 | PresenceOffline} |
     CurrentUser | {user: CurrentUser} |
     Friend | {friend: Friend};
 
@@ -276,12 +277,12 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
 
     const data = await response.json() as PresenceUrlResponse;
 
-    const user: CurrentUser | Friend | undefined =
+    const user: CurrentUser | Friend | Friend_4 | undefined =
         'user' in data ? data.user :
         'friend' in data ? data.friend :
         'nsaId' in data ? data :
         undefined;
-    const presence: Presence =
+    const presence: PresenceOnline | PresenceOnline_4 | PresenceOffline =
         'presence' in data ? data.presence :
         'user' in data ? data.user.presence :
         'friend' in data ? data.friend.presence :

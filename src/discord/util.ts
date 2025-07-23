@@ -76,7 +76,7 @@ export function getDiscordPresence(
     }
 
     return {
-        id: title.client ||
+        id: (title !== defaultTitle ? title : null)?.client ||
             (typeof context?.platform !== 'undefined' && platform_clients[context.platform]) ||
             defaultTitle.client,
         title: titleid,

@@ -1,18 +1,20 @@
 import process from 'node:process';
 import { fetch } from 'undici';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
-import { ActiveEvent, CurrentUser, Friend, Presence, PresenceGame, PresenceState } from '../../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, PresenceGame, PresenceOffline, PresenceOnline, PresenceOnline_4, PresencePlatform, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from './index.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime } from '../../discord/types.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
-import { getToken, Login } from '../../common/auth/coral.js';
+import { getToken } from '../../common/auth/coral.js';
 import { timeoutSignal } from '../../util/misc.js';
 import { getUserAgent } from '../../util/useragent.js';
 
 const debug = createDebug('cli:util:discord-activity');
+
+type Presence = PresenceOnline | PresenceOnline_4 | PresenceOffline;
 
 export const command = 'discord-activity';
 export const desc = 'Get Nintendo Switch presence as a Discord activity';
@@ -131,12 +133,18 @@ async function getPresenceFromJson(json: string) {
         sysDescription: typeof data.game.sysDescription === 'string' ? data.game.sysDescription : '',
     } : null;
 
+    // @ts-expect-error
     const presence: Presence = {
         state,
         updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : 0,
-        logoutAt: typeof data.updatedAt === 'number' ? data.logoutAt : 0,
+        logoutAt: typeof data.logoutAt === 'number' ? data.logoutAt : 0,
         game: game ?? {},
     };
+
+    if (state === PresenceState.ONLINE || state === PresenceState.PLAYING) {
+        // @ts-expect-error
+        presence.platform = typeof data.platform === 'number' ? data.platform : PresencePlatform.NX;
+    }
 
     return [presence] as const;
 }
@@ -149,11 +157,15 @@ async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
         await storage.getItem('NintendoAccountToken.' + usernsid);
     const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    const announcements = await nso.getAnnouncements();
-    const friends = await nso.getFriendList();
-    const webservices = await nso.getWebServices();
-    const activeevent = await nso.getActiveEvent();
-    const user = data[Login] ? data.nsoAccount.user : await nso.getCurrentUser();
+    const [friends, chats, webservices, activeevent, media, announcements, user] = await Promise.all([
+        nso.getFriendList(),
+        nso.getChats(),
+        nso.getWebServices(),
+        nso.getActiveEvent(),
+        nso.getMedia(),
+        nso.getAnnouncements(),
+        nso.getCurrentUser(),
+    ]);
 
     if (argv.friendNsaid) {
         const friend = friends.friends.find(f => f.nsaId === argv.friendNsaid);
@@ -209,7 +221,7 @@ function getActivityFromPresence(
         proxy_response,
         nsaid: argv.friendNsaid ?? user?.nsaId,
         user,
-        // platform: presence.platform,
+        platform: 'platform' in presence ? presence.platform : undefined,
     };
 
     const discordpresence = 'name' in presence.game ?

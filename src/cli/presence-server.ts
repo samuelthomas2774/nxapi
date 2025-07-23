@@ -12,7 +12,7 @@ import FestRecordQuery_c8660a6 from 'splatnet3-types/graphql/c8660a636e73dcbf55c
 import type { Arguments as ParentArguments } from '../cli.js';
 import { git, product, version } from '../util/product.js';
 import Users, { CoralUser } from '../common/users.js';
-import { Friend } from '../api/coral-types.js';
+import { Friend, PresenceGame } from '../api/coral-types.js';
 import SplatNet3Api, { PersistedQueryResult, RequestIdSymbol } from '../api/splatnet3.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import { getBulletToken, SavedBulletToken } from '../common/auth/splatnet3.js';
@@ -837,13 +837,14 @@ class Server extends HttpServer {
         if (scope && !scope.includes(PresenceScope.PRESENCE_TIMESTAMPS)) {
             response.friend = {
                 ...response.friend,
+
                 presence: {
                     ...response.friend.presence,
                     game: 'name' in response.friend.presence.game ? {
                         ...response.friend.presence.game,
                         firstPlayedAt: 0,
                         totalPlayTime: 0,
-                    } : {},
+                    } : {} as PresenceGame,
                     logoutAt: 0,
                     updatedAt: 0,
                 },
@@ -853,6 +854,8 @@ class Server extends HttpServer {
         if (scope && !scope.includes(PresenceScope.PRESENCE_TITLE)) {
             response.friend = {
                 ...response.friend,
+
+                // @ts-expect-error
                 presence: {
                     ...response.friend.presence,
                     game: {},

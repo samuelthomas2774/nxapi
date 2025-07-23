@@ -5,7 +5,7 @@ import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
 import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
-import { ActiveEvent, CurrentUser, Friend, Game, Presence, PresenceState, CoralError } from '../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, PresenceState, CoralError, PresenceOnline_4, PresenceOffline, PresenceOnline } from '../api/coral-types.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import createDebug from '../util/debug.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
@@ -24,6 +24,8 @@ const debugSplatnet2 = createDebug('nxapi:nso:presence:splatnet2');
 const MAX_CONNECT_ATTEMPTS = Infinity; // 10
 const RECONNECT_INTERVAL = 5000; // 5 seconds
 const MAX_PROXY_AUTO_RETRY = 10;
+
+type Presence = PresenceOnline_4 | PresenceOnline | PresenceOffline;
 
 interface SavedPresence {
     presence: Presence;
@@ -120,7 +122,7 @@ class ZncDiscordPresenceClient {
             monitors: [...this.monitors.values()],
             nsaid: this.m.presence_user!,
             user,
-            // platform: presence.platform,
+            platform: 'platform' in presence ? presence.platform : undefined,
         };
 
         const discord_presence = 'name' in presence.game ?
