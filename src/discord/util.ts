@@ -172,7 +172,8 @@ export function getInactiveDiscordPresence(
     state: PresenceState, logoutAt: number, context?: DiscordPresenceContext
 ): DiscordPresence {
     return {
-        id: defaultTitle.client,
+        id: (typeof context?.platform !== 'undefined' && platform_clients[context.platform]) ||
+            defaultTitle.client,
         title: null,
         activity: {
             state: 'Not playing',
