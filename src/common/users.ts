@@ -207,13 +207,12 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
     async getChats() {
         await this.update('chats', async () => {
             // Always requested together when refreshing main page
-            Promise.all([
-                this.getAnnouncements(),
-                this.getFriends(),
-                this.getWebServices(),
-                this.getMedia(),
-                this.getActiveEvent(),
-            ]);
+            this.getAnnouncements();
+            this.getFriends();
+            this.getWebServices();
+            this.getMedia();
+            this.getActiveEvent();
+            this.getCurrentUser();
 
             this.chats = await this.nso.getChats();
         }, this.update_interval);
@@ -234,13 +233,12 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
     async getActiveEvent() {
         await this.update('active_event', async () => {
             // Always requested together when refreshing main page
-            Promise.all([
-                this.getAnnouncements(),
-                this.getFriends(),
-                this.getWebServices(),
-                this.getChats(),
-                this.getMedia(),
-            ]);
+            this.getAnnouncements();
+            this.getFriends();
+            this.getWebServices();
+            this.getChats();
+            this.getMedia();
+            this.getCurrentUser();
 
             this.active_event = await this.nso.getActiveEvent();
         }, this.update_interval);
@@ -251,13 +249,12 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
     async getCurrentUser() {
         await this.update('user', async () => {
             // Always requested together when refreshing main page
-            Promise.all([
-                this.getAnnouncements(),
-                this.getFriends(),
-                this.getWebServices(),
-                this.getChats(),
-                this.getMedia(),
-            ]);
+            this.getAnnouncements();
+            this.getFriends();
+            this.getWebServices();
+            this.getChats();
+            this.getMedia();
+            this.getActiveEvent();
 
             // or, then user page requests /v4/User/ShowSelf, /v3/User/Permissions/ShowSelf, /v4/User/PlayLog/Show
 
