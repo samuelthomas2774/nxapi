@@ -43,7 +43,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const [friends, [chats, webservices, activeevent, media, announcements, current_user]] = await Promise.all([
         nso.getFriendList(),
 
-        data[Login] || 1 ? Promise.all([
+        data[Login] || true ? Promise.all([
             nso.getChats(),
             nso.getWebServices(),
             nso.getActiveEvent(),

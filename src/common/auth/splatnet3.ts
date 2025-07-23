@@ -1,7 +1,7 @@
 import persist from 'node-persist';
 import { Response } from 'undici';
 import { getToken, Login, SavedToken } from './coral.js';
-import SplatNet3Api, { SplatNet3AuthData, SplatNet3AuthErrorCode, SplatNet3AuthErrorResponse } from '../../api/splatnet3.js';
+import SplatNet3Api, { SPLATNET3_WEBSERVICE_ID, SplatNet3AuthData, SplatNet3AuthErrorCode, SplatNet3AuthErrorResponse } from '../../api/splatnet3.js';
 import { checkMembershipActive, checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
@@ -32,14 +32,21 @@ export async function getBulletToken(
 
         const {nso, data} = await getToken(storage, token, proxy_url);
 
-        if (data[Login]) {
-            const announcements = await nso.getAnnouncements();
-            const friends = await nso.getFriendList();
-            const webservices = await nso.getWebServices();
-            const activeevent = await nso.getActiveEvent();
-        }
+        const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || true ? await Promise.all([
+            nso.getFriendList(),
+            nso.getChats(),
+            nso.getWebServices(),
+            nso.getActiveEvent(),
+            nso.getMedia(),
+            nso.getAnnouncements(),
+            nso.getCurrentUser(),
+        ]) : [];
 
-        checkMembershipActive(data);
+        const webservice = webservices!.find(w => w.id === SPLATNET3_WEBSERVICE_ID);
+        if (!webservice) throw new Error('Invalid web service');
+
+        const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
+        if (verifymembership?.attrValue === 'true') checkMembershipActive(data);
 
         let attempt;
         if (ratelimit) {
@@ -139,12 +146,15 @@ async function renewToken(
 
     const {nso, data} = await getToken(storage, token, renew_token_data.znc_proxy_url);
 
-    if (data[Login]) {
-        const announcements = await nso.getAnnouncements();
-        const friends = await nso.getFriendList();
-        const webservices = await nso.getWebServices();
-        const activeevent = await nso.getActiveEvent();
-    }
+    const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || true ? await Promise.all([
+        nso.getFriendList(),
+        nso.getChats(),
+        nso.getWebServices(),
+        nso.getActiveEvent(),
+        nso.getMedia(),
+        nso.getAnnouncements(),
+        nso.getCurrentUser(),
+    ]) : [];
 
     const existingToken: SavedBulletToken = await splatnet.renewTokenWithCoral(nso, data.user);
 

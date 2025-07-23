@@ -1,7 +1,7 @@
 import persist from 'node-persist';
 import { Response } from 'undici';
 import { getToken, Login } from './coral.js';
-import NooklinkApi, { NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
+import NooklinkApi, { NOOKLINK_WEBSERVICE_ID, NooklinkAuthData, NooklinkUserApi, NooklinkUserAuthData } from '../../api/nooklink.js';
 import { Users, WebServiceError } from '../../api/nooklink-types.js';
 import { checkMembershipActive, checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import createDebug from '../../util/debug.js';
@@ -33,14 +33,21 @@ export async function getWebServiceToken(
 
         const {nso, data} = await getToken(storage, token, proxy_url);
 
-        if (data[Login]) {
-            const announcements = await nso.getAnnouncements();
-            const friends = await nso.getFriendList();
-            const webservices = await nso.getWebServices();
-            const activeevent = await nso.getActiveEvent();
-        }
+        const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || true ? await Promise.all([
+            nso.getFriendList(),
+            nso.getChats(),
+            nso.getWebServices(),
+            nso.getActiveEvent(),
+            nso.getMedia(),
+            nso.getAnnouncements(),
+            nso.getCurrentUser(),
+        ]) : [];
 
-        checkMembershipActive(data);
+        const webservice = webservices!.find(w => w.id === NOOKLINK_WEBSERVICE_ID);
+        if (!webservice) throw new Error('Invalid web service');
+
+        const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
+        if (verifymembership?.attrValue === 'true') checkMembershipActive(data);
 
         let attempt;
         if (ratelimit) {
@@ -106,12 +113,15 @@ async function renewToken(
 
     const {nso, data} = await getToken(storage, token, renew_token_data.znc_proxy_url);
 
-    if (data[Login]) {
-        const announcements = await nso.getAnnouncements();
-        const friends = await nso.getFriendList();
-        const webservices = await nso.getWebServices();
-        const activeevent = await nso.getActiveEvent();
-    }
+    const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || true ? await Promise.all([
+        nso.getFriendList(),
+        nso.getChats(),
+        nso.getWebServices(),
+        nso.getActiveEvent(),
+        nso.getMedia(),
+        nso.getAnnouncements(),
+        nso.getCurrentUser(),
+    ]) : [];
 
     const existingToken: SavedToken = await nooklink.renewTokenWithCoral(nso, data.user);
 

@@ -3,8 +3,8 @@ import * as fs from 'node:fs';
 import { setTimeout } from 'node:timers';
 import persist from 'node-persist';
 import { getToken, Login } from './coral.js';
-import SplatNet2Api, { SplatNet2AuthData, updateIksmSessionLastUsed } from '../../api/splatnet2.js';
-import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
+import SplatNet2Api, { SPLATNET2_WEBSERVICE_ID, SplatNet2AuthData, updateIksmSessionLastUsed } from '../../api/splatnet2.js';
+import { checkMembershipActive, checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { NintendoAccountSessionTokenJwtPayload } from '../../api/na.js';
@@ -37,12 +37,21 @@ export async function getIksmToken(
 
         const {nso, data} = await getToken(storage, token, proxy_url);
 
-        if (data[Login]) {
-            const announcements = await nso.getAnnouncements();
-            const friends = await nso.getFriendList();
-            const webservices = await nso.getWebServices();
-            const activeevent = await nso.getActiveEvent();
-        }
+        const [friends, chats, webservices, activeevent, media, announcements, current_user] = data[Login] || true ? await Promise.all([
+            nso.getFriendList(),
+            nso.getChats(),
+            nso.getWebServices(),
+            nso.getActiveEvent(),
+            nso.getMedia(),
+            nso.getAnnouncements(),
+            nso.getCurrentUser(),
+        ]) : [];
+
+        const webservice = webservices!.find(w => w.id === SPLATNET2_WEBSERVICE_ID);
+        if (!webservice) throw new Error('Invalid web service');
+
+        const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
+        if (verifymembership?.attrValue === 'true') checkMembershipActive(data);
 
         let attempt;
         if (ratelimit) {
