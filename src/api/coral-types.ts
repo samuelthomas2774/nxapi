@@ -433,7 +433,7 @@ export type FriendRequestSender = User;
 
 /** /v3/FriendRequest/Sent/List */
 export interface SentFriendRequests {
-    friendRequests: unknown[];
+    friendRequests: SentFriendRequest[];
 }
 
 export interface SentFriendRequest {
