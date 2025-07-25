@@ -6,7 +6,7 @@ import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
 import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, Friends, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListMediaParameter, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
-import { createZncaApi, FResult, getDefaultZncaApi, getPreferredZncaApiFromEnvironment, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
+import { createZncaApi, DecryptResponseResult, FResult, getDefaultZncaApi, getPreferredZncaApiFromEnvironment, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
 import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
@@ -24,6 +24,7 @@ export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
 const FRIEND_CODE = /^\d{4}-\d{4}-\d{4}$/;
 const FRIEND_CODE_HASH = /^[A-Za-z0-9]{10}$/;
 
+export const ResponseEncryptionSymbol = Symbol('ResponseEncryption');
 export const ResponseDataSymbol = Symbol('ResponseData');
 export const CorrelationIdSymbol = Symbol('CorrelationId');
 
@@ -31,6 +32,7 @@ export type Result<T> = T & ResultData<T>;
 
 export interface ResultData<T> {
     [ResponseSymbol]: Response;
+    [ResponseEncryptionSymbol]: ResponseEncryption | null;
     [ResponseDataSymbol]: CoralSuccessResponse<T>;
     [CorrelationIdSymbol]: string;
 
@@ -40,6 +42,10 @@ export interface ResultData<T> {
     result: T;
     /** @deprecated */
     correlationId: string;
+}
+export interface ResponseEncryption {
+    encrypted: Uint8Array;
+    decrypt_result: DecryptResponseResult;
 }
 
 export interface CoralApiInterface {
@@ -881,7 +887,7 @@ class CoralApiRequest<T = unknown> {
                 return this.handleEncryptedJsonResponse(response, data, request_encryption, _attempt);
             }
 
-            return this.decodeJsonResponse(response, data, _attempt);
+            return this.decodeJsonResponse(response, data, null, _attempt);
         }
 
         if (!response.ok) {
@@ -898,11 +904,16 @@ class CoralApiRequest<T = unknown> {
     ) {
         const decrypted = await request_encryption.decryptResponse(data);
 
-        return this.decodeJsonResponse(response, decrypted.data, _attempt);
+        const encryption: ResponseEncryption = {
+            encrypted: data,
+            decrypt_result: decrypted,
+        };
+
+        return this.decodeJsonResponse(response, decrypted.data, encryption, _attempt);
     }
 
     private async decodeJsonResponse(
-        response: Response, data: string | Uint8Array,
+        response: Response, data: string | Uint8Array, encryption: ResponseEncryption | null,
         /** @internal */ _attempt: number,
     ) {
         let json: CoralResponse<T>;
@@ -922,11 +933,11 @@ class CoralApiRequest<T = unknown> {
             throw new CoralErrorResponse('[znc] Non-200 status code', response, json as CoralError);
         }
 
-        return this.handleJsonResponse(response, json, _attempt);
+        return this.handleJsonResponse(response, json, encryption, _attempt);
     }
 
     private async handleJsonResponse(
-        response: Response, data: CoralResponse<T>,
+        response: Response, data: CoralResponse<T>, encryption: ResponseEncryption | null,
         /** @internal */ _attempt: number,
     ) {
         debug('fetch %s %s, response %s, status %d %s, correlationId %s', this.method, this.url, response.status,
@@ -954,6 +965,7 @@ class CoralApiRequest<T = unknown> {
         const result = data.result;
 
         Object.defineProperty(result, ResponseSymbol, {enumerable: false, value: response});
+        Object.defineProperty(result, ResponseEncryptionSymbol, {enumerable: false, value: encryption});
         Object.defineProperty(result, ResponseDataSymbol, {enumerable: false, value: data});
         Object.defineProperty(result, CorrelationIdSymbol, {enumerable: false, value: data.correlationId});
 

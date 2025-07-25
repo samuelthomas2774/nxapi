@@ -1,7 +1,7 @@
 import { fetch, Response } from 'undici';
 import { ActiveEvent, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4, PresenceOnline_4, PresenceOnline, PresenceOffline } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
-import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, Result } from './coral.js';
+import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, ResponseEncryptionSymbol, Result } from './coral.js';
 import { NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import createDebug from '../util/debug.js';
@@ -207,6 +207,7 @@ function createResult<T extends {}, R>(data: R & {[ResponseSymbol]: Response}, r
     };
 
     Object.defineProperty(result, ResponseSymbol, {enumerable: false, value: data[ResponseSymbol]});
+    Object.defineProperty(result, ResponseEncryptionSymbol, {enumerable: false, value: null});
     Object.defineProperty(result, ResponseDataSymbol, {enumerable: false, value: coral_result});
     Object.defineProperty(result, CorrelationIdSymbol, {enumerable: false, value: ''});
 
