@@ -27,6 +27,15 @@ export class ErrorResponse<T = unknown> extends Error {
 
         Object.defineProperty(this, ErrorResponseSymbol, {enumerable: false, value: ErrorResponseSymbol});
 
+        if (response.status === 502 &&
+            response.headers.get('Server') === 'cloudflare' &&
+            response.headers.get('Content-Type')?.match(/^text\/html(;|$)/)
+        ) {
+            // Cloudflare returns it's own HTML error page for HTTP 502 errors
+            // Logging this isn't helpful so just discard it
+            body = 'Bad Gateway\n';
+        }
+
         if (body instanceof ArrayBuffer) {
             body = (new TextDecoder()).decode(body);
         }

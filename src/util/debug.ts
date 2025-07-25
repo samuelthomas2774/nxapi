@@ -70,10 +70,10 @@ function applyFormatters(args: [formatter: string, ...args: unknown[]], self = d
 
 const censor_fields = [
     'token',
-    // NA OIDC
-    'access_token', 'id_token',
+    // OAuth/OIDC
+    'access_token', 'id_token', 'refresh_token', 'client_secret',
     // Coral
-    'accessToken', 'supportId',
+    'accessToken', 'supportId', 'naIdToken',
     // Moon
     'serialNumber', 'notificationToken',
 ];
