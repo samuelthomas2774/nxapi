@@ -11,7 +11,7 @@ import { getToken } from '../../common/auth/coral.js';
 import { getPctlToken } from '../../common/auth/moon.js';
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
-import { ZNCA_API_USE_TEXT, ZNCA_API_USE_URL } from '../../common/constants.js';
+import { ZNCA_API_USE_TEXT, ZNCA_API_USE_URL, ZNCA_API_USE_VERSION } from '../../common/constants.js';
 import { InvalidNintendoAccountTokenError } from '../../common/auth/na.js';
 
 const debug = createDebug('app:main:na-auth');
@@ -395,32 +395,25 @@ export async function askAddNsoAccount(app: App, iab = true) {
     }
 }
 
-async function checkZncaApiUseAllowed(app: App, window?: BrowserWindow, force = false) {
+export async function checkZncaApiUseAllowed(app: App, window?: BrowserWindow, force = false) {
     if (!force) {
-        if (await app.store.storage.getItem('ZncaApiConsent')) {
+        const saved = await app.store.storage.getItem('ZncaApiConsent');
+        const consent_version = typeof saved === 'number' ? saved :
+            typeof saved === 'boolean' ? (saved ? 1 : null) : null;
+
+        if (consent_version && consent_version === ZNCA_API_USE_VERSION) {
             return;
         }
 
         if (process.env.ZNC_PROXY_URL) {
             debug('Skipping znca API consent; znc proxy URL set');
-            await app.store.storage.setItem('ZncaApiConsent', true);
-            return;
-        }
-
-        const ids: string[] | undefined = await app.store.storage.getItem('NintendoAccountIds');
-
-        for (const id of ids ?? []) {
-            const nsotoken: string | undefined = await app.store.storage.getItem('NintendoAccountToken.' + id);
-            if (!nsotoken) continue;
-
-            debug('Skipping znca API consent; Nintendo Switch Online account already linked');
-            await app.store.storage.setItem('ZncaApiConsent', true);
+            await app.store.storage.setItem('ZncaApiConsent', ZNCA_API_USE_VERSION);
             return;
         }
     }
 
     if (await askZncaApiUseAllowed(app, window)) {
-        await app.store.storage.setItem('ZncaApiConsent', true);
+        await app.store.storage.setItem('ZncaApiConsent', ZNCA_API_USE_VERSION);
     } else {
         throw new Error('Cannot continue without third-party APIs allowed');
     }

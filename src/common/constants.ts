@@ -21,14 +21,18 @@ export const CREDITS_NOTICE = `
 This product uses services provided by Nintendo (https://nintendo.co.jp), Samuel Elliott (https://gitlab.fancy.org.uk/samuel/nxapi-znca-api) and Jone Wang (https://imink.app).
 `.trim();
 
-export const ZNCA_API_USE_TEXT = `
-To access the Nintendo Switch Online app API, nxapi must send some data to third-party APIs. This is required to generate some data to make Nintendo think you\'re using the real Nintendo Switch Online app.
+export const ZNCA_API_USE_VERSION = 2;
 
-By default, this uses nxapi-znca-api.fancy.org.uk or api.imink.app, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
+export const ZNCA_API_USE_TEXT = `
+To access the Nintendo Switch App API, nxapi must send some data to third-party APIs. This is required to make Nintendo\'s API think you\'re using the real Nintendo Switch App.
+
+This uses nxapi-znca-api.fancy.org.uk, but another service can be used by setting an environment variable. The default API may change without notice if you do not force use of a specific service.
 
 The data sent includes:
 
 - Your Nintendo Account ID
-- When authenticating to the Nintendo Switch Online app: a Nintendo Account ID token, containing your Nintendo Account country, which is valid for 15 minutes
-- When authenticating to game-specific services: your Coral (Nintendo Switch Online app) user ID and a Coral ID token, containing your Nintendo Switch Online membership status, and Nintendo Account child restriction status, which is valid for 2 hours
+- When authenticating to the Nintendo Switch App API: a Nintendo Account ID token, containing your Nintendo Account country
+- When authenticating to game-specific services, your Coral (Nintendo Switch Online app) user ID and a Coral token, containing your Nintendo Switch Online membership status, and Nintendo Account child restriction status
+
+Since June 2025 (v3.0.1), all data sent to/from the Nintendo Switch App API must also be sent for encryption.
 `.trim();

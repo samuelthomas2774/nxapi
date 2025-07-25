@@ -107,15 +107,6 @@ export const na_auth = {
     znca_api_use: {
         title: 'Verwendung einer Drittanbieter-API',
 
-        text: `Um Zugriff auf die API der Nintendo Switch Online App zu erhalten, muss nxapi einige Daten an Drittanbieter-APIs senden. Dieser Schritt wird benötigt, um Daten zu generieren, damit Nintendo denkt, dass du die echte Nintendo Switch Online App verwendest.
-Standardmäßig wird nxapi-znca-api.fancy.org.uk oder api.imink.app benutzt. Ein anderer Service kann ebenfalls benutzt werden, indem eine Umgebungsvariable gesetzt wird. Die standardmäßige API könnte sich jederzeit ohne Hinweis ändern, wenn du keinen spezifischen Service erzwingst.
-
-Die gesendeten Daten beinhalten:
-
-- Deine Nintendo Account ID
-- Bei Authorisierung mit der Nintendo Switch Online App: Ein Nintendo Account ID Token, welcher dein Land beinhaltet und für 15 Minuten gültig ist
-- Bei Authorisierung mit Spielspezifischen Services: Deine Coral (Nintendo Switch Online App) User ID und ein Coral ID Token, welcher deine aktuelle Nintendo Switch Online Mitgliedschaft und Altersbeschränkungsstatus beinhaltet und für 2 Stunden gültig ist`,
-
         ok: 'OK',
         cancel: 'Abbrechen',
         more_information: 'Weitere Informationen',

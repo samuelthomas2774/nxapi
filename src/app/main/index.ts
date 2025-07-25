@@ -12,7 +12,7 @@ import { createModalWindow, createWindow } from './windows.js';
 import { sendToAllWindows, setupIpc } from './ipc.js';
 import { askUserForUri, buildElectronProxyAgent, showErrorDialog } from './util.js';
 import { setAppInstance, updateMenuLanguage } from './app-menu.js';
-import { handleAuthUri } from './na-auth.js';
+import { checkZncaApiUseAllowed, handleAuthUri } from './na-auth.js';
 import { DiscordPresenceConfiguration, LoginItem, LoginItemOptions, WindowType } from '../common/types.js';
 import { init as initGlobals } from '../../common/globals.js';
 import { CREDITS_NOTICE, GITLAB_URL, LICENCE_NOTICE } from '../../common/constants.js';
@@ -413,6 +413,32 @@ export class Store extends EventEmitter {
 
         // ratelimit = false, as most users.get calls are triggered by user interaction (or at startup)
         this.users = Users.coral(this, process.env.ZNC_PROXY_URL, false);
+
+        this.setAskZncaApiConsent();
+    }
+
+    private _znca_api_use_consent_promise: Promise<void> | null = null;
+
+    private setAskZncaApiConsent() {
+        // @ts-expect-error
+        const get_user = this.users._get;
+
+        // @ts-expect-error
+        this.users._get = async token => {
+            if (!this._znca_api_use_consent_promise) {
+                this._znca_api_use_consent_promise = checkZncaApiUseAllowed(this.app)
+                    // Don't clear _znca_api_use_consent_promise on completion as if successful this
+                    // doesn't need to be called again anyway
+                    .catch(err => {
+                        this._znca_api_use_consent_promise = null;
+                        throw err;
+                    });
+            }
+
+            await this._znca_api_use_consent_promise;
+
+            return get_user.call(null, token);
+        };
     }
 
     async getLoginItem(): Promise<LoginItem> {
