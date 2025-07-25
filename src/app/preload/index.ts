@@ -7,9 +7,9 @@ import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
 import type { StatusUpdate } from '../../common/status.js';
-import type { Announcements, Announcements_4, CoralSuccessResponse, CurrentUser, Friend, Friend_4, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, ReceivedFriendRequests, SentFriendRequests, WebService, WebServices, WebServices_4 } from '../../api/coral-types.js';
+import type { Announcements_4, CoralSuccessResponse, CurrentUser, Friend, Friend_4, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, ReceivedFriendRequests, SentFriendRequests, WebService, WebServices_4 } from '../../api/coral-types.js';
 import type { DiscordPresence } from '../../discord/types.js';
-import type { NintendoAccountUser } from '../../api/na.js';
+import type { CachedErrorKey } from '../main/ipc.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
@@ -72,6 +72,8 @@ const ipc = {
     getNsoUserByFriendCode: (token: string, friendcode: string, hash?: string) => inv<FriendCodeUser>('coral:friendcode', token, friendcode, hash),
     addNsoFriend: (token: string, nsa_id: string) => inv<{result: CoralSuccessResponse<{}>; friend: Friend | null}>('coral:addfriend', token, nsa_id),
 
+    showCoralErrors: (token: string, keys: CachedErrorKey | CachedErrorKey[]) => inv('coral:showlasterrors', token, keys),
+
     getDiscordPresenceConfig: () => inv<DiscordPresenceConfiguration | null>('discord:config'),
     setDiscordPresenceConfig: (config: DiscordPresenceConfiguration | null) => inv<void>('discord:setconfig', config),
     getDiscordPresenceOptions: () => inv<Omit<DiscordPresenceConfiguration, 'source'> | null>('discord:options'),
@@ -100,7 +102,7 @@ const ipc = {
     showUserMenu: (user: NintendoAccountUserCoral | NintendoAccountUserMoon, nso?: CurrentUser, moon?: boolean) => inv('menu:user', user, nso, moon),
     showAddUserMenu: () => inv('menu:add-user'),
     showFriendCodeMenu: (fc: CurrentUser['links']['friendCode']) => inv('menu:friend-code', fc),
-    showFriendMenu: (user: NintendoAccountUserCoral, nso: CurrentUser, friend: Friend) => inv('menu:friend', user, nso, friend),
+    showFriendMenu: (user: NintendoAccountUserCoral, nso: CurrentUser, friend: Friend_4) => inv('menu:friend', user, nso, friend),
 
     registerEventListener: (event: string, listener: (args: any[]) => void) => events.on(event, listener),
     removeEventListener: (event: string, listener: (args: any[]) => void) => events.removeListener(event, listener),

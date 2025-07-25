@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { useAccentColour, useColourScheme } from '../util.js';
 import { useTranslation } from 'react-i18next';
 import { BORDER_COLOUR_LIGHT, BORDER_COLOUR_SECONDARY_DARK, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
+import type { CachedErrorKey } from '../../main/ipc.js';
 import ipc from '../ipc.js';
 import Warning from '../components/icons/warning.js';
 
@@ -10,6 +11,7 @@ export default function Section(props: React.PropsWithChildren<{
     title: string;
     loading?: boolean;
     error?: Error;
+    errorKey?: [string, CachedErrorKey];
     headerButtons?: React.ReactNode;
 }>) {
     const theme = useColourScheme() === 'light' ? light : dark;
@@ -17,7 +19,7 @@ export default function Section(props: React.PropsWithChildren<{
     const { t, i18n } = useTranslation('main_window', { keyPrefix: 'main_section' });
 
     const showErrorDetails = useCallback(() => {
-        alert(props.error);
+        props.errorKey ? ipc.showCoralErrors(...props.errorKey) : alert(props.error);
     }, [props.error]);
 
     return <View style={[styles.container, theme.container]}>

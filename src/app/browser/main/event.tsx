@@ -9,7 +9,7 @@ import Section from './section.js';
 import { Button } from '../components/index.js';
 
 export default function Event(props: {
-    user: User;
+    user: User<true>;
     event: ActiveEvent;
     loading?: boolean;
     error?: Error;
@@ -21,7 +21,9 @@ export default function Event(props: {
     const event_members = props.event.members.filter(m => m.isPlaying).length;
     const voip_members = props.event.members.filter(m => m.isJoinedVoip).length;
 
-    return <Section title={t('title')} loading={props.loading} error={props.error}>
+    return <Section title={t('title')} loading={props.loading} error={props.error}
+        errorKey={[props.user.nsotoken, 'activeevent']}
+    >
         <View style={styles.content}>
             <Image source={{uri: props.event.imageUri, width: 100, height: 100}} style={styles.image} />
 

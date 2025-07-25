@@ -10,7 +10,7 @@ import AddOutline from '../components/icons/add-outline.js';
 import { FriendCode } from '../components/index.js';
 
 export default function Friends(props: {
-    user: User;
+    user: User<true>;
     friends: Friend_4[];
     loading?: boolean;
     error?: Error;
@@ -27,7 +27,10 @@ export default function Friends(props: {
         <Text style={[styles.icon, {color: '#' + accent_colour}]}><AddOutline title={t('add')!} /></Text>
     </TouchableOpacity>;
 
-    return <Section title={t('title')} loading={props.loading} error={props.error} headerButtons={header_buttons}>
+    return <Section title={t('title')} loading={props.loading} error={props.error}
+        errorKey={[props.user.nsotoken, 'friends']}
+        headerButtons={header_buttons}
+    >
         {props.friends.length ? <ScrollView horizontal>
             <View style={styles.content}>
                 {props.friends.map(f => <Friend key={f.nsaId} friend={f} user={props.user} />)}

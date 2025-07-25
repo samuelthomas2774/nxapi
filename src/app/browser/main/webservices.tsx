@@ -8,7 +8,7 @@ import { TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section from './section.js';
 
 export default function WebServices(props: {
-    user: User;
+    user: User<true>;
     webservices: WebService[];
     loading?: boolean;
     error?: Error;
@@ -17,7 +17,9 @@ export default function WebServices(props: {
 
     if (!props.webservices.length) return null;
 
-    return <Section title={t('title')} loading={props.loading} error={props.error}>
+    return <Section title={t('title')} loading={props.loading} error={props.error}
+        errorKey={[props.user.nsotoken, 'webservices']}
+    >
         <ScrollView horizontal>
             <View style={styles.content}>
                 {props.webservices.map(g => <WebService key={g.id} webservice={g} token={props.user.nsotoken} />)}

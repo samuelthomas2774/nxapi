@@ -1,5 +1,8 @@
 import { BrowserWindow, clipboard, IpcMain, IpcMainInvokeEvent, KeyboardEvent, Menu, MenuItem, ShareMenu, SharingItem, shell, systemPreferences } from 'electron';
 import { User } from 'discord-rpc';
+import createDebug from '../../util/debug.js';
+import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../../util/errors.js';
+import { Jwt } from '../../util/jwt.js';
 import openWebService, { handleOpenWebServiceError, QrCodeReaderOptions, WebServiceIpc, WebServiceValidationError } from './webservices.js';
 import { createModalWindow, getWindowConfiguration, setWindowHeight } from './windows.js';
 import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
@@ -7,18 +10,41 @@ import { App } from './index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItemOptions, WindowType } from '../common/types.js';
 import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
-import { NintendoAccountUser } from '../../api/na.js';
-import createDebug from '../../util/debug.js';
+import { NintendoAccountSessionTokenJwtPayload, NintendoAccountUser } from '../../api/na.js';
 import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
 import { defaultTitle } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
+import { CoralUser } from '../../common/users.js';
 import { MembershipRequiredError } from '../../common/auth/util.js';
-import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../../util/errors.js';
+import { showErrorDialog } from './util.js';
 
 const debug = createDebug('app:main:ipc');
+
+export type CachedErrorKey = 'user' | 'announcements' | 'friends' | 'webservices' | 'activeevent' | 'friendcodeurl' | 'friendrequests-received' | 'friendrequests-sent';
+const cached_errors = new Map<string, Map<CachedErrorKey, Error>>();
+
+function createErrorHandler(user: CoralUser<any>, key: CachedErrorKey): (err: Error) => void
+function createErrorHandler(na_session_token: string, key: CachedErrorKey): (err: Error) => void
+function createErrorHandler(user: CoralUser<any> | string, key: CachedErrorKey) {
+    if (typeof user === 'string') {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(user);
+        user = jwt.payload.sub;
+    } else {
+        user = user.data.user.id;
+    }
+
+    return (err: Error) => {
+        let errors = cached_errors.get(user);
+        if (!errors) cached_errors.set(user, errors = new Map());
+
+        errors.set(key, err);
+
+        throw err;
+    };
+}
 
 export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     const store = appinstance.store;
@@ -81,19 +107,51 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     handle('coral:gettoken', (e, id: string) => storage.getItem('NintendoAccountToken.' + id));
     handle('coral:getcachedtoken', (e, token: string) => storage.getItem('NsoToken.' + token));
     handle('coral:announcements', (e, token: string) => store.users.get(token).then(u => u.announcements.result));
-    handle('coral:friends', (e, token: string) => store.users.get(token).then(u => u.getFriends()));
-    handle('coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices()));
+    handle('coral:friends', (e, token: string) => store.users.get(token).then(u => u.getFriends())
+        .catch(createErrorHandler(token, 'friends')));
+    handle('coral:webservices', (e, token: string) => store.users.get(token).then(u => u.getWebServices())
+        .catch(createErrorHandler(token, 'webservices')));
     handle('coral:openwebservice', (e, webservice: WebService, token: string, qs?: string) =>
         store.users.get(token).then(u => openWebService(store, token, u.nso, u.data, webservice, qs)
             .catch(err => err instanceof WebServiceValidationError || err instanceof MembershipRequiredError ?
                 handleOpenWebServiceError(err, webservice, qs, u.data, BrowserWindow.fromWebContents(e.sender)!) :
                 null)));
-    handle('coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
-    handle('coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()));
-    handle('coral:friendrequests:received', (e, token: string) => store.users.get(token).then(u => u.nso.getReceivedFriendRequests()));
-    handle('coral:friendrequests:sent', (e, token: string) => store.users.get(token).then(u => u.nso.getSentFriendRequests()));
+    handle('coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()
+        .then(e => e ?? {}))
+        .catch(createErrorHandler(token, 'activeevent')));
+    handle('coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl())
+        .catch(createErrorHandler(token, 'friendcodeurl')));
+    handle('coral:friendrequests:received', (e, token: string) => store.users.get(token).then(u => u.getReceivedFriendRequests())
+        .catch(createErrorHandler(token, 'friendrequests-received')));
+    handle('coral:friendrequests:sent', (e, token: string) => store.users.get(token).then(u => u.getSentFriendRequests())
+        .catch(createErrorHandler(token, 'friendrequests-sent')));
     handle('coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)));
     handle('coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
+
+    handle('coral:showlasterrors', async (e, token: string, keys: CachedErrorKey | CachedErrorKey[]) => {
+        const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
+        const user = jwt.payload.sub;
+        const errors = cached_errors.get(user);
+        if (!errors?.size) return;
+
+        if (typeof keys === 'string') keys = [keys];
+
+        const show = new Set<Error>();
+
+        for (const key of keys) {
+            if (!errors.has(key)) continue;
+            show.add(errors.get(key)!);
+        }
+
+        for (const error of show) {
+            showErrorDialog({
+                message: 'Error loading data',
+                error,
+                app: appinstance,
+                window: BrowserWindow.fromWebContents(e.sender) ?? undefined,
+            });
+        }
+    });
 
     handle('window:showpreferences', () => appinstance.showPreferencesWindow().id);
     handle('window:showfriend', (e, props: FriendProps) =>

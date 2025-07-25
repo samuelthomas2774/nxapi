@@ -250,9 +250,12 @@ export interface User<IsCoral extends boolean = boolean> {
         NintendoAccountUserCoral | NintendoAccountUserMoon;
     nso:
         IsCoral extends true ? SavedToken :
-        IsCoral extends true ? null :
+        IsCoral extends false ? null :
         SavedToken | null;
-    nsotoken: string | undefined;
+    nsotoken:
+        IsCoral extends true ? string :
+        IsCoral extends false ? null :
+        string | null;
     moon: SavedMoonToken | null;
     moontoken: string | undefined;
 }
@@ -263,7 +266,7 @@ export async function getAccounts() {
     const accounts: User[] = [];
 
     for (const id of ids ?? []) {
-        const nsotoken = await ipc.getNintendoAccountCoralToken(id);
+        const nsotoken = await ipc.getNintendoAccountCoralToken(id) ?? null;
         const moontoken = await ipc.getNintendoAccountMoonToken(id);
 
         const nso = nsotoken ? await ipc.getSavedCoralToken(nsotoken) ?? null : null;

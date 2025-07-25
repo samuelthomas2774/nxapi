@@ -56,9 +56,7 @@ export default function Main(props: {
     useEventListener(events, 'window:refresh', refresh, []);
 
     const showErrorDetails = useCallback(() => {
-        if (friends_error) alert(friends_error.stack ?? friends_error.message);
-        if (webservices_error) alert(webservices_error.stack ?? webservices_error.message);
-        if (active_event_error) alert(active_event_error.stack ?? active_event_error.message);
+        ipc.showCoralErrors(props.user.nsotoken!, ['friends', 'webservices', 'activeevent']);
     }, [friends_error, webservices_error, active_event_error]);
 
     if (!friends || !webservices || !active_event) {
