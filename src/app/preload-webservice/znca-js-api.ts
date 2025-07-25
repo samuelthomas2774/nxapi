@@ -152,6 +152,21 @@ interface WebServiceJsApi {
      * Opens a URL in the default browser.
      */
     openExternalBrowser(url: string): void;
+
+    /**
+     * Plays a preset vibration pattern.
+     *
+     * Used by ZELDA NOTES.
+     */
+    func_2644(data: string): void;
+
+    /**
+     * Requests a web service token from the Coral API.
+     * `window.znca._private.func_1d5e` is called with the returned token.
+     *
+     * Used by ZELDA NOTES.
+     */
+    func_272e(): void;
 }
 
 //
@@ -190,6 +205,17 @@ function requestGameWebToken() {
 
     ipc.requestGameWebToken().then(token => {
         window.onGameWebTokenReceive?.call(null, token);
+    }).catch(async err => {
+        debug('Error requesting web service token', err);
+    });
+}
+
+function func_272e() {
+    debug('func_272e called');
+
+    ipc.requestGameWebToken().then(token => {
+        // @ts-expect-error
+        window.znca?._private?.func_1d5e?.call(null, token);
     }).catch(async err => {
         debug('Error requesting web service token', err);
     });
@@ -359,6 +385,21 @@ function openExternalBrowser(url: string) {
     window.open(url);
 }
 
+export interface VibrateOptions {
+    pattern: VibratePattern;
+}
+export enum VibratePattern {
+    TAP = '0',
+    SUCCESS = '1',
+    ERROR = '2',
+}
+
+function func_2644(/** JSON.stringify(data: VibrateOptions) */ data: string) {
+    const options: VibrateOptions = JSON.parse(data);
+
+    debug('func_2644 called', options);
+}
+
 const api: WebServiceJsApi = {
     invokeNativeShare,
     invokeNativeShareUrl,
@@ -378,6 +419,8 @@ const api: WebServiceJsApi = {
     reloadExtension,
     clearUnreadFlag,
     openExternalBrowser,
+    func_2644,
+    func_272e,
 };
 
 window.jsBridge = api;
