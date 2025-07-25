@@ -3,7 +3,7 @@ import { Image, ImageStyle, Platform, ScrollView, StyleSheet, Text, TouchableOpa
 import { Trans, useTranslation } from 'react-i18next';
 import ipc from '../ipc.js';
 import { useAccentColour, useColourScheme, User, useTimeSince } from '../util.js';
-import { Friend, Presence, PresenceState } from '../../../api/coral-types.js';
+import { Friend_4, Presence, PresenceState } from '../../../api/coral-types.js';
 import { TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
 import Section, { HEADER_SIZE } from './section.js';
 import AddOutline from '../components/icons/add-outline.js';
@@ -11,7 +11,7 @@ import { FriendCode } from '../components/index.js';
 
 export default function Friends(props: {
     user: User;
-    friends: Friend[];
+    friends: Friend_4[];
     loading?: boolean;
     error?: Error;
 }) {
@@ -52,7 +52,7 @@ export default function Friends(props: {
 }
 
 function Friend(props: {
-    friend: Friend;
+    friend: Friend_4;
     user?: User<true>;
 }) {
     const theme = useColourScheme() === 'light' ? light : dark;

@@ -90,6 +90,8 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
                 null)));
     handle('coral:activeevent', (e, token: string) => store.users.get(token).then(u => u.getActiveEvent()));
     handle('coral:friendcodeurl', (e, token: string) => store.users.get(token).then(u => u.nso.getFriendCodeUrl()));
+    handle('coral:friendrequests:received', (e, token: string) => store.users.get(token).then(u => u.nso.getReceivedFriendRequests()));
+    handle('coral:friendrequests:sent', (e, token: string) => store.users.get(token).then(u => u.nso.getSentFriendRequests()));
     handle('coral:friendcode', (e, token: string, friendcode: string, hash?: string) => store.users.get(token).then(u => u.nso.getUserByFriendCode(friendcode, hash)));
     handle('coral:addfriend', (e, token: string, nsaid: string) => store.users.get(token).then(u => u.addFriend(nsaid)));
 

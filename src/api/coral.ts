@@ -61,6 +61,8 @@ export interface CoralApiInterface {
     getUser(id: number): Promise<Result<User>>;
     getUserByFriendCode(friend_code: string, hash?: string): Promise<Result<FriendCodeUser>>;
     getCurrentUser(): Promise<Result<CurrentUser>>;
+    getReceivedFriendRequests(): Promise<Result<ReceivedFriendRequests>>;
+    getSentFriendRequests(): Promise<Result<SentFriendRequests>>;
     getFriendCodeUrl(): Promise<Result<FriendCodeUrl>>;
     getCurrentUserPermissions(): Promise<Result<CurrentUserPermissions>>;
     getWebServiceToken(id: number): Promise<Result<WebServiceToken>>;

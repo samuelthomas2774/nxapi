@@ -4,7 +4,7 @@ import { Response } from 'undici';
 import createDebug from '../util/debug.js';
 import CoralApi, { CoralApiInterface, NintendoAccountUserCoral, Result } from '../api/coral.js';
 import ZncProxyApi from '../api/znc-proxy.js';
-import { Friend, GetActiveEventResult, CoralSuccessResponse, WebService, CoralError, Announcements_4, Friends_4, WebServices_4, ListMedia, ListChat, WebService_4, CurrentUser } from '../api/coral-types.js';
+import { Friend, GetActiveEventResult, CoralSuccessResponse, WebService, CoralError, Announcements_4, Friends_4, WebServices_4, ListMedia, ListChat, WebService_4, CurrentUser, ReceivedFriendRequests, SentFriendRequests } from '../api/coral-types.js';
 import { getToken, SavedToken } from './auth/coral.js';
 import type { Store } from '../app/main/index.js';
 
@@ -119,6 +119,9 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
     promise = new Map<string, Promise<void>>();
     delay_retry_after_error_until: number | null = null;
 
+    fr_received: CoralSuccessResponse<ReceivedFriendRequests> | null = null;
+    fr_sent: CoralSuccessResponse<SentFriendRequests> | null = null;
+
     updated = {
         announcements: Date.now(),
         friends: Date.now(),
@@ -127,6 +130,9 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
         media: Date.now(),
         active_event: Date.now(),
         user: Date.now(),
+
+        fr_received: null as number | null,
+        fr_sent: null as number | null,
     };
 
     delay_retry_after_error = 5 * 1000; // 5 seconds
@@ -147,7 +153,7 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
     ) {}
 
     private async update(key: keyof CoralUser['updated'], callback: () => Promise<void>, ttl: number) {
-        if ((this.updated[key] + ttl) < Date.now()) {
+        if (!this.updated[key] || (this.updated[key] + ttl) < Date.now()) {
             const promise = this.promise.get(key) ?? Promise.resolve().then(() => {
                 const delay_retry = (this.delay_retry_after_error_until ?? 0) - Date.now();
 
@@ -262,6 +268,28 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
         }, this.update_interval);
 
         return this.user.result;
+    }
+
+    async getReceivedFriendRequests() {
+        await this.update('fr_received', async () => {
+            // Always requested together when refreshing add friend page
+            this.getSentFriendRequests();
+
+            this.fr_received = await this.nso.getReceivedFriendRequests();
+        }, this.update_interval);
+
+        return this.fr_received!.result.friendRequests;
+    }
+
+    async getSentFriendRequests() {
+        await this.update('fr_sent', async () => {
+            // Always requested together when refreshing add friend page
+            this.getReceivedFriendRequests();
+
+            this.fr_sent = await this.nso.getSentFriendRequests();
+        }, this.update_interval);
+
+        return this.fr_sent!.result.friendRequests;
     }
 
     async addFriend(nsa_id: string) {

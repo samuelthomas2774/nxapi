@@ -36,6 +36,11 @@ export default function AddFriendWindow(props: AddFriendProps) {
     const [user] = useAsync(useCallback(() => token ?
         ipc.getSavedCoralToken(token) : Promise.resolve(null), [ipc, token]));
 
+    const [fr_received, fr_received_error, fr_received_state] = useAsync(useCallback(() => token ?
+        ipc.getNsoReceivedFriendRequests(token) : Promise.resolve(null), [ipc, token]));
+    const [fr_sent, fr_sent_error, fr_sent_state] = useAsync(useCallback(() => token ?
+        ipc.getNsoSentFriendRequests(token) : Promise.resolve(null), [ipc, token]));
+
     const [friendcode, setFriendCode] = useState(props.friendcode ?? '');
     const is_valid_friendcode = FRIEND_CODE.test(friendcode);
     const show_friendcode_field = !props.friendcode || !FRIEND_CODE.test(props.friendcode);

@@ -7,7 +7,7 @@ import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
 import type { StatusUpdate } from '../../common/status.js';
-import type { Announcements, CoralSuccessResponse, CurrentUser, Friend, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, WebService, WebServices } from '../../api/coral-types.js';
+import type { Announcements, Announcements_4, CoralSuccessResponse, CurrentUser, Friend, Friend_4, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, ReceivedFriendRequests, SentFriendRequests, WebService, WebServices, WebServices_4 } from '../../api/coral-types.js';
 import type { DiscordPresence } from '../../discord/types.js';
 import type { NintendoAccountUser } from '../../api/na.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
@@ -61,12 +61,14 @@ const ipc = {
 
     getNintendoAccountCoralToken: (id: string) => inv<string | undefined>('coral:gettoken', id),
     getSavedCoralToken: (token: string) => inv<SavedToken | undefined>('coral:getcachedtoken', token),
-    getCoralAnnouncements: (token: string) => inv<Announcements>('coral:announcements', token),
-    getNsoFriends: (token: string) => inv<Friend[]>('coral:friends', token),
-    getWebServices: (token: string) => inv<WebServices | undefined>('coral:webservices', token),
+    getCoralAnnouncements: (token: string) => inv<Announcements_4>('coral:announcements', token),
+    getNsoFriends: (token: string) => inv<Friend_4[]>('coral:friends', token),
+    getWebServices: (token: string) => inv<WebServices_4 | undefined>('coral:webservices', token),
     openWebService: (webservice: WebService, token: string, qs?: string) => inv<number>('coral:openwebservice', webservice, token, qs),
     getCoralActiveEvent: (token: string) => inv<GetActiveEventResult>('coral:activeevent', token),
     getNsoFriendCodeUrl: (token: string) => inv<FriendCodeUrl>('coral:friendcodeurl', token),
+    getNsoReceivedFriendRequests: (token: string) => inv<ReceivedFriendRequests>('coral:friendrequests:received', token),
+    getNsoSentFriendRequests: (token: string) => inv<SentFriendRequests>('coral:friendrequests:sent', token),
     getNsoUserByFriendCode: (token: string, friendcode: string, hash?: string) => inv<FriendCodeUser>('coral:friendcode', token, friendcode, hash),
     addNsoFriend: (token: string, nsa_id: string) => inv<{result: CoralSuccessResponse<{}>; friend: Friend | null}>('coral:addfriend', token, nsa_id),
 
