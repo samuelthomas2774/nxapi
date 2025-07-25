@@ -7,6 +7,7 @@ import { DiscordPresencePlayTime } from '../../discord/types.js';
 import { handleEnableSplatNet2Monitoring, TerminalNotificationManager } from './notify.js';
 import { ZncDiscordPresence, ZncProxyDiscordPresence } from '../../common/presence.js';
 import SplatNet3Monitor, { getConfigFromArgv as getSplatNet3MonitorConfigFromArgv } from '../../discord/monitor/splatoon3.js';
+import Users from '../../common/users.js';
 
 const debug = createDebug('cli:nso:presence');
 const debugProxy = createDebug('cli:nso:presence:proxy');
@@ -199,9 +200,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    const i = new ZncDiscordPresence(storage, token, nso, data);
+    const users = Users.coral(storage, argv.zncProxyUrl);
+    const user = await users.get(token);
+
+    const data = user.data;
+
+    const i = new ZncDiscordPresence(user, storage);
 
     i.notifications = await TerminalNotificationManager.create();
     i.user_notifications = argv.userNotifications;

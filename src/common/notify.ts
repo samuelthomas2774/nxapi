@@ -1,7 +1,6 @@
 import persist from 'node-persist';
 import { CoralApiInterface } from '../api/coral.js';
-import { ActiveEvent, CurrentUser, Friend, Presence, PresenceState, CoralError, GetActiveEventResult, FriendRouteChannel, PresenceGame, Announcements_4, Friend_4, WebServices_4, PresenceOnline_4, PresenceOffline } from '../api/coral-types.js';
-import ZncProxyApi from '../api/znc-proxy.js';
+import { CurrentUser, Friend, Presence, PresenceState, CoralError, PresenceGame } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
 import { SavedToken } from './auth/coral.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
@@ -24,123 +23,28 @@ export class ZncNotifications extends Loop {
     update_interval = 30;
 
     constructor(
-        public storage: persist.LocalStorage,
-        public token: string,
-        public nso: CoralApiInterface,
-        public data: Omit<SavedToken, 'expires_at'>,
-        public user?: CoralUser<CoralApiInterface>,
+        public user: CoralUser<CoralApiInterface>,
     ) {
         super();
     }
 
-    async fetch(req: (
-        'announcements' | 'friends' | {friend: string; presence?: boolean} | 'webservices' |
-        'event' | 'chats' | 'media' | 'user' | null
-    )[]) {
-        const result: Partial<{
-            announcements: Announcements_4;
-            friends: Friend_4[];
-            webservices: WebServices_4;
-            activeevent: ActiveEvent;
-            user: CurrentUser;
-        }> = {};
-
-        const friends = req.filter(r => typeof r === 'object' && r && 'friend' in r) as
-            {friend: string; presence?: boolean}[];
-
-        if (!(this.nso instanceof ZncProxyApi)) {
-            if (req.includes('announcements')) req.push('webservices');
-            if (req.includes('webservices')) req.push('announcements');
-            if (req.includes('event')) req.push('friends', 'webservices', 'chats', 'media', 'announcements', 'user');
-            if (req.includes('user')) req.push('friends', 'webservices', 'chats', 'media', 'announcements', 'event');
-            if (req.includes('chats')) req.push('friends', 'webservices', 'media', 'announcements', 'event', 'user');
-        }
-
-        if (req.includes('announcements')) {
-            result.announcements = this.user ?
-                await this.user?.getAnnouncements() :
-                await this.nso.getAnnouncements();
-        }
-        if (req.includes('friends') || (friends && !(this.nso instanceof ZncProxyApi))) {
-            result.friends = this.user ?
-                await this.user.getFriends() :
-                (await this.nso.getFriendList()).friends;
-        } else if (friends && this.nso instanceof ZncProxyApi) {
-            result.friends = await Promise.all(friends.map(async r => {
-                const nso = this.nso as unknown as ZncProxyApi;
-
-                if (r.presence) {
-                    const friend: Friend_4 = {
-                        id: 0,
-                        nsaId: r.friend,
-                        imageUri: '',
-                        image2Uri: '',
-                        name: '',
-                        isFriend: true,
-                        isFavoriteFriend: false,
-                        isServiceUser: false,
-                        isNew: false,
-                        friendCreatedAt: 0,
-                        route: {
-                            appName: '',
-                            userName: '',
-                            shopUri: '',
-                            imageUri: '',
-                            channel: FriendRouteChannel.FRIEND_CODE,
-                        },
-                        isOnlineNotificationEnabled: false,
-                        presence: await nso.fetchProxyApi<PresenceOnline_4 | PresenceOffline>('/friend/' + r.friend + '/presence'),
-                    };
-
-                    return friend;
-                }
-
-                return (await nso.fetchProxyApi<{friend: Friend_4}>('/friend/' + r.friend)).friend;
-            }));
-        }
-        if (req.includes('webservices')) {
-            result.webservices = this.user ?
-                await this.user.getWebServices() :
-                await this.nso.getWebServices();
-        }
-        if (req.includes('event')) {
-            const activeevent: GetActiveEventResult = this.user ?
-                await this.user.getActiveEvent() :
-                await this.nso.getActiveEvent();
-            result.activeevent = 'id' in activeevent ? activeevent as ActiveEvent : undefined;
-        }
-        if (req.includes('user')) {
-            result.user = await this.nso.getCurrentUser();
-        }
-
-        return result;
-    }
-
     async init() {
-        const {friends, user} = await this.fetch([
-            'announcements',
-            this.user_notifications ? 'user' : null,
-            this.friend_notifications ? 'friends' : null,
-            this.splatnet2_monitors.size ? 'user' : null,
-        ]);
-
-        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
-        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
+        await this.update();
 
         return LoopResult.OK;
     }
 
     async updateFriendsStatusForNotifications(
         friends: (CurrentUser | Friend)[],
-        naid = this.data.user.id,
+        naid = this.user.data.user.id,
         initialRun?: boolean
     ) {
         this.notifications.updateFriendsStatusForNotifications(friends, naid, initialRun);
     }
 
     async updatePresenceForNotifications(
-        user: CurrentUser | undefined, friends: Friend[] | undefined,
-        naid = this.data.user.id, initialRun?: boolean
+        user: CurrentUser | null, friends: Friend[] | null,
+        naid = this.user.data.user.id, initialRun?: boolean
     ) {
         await this.updateFriendsStatusForNotifications(([] as (CurrentUser | Friend)[])
             .concat(this.user_notifications && user ? [user] : [])
@@ -182,13 +86,12 @@ export class ZncNotifications extends Loop {
     }
 
     async update() {
-        const {friends, user} = await this.fetch([
-            this.user_notifications ? 'user' : null,
-            this.friend_notifications ? 'friends' : null,
-            this.splatnet2_monitors.size ? 'user' : null,
+        const [user, friends] = await Promise.all([
+            this.user_notifications || this.splatnet2_monitors.size ? this.user.getCurrentUser() : null,
+            this.friend_notifications ? this.user.getFriends() : null,
         ]);
 
-        await this.updatePresenceForNotifications(user, friends, this.data.user.id, false);
+        await this.updatePresenceForNotifications(user, friends, this.user.data.user.id, false);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 

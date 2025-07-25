@@ -24,6 +24,7 @@ declare global {
     namespace Express {
         interface Request {
             coralUser?: CoralUser;
+            coralNaSessionToken?: string;
             coral?: CoralApi;
             coralAuthData?: SavedToken;
 
@@ -169,6 +170,10 @@ class Server extends HttpServer {
             this.createProxyRequestHandler(r => this.handleWebServiceTokenRequest(r, r.req.params.id), true));
         app.get('/api/znc/activeevent', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleActiveEventRequest(r)));
+        app.get('/api/znc/chats', this.authTokenMiddleware, this.localAuthMiddleware,
+            this.createProxyRequestHandler(r => this.handleChatsRequest(r)));
+        app.get('/api/znc/media', this.authTokenMiddleware, this.localAuthMiddleware,
+            this.createProxyRequestHandler(r => this.handleMediaRequest(r)));
 
         app.get('/api/znc/event/:id',
             this.createProxyRequestHandler(r => this.handleEventRequest(r, r.req.params.id), true));
@@ -285,6 +290,8 @@ class Server extends HttpServer {
             na_session_token = auth.substr(3);
         }
 
+        req.coralNaSessionToken = na_session_token;
+
         let user_naid: string | null = null;
 
         const promise = this.coral_auth_promise.get(na_session_token) ?? (async () => {
@@ -326,7 +333,7 @@ class Server extends HttpServer {
 
     async handleAuthRequest({user}: RequestDataWithUser) {
         if (user.nso instanceof ZncProxyApi) {
-            return user.nso.fetchProxyApi('/auth');
+            return user.nso.fetchProxyApi('auth');
         } else {
             return user.data;
         }
@@ -397,7 +404,7 @@ class Server extends HttpServer {
 
     async handleApiCallRequest({req, policy}: RequestData) {
         if (policy && !policy.api) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const flags: Partial<RequestFlags> = {};
@@ -443,12 +450,12 @@ class Server extends HttpServer {
 
     //
     // Announcements
-    // This is cached for all users.
+    // This is cached permanently per-user, although other requests may cause this to be updated.
     //
 
     async handleAnnouncementsRequest({req, policy}: RequestData) {
         if (policy && !policy.announcements) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -461,22 +468,15 @@ class Server extends HttpServer {
     // Nintendo Switch user data
     //
 
-    private user_data_promise = new Map</** NA ID */ string, Promise<[number, CurrentUser]>>();
-    private cached_userdata = new Map</** NA ID */ string, [number, CurrentUser]>();
-
-    async getUserData(id: string, coral: CoralApiInterface) {
-        return this._cache(id, () => coral.getCurrentUser(),
-            this.user_data_promise, this.cached_userdata);
-    }
-
     async handleCurrentUserRequest({req, res, policy}: RequestData) {
         if (policy && !policy.current_user) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
 
-        const [updated, current_user] = await this.getUserData(user.data.user.id, user.nso);
+        const current_user = await user.getCurrentUser();
+        const updated = user.updated.user;
 
         res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
         return {user: current_user, updated};
@@ -484,12 +484,13 @@ class Server extends HttpServer {
 
     async handleUserPresenceRequest({req, policy}: RequestData) {
         if (policy && !policy.current_user_presence) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
 
-        const [updated, current_user] = await this.getUserData(user.data.user.id, user.nso);
+        const current_user = await user.getCurrentUser();
+        const updated = user.updated.user;
 
         return current_user.presence;
     }
@@ -500,7 +501,7 @@ class Server extends HttpServer {
 
     async handleFriendsRequest({req, res, policy}: RequestData) {
         if (policy && !policy.list_friends) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -522,7 +523,7 @@ class Server extends HttpServer {
 
     async handleFavouriteFriendsRequest({req, res, policy}: RequestData) {
         if (policy && !policy.list_friends) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -544,7 +545,7 @@ class Server extends HttpServer {
 
     async handleFriendsPresenceRequest({req, res, policy}: RequestData) {
         if (policy && !policy.list_friends_presence) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -568,7 +569,7 @@ class Server extends HttpServer {
 
     async handleFavouriteFriendsPresenceRequest({req, res, policy}: RequestData) {
         if (policy && !policy.list_friends_presence) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -594,10 +595,10 @@ class Server extends HttpServer {
 
     async handleFriendRequest({req, res, policy}: RequestData, nsaid: string) {
         if (policy && !policy.friend) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
         if (policy?.friends && !policy.friends.includes(nsaid)) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -644,10 +645,10 @@ class Server extends HttpServer {
 
     async handleFriendPresenceRequest({req, res, policy}: RequestData, nsaid: string) {
         if (policy && !policy.friend_presence) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
         if (!(policy?.friends_presence?.includes(nsaid) ?? policy?.friends?.includes(nsaid) ?? true)) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
@@ -666,16 +667,12 @@ class Server extends HttpServer {
 
     async handleWebServicesRequest({req, res, policy}: RequestData) {
         if (policy && !policy.webservices) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
 
-        const [friends, webservices, activeevent] = await Promise.all([
-            user.getFriends(),
-            user.getWebServices(),
-            user.getActiveEvent(),
-        ]);
+        const webservices = await user.getWebServices();
         const updated = user.updated.webservices;
 
         res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
@@ -690,20 +687,44 @@ class Server extends HttpServer {
 
     async handleActiveEventRequest({req, res, policy}: RequestData) {
         if (policy && !policy.activeevent) {
-            throw new ResponseError(403, 'token_unauthorised');
+            throw new ResponseError(403, 'insufficient_scope');
         }
 
         const user = await this.getCoralUser(req);
 
-        const [friends, webservices, activeevent] = await Promise.all([
-            user.getFriends(),
-            user.getWebServices(),
-            user.getActiveEvent(),
-        ]);
-        const updated = user.updated.webservices;
+        const activeevent = await user.getActiveEvent();
+        const updated = user.updated.active_event;
 
         res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
         return {activeevent, updated};
+    }
+
+    async handleChatsRequest({req, res, policy}: RequestData) {
+        if (policy && !policy.chats) {
+            throw new ResponseError(403, 'insufficient_scope');
+        }
+
+        const user = await this.getCoralUser(req);
+
+        const chats = await user.getChats();
+        const updated = user.updated.chats;
+
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
+        return {chats, updated};
+    }
+
+    async handleMediaRequest({req, res, policy}: RequestData) {
+        if (policy && !policy.media) {
+            throw new ResponseError(403, 'insufficient_scope');
+        }
+
+        const user = await this.getCoralUser(req);
+
+        const media = await user.getMedia();
+        const updated = user.updated.media;
+
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
+        return {media, updated};
     }
 
     async handleEventRequest({user}: RequestDataWithUser, id: string) {
@@ -799,8 +820,7 @@ class Server extends HttpServer {
     //
 
     async handlePresenceEventStreamRequest({req, res, user}: RequestDataWithUser) {
-        const na_session_token = req.headers['authorization']!.substr(3);
-        const i = new ZncNotifications(this.storage, na_session_token, user.nso, user.data, user);
+        const i = new ZncNotifications(user);
 
         i.user_notifications = false;
         i.friend_notifications = true;
@@ -815,7 +835,7 @@ class Server extends HttpServer {
             while (!res.destroyed) {
                 await i.loop();
 
-                this.resetAuthTimeout(na_session_token, () => user.data.user.id);
+                this.resetAuthTimeout(req.coralNaSessionToken!, () => user.data.user.id);
             }
         } catch (err) {
             stream.sendErrorEvent(err);

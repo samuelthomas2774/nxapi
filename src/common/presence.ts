@@ -1,19 +1,22 @@
 import { setTimeout } from 'node:timers';
 import { errors } from 'undici';
-import EventSource, { ErrorEvent, EventSourceErrorResponse } from '../util/eventsource.js';
-import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
-import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
-import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
-import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
-import { ActiveEvent, CurrentUser, Friend, Game, PresenceState, CoralError, PresenceOnline_4, PresenceOffline, PresenceOnline } from '../api/coral-types.js';
-import { getPresenceFromUrl } from '../api/znc-proxy.js';
+import { LocalStorage } from 'node-persist';
 import createDebug from '../util/debug.js';
-import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import Loop, { LoopResult } from '../util/loop.js';
 import { parseLinkHeader } from '../util/http.js';
 import { getUserAgent } from '../util/useragent.js';
 import { getTitleIdFromEcUrl, TemporaryErrorSymbol } from '../util/misc.js';
 import { handleError } from '../util/errors.js';
+import EventSource, { ErrorEvent, EventSourceErrorResponse } from '../util/eventsource.js';
+import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
+import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
+import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
+import { CoralApiInterface } from '../api/coral.js';
+import { ActiveEvent, CurrentUser, Friend, Game, PresenceState, CoralError, PresenceOnline_4, PresenceOffline, PresenceOnline } from '../api/coral-types.js';
+import { getPresenceFromUrl } from '../api/znc-proxy.js';
+import { ErrorResponse, ResponseSymbol } from '../api/util.js';
+import { CoralUser } from './users.js';
+import { EmbeddedSplatNet2Monitor, ZncNotifications } from './notify.js';
 import { StatusUpdateMonitor, StatusUpdateSourceHandle } from './status.js';
 
 const debug = createDebug('nxapi:nso:presence');
@@ -41,9 +44,9 @@ class ZncDiscordPresenceClient {
     protected i = 0;
 
     last_presence: Presence | null = null;
-    last_user: CurrentUser | Friend | undefined = undefined;
-    last_friendcode: CurrentUser['links']['friendCode'] | undefined = undefined;
-    last_event: ActiveEvent | undefined = undefined;
+    last_user: CurrentUser | Friend | null = null;
+    last_friendcode: CurrentUser['links']['friendCode'] | null = null;
+    last_event: ActiveEvent | null = null;
 
     last_activity: DiscordPresence | string | null = null;
     onUpdateActivity: ((activity: DiscordPresence | null) => void) | null = null;
@@ -65,14 +68,14 @@ class ZncDiscordPresenceClient {
 
     async updatePresenceForDiscord(
         presence: Presence | null,
-        user?: CurrentUser | Friend,
-        friendcode?: CurrentUser['links']['friendCode'],
-        activeevent?: ActiveEvent
+        user?: CurrentUser | Friend | null,
+        friendcode?: CurrentUser['links']['friendCode'] | null,
+        activeevent?: ActiveEvent | null,
     ) {
         this.last_presence = presence;
-        this.last_user = user;
-        this.last_friendcode = friendcode;
-        this.last_event = activeevent;
+        this.last_user = user ?? null;
+        this.last_friendcode = friendcode ?? null;
+        this.last_event = activeevent ?? null;
 
         this.onUpdate?.call(null);
 
@@ -114,14 +117,14 @@ class ZncDiscordPresenceClient {
         }
 
         const presence_context: DiscordPresenceContext = {
-            friendcode: this.m.show_friend_code ? this.m.force_friend_code ?? friendcode : undefined,
-            activeevent: this.m.show_active_event ? activeevent : undefined,
+            friendcode: this.m.show_friend_code ? this.m.force_friend_code ?? friendcode ?? undefined : undefined,
+            activeevent: this.m.show_active_event ? activeevent ?? undefined : undefined,
             show_play_time: this.m.show_play_time,
             znc_discord_presence: this.m,
             proxy_response: (this.m) instanceof ZncProxyDiscordPresence ? this.m.last_data : undefined,
             monitors: [...this.monitors.values()],
             nsaid: this.m.presence_user!,
-            user,
+            user: user ?? undefined,
             platform: 'platform' in presence ? presence.platform : undefined,
         };
 
@@ -412,62 +415,30 @@ export class ZncDiscordPresence extends ZncNotifications {
 
     readonly discord = new ZncDiscordPresenceClient(this);
 
-    async init() {
-        const {friends, user, activeevent} = await this.fetch([
-            'announcements',
-            this.presence_user ?
-                this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
-                    {friend: this.presence_user} : null,
-            this.presence_user && this.presence_user !== this.data.nsoAccount.user.nsaId &&
-                this.show_active_event ? 'event' : null,
-            this.user_notifications ? 'user' : null,
-            this.friend_notifications ? 'friends' : null,
-            this.splatnet2_monitors.size ? 'user' : null,
-        ]);
-
-        if (this.presence_user) {
-            if (this.presence_user !== this.data.nsoAccount.user.nsaId) {
-                const friend = friends!.find(f => f.nsaId === this.presence_user);
-
-                if (!friend) {
-                    throw new Error('User "' + this.presence_user + '" is not friends with this user');
-                }
-
-                await this.restorePresenceForTitleUpdateAt(friend.nsaId, friend.presence);
-
-                await this.discord.updatePresenceForDiscord(friend.presence, friend);
-                await this.savePresenceForTitleUpdateAt(friend.nsaId, friend.presence, this.discord.title?.since);
-            } else {
-                await this.restorePresenceForTitleUpdateAt(user!.nsaId, user!.presence);
-
-                await this.discord.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
-                await this.savePresenceForTitleUpdateAt(user!.nsaId, user!.presence, this.discord.title?.since);
-            }
-        }
-
-        await this.updatePresenceForNotifications(user, friends, this.data.user.id, true);
-        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
-
-        return LoopResult.OK;
+    constructor(
+        user: CoralUser<CoralApiInterface>,
+        readonly storage: LocalStorage,
+    ) {
+        super(user);
     }
+
 
     get presence_enabled() {
         return !!this.presence_user;
     }
 
     async update() {
-        const {friends, user, activeevent} = await this.fetch([
-            this.presence_user ?
-                this.presence_user === this.data.nsoAccount.user.nsaId ? 'user' :
-                    {friend: this.presence_user} : null,
-            this.presence_user && this.show_active_event ? 'event' : null,
-            this.user_notifications ? 'user' : null,
-            this.friend_notifications ? 'friends' : null,
-            this.splatnet2_monitors.size ? 'user' : null,
+        const [user, friends, activeevent] = await Promise.all([
+            (this.presence_user && this.presence_user === this.user.data.nsoAccount.user.nsaId) ||
+                this.user_notifications || this.splatnet2_monitors.size ? this.user.getCurrentUser() : null,
+            (this.presence_user && this.presence_user !== this.user.data.nsoAccount.user.nsaId) ||
+                this.friend_notifications ? this.user.getFriends() : null,
+            this.presence_user && this.presence_user === this.user.data.nsoAccount.user.nsaId &&
+                this.show_active_event ? this.user.getActiveEvent() : null,
         ]);
 
         if (this.presence_user) {
-            if (this.presence_user !== this.data.nsoAccount.user.nsaId) {
+            if (this.presence_user !== this.user.data.nsoAccount.user.nsaId) {
                 const friend = friends!.find(f => f.nsaId === this.presence_user);
 
                 if (!friend) {
@@ -483,7 +454,7 @@ export class ZncDiscordPresence extends ZncNotifications {
             }
         }
 
-        await this.updatePresenceForNotifications(user, friends, this.data.user.id, false);
+        await this.updatePresenceForNotifications(user, friends, this.user.data.user.id, false);
         if (user) await this.updatePresenceForSplatNet2Monitors([user]);
     }
 

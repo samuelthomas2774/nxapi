@@ -1,5 +1,6 @@
 import { Notification } from 'electron';
 import { i18n } from 'i18next';
+import { LocalStorage } from 'node-persist';
 import { App } from './index.js';
 import { showErrorDialog, tryGetNativeImageFromUrl } from './util.js';
 import { DiscordPresenceConfiguration, DiscordPresenceExternalMonitorsConfiguration, DiscordPresenceSource, DiscordStatus } from '../common/types.js';
@@ -13,9 +14,10 @@ import { DiscordPresence, DiscordPresencePlayTime, ErrorResult } from '../../dis
 import { DiscordRpcClient } from '../../discord/rpc.js';
 import SplatNet3Monitor, { getConfigFromAppConfig as getSplatNet3MonitorConfigFromAppConfig } from '../../discord/monitor/splatoon3.js';
 import { ErrorDescription } from '../../util/errors.js';
-import { CoralErrorResponse } from '../../api/coral.js';
+import { CoralApiInterface, CoralErrorResponse } from '../../api/coral.js';
 import { NintendoAccountAuthErrorResponse, NintendoAccountErrorResponse } from '../../api/na.js';
 import { InvalidNintendoAccountTokenError } from '../../common/auth/na.js';
+import { CoralUser } from '../../common/users.js';
 
 const debug = createDebug('app:main:monitor');
 
@@ -37,13 +39,15 @@ export class PresenceMonitorManager {
 
         const user = await this.app.store.users.get(token);
 
-        const existing = this.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === user.data.user.id);
+        const existing = this.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
+            m.user.data.user.id === user.data.user.id);
+
         if (existing) {
             await callback?.call(null, existing as EmbeddedPresenceMonitor, false);
             return existing;
         }
 
-        const i = new EmbeddedPresenceMonitor(this.app.store.storage, token, user.nso, user.data, user);
+        const i = new EmbeddedPresenceMonitor(user, this.app.store.storage, token);
 
         i.notifications = this.notifications;
         i.presence_user = null;
@@ -143,7 +147,7 @@ export class PresenceMonitorManager {
     async stop(id: string) {
         let index;
         while ((index = this.monitors.findIndex(m =>
-            (m instanceof EmbeddedPresenceMonitor && m.data.user.id === id) ||
+            (m instanceof EmbeddedPresenceMonitor && m.user.data.user.id === id) ||
             (m instanceof EmbeddedProxyPresenceMonitor && m.presence_url === id)
         )) >= 0) {
             const i = this.monitors[index];
@@ -283,8 +287,8 @@ export class PresenceMonitorManager {
         return monitor instanceof EmbeddedProxyPresenceMonitor ? {
             url: monitor.presence_url,
         } : {
-            na_id: monitor.data.user.id,
-            friend_nsa_id: monitor.presence_user === monitor.data.nsoAccount.user.nsaId ? undefined :
+            na_id: monitor.user.data.user.id,
+            friend_nsa_id: monitor.presence_user === monitor.user.data.nsoAccount.user.nsaId ? undefined :
                 monitor.presence_user ?? undefined,
         };
     }
@@ -297,11 +301,11 @@ export class PresenceMonitorManager {
 
         if (source && 'na_id' in source &&
             existing && existing instanceof EmbeddedPresenceMonitor &&
-            existing.data.user.id === source.na_id &&
-            existing.presence_user !== (source.friend_nsa_id ?? existing.data.nsoAccount.user.nsaId)
+            existing.user.data.user.id === source.na_id &&
+            existing.presence_user !== (source.friend_nsa_id ?? existing.user.data.nsoAccount.user.nsaId)
         ) {
             await this.start(source.na_id, monitor => {
-                monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
+                monitor.presence_user = source.friend_nsa_id ?? monitor.user.data.nsoAccount.user.nsaId;
                 this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
                 callback?.call(null, monitor);
                 monitor.discord.refreshExternalMonitorsConfig();
@@ -314,7 +318,7 @@ export class PresenceMonitorManager {
 
         if (existing) {
             if (source && (
-                ('na_id' in source && existing instanceof EmbeddedPresenceMonitor && existing.data.user.id === source.na_id) ||
+                ('na_id' in source && existing instanceof EmbeddedPresenceMonitor && existing.user.data.user.id === source.na_id) ||
                 ('url' in source && existing instanceof EmbeddedProxyPresenceMonitor && existing.presence_url === source.url)
             )) {
                 callback?.call(null, existing);
@@ -327,7 +331,7 @@ export class PresenceMonitorManager {
                 existing.presence_user = null;
 
                 if (!existing.user_notifications && !existing.friend_notifications) {
-                    this.stop(existing.data.user.id);
+                    this.stop(existing.user.data.user.id);
                 }
             }
 
@@ -338,7 +342,7 @@ export class PresenceMonitorManager {
 
         if (source && 'na_id' in source) {
             await this.start(source.na_id, async monitor => {
-                monitor.presence_user = source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId;
+                monitor.presence_user = source.friend_nsa_id ?? monitor.user.data.nsoAccount.user.nsaId;
                 if (existing) this.setDiscordPresenceSourceCopyConfiguration(monitor, existing);
                 else await this.setDiscordPresenceSourceRestoreSavedConfiguration(monitor);
                 callback?.call(null, monitor);
@@ -434,6 +438,14 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
     onError?: (error: ErrorResponse<CoralError> | NodeJS.ErrnoException) =>
         Promise<LoopResult | void> | LoopResult | void = undefined;
 
+    constructor(
+        user: CoralUser<CoralApiInterface>,
+        storage: LocalStorage,
+        readonly token: string,
+    ) {
+        super(user, storage);
+    }
+
     enable() {
         if (this._running !== 0) return;
         this._run();
@@ -468,7 +480,7 @@ export class EmbeddedPresenceMonitor extends ZncDiscordPresence {
 
             await this.onStop?.();
 
-            debug('Monitor for user %s finished', this.data.nsoAccount.user.name);
+            debug('Monitor for user %s finished', this.user.data.nsoAccount.user.name);
         } finally {
             this._running = 0;
         }

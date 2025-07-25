@@ -480,11 +480,11 @@ export class Store extends EventEmitter {
         };
 
         for (const monitor of monitors.monitors) {
-            if (monitor instanceof EmbeddedPresenceMonitor && !users.has(monitor.data.user.id)) {
-                users.add(monitor.data?.user.id);
+            if (monitor instanceof EmbeddedPresenceMonitor && !users.has(monitor.user.data.user.id)) {
+                users.add(monitor.user.data.user.id);
 
                 state.users.push({
-                    id: monitor.data?.user.id,
+                    id: monitor.user.data.user.id,
                     user_notifications: monitor.user_notifications,
                     friend_notifications: monitor.friend_notifications,
                 });
@@ -541,7 +541,7 @@ export class Store extends EventEmitter {
             await monitors.start(user.id, monitor => {
                 monitor.presence_user = state.discord_presence && 'na_id' in state.discord_presence.source &&
                     state.discord_presence.source.na_id === user.id ?
-                        state.discord_presence.source.friend_nsa_id ?? monitor.data.nsoAccount.user.nsaId : null;
+                        state.discord_presence.source.friend_nsa_id ?? monitor.user.data.nsoAccount.user.nsaId : null;
                 monitor.user_notifications = user.user_notifications;
                 monitor.friend_notifications = user.friend_notifications;
 

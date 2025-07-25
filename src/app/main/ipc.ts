@@ -195,7 +195,8 @@ export function sendToAllWindows(channel: string, ...args: any[]) {
 function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean, window?: BrowserWindow) {
     const t = app.i18n.getFixedT(null, 'menus', 'user');
     const dm = app.monitors.getActiveDiscordPresenceMonitor();
-    const monitor = app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === user.id);
+    const monitor = app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
+        m.user.data.user.id === user.id);
 
     return Menu.buildFromTemplate([
         new MenuItem({label: t('na_id', {id: user.id})!, enabled: false}),
@@ -215,9 +216,9 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),
             ] : dm?.presence_user === nso.nsaId ? [
                 new MenuItem({label: t('discord_enabled_via', {name:
-                    dm.data.user.nickname +
-                    (dm.data.user.nickname !== dm.data.nsoAccount.user.name ?
-                        '/' + dm.data.nsoAccount.user.name : '')})!,
+                    dm.user.data.user.nickname +
+                    (dm.user.data.user.nickname !== dm.user.data.nsoAccount.user.name ?
+                        '/' + dm.user.data.nsoAccount.user.name : '')})!,
                     enabled: false}),
                 new MenuItem({label: t('discord_disable')!,
                     click: () => app.menu?.setActiveDiscordPresenceUser(null)}),

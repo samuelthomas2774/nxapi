@@ -8,6 +8,7 @@ import { getToken } from '../../common/auth/coral.js';
 import { getIksmToken } from '../../common/auth/splatnet2.js';
 import { EmbeddedSplatNet2Monitor, NotificationManager, ZncNotifications } from '../../common/notify.js';
 import { CurrentUser, Friend, PresenceGame } from '../../api/coral-types.js';
+import Users from '../../common/users.js';
 
 const debug = createDebug('cli:nso:notify');
 
@@ -100,9 +101,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const usernsid = argv.user ?? await storage.getItem('SelectedUser');
     const token: string = argv.token ||
         await storage.getItem('NintendoAccountToken.' + usernsid);
-    const {nso, data} = await getToken(storage, token, argv.zncProxyUrl);
 
-    const i = new ZncNotifications(storage, token, nso, data);
+    const users = Users.coral(storage, argv.zncProxyUrl);
+    const user = await users.get(token);
+
+    const data = user.data;
+
+    const i = new ZncNotifications(user);
 
     i.notifications = await TerminalNotificationManager.create();
     i.user_notifications = argv.userNotifications;

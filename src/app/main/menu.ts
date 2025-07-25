@@ -61,9 +61,10 @@ export default class MenuApp {
             if (!data) continue;
 
             const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
-                m.data.user.id === data.user.id);
-            const discord_presence_active = discord_presence_monitor instanceof EmbeddedPresenceMonitor &&
-                discord_presence_monitor?.data?.user.id === data.user.id;
+                m.user.data.user.id === data.user.id);
+            const discord_presence_active = discord_presence_monitor &&
+                discord_presence_monitor instanceof EmbeddedPresenceMonitor &&
+                discord_presence_monitor.user.data.user.id === data.user.id;
 
             const webservices = await this.getWebServiceItems(data.user.language, token);
 
@@ -204,7 +205,7 @@ export default class MenuApp {
         const monitor = this.getActiveDiscordPresenceMonitor();
 
         if (monitor) {
-            if (monitor instanceof EmbeddedPresenceMonitor && monitor.data.user.id === id) return;
+            if (monitor instanceof EmbeddedPresenceMonitor && monitor.user.data.user.id === id) return;
 
             monitor.discord.updatePresenceForDiscord(null);
 
@@ -212,7 +213,7 @@ export default class MenuApp {
                 monitor.presence_user = null;
 
                 if (!monitor.user_notifications && !monitor.friend_notifications) {
-                    this.app.monitors.stop(monitor.data.user.id);
+                    this.app.monitors.stop(monitor.user.data.user.id);
                 }
             }
 
@@ -222,7 +223,7 @@ export default class MenuApp {
         }
 
         if (id) await this.app.monitors.start(id, monitor => {
-            monitor.presence_user = monitor.data.nsoAccount.user.nsaId;
+            monitor.presence_user = monitor.user.data.nsoAccount.user.nsaId;
             monitor.skipIntervalInCurrentLoop();
         });
 
@@ -230,13 +231,14 @@ export default class MenuApp {
     }
 
     async setUserNotificationsActive(id: string, active: boolean) {
-        const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === id);
+        const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
+            m.user.data.user.id === id);
 
         if (monitor?.user_notifications && !active) {
             monitor.user_notifications = false;
 
             if (!monitor.presence_user && !monitor.friend_notifications) {
-                this.app.monitors.stop(monitor.data.user.id);
+                this.app.monitors.stop(monitor.user.data.user.id);
             }
 
             monitor.skipIntervalInCurrentLoop();
@@ -251,13 +253,14 @@ export default class MenuApp {
     }
 
     async setFriendNotificationsActive(id: string, active: boolean) {
-        const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor && m.data.user.id === id);
+        const monitor = this.app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
+            m.user.data.user.id === id);
 
         if (monitor?.friend_notifications && !active) {
             monitor.friend_notifications = false;
 
             if (!monitor.presence_user && !monitor.user_notifications) {
-                this.app.monitors.stop(monitor.data.user.id);
+                this.app.monitors.stop(monitor.user.data.user.id);
             }
 
             monitor.skipIntervalInCurrentLoop();

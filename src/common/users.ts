@@ -243,7 +243,7 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
             this.active_event = await this.nso.getActiveEvent();
         }, this.update_interval);
 
-        return this.active_event.result;
+        return 'id' in this.active_event.result ? this.active_event.result : null;
     }
 
     async getCurrentUser() {

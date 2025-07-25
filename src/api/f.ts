@@ -241,6 +241,11 @@ export interface AndroidZncaEncryptRequestRequest {
 
 export interface AndroidZncaDecryptResponseRequest {
     data: string;
+    request_nsa_assertion?: boolean;
+}
+export interface AndroidZncaDecryptResponseResponse {
+    data: string;
+    nsa_assertion?: string | null;
 }
 
 export interface AndroidZncaFError {
