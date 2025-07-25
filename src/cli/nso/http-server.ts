@@ -164,6 +164,11 @@ class Server extends HttpServer {
         app.get('/api/znc/friend/:nsaid/presence', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleFriendPresenceRequest(r, r.req.params.nsaid)));
 
+        app.get('/api/znc/friends/requests/received', this.authTokenMiddleware, this.localAuthMiddleware,
+            this.createProxyRequestHandler(r => this.handleReceivedFriendRequestsRequest(r)));
+        app.get('/api/znc/friends/requests/sent', this.authTokenMiddleware, this.localAuthMiddleware,
+            this.createProxyRequestHandler(r => this.handleSentFriendRequestsRequest(r)));
+
         app.get('/api/znc/webservices', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleWebServicesRequest(r)));
         app.get('/api/znc/webservice/:id/token',
@@ -665,6 +670,34 @@ class Server extends HttpServer {
         return friend.presence;
     }
 
+    async handleReceivedFriendRequestsRequest({req, res, policy}: RequestData) {
+        if (policy && !policy.list_friend_requests) {
+            throw new ResponseError(403, 'insufficient_scope');
+        }
+
+        const user = await this.getCoralUser(req);
+
+        const friend_requests = await user.getReceivedFriendRequests();
+        const updated = user.updated.fr_received!;
+
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
+        return {friend_requests, updated};
+    }
+
+    async handleSentFriendRequestsRequest({req, res, policy}: RequestData) {
+        if (policy && !policy.list_friend_requests) {
+            throw new ResponseError(403, 'insufficient_scope');
+        }
+
+        const user = await this.getCoralUser(req);
+
+        const friend_requests = await user.getSentFriendRequests();
+        const updated = user.updated.fr_sent!;
+
+        res.setHeader('Cache-Control', 'private, immutable, max-age=' + cacheMaxAge(updated, this.update_interval));
+        return {friend_requests, updated};
+    }
+
     async handleWebServicesRequest({req, res, policy}: RequestData) {
         if (policy && !policy.webservices) {
             throw new ResponseError(403, 'insufficient_scope');
@@ -766,6 +799,12 @@ class Server extends HttpServer {
         try {
             return await this._cache(friendcode, async (): Promise<[FriendCodeUser | null, string]> => {
                 try {
+                    // Always requested on the add friend page
+                    Promise.all([
+                        coral.getReceivedFriendRequests(),
+                        coral.getSentFriendRequests(),
+                    ]);
+
                     const user = await coral.getUserByFriendCode(friendcode);
                     return [user, id];
                 } catch (err) {
@@ -800,8 +839,15 @@ class Server extends HttpServer {
     private cached_friendcodeurl = new Map</** NA ID */ string, [number, FriendCodeUrl]>();
 
     getFriendCodeUrl(id: string, coral: CoralApiInterface) {
-        return this._cache(id, () => coral.getFriendCodeUrl(),
-            this.user_friendcodeurl_promise, this.cached_friendcodeurl);
+        return this._cache(id, async () => {
+            // Always requested on the add friend page
+            Promise.all([
+                coral.getReceivedFriendRequests(),
+                coral.getSentFriendRequests(),
+            ]);
+
+            return coral.getFriendCodeUrl();
+        }, this.user_friendcodeurl_promise, this.cached_friendcodeurl);
     }
 
     async handleFriendCodeUrlRequest({res, user}: RequestDataWithUser) {

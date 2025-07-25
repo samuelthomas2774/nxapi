@@ -1,5 +1,5 @@
 import { fetch, Response } from 'undici';
-import { ActiveEvent, CurrentUser, Event, Friend, Presence, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4, PresenceOnline_4, PresenceOnline, PresenceOffline, GetActiveEventResult } from './coral-types.js';
+import { ActiveEvent, CurrentUser, Event, Friend, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4, PresenceOnline_4, PresenceOnline, PresenceOffline, GetActiveEventResult, ReceivedFriendRequest, SentFriendRequest } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
 import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, ResponseEncryptionSymbol, Result } from './coral.js';
 import { NintendoAccountToken, NintendoAccountUser } from './na.js';
@@ -139,6 +139,16 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         return createResult(result, result.user);
     }
 
+    async getReceivedFriendRequests() {
+        const result = await this.fetchProxyApi<{friend_requests: ReceivedFriendRequest[]}>('friends/requests/received');
+        return createResult(result, {friendRequests: result.friend_requests});
+    }
+
+    async getSentFriendRequests() {
+        const result = await this.fetchProxyApi<{friend_requests: SentFriendRequest[]}>('friends/requests/sent');
+        return createResult(result, {friendRequests: result.friend_requests});
+    }
+
     async getFriendCodeUrl() {
         const result = await this.fetchProxyApi<{friendcode: FriendCodeUrl}>('friendcode');
         return createResult(result, result.friendcode);
@@ -233,6 +243,7 @@ export interface AuthPolicy {
     list_friends_presence?: boolean;
     friend?: boolean;
     friend_presence?: boolean;
+    list_friend_requests?: boolean;
     webservices?: boolean;
     activeevent?: boolean;
     chats?: boolean;
