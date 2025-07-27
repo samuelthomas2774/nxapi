@@ -146,7 +146,7 @@ export abstract class AbstractCoralApi {
         });
     }
 
-    /** unused */
+    /** @deprecated unused */
     async getFriend(nsa_id: string) {
         return this.call<Friend_4, {nsaId: string}>('/v4/Friend/Show', {
             nsaId: nsa_id,
@@ -156,6 +156,12 @@ export abstract class AbstractCoralApi {
     async getPlayLog(nsa_id: string) {
         return this.call<UserPlayLog, {nsaId: string}>('/v4/User/PlayLog/Show', {
             nsaId: nsa_id,
+        });
+    }
+
+    async deleteFriendIsNew(nsa_id: string) {
+        return this.call<{}, {friendNsaId: string}>('/v4/Friend/IsNew/Delete', {
+            friendNsaId: nsa_id,
         });
     }
 
