@@ -393,7 +393,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         if (response.status !== 200) {
             const err = await ErrorResponse.fromResponse<AndroidZncaFError>(response, '[znca-api] Non-200 status code');
 
-            if (this.auth && err.data?.error === 'invalid_token' && _attempt) {
+            if (this.auth && err.data?.error === 'invalid_token' && !_attempt) {
                 this.auth.token = null;
 
                 return this.genf(token, hash_method, user, encrypt_token_request, _attempt + 1);
