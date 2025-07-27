@@ -139,6 +139,9 @@ export function builder(yargs: Argv<ParentArguments>) {
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
+const FestVotingStatusHistoryTimestampSymbol = Symbol('Timestamp');
+const FestVotingStatusHistoryVoteKeySymbol = Symbol('VoteKey');
+
 const ResourceUrlMapSymbol = Symbol('ResourceUrls');
 
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
@@ -693,11 +696,19 @@ class Server extends HttpServer {
             throw new ResponseError(403, 'unauthorised');
         }
 
-        const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
+        const query = new URL(req.originalUrl, 'http://localhost').searchParams;
+        const user_na_id = query.get('user');
+        const include_splatnet3 = this.splatnet3_users && query.get('include-splatoon3') === '1';
+
+        if (user_na_id && !this.user_ids.includes(user_na_id)) {
+            debug('requested unknown user', user_na_id);
+            throw new ResponseError(400, 'invalid_request');
+        }
 
         const result: AllUsersResult[] = [];
 
-        const users = await Promise.all(this.user_ids.map(id => this.getCoralUser(id)));
+        const user_ids = user_na_id ? [user_na_id] : this.user_ids;
+        const users = await Promise.all(user_ids.map(id => this.getCoralUser(id)));
 
         for (const user of users) {
             const friends = await user.getFriends();
@@ -723,7 +734,7 @@ class Server extends HttpServer {
         }
 
         if (this.splatnet3_users && include_splatnet3) {
-            const users = await Promise.all(this.user_ids.map(id => this.getSplatNet3User(id)));
+            const users = await Promise.all(user_ids.map(id => this.getSplatNet3User(id)));
 
             for (const user of users) {
                 const friends = await user.getFriends();
@@ -785,8 +796,9 @@ class Server extends HttpServer {
         req: Request, res: Response | null, presence_user_nsaid: string,
         is_stream = false, scope = this.getAccessScopeFromHeaders(req),
     ) {
+        const req_url = new URL(req.url, 'http://localhost');
+
         if (res && !is_stream) {
-            const req_url = new URL(req.url, 'http://localhost');
             const stream_url = new URL('/api/presence/' + encodeURIComponent(presence_user_nsaid) + '/events', req_url);
             res.setHeader('Link', '<' + encodeURI(stream_url.pathname + req_url.search) +
                 '>; rel="alternate"; type="text/event-stream"');
@@ -798,7 +810,7 @@ class Server extends HttpServer {
             throw new ResponseError(403, 'unauthorised', 'Missing required scope presence');
         }
 
-        const include_splatnet3 = this.splatnet3_users && req.query['include-splatoon3'] === '1';
+        const include_splatnet3 = this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '1';
 
         let match: [CoralUser<CoralApiInterface>, Friend, string] | null = null;
 
@@ -1023,9 +1035,6 @@ class Server extends HttpServer {
         // still friends with the presence server user
         await this.handlePresenceRequest(req, null, presence_user_nsaid);
 
-        const TimestampSymbol = Symbol('Timestamp');
-        const VoteKeySymbol = Symbol('VoteKey');
-
         const response: {
             result: {
                 id: string;
@@ -1033,15 +1042,16 @@ class Server extends HttpServer {
                 fest_team_id: string;
                 fest_team: FestTeam_votingStatus;
                 updated_at: string;
-                [TimestampSymbol]: number;
-                [VoteKeySymbol]: string;
+                [FestVotingStatusHistoryTimestampSymbol]: number;
+                [FestVotingStatusHistoryVoteKeySymbol]: string;
             }[];
         } = {
             result: [],
         };
 
         const latest = new Map<string, [timestamp: Date, data: FestTeam_votingStatus]>();
-        const all = req.query['include-all'] === '1';
+        const query = new URL(req.originalUrl, 'http://localhost').searchParams;
+        const all = query.get('include-all') === '1';
 
         for await (const dirent of await fs.opendir(this.record_fest_votes.path)) {
             if (!dirent.isDirectory() || !dirent.name.startsWith('splatnet3-fest-votes-')) continue;
@@ -1094,8 +1104,8 @@ class Server extends HttpServer {
                         fest_team_id,
                         fest_team,
                         updated_at: timestamp.toISOString(),
-                        [TimestampSymbol]: timestamp.getTime(),
-                        [VoteKeySymbol]: fest_id + '/' + fest_team_id + '/' + fest_team.myVoteState,
+                        [FestVotingStatusHistoryTimestampSymbol]: timestamp.getTime(),
+                        [FestVotingStatusHistoryVoteKeySymbol]: fest_id + '/' + fest_team_id + '/' + fest_team.myVoteState,
                     });
                 } catch (err) {
                     debug('Error reading fest voting status records', id, match[1], err);
@@ -1105,11 +1115,13 @@ class Server extends HttpServer {
 
         if (!response.result.length) throw new ResponseError(404, 'not_found', 'No fest voting status history for this user');
 
-        response.result.sort((a, b) => a[TimestampSymbol] - b[TimestampSymbol]);
+        response.result.sort((a, b) => a[FestVotingStatusHistoryTimestampSymbol] -
+            b[FestVotingStatusHistoryTimestampSymbol]);
 
         response.result = response.result.filter((result, index, results) => {
             const prev_result = results[index - 1];
-            return !prev_result || result[VoteKeySymbol] !== prev_result[VoteKeySymbol];
+            return !prev_result || result[FestVotingStatusHistoryVoteKeySymbol] !==
+                prev_result[FestVotingStatusHistoryVoteKeySymbol];
         });
 
         response.result.reverse();
@@ -1143,7 +1155,7 @@ class Server extends HttpServer {
         stream.sendEvent('supported_events', [
             'friend',
             'title',
-            ...(this.splatnet3_users && req.query['include-splatoon3'] === '1' ? [
+            ...(this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '1' ? [
                 'splatoon3',
                 'splatoon3_fest_team',
                 'splatoon3_vs_setting',

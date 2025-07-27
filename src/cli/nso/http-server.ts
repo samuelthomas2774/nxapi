@@ -252,9 +252,13 @@ class Server extends HttpServer {
     }
 
     private localAuthMiddleware = this.createApiMiddleware(async (req, res) => {
-        if (this.require_token || !req.query.user) return;
+        if (this.require_token || req.proxyAuthPolicyUser) return;
 
-        const token = await this.storage.getItem('NintendoAccountToken.' + req.query.user);
+        const query = new URL(req.originalUrl, 'http://localhost').searchParams;
+        const user = query.get('user');
+        if (!user) return;
+
+        const token = await this.storage.getItem('NintendoAccountToken.' + user);
         if (!token) return;
 
         req.headers['authorization'] = 'na ' + token;
@@ -270,13 +274,19 @@ class Server extends HttpServer {
             req.proxyAuthPolicy = auth.policy;
             req.proxyAuthPolicyUser = auth.user;
             req.proxyAuthPolicyToken = token;
-        } else if (req.query.token) {
-            const auth: AuthToken | undefined = await this.storage.getItem('ZncProxyAuthPolicy.' + req.query.token);
+            return;
+        }
+
+        const query = new URL(req.originalUrl, 'http://localhost').searchParams;
+        const token = query.get('access_token') ?? query.get('token');
+
+        if (token) {
+            const auth: AuthToken | undefined = await this.storage.getItem('ZncProxyAuthPolicy.' + token);
             if (!auth) return;
 
             req.proxyAuthPolicy = auth.policy;
             req.proxyAuthPolicyUser = auth.user;
-            req.proxyAuthPolicyToken = '' + req.query.token;
+            req.proxyAuthPolicyToken = token;
         }
     });
 
