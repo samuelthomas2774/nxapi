@@ -157,10 +157,10 @@ class Server extends HttpServer {
 
         app.get('/api/znc/friend/:nsaid', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleFriendRequest(r, r.req.params.nsaid)));
-        app.post('/api/znc/friend/:nsaid', bodyParser.json(),
-            this.createProxyRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid), true));
         app.patch('/api/znc/friend/:nsaid', bodyParser.json(),
             this.createProxyRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid), true));
+        app.post('/api/znc/friend/:nsaid', bodyParser.json(),
+            this.createProxyRequestHandler(r => this.handleUpdateFriendRequest(r, r.req.params.nsaid, true), true));
         app.get('/api/znc/friend/:nsaid/presence', this.authTokenMiddleware, this.localAuthMiddleware,
             this.createProxyRequestHandler(r => this.handleFriendPresenceRequest(r, r.req.params.nsaid)));
 
@@ -630,7 +630,7 @@ class Server extends HttpServer {
         return {friend, updated};
     }
 
-    async handleUpdateFriendRequest({req, res, user}: RequestDataWithUser, nsaid: string) {
+    async handleUpdateFriendRequest({req, res, user}: RequestDataWithUser, nsaid: string, post = false) {
         const friends = await user.getFriends();
         const updated = user.updated.friends;
         const friend = friends.find(f => f.nsaId === nsaid);
@@ -640,22 +640,75 @@ class Server extends HttpServer {
         }
 
         if ('isFavoriteFriend' in req.body &&
-            req.body.isFavoriteFriend !== true &&
-            req.body.isFavoriteFriend !== false
+            typeof req.body.isFavoriteFriend !== 'boolean'
         ) {
             throw new ResponseError(400, 'invalid_request', 'Invalid value for isFavoriteFriend.');
+        }
+
+        if ('isNew' in req.body && (typeof req.body.isNew !== 'boolean' ||
+            // Cannot set friend as isNew
+            (!friend.isNew && req.body.isNew)
+        )) {
+            throw new ResponseError(400, 'invalid_request', 'Invalid value for isNew.');
+        }
+
+        if ('isOnlineNotificationEnabled' in req.body &&
+            typeof req.body.isOnlineNotificationEnabled !== 'boolean'
+        ) {
+            throw new ResponseError(400, 'invalid_request', 'Invalid value for isOnlineNotificationEnabled.');
+        }
+
+        if ('isNew' in req.body) {
+            if (friend.isNew !== req.body.isNew) {
+                if (!req.body.isNew) await user.nso.deleteFriendIsNew(friend.nsaId);
+
+                // Update cached data
+                friend.isNew = req.body.isNew;
+            } else {
+                // No change
+            }
+        } else {
+            if (friend.isNew && 'isFavoriteFriend' in req.body) {
+                // If updating the friend they should have been marked as not new
+                // It *is* possible to update the friend online notification setting
+                // without doing this though
+                await user.nso.deleteFriendIsNew(friend.nsaId);
+
+                // Update cached data
+                friend.isNew = false;
+            }
         }
 
         if ('isFavoriteFriend' in req.body) {
             if (friend.isFavoriteFriend !== req.body.isFavoriteFriend) {
                 if (req.body.isFavoriteFriend) await user.nso.addFavouriteFriend(friend.nsaId);
                 if (!req.body.isFavoriteFriend) await user.nso.removeFavouriteFriend(friend.nsaId);
+
+                // Update cached data
+                friend.isFavoriteFriend = req.body.isFavoriteFriend;
             } else {
                 // No change
             }
         }
 
-        res.statusCode = 204;
+        if ('isOnlineNotificationEnabled' in req.body) {
+            if (friend.isOnlineNotificationEnabled !== req.body.isOnlineNotificationEnabled) {
+                await user.nso.updateFriendOnlineNotificationSettings(
+                    friend.nsaId, req.body.isOnlineNotificationEnabled);
+
+                // Update cached data
+                friend.isOnlineNotificationEnabled = req.body.isOnlineNotificationEnabled;
+            } else {
+                // No change
+            }
+        }
+
+        if (post) {
+            res.statusCode = 204;
+            return;
+        }
+
+        return {friend, updated};
     }
 
     async handleFriendPresenceRequest({req, res, policy}: RequestData, nsaid: string) {

@@ -95,6 +95,13 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         return createResult(result, {});
     }
 
+    async deleteFriendIsNew(nsa_id: string) {
+        const result = await this.fetchProxyApi('friend/' + nsa_id, 'PATCH', JSON.stringify({
+            isNew: false,
+        }));
+        return createResult(result, {});
+    }
+
     async getWebServices() {
         const result = await this.fetchProxyApi<{webservices: WebService_4[]}>('webservices');
         return createResult(result, result.webservices);
@@ -168,6 +175,13 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
     // ): Promise<Result<{}>> {
     //     throw new Error('Not supported in ZncProxyApi');
     // }
+
+    async updateFriendOnlineNotificationSettings(nsa_id: string, value: boolean) {
+        const result = await this.fetchProxyApi('friend/' + nsa_id, 'PATCH', JSON.stringify({
+            isOnlineNotificationEnabled: value,
+        }));
+        return createResult(result, {});
+    }
 
     async getWebServiceToken(id: number) {
         const result = await this.fetchProxyApi<{token: WebServiceToken}>('webservice/' + id + '/token');

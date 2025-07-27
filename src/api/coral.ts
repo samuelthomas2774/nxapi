@@ -53,6 +53,7 @@ export interface CoralApiInterface {
     getFriendList(): Promise<Result<Friends_4>>;
     addFavouriteFriend(nsa_id: string): Promise<Result<{}>>;
     removeFavouriteFriend(nsa_id: string): Promise<Result<{}>>;
+    deleteFriendIsNew(nsa_id: string): Promise<Result<{}>>;
     getWebServices(): Promise<Result<WebServices_4>>;
     getChats(): Promise<Result<ListChat>>;
     getMedia(): Promise<Result<ListMedia>>;
@@ -65,6 +66,7 @@ export interface CoralApiInterface {
     getSentFriendRequests(): Promise<Result<SentFriendRequests>>;
     getFriendCodeUrl(): Promise<Result<FriendCodeUrl>>;
     getCurrentUserPermissions(): Promise<Result<CurrentUserPermissions>>;
+    updateFriendOnlineNotificationSettings(nsa_id: string, value: boolean): Promise<Result<{}>>;
     getWebServiceToken(id: number): Promise<Result<WebServiceToken>>;
 }
 
