@@ -81,6 +81,11 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         }));
     }
 
+    async getFriend(nsa_id: string) {
+        const result = await this.fetchProxyApi<{friend: Friend_4}>('friend/' + nsa_id);
+        return createResult(result, result.friend);
+    }
+
     async addFavouriteFriend(nsa_id: string) {
         const result = await this.fetchProxyApi('friend/' + nsa_id, 'PATCH', JSON.stringify({
             isFavoriteFriend: true,
