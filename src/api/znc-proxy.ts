@@ -21,19 +21,25 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         super();
     }
 
-    async fetchProxyApi<T = unknown>(url: URL | string, method = 'GET', body?: string, headers?: object) {
+    async fetchProxyApi<T = unknown>(url: URL | string, method = 'GET', body?: string, _headers?: HeadersInit) {
         if (typeof url === 'string' && url.startsWith('/')) url = url.substring(1);
 
         const base_url = typeof this.url === 'string' ? new URL(this.url) : this.url;
         if (typeof this.url === 'string' && !base_url.pathname.endsWith('/')) base_url.pathname += '/';
 
+        const headers = new Headers(_headers);
+
+        headers.append('Authorization', 'na ' + this.token);
+        headers.append('User-Agent', getUserAgent(this.useragent));
+
+        if (body && !headers.has('Content-Type')) {
+            headers.append('Content-Type', 'application/json');
+        }
+
         const [signal, cancel] = timeoutSignal();
         const response = await fetch(new URL(url, base_url), {
             method,
-            headers: Object.assign({
-                'Authorization': 'na ' + this.token,
-                'User-Agent': getUserAgent(this.useragent),
-            }, headers),
+            headers,
             body,
             signal,
         }).finally(cancel);
