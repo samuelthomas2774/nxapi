@@ -68,6 +68,15 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         ]) : [],
     ]);
 
+    if (argv.jsonPrettyPrint) {
+        console.log(JSON.stringify(play_log, null, 4));
+        return;
+    }
+    if (argv.json) {
+        console.log(JSON.stringify(play_log));
+        return;
+    }
+
     const table = new Table({
         head: [
             'Title ID',
