@@ -1,7 +1,7 @@
 import { fetch, Response } from 'undici';
-import { ActiveEvent, CurrentUser, Event, Friend, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4, PresenceOnline_4, PresenceOnline, PresenceOffline, GetActiveEventResult, ReceivedFriendRequest, SentFriendRequest } from './coral-types.js';
+import { ActiveEvent, CurrentUser, Event, Friend, PresencePermissions, User, WebServiceToken, CoralStatus, CoralSuccessResponse, FriendCodeUser, FriendCodeUrl, WebService_4, Media, Announcements_4, Friend_4, PresenceOnline_4, PresenceOnline, PresenceOffline, GetActiveEventResult, ReceivedFriendRequest, SentFriendRequest, CoralError } from './coral-types.js';
 import { defineResponse, ErrorResponse, ResponseSymbol } from './util.js';
-import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, ResponseEncryptionSymbol, Result } from './coral.js';
+import { AbstractCoralApi, CoralApiInterface, CoralAuthData, CoralErrorResponse, CorrelationIdSymbol, PartialCoralAuthData, RequestFlagAddPlatformSymbol, RequestFlagAddProductVersionSymbol, RequestFlagNoParameterSymbol, RequestFlagRequestIdSymbol, RequestFlags, ResponseDataSymbol, ResponseEncryptionSymbol, Result } from './coral.js';
 import { NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { SavedToken } from '../common/auth/coral.js';
 import createDebug from '../util/debug.js';
@@ -21,7 +21,10 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         super();
     }
 
-    async fetchProxyApi<T = unknown>(url: URL | string, method = 'GET', body?: string, _headers?: HeadersInit) {
+    async fetchProxyApi<T = unknown>(
+        url: URL | string, method = 'GET', body?: string, _headers?: HeadersInit,
+        /** @internal */ _log?: string,
+    ) {
         if (typeof url === 'string' && url.startsWith('/')) url = url.substring(1);
 
         const base_url = typeof this.url === 'string' ? new URL(this.url) : this.url;
@@ -45,7 +48,7 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         }).finally(cancel);
 
         const debug_url = typeof url === 'string' ? '/' + url : url.toString();
-        debug('fetch %s %s, response %s', method, debug_url, response.status);
+        debug('fetch %s %s%s, response %s', method, debug_url, _log ? ', ' + _log : '', response.status);
 
         if (!response.ok) {
             throw await ZncProxyErrorResponse.fromResponse(response, '[zncproxy] Non-2xx status code');
@@ -64,14 +67,33 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         if (parameter[RequestFlagNoParameterSymbol]) options.push(['no_parameter', true]);
         if (RequestFlagRequestIdSymbol in parameter) options.push(['request_id', parameter[RequestFlagRequestIdSymbol]]);
 
-        const result = await this.fetchProxyApi<{result: T}>('call', 'POST', JSON.stringify({
-            url,
-            parameter,
+        try {
+            const result = await this.fetchProxyApi<{result: T}>('call', 'POST', JSON.stringify({
+                url,
+                parameter,
 
-            options: options.length ? Object.fromEntries(options) : undefined,
-        }));
+                options: options.length ? Object.fromEntries(options) : undefined,
+            }), undefined, 'call ' + url);
 
-        return createResult(result, result.result);
+            return createResult(result, result.result);
+        } catch (err) {
+            if (err instanceof ZncProxyErrorResponse &&
+                err.response.status === 500 &&
+                err.data && typeof err.data === 'object' &&
+                'error' in err.data && err.data.error === 'unknown_error' &&
+                'data' in err.data && err.data.data && typeof err.data.data === 'object' &&
+                'status' in err.data.data && typeof err.data.data.status === 'number' &&
+                'errorMessage' in err.data.data && typeof err.data.data.errorMessage === 'string' &&
+                'correlationId' in err.data.data && typeof err.data.data.correlationId === 'string'
+            ) {
+                const coral_err = new CoralErrorResponse('[znc] ' + err.data.data.errorMessage,
+                    err.response, err.data.data as CoralError);
+                Object.defineProperty(coral_err, 'parent', {value: err});
+                throw coral_err;
+            }
+
+            throw err;
+        }
     }
 
     async getAnnouncements() {

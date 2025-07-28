@@ -316,9 +316,14 @@ export interface ResourceData {
     authorisation_server_metadata: AuthorisationServerMetadata;
 }
 
+export const NsaAssertionSymbol = Symbol('NsaAssertion');
+
 export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
     readonly url: URL;
     readonly auth: NxapiZncaAuth | null;
+
+    last_nsa_assertion: string | null = null
+    onReceiveNsaAssertion: ((nsa_assertion: string) => void) | null = null;
 
     headers = new Headers();
 
@@ -479,19 +484,24 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
 
     async decryptResponse(
         data: Uint8Array,
+        request_nsa_assertion = false,
         /** @internal */ _attempt = 0,
     ): Promise<DecryptResponseResult> {
         if (this.auth && !this.auth.has_valid_token) await this.auth.authenticate();
 
-        debugZncaApi('decrypting response', data);
+        // debugZncaApi('decrypting response', data);
 
         const req: AndroidZncaDecryptResponseRequest = {
             data: Buffer.from(data).toString('base64'),
         };
 
+        if (request_nsa_assertion) {
+            req.request_nsa_assertion = true;
+        }
+
         const headers = new Headers(this.headers);
         headers.set('Content-Type', 'application/json');
-        headers.set('Accept', 'text/plain');
+        headers.set('Accept', request_nsa_assertion ? 'application/json' : 'text/plain');
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
         if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
@@ -511,18 +521,27 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
             if (this.auth && err.data?.error === 'invalid_token' && !_attempt) {
                 this.auth.token = null;
 
-                return this.decryptResponse(data, _attempt + 1);
+                return this.decryptResponse(data, request_nsa_assertion, _attempt + 1);
             }
 
             throw err;
         }
 
-        const decrypted_data = await response.text();
+        const result = request_nsa_assertion ? await response.json() as AndroidZncaDecryptResponseResponse : {
+            data: await response.text(),
+        };
+
+        if (result.nsa_assertion) {
+            this.last_nsa_assertion = result.nsa_assertion;
+            this.onReceiveNsaAssertion?.call(null, result.nsa_assertion);
+        }
 
         return {
-            data: decrypted_data,
+            data: result.data,
 
             // @ts-expect-error
+            [NsaAssertionSymbol]: result.nsa_assertion ?? null,
+
             response,
         };
     }
@@ -535,6 +554,8 @@ export class NxapiZncaAuth {
         { id: string; secret: string; } |
         { id: string; } |
         null = null;
+        
+    request_scope = 'ca:gf ca:er ca:dr';
 
     token: TokenData | null = null;
     refresh_token: string | null = null;
@@ -574,6 +595,10 @@ export class NxapiZncaAuth {
             auth.client_assertion_provider = client_assertion_provider;
         } else {
             debugZncaAuth('client authentication not configured');
+        }
+
+        if (process.env.NXAPI_ZNCA_API_AUTH_SCOPE) {
+            auth.request_scope = process.env.NXAPI_ZNCA_API_AUTH_SCOPE;
         }
 
         return auth;
@@ -617,7 +642,7 @@ export class NxapiZncaAuth {
             body.append('refresh_token', refresh_token);
         } else {
             body.append('grant_type', 'client_credentials');
-            body.append('scope', 'ca:gf ca:er ca:dr');
+            body.append('scope', this.request_scope);
         }
 
         if (this.client_credentials && 'secret' in this.client_credentials) {

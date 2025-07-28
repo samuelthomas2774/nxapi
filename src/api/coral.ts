@@ -6,7 +6,7 @@ import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
 import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListMediaParameter, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
-import { createZncaApi, DecryptResponseResult, FResult, HashMethod, RequestEncryptionProvider, ZncaApi } from './f.js';
+import { createZncaApi, DecryptResponseResult, FResult, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
 import { ErrorDescription, ErrorDescriptionSymbol, HasErrorDescription } from '../util/errors.js';
@@ -374,6 +374,7 @@ export const RequestFlagNoEncryptionSymbol = Symbol('RequestFlagNoEncryption');
 export const RequestFlagNoParameterSymbol = Symbol('RequestFlagNoParameter');
 export const RequestFlagRequestIdSymbol = Symbol('RequestFlagRequestId');
 export const RequestFlagNoAutoRenewTokenSymbol = Symbol('RequestFlagNoAutoRenewToken');
+export const RequestFlagNxapiZncaApiRequestNsaAssertionSymbol = Symbol('RequestFlagNxapiZncaApiRequestNsaAssertion');
 
 export interface RequestFlags {
     [RequestFlagAddProductVersionSymbol]: boolean;
@@ -383,6 +384,7 @@ export interface RequestFlags {
     [RequestFlagNoParameterSymbol]: boolean;
     [RequestFlagRequestIdSymbol]: RequestFlagRequestId;
     [RequestFlagNoAutoRenewTokenSymbol]: boolean;
+    [RequestFlagNxapiZncaApiRequestNsaAssertionSymbol]: boolean;
 }
 export enum RequestFlagRequestId {
     NONE,
@@ -548,6 +550,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
                 [RequestFlagAddPlatformSymbol]: true,
                 [RequestFlagAddProductVersionSymbol]: true,
                 [RequestFlagNoAutoRenewTokenSymbol]: true,
+                [RequestFlagNxapiZncaApiRequestNsaAssertionSymbol]: true,
             });
         } catch (err) {
             if (err instanceof CoralErrorResponse && err.status === CoralStatus.TOKEN_EXPIRED && !_attempt && this.onTokenExpired) {
@@ -912,7 +915,12 @@ class CoralApiRequest<T = unknown> {
         request_encryption: RequestEncryptionProvider,
         /** @internal */ _attempt: number,
     ) {
-        const decrypted = await request_encryption.decryptResponse(data);
+        debug('decrypting response', this.url, data.length);
+
+        const decrypted = request_encryption instanceof ZncaApiNxapi ?
+            await request_encryption.decryptResponse(data,
+                this.flags[RequestFlagNxapiZncaApiRequestNsaAssertionSymbol]) :
+            await request_encryption.decryptResponse(data);
 
         const encryption: ResponseEncryption = {
             encrypted: data,
