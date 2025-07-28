@@ -28,7 +28,7 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
         if (typeof this.url === 'string' && !base_url.pathname.endsWith('/')) base_url.pathname += '/';
 
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(new URL(url, this.url), {
+        const response = await fetch(new URL(url, base_url), {
             method,
             headers: Object.assign({
                 'Authorization': 'na ' + this.token,
