@@ -98,6 +98,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     console.log('Open this URL and login to nxapi-auth to link your account:');
     console.log('');
-    console.log(link_url);
+    console.log(link_url.toString());
     console.log('');
 }
