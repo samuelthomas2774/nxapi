@@ -106,6 +106,13 @@ export function builder(yargs: Argv<ParentArguments>) {
         describe: 'Enable SplatNet 3 presence',
         type: 'boolean',
         default: false,
+    }).option('splatnet3-user', {
+        describe: 'Nintendo Account ID for SplatNet 3',
+        type: 'string',
+        array: true,
+        ...process.env.NXAPI_PRESENCE_SERVER_USER_SPLATNET3 ? {
+            default: process.env.NXAPI_PRESENCE_SERVER_USER_SPLATNET3.split(','),
+        } : {},
     }).option('allow-all-users', {
         describe: 'Enable returning all users',
         type: 'boolean',
@@ -151,8 +158,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
 
     const user_naid: string | undefined = !argv.user ? await storage.getItem('SelectedUser') : undefined;
     const user_naids = argv.user ?? (user_naid ? [user_naid] : []);
+    const user_naids_splatnet3 = argv.splatnet3User?.length ? argv.splatnet3User : user_naids;
 
     debug('user', user_naids);
+    debug('user splatnet3', argv.splatnet3 ? user_naids_splatnet3 : null);
 
     if (!user_naids.length && !argv.splatnet3Proxy) {
         throw new Error('No user selected');
@@ -172,7 +181,12 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         splatnet3: path.join(argv.dataPath, 'presence-server-resources', 'splatnet3'),
     };
 
-    const server = new Server(storage, coral_users, splatnet3_users, user_naids, image_proxy_path);
+    const server = new Server(
+        storage,
+        coral_users, splatnet3_users,
+        user_naids, user_naids_splatnet3,
+        image_proxy_path,
+    );
 
     server.allow_all_users = argv.allowAllUsers;
     server.enable_splatnet3_proxy = argv.splatnet3Proxy;
@@ -562,6 +576,7 @@ class Server extends HttpServer {
         readonly coral_users: Users<CoralUser<CoralApiInterface>>,
         readonly splatnet3_users: Users<SplatNet3User> | null,
         readonly user_ids: string[],
+        readonly user_ids_splatnet3: string[],
         image_proxy_path?: {baas?: string; atum?: string; splatnet3?: string;},
     ) {
         super();
@@ -708,6 +723,7 @@ class Server extends HttpServer {
         const result: AllUsersResult[] = [];
 
         const user_ids = user_na_id ? [user_na_id] : this.user_ids;
+        const user_ids_splatnet3 = this.user_ids_splatnet3.filter(id => user_ids.includes(id));
         const users = await Promise.all(user_ids.map(id => this.getCoralUser(id)));
 
         for (const user of users) {
@@ -728,17 +744,20 @@ class Server extends HttpServer {
 
                 result.push(Object.assign({}, friend, {
                     title,
-                    ...include_splatnet3 ? {splatoon3: null} : {},
+                    ...include_splatnet3 && user_ids_splatnet3.includes(user.data.user.id) ?
+                        {splatoon3: null} : {},
                 }));
             }
         }
 
         if (this.splatnet3_users && include_splatnet3) {
-            const users = await Promise.all(user_ids.map(id => this.getSplatNet3User(id)));
+            const users = await Promise.all(user_ids_splatnet3.map(id => this.getSplatNet3User(id)));
 
             for (const user of users) {
-                const friends = await user.getFriends();
-                const fest_vote_status = await user.getCurrentFestVotes();
+                const [friends, fest_vote_status] = await Promise.all([
+                    user.getFriends(),
+                    user.getCurrentFestVotes(),
+                ]);
 
                 for (const friend of friends) {
                     const friend_nsaid = Buffer.from(friend.id, 'base64').toString()
@@ -877,7 +896,7 @@ class Server extends HttpServer {
             response.title = null;
         }
 
-        if (this.splatnet3_users && include_splatnet3 && (!scope ||
+        if (this.splatnet3_users && include_splatnet3 && this.user_ids_splatnet3.includes(user_naid) && (!scope ||
             scope.includes(PresenceScope.SPLATOON3_PRESENCE) ||
             scope.includes(PresenceScope.SPLATOON3_FEST_TEAM)
         )) {
@@ -1141,6 +1160,8 @@ class Server extends HttpServer {
 
         res.setHeader('Access-Control-Allow-Origin', '*');
 
+        const include_splatnet3 = this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '1';
+
         const scope = this.getAccessScopeFromHeaders(req);
         const result = await this.handlePresenceRequest(req, null, presence_user_nsaid, true, scope);
 
@@ -1155,7 +1176,7 @@ class Server extends HttpServer {
         stream.sendEvent('supported_events', [
             'friend',
             'title',
-            ...(this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '1' ? [
+            ...(include_splatnet3 ? [
                 'splatoon3',
                 'splatoon3_fest_team',
                 'splatoon3_vs_setting',
