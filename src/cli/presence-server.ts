@@ -712,17 +712,18 @@ class Server extends HttpServer {
         }
 
         const query = new URL(req.originalUrl, 'http://localhost').searchParams;
-        const user_na_id = query.get('user');
+        const user_na_ids = query.has('user') ? query.getAll('user') : null;
         const include_splatnet3 = this.splatnet3_users && query.get('include-splatoon3') === '1';
 
-        if (user_na_id && !this.user_ids.includes(user_na_id)) {
+        for (const user_na_id of user_na_ids ?? []) {
+            if (this.user_ids.includes(user_na_id)) continue;
             debug('requested unknown user', user_na_id);
             throw new ResponseError(400, 'invalid_request');
         }
 
         const result: AllUsersResult[] = [];
 
-        const user_ids = user_na_id ? [user_na_id] : this.user_ids;
+        const user_ids = user_na_ids ?? this.user_ids;
         const user_ids_splatnet3 = this.user_ids_splatnet3.filter(id => user_ids.includes(id));
         const users = await Promise.all(user_ids.map(id => this.getCoralUser(id)));
 
