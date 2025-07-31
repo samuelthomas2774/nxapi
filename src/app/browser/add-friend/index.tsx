@@ -171,7 +171,7 @@ function AddFriend(props: {
             !props.setFriendCode ? styles.targetUserNoFriendCodeField : null,
             theme.targetUser,
         ]}>
-            <Image source={{uri: props.lookupUser.imageUri, width: 100, height: 100}} style={styles.targetUserImage} />
+            <Image source={{uri: props.lookupUser.image2Uri, width: 100, height: 100}} style={styles.targetUserImage} />
 
             <View style={styles.targetUserDetail}>
                 <Text style={[styles.targetUserName, theme.text]}>{props.lookupUser.name}</Text>

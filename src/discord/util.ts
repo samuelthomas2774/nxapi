@@ -51,8 +51,8 @@ export function getDiscordPresence(
 
     if (title.smallImageKey) {
         activity.setSmallImage(title.smallImageKey, title.smallImageText);
-    } else if (context?.friendcode && context.user?.imageUri) {
-        activity.setSmallImage(context.user.imageUri, 'SW-' + context.friendcode.id);
+    } else if (context?.friendcode && context.user?.image2Uri) {
+        activity.setSmallImage(context.user.image2Uri, 'SW-' + context.friendcode.id);
     }
 
     if (game.shopUri) {
@@ -179,8 +179,8 @@ export function getInactiveDiscordPresence(
             state: 'Not playing',
             largeImageKey: 'nintendoswitch',
             largeImageText: product,
-            smallImageKey: context?.friendcode ? context?.user?.imageUri : undefined,
-            smallImageText: context?.friendcode && context?.user?.imageUri ? 'SW-' + context.friendcode.id : undefined,
+            smallImageKey: context?.friendcode ? context?.user?.image2Uri : undefined,
+            smallImageText: context?.friendcode && context?.user?.image2Uri ? 'SW-' + context.friendcode.id : undefined,
         },
     };
 }

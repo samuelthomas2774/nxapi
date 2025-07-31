@@ -187,7 +187,7 @@ export function renderUserEmbedSvg(
     `}}
 
     <image x="30" y="30" width="120" height="120"
-        href="${image(result.friend.imageUri) ?? result.friend.imageUri}" />
+        href="${image(result.friend.image2Uri) ?? result.friend.image2Uri}" />
     <text x="180" y="57" fill="${colours.text}" font-size="26" font-family="${font_family}" font-weight="500" mask="url(#mask-out-title)">${result.friend.name}</text>
 
     <line x1="180" y1="73" x2="${width - 30}" y2="73" stroke="${colours.separator}" />

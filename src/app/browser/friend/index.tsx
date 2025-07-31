@@ -87,7 +87,7 @@ function Friend(props: {
 
     return <View style={styles.main}>
         <View style={styles.friend}>
-            <Image source={{uri: friend.imageUri, width: 130, height: 130}} style={styles.friendImage} />
+            <Image source={{uri: friend.image2Uri, width: 130, height: 130}} style={styles.friendImage} />
             <Text style={[styles.friendName, theme.text]}>{friend.name}</Text>
 
             {friend.presence.updatedAt ?

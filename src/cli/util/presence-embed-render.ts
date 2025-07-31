@@ -67,7 +67,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const [presence, user, data] = await getPresenceFromUrl(argv.url);
     const result = data as PresenceResponse;
 
-    const image_urls = [result.friend.imageUri];
+    const image_urls = [result.friend.image2Uri];
 
     if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
     for (const stage of result.splatoon3_vs_setting?.vsStages ?? []) image_urls.push(stage.image.url);

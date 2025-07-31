@@ -12,7 +12,7 @@ export default function NintendoSwitchUser(props: {
     const user = 'friend' in props ? props.friend : props.user;
 
     return <>
-        <Image source={{uri: user.imageUri, width: 16, height: 16}}
+        <Image source={{uri: user.image2Uri, width: 16, height: 16}}
             style={styles.userImage} />
         {' '}
         {user.name}

@@ -1226,10 +1226,10 @@ class Server extends HttpServer {
         const result = await this.handlePresenceRequest(req, null, presence_user_nsaid);
 
         const url_map = await this.downloadImages({
-            url: result.friend.imageUri,
+            url: result.friend.image2Uri,
         }, this.getResourceBaseUrls(req));
 
-        const image_url = url_map[result.friend.imageUri];
+        const image_url = url_map[result.friend.image2Uri];
 
         res.statusCode = 303;
         res.setHeader('Location', image_url);

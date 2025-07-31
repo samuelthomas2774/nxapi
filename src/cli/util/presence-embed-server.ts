@@ -123,7 +123,7 @@ class Server extends HttpServer {
             return;
         }
 
-        const image_urls = [result.friend.imageUri];
+        const image_urls = [result.friend.image2Uri];
 
         if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
         for (const stage of result.splatoon3_vs_setting?.vsStages ?? []) image_urls.push(stage.image.url);
@@ -168,7 +168,7 @@ class Server extends HttpServer {
         const [presence, user, data] = await getPresenceFromUrl(this.base_url + '/' + presence_user_nsaid + qs_2);
         const result = data as PresenceResponse;
 
-        const image_urls = [result.friend.imageUri];
+        const image_urls = [result.friend.image2Uri];
 
         if ('imageUri' in result.friend.presence.game) image_urls.push(result.friend.presence.game.imageUri);
         if (result.splatoon3_fest_team?.myVoteState === FestVoteState.VOTED) image_urls.push(result.splatoon3_fest_team.image.url);

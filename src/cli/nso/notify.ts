@@ -144,7 +144,7 @@ export class TerminalNotificationManager extends NotificationManager {
             message: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
             // icon: currenttitle.imageUri,
-            icon: friend.imageUri,
+            icon: friend.image2Uri,
         });
     }
 
@@ -152,7 +152,7 @@ export class TerminalNotificationManager extends NotificationManager {
         this.notifier.notify({
             title: friend.name,
             message: 'Offline',
-            icon: friend.imageUri,
+            icon: friend.image2Uri,
         });
     }
 
@@ -164,7 +164,7 @@ export class TerminalNotificationManager extends NotificationManager {
             message: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
             // icon: currenttitle.imageUri,
-            icon: friend.imageUri,
+            icon: friend.image2Uri,
         });
     }
 
@@ -176,7 +176,7 @@ export class TerminalNotificationManager extends NotificationManager {
             message: 'Playing ' + currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : ''),
             // icon: currenttitle.imageUri,
-            icon: friend.imageUri,
+            icon: friend.image2Uri,
         });
     }
 

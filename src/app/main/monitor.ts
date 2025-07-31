@@ -575,7 +575,7 @@ export class ElectronNotificationManager extends NotificationManager {
             title: friend.name,
             body: this.t('playing', {name: currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : '')})!,
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.image2Uri),
         }).show();
     }
 
@@ -583,7 +583,7 @@ export class ElectronNotificationManager extends NotificationManager {
         new Notification({
             title: friend.name,
             body: this.t('offline')!,
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.image2Uri),
         }).show();
     }
 
@@ -594,7 +594,7 @@ export class ElectronNotificationManager extends NotificationManager {
             title: friend.name,
             body: this.t('playing', {name: currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : '')})!,
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.image2Uri),
         }).show();
     }
 
@@ -605,7 +605,7 @@ export class ElectronNotificationManager extends NotificationManager {
             title: friend.name,
             body: this.t('playing', {name: currenttitle.name +
                 (currenttitle.sysDescription ? '\n' + currenttitle.sysDescription : '')})!,
-            icon: await tryGetNativeImageFromUrl(friend.imageUri),
+            icon: await tryGetNativeImageFromUrl(friend.image2Uri),
         }).show();
     }
 }

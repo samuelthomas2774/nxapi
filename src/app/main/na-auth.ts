@@ -327,7 +327,8 @@ export async function addNsoAccount(app: App, use_in_app_browser = true) {
                         na_username: data.user.screenName,
                     }) ?? 'Already signed in as ' + data.nsoAccount.user.name + ' (Nintendo Account ' +
                         data.user.nickname + ' / ' + data.user.screenName + ')',
-                    icon: await tryGetNativeImageFromUrl(data.nsoAccount.user.imageUri),
+                    icon: await tryGetNativeImageFromUrl(data.nsoAccount.user.image2Uri ??
+                        data.nsoAccount.user.imageUri),
                 }).show();
 
                 return {nso, data};

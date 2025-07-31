@@ -73,7 +73,7 @@ function Friend(props: {
     const game = 'name' in props.friend.presence.game ? props.friend.presence.game : null;
 
     const content = <View style={styles.friend}>
-        <Image source={{uri: props.friend.imageUri, width: 50, height: 50}} style={styles.friendImage as ImageStyle} />
+        <Image source={{uri: props.friend.image2Uri, width: 50, height: 50}} style={styles.friendImage as ImageStyle} />
         {game ? <Image source={{uri: game.imageUri, width: 20, height: 20}} style={styles.presenceImage as ImageStyle} /> : null}
 
         <Text style={theme.text}>{props.friend.name}</Text>

@@ -92,7 +92,8 @@ function User(props: {
 
                 {props.user.nso ? <View style={styles.userNso}>
                     <View style={styles.userNsoImage}>
-                        <Image source={{uri: props.user.nso.nsoAccount.user.imageUri, width: 16, height: 16}} />
+                        <Image source={{uri: props.user.nso.nsoAccount.user.image2Uri ??
+                            props.user.nso.nsoAccount.user.imageUri, width: 16, height: 16}} />
                     </View>
 
                     <Text style={[styles.userNsoName, theme.text]}>{props.user.nso.nsoAccount.user.name}</Text>
