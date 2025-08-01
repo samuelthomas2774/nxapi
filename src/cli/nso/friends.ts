@@ -1,5 +1,5 @@
 import Table from '../../util/table.js';
-import { PresenceState } from '../../api/coral-types.js';
+import { PresencePlatform, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
@@ -83,9 +83,13 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
             friend.name,
             online ?
                 'name' in friend.presence.game ?
-                    'Playing ' + friend.presence.game.name + ';\nplayed for ' +
+                    'Playing ' + friend.presence.game.name +
+                        ('platform' in friend.presence ?
+                            friend.presence.platform === PresencePlatform.NX ? ' (Nintendo Switch)' :
+                            friend.presence.platform === PresencePlatform.OUNCE ? ' (Nintendo Switch 2)' : '' : '') +
+                        ';\nplayed for ' +
                         hrduration(friend.presence.game.totalPlayTime) + ' since ' +
-                        new Date(friend.presence.game.firstPlayedAt * 1000).toLocaleDateString('en-GB') :
+                        new Date(friend.presence.game.firstPlayedAt * 1000).toISOString() :
                     'Online' :
                 friend.presence.state === PresenceState.INACTIVE ?
                     'Console online' + (friend.presence.logoutAt ?

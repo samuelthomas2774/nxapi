@@ -120,7 +120,8 @@ function getPlayTimeText(type: DiscordPresencePlayTime, game: PresenceGame) {
 
     if (type === DiscordPresencePlayTime.HIDDEN || game.totalPlayTime < 0) return null;
 
-    const since = game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000).toLocaleDateString('en-GB') : 'now';
+    const since = game.firstPlayedAt ? new Date(game.firstPlayedAt * 1000)
+        .toLocaleDateString('en-GB', {dateStyle: 'medium'}) : 'now';
 
     switch (type) {
         case DiscordPresencePlayTime.APPROXIMATE_PLAY_TIME:
@@ -160,8 +161,8 @@ function getFirstPlayedText(first_played_at: number) {
 }
 
 function getApproximatePlayTime(minutes: number) {
-    if (minutes < 300) {
-        // Less than 5 hours
+    if (minutes < 600) {
+        // Less than 10 hours
         return Math.floor(minutes / 60) * 60;
     } else {
         return Math.floor(minutes / 300) * 300;
