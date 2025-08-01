@@ -10,7 +10,6 @@ export const desc = 'nxapi-auth';
 
 export function builder(yargs: Argv<ParentArguments>) {
     for (const command of Object.values(commands)) {
-        // @ts-expect-error
         yargs.command(command);
     }
 
