@@ -9,7 +9,7 @@ import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItemOptions, WindowType } from '../common/types.js';
-import { CurrentUser, Friend, Game, PresenceState, WebService } from '../../api/coral-types.js';
+import { CurrentUser, Friend, Game, PresencePlatform, PresenceState, WebService } from '../../api/coral-types.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountUser } from '../../api/na.js';
 import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
@@ -313,7 +313,12 @@ function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser, 
     return Menu.buildFromTemplate([
         ...(!friend.presence.updatedAt ? [
         ] : friend.presence.state === PresenceState.ONLINE || friend.presence.state === PresenceState.PLAYING ? [
-            new MenuItem({label: t('presence_online')!, enabled: false}),
+            new MenuItem({label: t(
+                'platform' in friend.presence ?
+                    friend.presence.platform === PresencePlatform.NX ? 'presence_online_nx' :
+                    friend.presence.platform === PresencePlatform.OUNCE ? 'presence_online_ounce' :
+                    'presence_online' :
+                'presence_online')!, enabled: false}),
             ...('name' in friend.presence.game ? [
                 new MenuItem({label: friend.presence.game.name, click: () =>
                     shell.openExternal((friend.presence.game as Game).shopUri)}),

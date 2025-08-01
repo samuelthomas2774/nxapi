@@ -4,7 +4,7 @@ import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CheckBox } from 'react-native-web';
-import { Friend, Presence, PresenceGame, PresencePermissions, PresenceState } from '../../../api/coral-types.js';
+import { Friend, Presence, PresenceGame, PresencePermissions, PresencePlatform, PresenceState } from '../../../api/coral-types.js';
 import { getTitleIdFromEcUrl, hrduration } from '../../../util/misc.js';
 import { Button } from '../components/index.js';
 import { DEFAULT_ACCENT_COLOUR, TEXT_COLOUR_ACTIVE, TEXT_COLOUR_DARK, TEXT_COLOUR_LIGHT } from '../constants.js';
@@ -164,7 +164,11 @@ function FriendPresence(props: {
     const game = 'name' in props.presence.game ? props.presence.game : null;
 
     if ((props.presence.state === PresenceState.ONLINE || props.presence.state === PresenceState.PLAYING) && game) {
-        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>{t('presence_playing', {game: game.name})}</Text>;
+        return <Text style={[styles.presenceText, theme.text, styles.presenceTextOnline]}>{t(
+            'platform' in props.presence ?
+                props.presence.platform === PresencePlatform.NX ? 'presence_playing_nx' :
+                props.presence.platform === PresencePlatform.OUNCE ? 'presence_playing_ounce' :
+                'presence_playing' : 'presence_playing', {game: game.name})}</Text>;
     }
 
     return <View>

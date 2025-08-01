@@ -69,6 +69,8 @@ export const menus = {
 
     friend: {
         presence_online: 'Online',
+        presence_online_nx: 'Online (Nintendo Switch)',
+        presence_online_ounce: 'Online (Nintendo Switch 2)',
         game_first_played: 'First played: {{date, datetime}}',
 
         game_play_time_h: 'Play time: $t(friend.hours, {"count": {{hours}}})',
@@ -310,6 +312,8 @@ export const friend_window = {
     close: 'Close',
 
     presence_playing: 'Playing {{game}}',
+    presence_playing_nx: 'Playing {{game}} (Nintendo Switch)',
+    presence_playing_ounce: 'Playing {{game}} (Nintendo Switch 2)',
     presence_offline: 'Offline',
     presence_last_seen: 'Last seen {{since_logout}}',
 
