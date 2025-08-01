@@ -1,4 +1,4 @@
-import type { Arguments as ParentArguments } from '../nso/index.js';
+import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 import { initStorage } from '../../util/storage.js';
@@ -30,13 +30,6 @@ type Arguments = YargsArguments<ReturnType<typeof builder>>;
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     if (argv.zncProxyUrl) {
         throw new Error('API proxy not supported');
-    }
-
-    if (!process.env.NXAPI_ZNCA_API_AUTH_SCOPE) {
-        // TODO: default cli/app clients should have this scope set automatically
-        // - custom clients won't be able to request this scope though so can't
-        // just be the default request scope
-        process.env.NXAPI_ZNCA_API_AUTH_SCOPE = 'ca:gf ca:er ca:dr ca:na';
     }
 
     const storage = await initStorage(argv.dataPath);

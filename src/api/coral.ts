@@ -919,7 +919,8 @@ class CoralApiRequest<T = unknown> {
 
         const decrypted = request_encryption instanceof ZncaApiNxapi ?
             await request_encryption.decryptResponse(data,
-                this.flags[RequestFlagNxapiZncaApiRequestNsaAssertionSymbol]) :
+                request_encryption.auth?.has_nsa_assertion_scope &&
+                    this.flags[RequestFlagNxapiZncaApiRequestNsaAssertionSymbol]) :
             await request_encryption.decryptResponse(data);
 
         const encryption: ResponseEncryption = {

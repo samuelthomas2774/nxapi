@@ -554,7 +554,7 @@ export class NxapiZncaAuth {
         { id: string; secret: string; } |
         { id: string; } |
         null = null;
-        
+
     request_scope = 'ca:gf ca:er ca:dr';
 
     token: TokenData | null = null;
@@ -626,6 +626,13 @@ export class NxapiZncaAuth {
         return !!this.token && this.token.expires_at > Date.now();
     }
 
+    get has_nsa_assertion_scope() {
+        return this.token?.result.scope ? !!this.token.result.scope.match(/\bca:ns\b/) :
+            this.client_assertion_provider && !this.client_credentials ?
+                !!this.client_assertion_provider.scope.match(/\bca:ns\b/) :
+            this.client_credentials ? !!this.request_scope.match(/\bca:ns\b/) : false;
+    }
+
     async getAccessToken(): Promise<TokenResponse> {
         const resource = this.protected_resource ?? (this.protected_resource = await this.getProtectedResource());
         const refresh_token = this.refresh_token;
@@ -658,6 +665,7 @@ export class NxapiZncaAuth {
 
             body.append('client_assertion_type', type);
             body.append('client_assertion', assertion);
+            body.set('scope', this.client_assertion_provider.scope);
         } else {
             if (resource.resource_metadata.resource_documentation) {
                 throw new TypeError('Client authentication not configured\n\n' +

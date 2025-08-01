@@ -12,6 +12,7 @@ export function setClientAssertionProvider(provider: ClientAssertionProviderInte
 }
 
 export interface ClientAssertionProviderInterface {
+    scope: string;
     create(aud: string, exp?: number): Promise<OAuthClientAssertion>;
 }
 export interface OAuthClientAssertion {
@@ -24,6 +25,7 @@ export class ClientAssertionProvider implements ClientAssertionProviderInterface
         readonly client_id: string,
         // readonly iss = 'nxapi',
         readonly iss = client_id,
+        public scope = 'ca:gf ca:er ca:dr',
     ) {}
 
     async create(aud: string, exp = 60) {

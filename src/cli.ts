@@ -59,7 +59,8 @@ export async function main(argv = process.argv.slice(2)) {
         addUserAgent('unidentified-script');
     }
 
-    setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID));
+    setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID, undefined,
+        'ca:gf ca:er ca:dr ca:na'));
 
     const yargs = createYargs(argv);
 
