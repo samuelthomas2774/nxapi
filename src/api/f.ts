@@ -627,10 +627,10 @@ export class NxapiZncaAuth {
     }
 
     get has_nsa_assertion_scope() {
-        return this.token?.result.scope ? !!this.token.result.scope.match(/\bca:ns\b/) :
+        return this.token?.result.scope ? !!this.token.result.scope.match(/\bca:na\b/) :
             this.client_assertion_provider && !this.client_credentials ?
-                !!this.client_assertion_provider.scope.match(/\bca:ns\b/) :
-            this.client_credentials ? !!this.request_scope.match(/\bca:ns\b/) : false;
+                !!this.client_assertion_provider.scope.match(/\bca:na\b/) :
+            this.client_credentials ? !!this.request_scope.match(/\bca:na\b/) : false;
     }
 
     async getAccessToken(): Promise<TokenResponse> {
