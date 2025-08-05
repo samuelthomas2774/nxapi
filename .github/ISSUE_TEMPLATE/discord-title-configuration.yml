@@ -13,13 +13,13 @@ body:
     attributes:
       value: |
         > [!NOTE]
-        > I paused adding new titles a while ago after requesting access to Discord's activities API, which would allow sending any activity name, meaning new titles only need to be added for special configuration such as in Splatoon 3. Although Discord did not allow nxapi to use this API I didn't resume adding new titles. Please do still suggest new titles as I will likely resume adding titles in the future if I cannot use the activities API instead.
+        > Discord now allows requesting to show the details or state field under the user's name, which allows showing the full title name instead of "Nintendo Switch"/"Nintendo Switch 2" for all titles, although this doesn't allow fully customising the activity name. It is no longer necessary add title configuration that only sets a custom Discord application.
 
   - type: input
     id: title-name
     attributes:
       label: Title name
-      description: The full name of the title, exactly as it appears on a Nintendo Switch console or Nintendo eShop. If you are requesting a custom Discord application for this title, this will be used as it's name.
+      description: The full name of the title, exactly as it appears on a Nintendo Switch console or Nintendo eShop.
     validations:
       required: true
 
@@ -40,7 +40,7 @@ body:
 
         If the title/s already has/have custom Discord configuration, you don't need to include all title IDs - just one to identify it. If the title hasn't been released yet and doesn't have a title ID, add a note in the other information section below, and the expected release date and links to Nintendo websites/Nintendo eShop NSUIDs.
 
-        Application title IDs are 16 hexadecimal digits, and should start with `0100` and end with `0000`, `2000`, `4000`, `6000`, `8000`, `a000`, `c000` or `e000`.
+        Application title IDs are 16 hexadecimal digits, and should start with `0100` (Nintendo Switch) or `0400` (Nintendo Switch 2) and end with `0000`, `2000`, `4000`, `6000`, `8000`, `a000`, `c000` or `e000`.
       placeholder: |
         0100d2f00d5c0000 Nintendo Switch Sports
         01000ee017182000 Nintendo Switch Sports Online Play Test
@@ -56,13 +56,3 @@ body:
         Include any other relevant information, such as custom attributes that should be set for the title, or any changes that should be made to the existing configuration, or any other related titles that have/will be released.
     validations:
       required: true
-
-  - type: checkboxes
-    id: review-checklist
-    attributes:
-      label: Review checklist
-      options:
-        - label: No other open issues related to this title exist (if any issues do exist, add a comment/reaction to those instead of opening a new issue)
-          required: true
-        - label: I am requesting a custom Discord application for this title - this title is a very popular game and/or has high ratings, is currently available for purchase (or will be soon) in most Nintendo eShop regions, and it would be useful for a number of users to have it's own Discord application (I don't have any strict guidelines for which titles should have custom Discord applications - tick if you think the title should have it's own Discord application - I just want to keep the list short so I don't have to create 100s of Discord applications)
-          required: false

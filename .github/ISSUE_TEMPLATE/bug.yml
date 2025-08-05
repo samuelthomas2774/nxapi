@@ -16,7 +16,7 @@ body:
         Make sure you test the latest development build as the issue may have already been fixed: [macOS/Linux](https://gitlab.fancy.org.uk/samuel/nxapi/-/jobs/artifacts/main/browse/app?job=build-app), [Windows](https://gitlab.fancy.org.uk/samuel/nxapi/-/jobs/artifacts/main/browse/app?job=build-windows).
 
         > [!IMPORTANT]
-        > The latest release of nxapi no longer works due to changes by Nintendo. If you are using nxapi 1.6.1 or before and do not update to the latest development build you will see an error message from the f-generation API as the `X-znca-Client-Version` header is not sent.
+        > The latest release of nxapi no longer works due to changes by Nintendo. If you are using nxapi 1.6.1 or before and do not update to the latest development build you will see an error message from the f-generation API as client authentication is not sent.
 
   - type: textarea
     id: what-you-did
