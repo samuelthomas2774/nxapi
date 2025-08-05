@@ -12,7 +12,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        > [!NOTE]
+        > [!IMPORTANT]
         > Discord now allows requesting to show the details or state field under the user's name, which allows showing the full title name instead of "Nintendo Switch"/"Nintendo Switch 2" for all titles, although this doesn't allow fully customising the activity name. It is no longer necessary add title configuration that only sets a custom Discord application.
 
   - type: input

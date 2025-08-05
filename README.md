@@ -10,27 +10,16 @@ JavaScript library, command line tool and Electron app for accessing the Nintend
 - Command line and Electron app interfaces
 - Interactive Nintendo Account login for the Nintendo Switch Online and Nintendo Switch Parental Controls apps
 - Automated login to the Nintendo Switch Online app API
-    - This uses the [api.imink.app](https://github.com/imink-app/f-API) or
-        [nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) API by default.
+    - This uses [nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) API by default.
     - Alternatively a custom server can be used.
-    - A custom server using a rooted Android device/emulator is included.
 - Get Nintendo Switch account information, friends list and game-specific services
 - Show Discord Rich Presence using your Nintendo Switch presence
     - Fetch presence using a secondary account or from a custom URL.
     - Show your account's friend code (or a custom friend code).
-    - All titles are supported using a default Nintendo Switch app. A limited number of titles have their own
-        Discord apps (meaning they appear under your name with the title's name instead of "Nintendo Switch")
-        or other custom Discord features. [See here for Discord title overrides](src/discord/titles) or
-        [create an issue if you'd like another title added](https://github.com/samuelthomas2774/nxapi/issues/new/choose).
-
-    ![Screenshot showing Splatoon 2 as a Discord activity](resources/discord-activity.png)
-
+    - All titles are supported, and since August 2025 all titles can show their full name next to your name
+        in Discord without any extra configuration.
     - Additional presence information for Splatoon 3
-
-        <img src="resources/discord-activity-splatoon3.png" alt="Screenshot showing Splatoon 3 as a Discord activity with SplatNet 3 presence information" width="308">
 - Show notifications for friend Nintendo Switch presences
-
-    ![Screenshot showing a presence notification](resources/notification.png)
 - [Electron app] Open game-specific services
     - Including NookLink, which doesn't work in web browsers as it requires custom JavaScript APIs.
 - Nintendo Switch Online app API proxy server and presence server
@@ -38,11 +27,15 @@ JavaScript library, command line tool and Electron app for accessing the Nintend
     - Data will be cached for a short time to reduce the number of requests to Nintendo's server.
     - This automatically handles authentication when given a Nintendo Account session token. This makes it much
         easier to access the API from a browser, in scripts or in other software.
-- Download all personalised SplatNet 2 and SplatNet 3 data, including battle and Salmon Run results
+- Download all personal SplatNet 2 and SplatNet 3 data, including battle and Salmon Run results
 - Download island newspapers from and send messages and reactions using NookLink
 - Download all Nintendo Switch Parental Controls usage records
 
 The API library and types are exported for use in JavaScript/TypeScript software. The app/commands properly cache access tokens and try to handle requests to appear as Nintendo's apps - if using nxapi as a library you will need to handle this yourself. [More information.](#usage-as-a-typescriptjavascript-library)
+
+Discord presence                    | Additional data for Splatoon 3    | Friend notifications
+------------------------------------|-----------------------------------|-----------------------------------
+![Screenshot showing Splatoon 2 as a Discord activity](resources/discord-activity.png) | <img src="resources/discord-activity-splatoon3.png" alt="Screenshot showing Splatoon 3 as a Discord activity with SplatNet 3 presence information" width="308"> | ![Screenshot showing a presence notification](resources/notification.png)
 
 #### Electron app
 
@@ -119,8 +112,10 @@ It's extremely unlikely:
 
 A secondary account is required for Discord Rich Presence; you don't need to sign in to your main account.
 
-##### Update 08/09/2023
-
+> [!CAUTION]
+>
+> **Update 08/09/2023**
+>
 > Nintendo has banned a small number of users from accessing SplatNet 3. Nintendo has not sent any notification to affected users. This is only known to have affected users of one application unrelated to nxapi.
 >
 > SplatNet 3 returns `401 Unauthorized` (`ERROR_INVALID_GAME_WEB_TOKEN`... which causes the official app to retry repeatedly); there is no specific error message for banned users. No other Nintendo services are affected.
@@ -132,7 +127,7 @@ A secondary account is required for Discord Rich Presence; you don't need to sig
 > - https://tkgstrator.work/article/2023/09/announcement.html
 > - https://github.com/frozenpandaman/s3s/issues/146
 
-#### Why is a token sent to one/two different non-Nintendo servers?
+#### Why is data sent to non-Nintendo servers?
 
 It's required to generate some data to make Nintendo think you're using the real Nintendo Switch Online app, as currently it's too hard to do this locally. (This isn't required for Parental Controls data.) See the [Coral client authentication](#coral-client-authentication) section below for more information.
 
@@ -323,15 +318,11 @@ See [docs/lib](docs/lib/index.md) and [src/exports](src/exports).
 
 ### Coral client authentication
 
-[api.imink.app](https://github.com/JoneWang/imink/wiki/imink-API-Documentation) or [nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) is used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to this API to generate some data that is required to authenticate the app. This API runs the Nintendo Switch Online app on an Android device to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
+[nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) is used by default to automate authenticating to the Nintendo Switch Online app's API and authenticating to web services. An access token (`id_token`) created by Nintendo must be sent to this API to generate some data that is required to authenticate the app. This API runs the Nintendo Switch Online app on an Android device to generate this data. The access token sent includes some information about the authenticated Nintendo Account and can be used to authenticate to the Nintendo Switch Online app and web services.
 
 Specifically, the tokens sent are JSON Web Tokens. The token sent to login to the app includes [this information and is valid for 15 minutes](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-account-id_token), and the token sent to login to web services includes [this information and is valid for two hours](https://gitlab.fancy.org.uk/samuel/nxapi/-/wikis/Nintendo-tokens#nintendo-switch-online-app-token).
 
-Alternatively the [flapg API](https://twitter.com/NexusMine/status/1563728086322929665) can be used by setting the `NXAPI_ZNCA_API` environment variable to `flapg`. (`NXAPI_ZNCA_API=flapg nxapi nso ...`)
-
-> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi. To force the use of the imink API, set the `NXAPI_ZNCA_API` environment variable to `imink`.
-
-nxapi also includes a custom server using Frida on an Android device/emulator that can be used instead of these.
+> Since v1.3.0 the default API to use will be fetched from my server and can be changed without an update to nxapi.
 
 This is only required for Nintendo Switch Online app data. Nintendo Switch Parental Controls data can be fetched without sending an access token to a third-party API.
 
