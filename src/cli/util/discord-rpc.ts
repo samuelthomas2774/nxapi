@@ -1,6 +1,6 @@
 import type { Arguments as ParentArguments } from './index.js';
 import { DiscordRpcClient, getAllIpcSockets } from '../../discord/rpc.js';
-import { defaultTitle } from '../../discord/titles.js';
+import { default_client } from '../../discord/titles.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
 
@@ -16,8 +16,6 @@ export function builder(yargs: Argv<ParentArguments>) {
 
 type Arguments = YargsArguments<ReturnType<typeof builder>>;
 
-const CLIENT_ID = defaultTitle.client;
-
 export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const sockets = await getAllIpcSockets();
 
@@ -26,7 +24,7 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     for (const [id, socket] of sockets) {
         const client = new DiscordRpcClient({ transport: 'ipc', ipc_socket: socket });
 
-        await client.connect(CLIENT_ID);
+        await client.connect(default_client);
         debug('[%d] Connected', id);
 
         if (client.application) {

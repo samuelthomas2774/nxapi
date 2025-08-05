@@ -2,7 +2,7 @@ import { fetch } from 'undici';
 import type { Arguments as ParentArguments } from './index.js';
 import createDebug from '../../util/debug.js';
 import { ArgumentsCamelCase, Argv, YargsArguments } from '../../util/yargs.js';
-import { titles as unsorted_titles } from '../../discord/titles.js';
+import { default_client, titles as unsorted_titles } from '../../discord/titles.js';
 import { DiscordApplicationRpc, getDiscordApplicationRpc } from './discord-activity.js';
 import { Title } from '../../discord/types.js';
 
@@ -153,13 +153,13 @@ async function getGroupedTitlesJson(exclude_discord_configuration = false, inclu
     }[] = [];
 
     for (const title of titles) {
-        let client = clients.find(c => c.id === title.client);
+        let client = clients.find(c => c.id === (title.client ?? default_client));
 
         if (!client) {
-            const application = await getDiscordApplicationRpc(title.client);
+            const application = await getDiscordApplicationRpc(title.client ?? default_client);
 
             client = {
-                id: title.client,
+                id: title.client ?? default_client,
                 application,
                 titles: [],
             };

@@ -1,10 +1,11 @@
 import DiscordRPC from 'discord-rpc';
-import { PresenceGame, PresenceState } from '../api/coral-types.js';
-import { defaultTitle, platform_clients, titles } from './titles.js';
+import { PresenceGame, PresencePlatform, PresenceState } from '../api/coral-types.js';
+import { default_client, defaultTitle, platform_clients, titles } from './titles.js';
 import createDebug from '../util/debug.js';
 import { product, version } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
 import { DiscordPresence, DiscordPresenceContext, DiscordPresencePlayTime } from './types.js';
+import { DiscordApiActivityStatusDisplayType } from './rpc.js';
 
 const debug = createDebug('nxapi:discord');
 
@@ -44,8 +45,17 @@ export function getDiscordPresence(
 
     const activity = new DiscordActivity();
 
+    if (title.setActivityName) {
+        activity.name = title.activityName ?? game.name;
+    } else if (title.titleName) {
+        // If this is set it/the title name is used as the details field
+        activity.statusDisplayType = DiscordApiActivityStatusDisplayType.DETAILS;
+    }
+
     activity.details = text[0];
     activity.state = text[1];
+
+    activity.platform = context?.platform;
 
     activity.setLargeImage(title.largeImageKey ?? game.imageUri, title.largeImageText);
 
@@ -78,7 +88,7 @@ export function getDiscordPresence(
     return {
         id: (title !== defaultTitle ? title : null)?.client ||
             (typeof context?.platform !== 'undefined' && platform_clients[context.platform]) ||
-            defaultTitle.client,
+            defaultTitle.client || default_client,
         title: titleid,
         config: title,
         activity,
@@ -87,6 +97,8 @@ export function getDiscordPresence(
 }
 
 export class DiscordActivity implements DiscordRPC.Presence {
+    name?: string = undefined;
+    statusDisplayType?: DiscordApiActivityStatusDisplayType | undefined;
     details?: string = undefined;
     state?: string = undefined;
     largeImageKey?: string = undefined;
@@ -95,13 +107,24 @@ export class DiscordActivity implements DiscordRPC.Presence {
     smallImageText?: string = undefined;
     buttons: { label: string; url: string; }[] = [];
 
+    platform?: PresencePlatform;
+
     constructor() {
         //
     }
 
+    get large_image_default_text() {
+        let text = product;
+
+        if (this.platform === PresencePlatform.NX) text = 'Playing on Nintendo Switch | ' + text;
+        if (this.platform === PresencePlatform.OUNCE) text = 'Playing on Nintendo Switch 2 | ' + text;
+
+        return text;
+    }
+
     setLargeImage(key: string, text?: string) {
         this.largeImageKey = key;
-        this.largeImageText = text ? text + ' | ' + product : product;
+        this.largeImageText = text ? text + ' | ' + this.large_image_default_text : this.large_image_default_text;
     }
 
     setSmallImage(key: string, text?: string) {
@@ -174,7 +197,7 @@ export function getInactiveDiscordPresence(
 ): DiscordPresence {
     return {
         id: (typeof context?.platform !== 'undefined' && platform_clients[context.platform]) ||
-            defaultTitle.client,
+            defaultTitle.client || default_client,
         title: null,
         activity: {
             state: 'Not playing',

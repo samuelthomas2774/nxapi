@@ -27,7 +27,9 @@ export interface DiscordPresence {
 type SystemModuleTitleId = `01000000000000${string}`;
 type SystemDataTitleId = `01000000000008${string}`;
 type SystemAppletTitleId = `0100000000001${string}`;
-type ApplicationTitleId = `0100${string}${'0' | '2' | '4' | '6' | '8' | 'a' | 'c' | 'e'}000`;
+type ApplicationTitleIdNx = `0100${string}${'0' | '2' | '4' | '6' | '8' | 'a' | 'c' | 'e'}000`;
+type ApplicationTitleIdOunce = `0400${string}${'0' | '2' | '4' | '6' | '8' | 'a' | 'c' | 'e'}000`;
+type ApplicationTitleId = ApplicationTitleIdNx | ApplicationTitleIdOunce;
 
 export interface Title<M extends ExternalMonitor = ExternalMonitor> {
     /**
@@ -39,12 +41,18 @@ export interface Title<M extends ExternalMonitor = ExternalMonitor> {
     /**
      * Discord client ID
      */
-    client: string;
+    client?: string;
+
+    /**
+     * Activity name. This overrides the application's name that will appear under the user's name after "Playing ".
+     */
+    setActivityName?: boolean;
+    activityName?: string;
 
     /**
      * Title name to show in Discord. This is *not* the name that will appear under the user's name after "Playing ".
      *
-     * If this is set to true the title's name from znc will be used.
+     * If this is set to true the title's name from coral will be used.
      * If this is set to false (default) no title name will be set. This should be used when a specific Discord client for the title is used.
      * If this is set to a string it will be used as the title name.
      *
@@ -52,7 +60,7 @@ export interface Title<M extends ExternalMonitor = ExternalMonitor> {
      */
     titleName?: string | boolean;
     /**
-     * By default the title's icon from znc will be used. (No icons need to be uploaded to Discord.)
+     * By default the title's icon from coral will be used. (No icons need to be uploaded to Discord.)
      */
     largeImageKey?: string;
     largeImageText?: string;

@@ -56,6 +56,29 @@ export async function findDiscordRpcClient(
 // Patches discord-rpc to allow using a specific socket.
 //
 
+export interface DiscordRpcClient {
+    /**
+     * Request
+     * @param {string} cmd Command
+     * @param {Object} [args={}] Arguments
+     * @param {string} [evt] Event
+     * @returns {Promise}
+     * @private
+     */
+    request(cmd: string, args?: object, evt?: string): Promise<unknown>;
+}
+
+declare module 'discord-rpc' {
+    interface Presence {
+        name?: string;
+        statusDisplayType?: DiscordApiActivityStatusDisplayType;
+        stateUrl?: string;
+        detailsUrl?: string;
+        largeImageUrl?: string;
+        smallImageUrl?: string;
+    }
+}
+
 export class DiscordRpcClient extends DiscordRPC.Client {
     constructor(options?: DiscordRPC.RPCClientOptions & {
         ipc_socket?: net.Socket;
@@ -74,6 +97,149 @@ export class DiscordRpcClient extends DiscordRPC.Client {
             this.transport.on('message', this._onRpcMessage.bind(this));
         }
     }
+
+    setActivity(args: DiscordRPC.Presence, pid = process.pid) {
+        const activity: DiscordRpcActivity = {
+            name: args.name,
+            type: DiscordApiActivityType.PLAYING,
+            status_display_type: args.statusDisplayType,
+            state: args.state,
+            state_url: args.stateUrl,
+            details: args.details,
+            details_url: args.detailsUrl,
+            buttons: args.buttons,
+            instance: !!args.instance,
+        };
+
+        if (args.startTimestamp || args.endTimestamp) {
+            activity.timestamps = {
+                start: args.startTimestamp instanceof Date ? Math.round(args.startTimestamp.getTime()) : args.startTimestamp,
+                end: args.endTimestamp instanceof Date ? Math.round(args.endTimestamp.getTime()) : args.endTimestamp,
+            };
+            if (typeof activity.timestamps.start === 'number' && activity.timestamps.start > 2147483647000) {
+                throw new RangeError('timestamps.start must fit into a unix timestamp');
+            }
+            if (typeof activity.timestamps.end === 'number' && activity.timestamps.end > 2147483647000) {
+                throw new RangeError('timestamps.end must fit into a unix timestamp');
+            }
+        }
+
+        if (args.largeImageKey || args.largeImageText ||
+            args.smallImageKey || args.smallImageText
+        ) {
+            activity.assets = {
+                large_image: args.largeImageKey,
+                large_text: args.largeImageText,
+                large_url: args.largeImageUrl,
+                small_image: args.smallImageKey,
+                small_text: args.smallImageText,
+                small_url: args.smallImageUrl,
+            };
+        }
+
+        if (args.partySize || args.partyId || args.partyMax) {
+            activity.party = {
+                id: args.partyId,
+                size: args.partySize || args.partyMax ? [args.partySize ?? 0, args.partyMax ?? 0] : undefined,
+            };
+        }
+
+        if (args.matchSecret || args.joinSecret || args.spectateSecret) {
+            activity.secrets = {
+                match: args.matchSecret,
+                join: args.joinSecret,
+                spectate: args.spectateSecret,
+            };
+        }
+
+        return this.setActivityRaw(activity, pid);
+    }
+
+    setActivityRaw(activity: DiscordRpcActivity, pid = process.pid) {
+        debug('set activity', activity);
+
+        return this.request('SET_ACTIVITY', {
+            pid,
+            activity,
+        });
+    }
+}
+
+type DiscordRpcActivity = Partial<Omit<DiscordApiActivity, 'created_at' | 'application_id' | 'emoji'>>;
+
+interface DiscordApiActivity {
+    name: string;
+    type: DiscordApiActivityType;
+    url?: string;
+    created_at: number;
+    timestamps?: DiscordApiActivityTimestamps;
+    application_id?: string;
+    status_display_type?: DiscordApiActivityStatusDisplayType;
+    details?: string;
+    details_url?: string;
+    state?: string;
+    state_url?: string;
+    emoji?: DiscordApiActivityEmoji;
+    party?: DiscordApiActivityParty;
+    assets?: DiscordApiActivityAssets;
+    secrets?: DiscordApiActivitySecrets;
+    instance?: boolean;
+    flags?: number;
+    buttons?: DiscordApiActivityButton[];
+}
+enum DiscordApiActivityType {
+    PLAYING = 0,
+    STREAMING = 1,
+    LISTENING = 2,
+    WATCHING = 3,
+    CUSTOM = 4,
+    COMPETING = 5,
+}
+export enum DiscordApiActivityStatusDisplayType {
+    NAME = 0,
+    STATE = 1,
+    DETAILS = 2,
+}
+interface DiscordApiActivityTimestamps {
+    start?: number;
+    end?: number;
+}
+interface DiscordApiActivityEmoji {
+    name: string;
+    id?: string;
+    animated?: boolean;
+}
+interface DiscordApiActivityParty {
+    id?: string;
+    size?: [number, number];
+}
+interface DiscordApiActivityAssets {
+    large_image?: string;
+    large_text?: string;
+    large_url?: string;
+    small_image?: string;
+    small_text?: string;
+    small_url?: string;
+}
+interface DiscordApiActivitySecrets {
+    join?: string;
+    spectate?: string;
+    match?: string;
+}
+enum DiscordApiActivityFlags {
+    INSTANCE = 1 << 0,
+    JOIN = 1 << 1,
+    SPECTATE = 1 << 2,
+    JOIN_REQUEST = 1 << 3,
+    SYNC = 1 << 4,
+    PLAY = 1 << 5,
+    PARTY_PRIVACY_FRIENDS = 1 << 6,
+    PARTY_PRIVACY_VOICE_CHANNEL = 1 << 7,
+    EMBEDDED = 1 << 8,
+}
+interface DiscordApiActivityButton {
+    label: string;
+    url: string;
 }
 
 class IpcTransport extends BaseIpcTransport {

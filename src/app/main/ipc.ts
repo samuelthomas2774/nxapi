@@ -13,7 +13,7 @@ import { CurrentUser, Friend, Game, PresencePlatform, PresenceState, WebService 
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountUser } from '../../api/na.js';
 import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
-import { defaultTitle } from '../../discord/titles.js';
+import { default_client } from '../../discord/titles.js';
 import type { FriendProps } from '../browser/friend/index.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
 import type { AddFriendProps } from '../browser/add-friend/index.js';
@@ -181,7 +181,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
 
         for (const client of await getDiscordRpcClients()) {
             try {
-                await client.connect(defaultTitle.client);
+                await client.connect(default_client);
                 if (client.user && !users.find(u => u.id === client.user!.id)) users.push(client.user);
             } finally {
                 await client.destroy();
