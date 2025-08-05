@@ -42,8 +42,8 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
                 debug('[%s#%d] ' + msg, publisher, i, ...args);
             };
 
-            if (!title.id.match(/^0100([0-9a-f]{8})[02468ace]000$/)) {
-                if (title.id.match(/^0100([0-9a-f]{8})[02468ace]000$/i))
+            if (!title.id.match(/^0[14]00([0-9a-f]{8})[02468ace]000$/)) {
+                if (title.id.match(/^0[14]00([0-9a-f]{8})[02468ace]000$/i))
                     warn('Invalid title ID, must be lowercase hex', title.id);
                 else warn('Invalid title ID', title.id);
             }
