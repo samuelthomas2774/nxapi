@@ -121,14 +121,44 @@ export const titles: Title[] = [
         largeImageText: 'Nintendo Entertainment System',
     },
     {
+        // ファミリーコンピュータ Nintendo Switch Online
+        id: '0100b4e00444c000',
+        client: '950907272438104064',
+        largeImageText: 'ファミリーコンピュータ',
+    },
+    {
         // Super Nintendo Entertainment System - Nintendo Switch Online
         id: '01008d300c50c000',
         client: '950907272438104064',
         largeImageText: 'Super Nintendo Entertainment System',
     },
     {
+        // スーパーファミコン Nintendo Classics [SNES JP/HK]
+        id: '0100e8600c504000',
+        client: '950907272438104064',
+        largeImageText: 'スーパーファミコン',
+    },
+    {
         // Nintendo 64 - Nintendo Switch Online
         id: '0100c9a00ece6000',
+        client: '950907272438104064',
+        largeImageText: 'Nintendo 64',
+    },
+    {
+        // NINTENDO 64 Nintendo Classics [JP/HK]
+        id: '010057d00ece4000',
+        client: '950907272438104064',
+        largeImageText: 'Nintendo 64',
+    },
+    {
+        // Nintendo 64 – Nintendo Classics: Mature
+        id: '0100e0601c632000',
+        client: '950907272438104064',
+        largeImageText: 'Nintendo 64',
+    },
+    {
+        // NINTENDO 64 Nintendo Switch Online 18+ [JP/HK]
+        id: '010037a0170d2000',
         client: '950907272438104064',
         largeImageText: 'Nintendo 64',
     },
@@ -139,16 +169,46 @@ export const titles: Title[] = [
         largeImageText: 'SEGA Mega Drive',
     },
     {
+        // セガ メガドライブ for Nintendo Switch Online [SEGA Mega Drive JP/HK]
+        id: '01001ea014bcc000',
+        client: '950907272438104064',
+        largeImageText: 'セガ メガドライブ',
+    },
+    {
         // Game Boy - Nintendo Switch Online
         id: '0100c62011050000',
         client: '950907272438104064',
         largeImageText: 'Game Boy',
     },
     {
+        // ゲームボーイ Nintendo Switch Online
+        id: '0100395011044000',
+        client: '950907272438104064',
+        largeImageText: 'ゲームボーイ',
+    },
+    {
         // Game Boy Advance - Nintendo Switch Online
         id: '010012f017576000',
         client: '950907272438104064',
         largeImageText: 'Game Boy Advance',
+    },
+    {
+        // ゲームボーイアドバンス Nintendo Switch Online [GBA JP/HK]
+        id: '0100555017574000',
+        client: '950907272438104064',
+        largeImageText: 'ゲームボーイアドバンス',
+    },
+    {
+        // Nintendo GameCube – Nintendo Classics
+        id: '040029a01d3e0000',
+        client: '950907272438104064',
+        largeImageText: 'Nintendo GameCube',
+    },
+    {
+        // ニンテンドー ゲームキューブ Nintendo Classics [GC JP/HK]
+        id: '040052e01d3da000',
+        client: '950907272438104064',
+        largeImageText: 'ニンテンドー ゲームキューブ',
     },
 
     {
