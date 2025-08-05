@@ -70,7 +70,7 @@ export interface DiscordRpcClient {
 
 declare module 'discord-rpc' {
     interface Presence {
-        name?: string;
+        type?: DiscordApiActivityType;
         statusDisplayType?: DiscordApiActivityStatusDisplayType;
         stateUrl?: string;
         detailsUrl?: string;
@@ -100,8 +100,7 @@ export class DiscordRpcClient extends DiscordRPC.Client {
 
     setActivity(args: DiscordRPC.Presence, pid = process.pid) {
         const activity: DiscordRpcActivity = {
-            name: args.name,
-            type: DiscordApiActivityType.PLAYING,
+            type: args.type,
             status_display_type: args.statusDisplayType,
             state: args.state,
             state_url: args.stateUrl,
@@ -165,7 +164,8 @@ export class DiscordRpcClient extends DiscordRPC.Client {
     }
 }
 
-type DiscordRpcActivity = Partial<Omit<DiscordApiActivity, 'created_at' | 'application_id' | 'emoji'>>;
+// RPC clients can't set activity name, but some third-party clients do allow this
+type DiscordRpcActivity = Partial<Omit<DiscordApiActivity, 'name' | 'created_at' | 'application_id' | 'emoji'>>;
 
 interface DiscordApiActivity {
     name: string;
@@ -187,7 +187,7 @@ interface DiscordApiActivity {
     flags?: number;
     buttons?: DiscordApiActivityButton[];
 }
-enum DiscordApiActivityType {
+export enum DiscordApiActivityType {
     PLAYING = 0,
     STREAMING = 1,
     LISTENING = 2,
@@ -226,7 +226,7 @@ interface DiscordApiActivitySecrets {
     spectate?: string;
     match?: string;
 }
-enum DiscordApiActivityFlags {
+export enum DiscordApiActivityFlags {
     INSTANCE = 1 << 0,
     JOIN = 1 << 1,
     SPECTATE = 1 << 2,

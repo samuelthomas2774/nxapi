@@ -5,7 +5,7 @@ import createDebug from '../util/debug.js';
 import { product, version } from '../util/product.js';
 import { getTitleIdFromEcUrl, hrduration } from '../util/misc.js';
 import { DiscordPresence, DiscordPresenceContext, DiscordPresencePlayTime } from './types.js';
-import { DiscordApiActivityStatusDisplayType } from './rpc.js';
+import { DiscordApiActivityStatusDisplayType, DiscordApiActivityType } from './rpc.js';
 
 const debug = createDebug('nxapi:discord');
 
@@ -45,9 +45,7 @@ export function getDiscordPresence(
 
     const activity = new DiscordActivity();
 
-    if (title.setActivityName) {
-        activity.name = title.activityName ?? game.name;
-    } else if (title.titleName) {
+    if (title.titleName) {
         // If this is set it/the title name is used as the details field
         activity.statusDisplayType = DiscordApiActivityStatusDisplayType.DETAILS;
     }
@@ -97,8 +95,8 @@ export function getDiscordPresence(
 }
 
 export class DiscordActivity implements DiscordRPC.Presence {
-    name?: string = undefined;
-    statusDisplayType?: DiscordApiActivityStatusDisplayType | undefined;
+    type?: DiscordApiActivityType = undefined;
+    statusDisplayType?: DiscordApiActivityStatusDisplayType = undefined;
     details?: string = undefined;
     state?: string = undefined;
     largeImageKey?: string = undefined;

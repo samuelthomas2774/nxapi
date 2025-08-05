@@ -44,12 +44,6 @@ export interface Title<M extends ExternalMonitor = ExternalMonitor> {
     client?: string;
 
     /**
-     * Activity name. This overrides the application's name that will appear under the user's name after "Playing ".
-     */
-    setActivityName?: boolean;
-    activityName?: string;
-
-    /**
      * Title name to show in Discord. This is *not* the name that will appear under the user's name after "Playing ".
      *
      * If this is set to true the title's name from coral will be used.
