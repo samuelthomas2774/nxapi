@@ -68,15 +68,24 @@ function User(props: {
         ipc.showUserMenu(props.user.user, props.user.nso?.nsoAccount.user);
     }, [ipc, props.user.user, props.user.nso?.nsoAccount.user]);
 
-    const miiImageSource: ImageURISource = props.user.user.mii ? {
-        uri: 'https://' + props.user.user.mii.imageOrigin + '/2.0.0/mii_images/' +
+    const mii_url = new URL(props.user.user.iconUri ?? (props.user.user.mii ?
+        'https://' + props.user.user.mii.imageOrigin + '/2.0.0/mii_images/' +
             props.user.user.mii.id + '/' +
-            props.user.user.mii.etag + '.png' +
-            '?type=face&width=140&bgColor=DFDFDFFF',
-        width: 32,
-        height: 32,
-    } : {
-        uri: 'https://cdn.accounts.nintendo.com/account/images/common/defaults/mii.png',
+            props.user.user.mii.etag + '.png' :
+        'https://cdn.accounts.nintendo.com/account/images/common/defaults/mii.png'));
+
+    if (mii_url.origin === 'https://cdn-mii.accounts.nintendo.com' ||
+        props.user.user.mii && mii_url.hostname === props.user.user.mii.imageOrigin
+    ) {
+        mii_url.searchParams.append('type', 'face');
+        mii_url.searchParams.append('width', '140');
+        mii_url.searchParams.append('bgColor', 'DFDFDFFF');
+    } else {
+        mii_url.href = 'https://cdn.accounts.nintendo.com/account/images/common/defaults/mii.png';
+    }
+
+    const miiImageSource: ImageURISource = {
+        uri: mii_url.toString(),
         width: 32,
         height: 32,
     };
