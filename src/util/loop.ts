@@ -4,6 +4,7 @@ const debug = createDebug('nxapi:util:loop');
 
 export default abstract class Loop {
     update_interval = 60;
+    errors = 0;
 
     init(): void | Promise<LoopResult | void> {}
 
@@ -13,14 +14,21 @@ export default abstract class Loop {
         try {
             const result = init ? await this.init() : await this.update();
 
+            this.errors = 0;
+
             return result ?? (init ? LoopResult.OK_SKIP_INTERVAL : LoopResult.OK);
         } catch (err) {
+            this.errors++;
             return this.handleError(err as any);
         }
     }
 
     async handleError(err: Error): Promise<LoopResult> {
         throw err;
+    }
+
+    get next_update_interval() {
+        return this.update_interval * Math.min(this.errors / 2, 20);
     }
 
     private is_loop_active = 0;
@@ -36,6 +44,13 @@ export default abstract class Loop {
                     this.skip_interval_once = false;
                 } else {
                     await new Promise(rs => setTimeout(this.timeout_resolve = rs, this.update_interval * 1000));
+                }
+            }
+            if (result === LoopResult.DEFER_NEXT_UPDATE) {
+                if (this.skip_interval_once) {
+                    this.skip_interval_once = false;
+                } else {
+                    await new Promise(rs => setTimeout(this.timeout_resolve = rs, this.next_update_interval * 1000));
                 }
             }
             if (result === LoopResult.STOP) {
@@ -62,11 +77,13 @@ export default abstract class Loop {
 
 const LoopRunOk = Symbol('LoopRunOk');
 const LoopRunOkSkipInterval = Symbol('LoopRunOkSkipInterval');
+const LoopRunIncrementInterval = Symbol('LoopRunIncrementInterval');
 const LoopRunStop = Symbol('LoopRunStopNow');
 
 export enum LoopResult {
     OK = LoopRunOk as any,
     OK_SKIP_INTERVAL = LoopRunOkSkipInterval as any,
+    DEFER_NEXT_UPDATE = LoopRunIncrementInterval as any,
     STOP = LoopRunStop as any,
 }
 

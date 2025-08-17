@@ -77,16 +77,9 @@ interface ErrorBoxOptions extends MessageBoxOptions {
     window?: BrowserWindow;
 }
 
-export async function showErrorDialog(options: ErrorBoxOptions) {
+export function showErrorDialog(options: ErrorBoxOptions) {
     const {error, app, window, ...message_box_options} = options;
     const detail = ErrorDescription.getErrorDescription(error);
-
-    if (app) {
-        const showErrorAlerts = await app.store.storage.getItem('preferences.showerroralerts') as boolean
-        if (showErrorAlerts === false) {
-            return Promise.resolve({ response: 0, checkboxChecked: false });
-        }
-    }
 
     message_box_options.detail = message_box_options.detail ?
         detail + '\n\n' + message_box_options.detail :

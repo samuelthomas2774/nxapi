@@ -397,12 +397,14 @@ export class PresenceMonitorManager {
             return LoopResult.OK;
         }
 
+        const show_error_alerts: boolean = await this.app.store.storage.getItem('ShowErrorAlertsPreference') ?? false;
+        if (!show_error_alerts) return LoopResult.DEFER_NEXT_UPDATE;
+
         const {response} = await showErrorDialog({
             message: err.name + ' updating presence monitor',
             error: err,
             buttons: ['OK', 'Retry'],
             defaultId: 0,
-            app: this.app,
         });
 
         if (response === 1) {
@@ -432,7 +434,6 @@ export class PresenceMonitorManager {
         await showErrorDialog({
             message: error.name + ' updating presence monitor',
             error,
-            app: this.app,
         });
     }
 }

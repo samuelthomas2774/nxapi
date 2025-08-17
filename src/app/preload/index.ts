@@ -50,8 +50,8 @@ const ipc = {
     getLoginItemSettings: () => inv<LoginItem>('systemPreferences:getloginitem'),
     setLoginItemSettings: (settings: LoginItemOptions) => inv('systemPreferences:setloginitem', settings),
 
-    getShowErrorAlerts: () => inv<boolean>('preferences:showerroralerts'),
-    setShowErrorAlerts: (enabled: boolean) => inv('preferences:setshowerroralerts', enabled),
+    getShowErrorAlerts: () => inv<boolean>('preferences:getshowerroralerts'),
+    setShowErrorAlerts: (show: boolean) => inv('preferences:setshowerroralerts', show),
 
     getUpdateData: () => inv<UpdateCacheData | null>('update:get'),
     checkUpdates: () => inv<UpdateCacheData | null>('update:check'),
