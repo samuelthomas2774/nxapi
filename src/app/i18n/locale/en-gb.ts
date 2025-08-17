@@ -296,8 +296,8 @@ export const preferences_window = {
     miscellaneous: {
         heading: 'Miscellaneous',
         show_error_alerts: 'Show error alerts',
-        show_error_alerts_help: 'This will show a popup when an error occurs while loading data. This is useful for debugging, but can be annoying if you are not interested in the errors.',
-    }
+        show_error_alerts_help: 'Shows an alert when an error occurs while updating presence. If this is disabled, nxapi will delay updates after errors.',
+    },
 };
 
 export const friend_window = {
