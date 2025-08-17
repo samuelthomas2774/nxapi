@@ -10,3 +10,6 @@ export * as presenceEmbedServer from './presence-embed-server.js';
 export * as logArchive from './log-archive.js';
 export * as decryptLogArchive from './decrypt-log-archive.js';
 export * as status from './status.js';
+export * as updateS2sToken from './update-s2s-token.js';
+export * as updateS3sToken from './update-s3s-token.js';
+export * as updateS3siToken from './update-s3si-token.js';

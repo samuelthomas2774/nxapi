@@ -17,7 +17,7 @@ export const SPLATNET3_WEBSERVICE_ID = 4834290508791808;
 export const SPLATNET3_WEBSERVICE_URL = 'https://api.lp1.av5ja.srv.nintendo.net';
 export const SPLATNET3_WEBSERVICE_USERAGENT = 'Mozilla/5.0 (Linux; Android 8.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/58.0.3029.125 Mobile Safari/537.36';
 
-const languages = [
+export const languages = [
     'de-DE', 'en-GB', 'en-US', 'es-ES', 'es-MX', 'fr-CA',
     'fr-FR', 'it-IT', 'ja-JP', 'ko-KR', 'nl-NL', 'ru-RU',
     'zh-CN', 'zh-TW',
