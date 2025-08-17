@@ -67,8 +67,10 @@ export class PresenceMonitorManager {
                 error: err,
                 buttons: ['OK', 'Retry', 'Stop'],
                 defaultId: 0,
-                app: this.app,
             });
+
+            const show_error_alerts: boolean = await this.app.store.storage.getItem('ShowErrorAlertsPreference') ?? false;
+            if (!show_error_alerts) return ErrorResult.DEFER;
 
             if (response === 1) {
                 return ErrorResult.RETRY;

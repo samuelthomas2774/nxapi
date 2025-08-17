@@ -91,6 +91,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
             debug('Error authenticating to SplatNet 3', err);
             const result = await this.discord_presence.handleError(err as Error);
             if (result === ErrorResult.RETRY) return this.init();
+            if (result === ErrorResult.DEFER) return this.errors++, LoopResult.DEFER_NEXT_UPDATE;
             if (result === ErrorResult.STOP) return LoopResult.STOP;
         }
 
@@ -168,6 +169,7 @@ export default class SplatNet3Monitor extends EmbeddedLoop {
     async handleError(err: Error) {
         const result = await this.discord_presence.handleError(err as Error);
         if (result === ErrorResult.RETRY) return LoopResult.OK_SKIP_INTERVAL;
+        if (result === ErrorResult.DEFER) return LoopResult.DEFER_NEXT_UPDATE;
 
         this.friend = null;
         this.discord_presence.refreshPresence();

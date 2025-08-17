@@ -52,6 +52,7 @@ export default abstract class Loop {
                 } else {
                     await new Promise(rs => setTimeout(this.timeout_resolve = rs, this.next_update_interval * 1000));
                 }
+                return LoopResult.DEFER_NEXT_UPDATE;
             }
             if (result === LoopResult.STOP) {
                 return LoopResult.STOP;
@@ -109,25 +110,26 @@ export abstract class EmbeddedLoop extends Loop {
     private async _run() {
         this._running++;
         const i = this._running;
+        let init = true;
 
         try {
-            const result = await this.loop(true);
-            if (result === LoopResult.STOP) return;
-
             while (i === this._running) {
-                const result = await this.loop();
+                const result = await this.loop(init);
+
+                if (init && result !== LoopResult.DEFER_NEXT_UPDATE) {
+                    init = false;
+                }
 
                 if (result === LoopResult.STOP) {
-                    await this.onStop?.();
+                    if (!init) await this.onStop?.();
                     return;
                 }
             }
 
-            if (this._running === 0 && !this.onStop) {
+            if (this._running === 0 && !init && !this.onStop) {
                 // Run one more time after the loop ends
                 const result = await this.loopRun();
             }
-
         } finally {
             this._running = 0;
         }
