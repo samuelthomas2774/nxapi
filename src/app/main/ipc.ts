@@ -90,6 +90,10 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     handle('systemPreferences:getloginitem', () => appinstance.store.getLoginItem());
     handle('systemPreferences:setloginitem', (e, settings: LoginItemOptions) => appinstance.store.setLoginItem(settings));
 
+    handle('preferences:showerroralerts', () => storage.getItem('preferences.showerroralerts'));
+    handle('preferences:setshowerroralerts', (e, enabled: boolean) =>
+        storage.setItem('preferences.showerroralerts', enabled));
+
     handle('update:get', () => appinstance.updater.cache ?? appinstance.updater.check());
     handle('update:check', () => appinstance.updater.check());
     handle('statusupdates:get', () => appinstance.statusupdates.cache ?? []);

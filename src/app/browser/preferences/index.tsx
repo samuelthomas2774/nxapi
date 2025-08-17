@@ -30,6 +30,8 @@ function _Preferences(props: {
 
     const [login_item, ,, forceRefreshLoginItem] = useAsync(useCallback(() => ipc.getLoginItemSettings(), [ipc]));
 
+    const [show_error_alerts, , show_error_alerts_state, forceRefreshErrorAlerts] = useAsync(useCallback(() => ipc.getShowErrorAlerts(), [ipc]));
+
     const setOpenAtLogin = useCallback(async (open_at_login: boolean | 'mixed') => {
         await ipc.setLoginItemSettings({...login_item!, startup_enabled: !!open_at_login});
         forceRefreshLoginItem();
@@ -38,6 +40,11 @@ function _Preferences(props: {
         await ipc.setLoginItemSettings({...login_item!, startup_hidden: !!open_as_hidden});
         forceRefreshLoginItem();
     }, [ipc, login_item]);
+
+    const setShowErrorAlerts = useCallback(async (show_error_alerts: boolean | 'mixed') => {
+        await ipc.setShowErrorAlerts(!!show_error_alerts);
+        forceRefreshErrorAlerts();
+    }, [ipc]);
 
     const [discord_users, discord_users_error, discord_users_state, forceRefreshDiscordUsers] =
         useAsync(useCallback(() => ipc.getDiscordUsers(), [ipc]));
@@ -97,7 +104,8 @@ function _Preferences(props: {
 
     useEventListener(events, 'window:refresh', () => (
         forceRefreshAccounts(), forceRefreshLoginItem(),
-        forceRefreshDiscordUsers(), forceRefreshDiscordOptions()
+        forceRefreshDiscordUsers(), forceRefreshDiscordOptions(),
+        forceRefreshErrorAlerts()
     ), []);
 
     if (!users ||
@@ -278,6 +286,26 @@ function _Preferences(props: {
                 </View>
                 <Text style={[styles.help, theme.text]}>{t('splatnet3.discord_help_1')}</Text>
                 <Text style={[styles.help, theme.text]}>{t('splatnet3.discord_help_2')}</Text>
+            </View>
+        </View>
+
+        <View style={styles.section}>
+            <View style={styles.sectionLeft}>
+                <Text style={[styles.label, theme.text]}>{t('miscellaneous.heading')}</Text>
+            </View>
+            <View style={styles.sectionRight}>
+                <View style={[styles.checkboxContainer]}>
+                    <CheckBox
+                        value={show_error_alerts ?? true}
+                        onValueChange={setShowErrorAlerts}
+                        color={'#' + (accent_colour ?? DEFAULT_ACCENT_COLOUR)}
+                        style={styles.checkbox}
+                    />
+                    <TouchableOpacity style={styles.checkboxLabel} onPress={() => setShowErrorAlerts(!(show_error_alerts ?? true))}>
+                        <Text style={[styles.checkboxLabelText, theme.text]}>{t('miscellaneous.show_error_alerts')}</Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={[styles.help, theme.text]}>{t('miscellaneous.show_error_alerts_help')}</Text>
             </View>
         </View>
     </View>;
