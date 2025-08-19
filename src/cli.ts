@@ -4,7 +4,7 @@ import { setGlobalDispatcher } from 'undici';
 import * as commands from './cli/commands.js';
 import { checkUpdates } from './common/update.js';
 import createDebug from './util/debug.js';
-import { dev } from './util/product.js';
+import { dev, product } from './util/product.js';
 import { paths } from './util/storage.js';
 import { YargsArguments } from './util/yargs.js';
 import { addUserAgent } from './util/useragent.js';
@@ -39,6 +39,7 @@ export function createYargs(argv: string[]) {
         .demandCommand()
         .help()
         // .version(false)
+        .version(product)
         .showHelpOnFail(false, 'Specify --help for available options');
 
     return yargs;
