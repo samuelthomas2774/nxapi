@@ -5,11 +5,19 @@ import { dev, git, pkg, release } from './product.js';
 export const NXAPI_AUTH_CLI_CLIENT_ID = 'CKtknJ6HiH2AZIMw-x8ljw';
 export const NXAPI_AUTH_APP_CLIENT_ID = 'GlR_qsPZpNcxqMwnbsSjMA';
 
+export let client_auth_provider: ClientAuthProviderInterface | null = null;
 export let client_assertion_provider: ClientAssertionProviderInterface | null = null;
 
+export function setClientAuthentication(provider: ClientAuthProviderInterface) {
+    client_auth_provider = provider;
+}
 export function setClientAssertionProvider(provider: ClientAssertionProviderInterface) {
     client_assertion_provider = provider;
 }
+
+export type ClientAuthProviderInterface =
+    ClientAssertionProviderInterface |
+    ClientCredentialsInterface;
 
 export interface ClientAssertionProviderInterface {
     scope: string;
@@ -18,6 +26,12 @@ export interface ClientAssertionProviderInterface {
 export interface OAuthClientAssertion {
     assertion: string;
     type: string;
+}
+
+export interface ClientCredentialsInterface {
+    id: string;
+    secret?: string;
+    scope: string;
 }
 
 export class ClientAssertionProvider implements ClientAssertionProviderInterface {

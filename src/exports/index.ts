@@ -2,6 +2,13 @@ export { getTitleIdFromEcUrl } from '../util/misc.js';
 export { ErrorResponse, ResponseSymbol } from '../api/util.js';
 export { addUserAgent, addUserAgentFromPackageJson } from '../util/useragent.js';
 
+export {
+    ClientAssertionProviderInterface,
+    ClientAuthProviderInterface,
+    ClientCredentialsInterface,
+    setClientAuthentication,
+} from '../util/nxapi-auth.js';
+
 export { version, product } from '../util/product.js';
 
 export {

@@ -5,7 +5,7 @@ import { defineResponse, ErrorResponse } from './util.js';
 import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
-import { client_assertion_provider, ClientAssertionProviderInterface } from '../util/nxapi-auth.js';
+import { client_assertion_provider, client_auth_provider, ClientAssertionProviderInterface } from '../util/nxapi-auth.js';
 import { ZNCA_VERSION } from './coral.js';
 import { AccountLoginParameter, AccountTokenParameter, WebServiceTokenParameter } from './coral-types.js';
 
@@ -575,6 +575,7 @@ export class NxapiZncaAuth {
         const resource = new URL(url).origin;
 
         const auth = new NxapiZncaAuth(resource, useragent);
+        let scope: string | null = null;
 
         if (process.env.NXAPI_ZNCA_API_CLIENT_ID && process.env.NXAPI_ZNCA_API_CLIENT_SECRET) {
             auth.client_credentials = {
@@ -591,13 +592,23 @@ export class NxapiZncaAuth {
             auth.client_credentials = {
                 id: process.env.NXAPI_ZNCA_API_CLIENT_ID,
             };
+        } else if (client_auth_provider && 'id' in client_auth_provider) {
+            auth.client_credentials = {
+                id: client_auth_provider.id,
+                secret: client_auth_provider.secret,
+            };
+            scope = client_auth_provider.scope;
+        } else if (client_auth_provider && 'create' in client_auth_provider) {
+            auth.client_assertion_provider = client_auth_provider;
         } else if (client_assertion_provider) {
             auth.client_assertion_provider = client_assertion_provider;
         } else {
             debugZncaAuth('client authentication not configured');
         }
 
-        if (process.env.NXAPI_ZNCA_API_AUTH_SCOPE) {
+        if (scope) {
+            auth.request_scope = scope;
+        } else if (process.env.NXAPI_ZNCA_API_AUTH_SCOPE) {
             auth.request_scope = process.env.NXAPI_ZNCA_API_AUTH_SCOPE;
         }
 
