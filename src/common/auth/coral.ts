@@ -7,7 +7,7 @@ import { getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionTok
 import createDebug from '../../util/debug.js';
 import { Jwt } from '../../util/jwt.js';
 import { checkUseLimit, SHOULD_LIMIT_USE } from './util.js';
-import { getNaToken } from './na.js';
+import { getNaToken, InvalidNintendoAccountTokenError, NintendoAccountSessionTokenExpiredError } from './na.js';
 
 const debug = createDebug('nxapi:auth:coral');
 
@@ -48,17 +48,20 @@ export async function getToken(
 
     const [jwt, sig] = Jwt.decode<NintendoAccountSessionTokenJwtPayload>(token);
 
+    // TODO: getNaToken already does this, but is called after checkUseLimit
+    // It has it's own rate limit so just call this first
+
     if (jwt.payload.iss !== 'https://accounts.nintendo.com') {
-        throw new Error('Invalid Nintendo Account session token issuer');
+        throw new InvalidNintendoAccountTokenError('Invalid Nintendo Account session token issuer');
     }
     if (jwt.payload.typ !== 'session_token') {
-        throw new Error('Invalid Nintendo Account session token type');
+        throw new InvalidNintendoAccountTokenError('Invalid Nintendo Account session token type');
     }
     if (jwt.payload.aud !== ZNCA_CLIENT_ID) {
-        throw new Error('Invalid Nintendo Account session token audience');
+        throw new InvalidNintendoAccountTokenError('Invalid Nintendo Account session token audience');
     }
     if (jwt.payload.exp <= (Date.now() / 1000)) {
-        throw new Error('Nintendo Account session token expired');
+        throw new NintendoAccountSessionTokenExpiredError('Nintendo Account session token expired');
     }
 
     // Nintendo Account session tokens use a HMAC SHA256 signature, so we can't verify this is valid
