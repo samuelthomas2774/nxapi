@@ -28,12 +28,16 @@ declare global {
     var __NXAPI_BUNDLE_GIT__: RevisionInfo | null | undefined;
     var __NXAPI_BUNDLE_RELEASE__: string | null | undefined;
     var __NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__: any | undefined;
+    var __NXAPI_BUNDLE_NXAPI_AUTH_CLI_CLIENT_ID__: string | undefined;
+    var __NXAPI_BUNDLE_NXAPI_AUTH_APP_CLIENT_ID__: string | undefined;
 }
 
 const embedded_pkg = globalThis.__NXAPI_BUNDLE_PKG__;
 const embedded_git = globalThis.__NXAPI_BUNDLE_GIT__;
 const embedded_release = globalThis.__NXAPI_BUNDLE_RELEASE__;
 export const embedded_default_remote_config = globalThis.__NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__;
+export const embedded_nxapi_auth_cli_client_id = globalThis.__NXAPI_BUNDLE_NXAPI_AUTH_CLI_CLIENT_ID__;
+export const embedded_nxapi_auth_app_client_id = globalThis.__NXAPI_BUNDLE_NXAPI_AUTH_APP_CLIENT_ID__;
 
 //
 // Package/version info

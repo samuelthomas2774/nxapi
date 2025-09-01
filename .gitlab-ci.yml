@@ -11,7 +11,7 @@ build:
   stage: build
   script:
     - npx tsc
-    # Uses CI_COMMIT_TAG
+    # Uses CI_COMMIT_TAG, NXAPI_AUTH_CLI_CLIENT_ID, NXAPI_AUTH_APP_CLIENT_ID
     - NODE_ENV=production npx rollup --config
 
     - node bin/nxapi.js util validate-discord-titles

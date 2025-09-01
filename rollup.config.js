@@ -57,6 +57,8 @@ const replace_options = {
         'globalThis.__NXAPI_BUNDLE_GIT__': JSON.stringify(git),
         'globalThis.__NXAPI_BUNDLE_RELEASE__': JSON.stringify(release),
         'globalThis.__NXAPI_BUNDLE_DEFAULT_REMOTE_CONFIG__': JSON.stringify(default_remote_config),
+        'globalThis.__NXAPI_BUNDLE_NXAPI_AUTH_CLI_CLIENT_ID__': JSON.stringify(process.env.NXAPI_AUTH_CLI_CLIENT_ID),
+        'globalThis.__NXAPI_BUNDLE_NXAPI_AUTH_APP_CLIENT_ID__': JSON.stringify(process.env.NXAPI_AUTH_APP_CLIENT_ID),
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
     },
     preventAssignment: true,

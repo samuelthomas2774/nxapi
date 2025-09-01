@@ -42,4 +42,13 @@ pkg.__nxapi_git = pkg.__nxapi_git ?? {
     changed_files: changed_files.length ? changed_files.split('\n') : [],
 };
 
+pkg.__nxapi_auth = process.env.NXAPI_AUTH_CLI_CLIENT_ID || process.env.NXAPI_AUTH_APP_CLIENT_ID ? {
+    cli: process.env.NXAPI_AUTH_CLI_CLIENT_ID ? {
+        client_id: process.env.NXAPI_AUTH_CLI_CLIENT_ID,
+    } : undefined,
+    app: process.env.NXAPI_AUTH_APP_CLIENT_ID ? {
+        client_id: process.env.NXAPI_AUTH_APP_CLIENT_ID,
+    } : undefined,
+} : undefined;
+
 await fs.writeFile(new URL('../../package.json', import.meta.url), JSON.stringify(pkg, null, 4) + '\n', 'utf-8');
