@@ -54,6 +54,7 @@
         "supports-color": "^9.4.0",
         "tar": "^7.4.3",
         "tslib": "^2.6.2",
+        "tweetnacl": "^1.0.3",
         "undici": "^6.15.0",
         "yargs": "^17.7.2"
     },
