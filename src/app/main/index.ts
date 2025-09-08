@@ -22,7 +22,7 @@ import createDebug from '../../util/debug.js';
 import { dev, dir, git, release, version } from '../../util/product.js';
 import { addUserAgent } from '../../util/useragent.js';
 import { initStorage, paths } from '../../util/storage.js';
-import { ClientAssertionProvider, NXAPI_AUTH_APP_CLIENT_ID, setClientAssertionProvider } from '../../util/nxapi-auth.js';
+import { ClientAssertionProvider, NXAPI_AUTH_APP_CLIENT_ID, NXAPI_AUTH_APP_SCOPE, setClientAssertionProvider } from '../../util/nxapi-auth.js';
 import createI18n, { languages } from '../i18n/index.js';
 import { CoralApiInterface } from '../../api/coral.js';
 import { StatusUpdateIdentifierSymbol, StatusUpdateMonitor, StatusUpdateNotify, StatusUpdateResult, StatusUpdateSubscriber } from '../../common/status.js';
@@ -167,7 +167,11 @@ export async function init() {
 
     initGlobals();
     addUserAgent('nxapi-app (Chromium ' + process.versions.chrome + '; Electron ' + process.versions.electron + ')');
-    setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_APP_CLIENT_ID));
+
+    if (NXAPI_AUTH_APP_CLIENT_ID) {
+        setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_APP_CLIENT_ID, undefined,
+            NXAPI_AUTH_APP_SCOPE));
+    }
 
     setAboutPanelOptions();
 

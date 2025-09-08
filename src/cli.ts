@@ -11,7 +11,7 @@ import { addUserAgent } from './util/useragent.js';
 import { USER_AGENT_INFO_URL } from './common/constants.js';
 import { init as initGlobals } from './common/globals.js';
 import { buildEnvironmentProxyAgent } from './util/undici-proxy.js';
-import { ClientAssertionProvider, NXAPI_AUTH_CLI_CLIENT_ID, setClientAssertionProvider } from './util/nxapi-auth.js';
+import { ClientAssertionProvider, NXAPI_AUTH_CLI_CLIENT_ID, NXAPI_AUTH_CLI_SCOPE, setClientAssertionProvider } from './util/nxapi-auth.js';
 
 const debug = createDebug('cli');
 
@@ -60,8 +60,10 @@ export async function main(argv = process.argv.slice(2)) {
         addUserAgent('unidentified-script');
     }
 
-    setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID, undefined,
-        'ca:gf ca:er ca:dr ca:na'));
+    if (NXAPI_AUTH_CLI_CLIENT_ID) {
+        setClientAssertionProvider(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID, undefined,
+            NXAPI_AUTH_CLI_SCOPE));
+    }
 
     const yargs = createYargs(argv);
 

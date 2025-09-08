@@ -1,9 +1,25 @@
 import { createHash } from 'node:crypto';
 import { Jwt, JwtAlgorithm } from './jwt.js';
-import { dev, git, pkg, release } from './product.js';
+import { dev, embedded_nxapi_auth_app_client_id, embedded_nxapi_auth_cli_client_id, git, pkg, release } from './product.js';
 
-export const NXAPI_AUTH_CLI_CLIENT_ID = 'CKtknJ6HiH2AZIMw-x8ljw';
-export const NXAPI_AUTH_APP_CLIENT_ID = 'GlR_qsPZpNcxqMwnbsSjMA';
+export const NXAPI_AUTH_CLI_CLIENT_ID =
+    embedded_nxapi_auth_cli_client_id ??
+    (pkg.__nxapi_auth?.cli?.client_id as string | undefined) ??
+    process.env.NXAPI_AUTH_CLIENT_ID ??
+    null;
+export const NXAPI_AUTH_CLI_SCOPE =
+    embedded_nxapi_auth_cli_client_id || pkg.__nxapi_auth?.cli?.client_id ? 'ca:gf ca:er ca:dr ca:na' :
+    process.env.NXAPI_AUTH_SCOPE ??
+    'ca:gf ca:er ca:dr';
+
+export const NXAPI_AUTH_APP_CLIENT_ID =
+    embedded_nxapi_auth_app_client_id ??
+    process.env.NXAPI_AUTH_CLIENT_ID ??
+    null;
+export const NXAPI_AUTH_APP_SCOPE =
+    embedded_nxapi_auth_app_client_id ? 'ca:gf ca:er ca:dr' :
+    process.env.NXAPI_AUTH_SCOPE ??
+    'ca:gf ca:er ca:dr';
 
 export let client_auth_provider: ClientAuthProviderInterface | null = null;
 export let client_assertion_provider: ClientAssertionProviderInterface | null = null;
