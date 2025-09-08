@@ -163,6 +163,9 @@ npm install --global --registry https://gitlab.com/api/v4/packages/npm/ @samuelt
 
 Node.js and npm must already be installed.
 
+> [!NOTE]
+> When building from source nxapi will not have a nxapi-auth client identifier necessary to use the f-generation API. Register a test OAuth client at https://nxapi-auth.fancy.org.uk/oauth/clients with the scope `ca:gf ca:er ca:dr` and add the client ID to [the `.env` file used by nxapi](#environment-variables) as `NXAPI_AUTH_CLIENT_ID`. This will use the same client for the command line and Electron app. This is only necessary if you are using nxapi to access the Coral API directly, if you are not using the Coral API, or are using the `ZncProxyApi` class instead of `CoralApi`, nxapi doesn't need to use the f-generation API.
+
 ```sh
 # Don't download an archive, as nxapi detects the current git revision
 git clone https://gitlab.fancy.org.uk/samuel/nxapi.git
@@ -271,6 +274,11 @@ Environment variable            | Description
 `NXAPI_SKIP_UPDATE_CHECK`       | Disables the update check in the nxapi command and the Electron app if set to `1`.
 `NXAPI_SPLATNET3_UPGRADE_QUERIES` | Sets when the SplatNet 3 client is allowed to upgrade persisted query IDs to newer versions. If `0` queries are never upgraded (not recommended). If `1` queries are upgraded if they do not contain potentially breaking changes (not recommended, as like `0` this allows older queries to be sent to the API). If `2` queries are upgraded, requests that would include breaking changes are rejected. If `3` all queries are upgraded, even if they contain potentially breaking changes (default).
 `NXAPI_SPLATNET3_STRICT`        | Disables strict handling of errors from the SplatNet 3 GraphQL API if set to `0`. If set to `1` (default) requests will be rejected if the response includes any errors, even if the response includes a result.
+`NXAPI_ZNCA_API_CLIENT_ID`      | nxapi-auth client identifier to use for the f-generation API instead of the default. For development, `NXAPI_AUTH_CLIENT_ID` can be used to set the default nxapi-auth client.
+`NXAPI_ZNCA_API_CLIENT_SECRET`  | nxapi-auth client secret to use for the f-generation API if necessary for a non-default client.
+`NXAPI_ZNCA_API_CLIENT_ASSERTION` | nxapi-auth client assertion to use for the f-generation API if necessary for a non-default client. Setting `NXAPI_ZNCA_API_CLIENT_ID` is not necessary when using a client assertion, as the assertion contains the client identifier.
+`NXAPI_ZNCA_API_CLIENT_ASSERTION_TYPE` | Type of the client assertion if not `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`.
+`NXAPI_ZNCA_API_AUTH_SCOPE`     | nxapi-auth scope to use for the f-generation API. This should usually not need to be set. For development, `NXAPI_AUTH_SCOPE` can be used to set the default nxapi-auth scope.
 `DEBUG`                         | Used by the [debug](https://github.com/debug-js/debug) package. Sets which modules should have debug logging enabled. See [debug logs](#debug-logs).
 `NXAPI_DEBUG_FILE`              | Disables writing debug logs to a file if set to `0`.
 
@@ -331,6 +339,40 @@ This is really annoying. Initially the Nintendo Switch Online app didn't perform
 The reason Nintendo added this is probably to try and stop people automating access to their app's API. I really hope that's wrong though, as then Nintendo would be prioritising that over account security, as most people seem ok with sharing account credentials to access the API. (And it's not stopping anyone accessing the API outside of the app anyway.)
 
 [**See #10 if you can help with this.**](https://github.com/samuelthomas2774/nxapi/discussions/10)
+
+#### nxapi-auth authentication
+
+Since June 2025, [nxapi-znca-api.fancy.org.uk](https://github.com/samuelthomas2774/nxapi-znca-api) requires client authentication via nxapi-auth.
+
+When using the Electron app or nxapi command installed from npm or the Docker image you don't need to do anything. If you build nxapi from source, or use it as a library, you will need to register a client at https://nxapi-auth.fancy.org.uk/oauth/clients.
+
+> [!CAUTION]
+> This API may change.
+
+```ts
+import { setClientAuthentication, ClientAssertionProviderInterface } from 'nxapi';
+
+// setClientAuthentication accepts an object with a client id and optional secret, or
+// a function that returns a client assertion
+// `scope` is always required, even though it will usually always be `ca:gf ca:er ca:dr`
+
+// Public client
+setClientAuthentication({ id: '...', scope: 'ca:gf ca:er ca:dr' });
+
+// Confidential client, using client secret
+setClientAuthentication({ id: '...', secret: process.env.NXAPI_AUTH_CLIENT_SECRET, scope: 'ca:gf ca:er ca:dr' });
+
+// Confidential client, using client assertion
+setClientAuthentication(new ExampleClientAssertionProvider());
+
+class ExampleClientAssertionProvider implements ClientAssertionProviderInterface {
+    scope = 'ca:gf ca:er ca:dr';
+
+    async create(aud: string, exp = 60) {
+        return { assertion: '...', type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer' };
+    }
+}
+```
 
 ### Resources
 
