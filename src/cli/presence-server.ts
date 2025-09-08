@@ -830,11 +830,16 @@ class Server extends HttpServer {
             throw new ResponseError(403, 'unauthorised', 'Missing required scope presence');
         }
 
-        const include_splatnet3 = this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '1';
+        const user_id_hint = req.headers['x-nxapi-auth-user'];
+        const require_include_splatnet3 =
+            this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '2';
+        const include_splatnet3 = require_include_splatnet3 ||
+            (this.splatnet3_users && req_url.searchParams.get('include-splatoon3') === '1');
 
+        const user_ids = user_id_hint ? [...this.user_ids].sort((a, b) => a === user_id_hint ? 1 : b === user_id_hint ? -1 : 0) : this.user_ids;
         let match: [CoralUser<CoralApiInterface>, Friend, string] | null = null;
 
-        for (const user_naid of this.user_ids) {
+        for (const user_naid of user_ids) {
             const token = await this.storage.getItem('NintendoAccountToken.' + user_naid);
             const user = await this.coral_users.get(token);
             user.update_interval = this.update_interval;
@@ -851,7 +856,7 @@ class Server extends HttpServer {
             match = [user, friend, user_naid];
 
             // Keep searching if the authenticated user doesn't have permission to view this user's presence
-            if (friend.presence.updatedAt) break;
+            if (user_id_hint === user_naid && friend.presence.updatedAt) break;
         }
 
         if (!match) {
@@ -901,9 +906,15 @@ class Server extends HttpServer {
             scope.includes(PresenceScope.SPLATOON3_PRESENCE) ||
             scope.includes(PresenceScope.SPLATOON3_FEST_TEAM)
         )) {
-            const user = await this.getSplatNet3User(user_naid);
+            try {
+                const user = await this.getSplatNet3User(user_naid);
 
-            await this.handleSplatoon3Presence(friend, user, response, scope);
+                await this.handleSplatoon3Presence(friend, user, response, scope);
+            } catch (err) {
+                if (require_include_splatnet3) throw err;
+
+                debug('error fetching Splatoon 3 data, ignoring', err);
+            }
         }
 
         const images = await this.downloadImages(response, this.getResourceBaseUrls(req));
