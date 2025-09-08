@@ -58,21 +58,21 @@ export class ClientAssertionProvider implements ClientAssertionProviderInterface
         public scope = 'ca:gf ca:er ca:dr',
     ) {}
 
-    async create(aud: string, exp = 60) {
+    async create(aud: string, exp = 300) {
         const assertion = await this.createAssertion(aud, exp);
         const type = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
 
         return { assertion, type };
     }
 
-    async createAssertion(aud: string, exp = 60) {
+    async createAssertion(aud: string, exp: number) {
         const jwt = this.createAssertionJwt(aud, exp);
         const key = await this.createAssertionKey();
 
         return jwt.sign(key);
     }
 
-    createAssertionJwt(aud: string, exp = 60) {
+    createAssertionJwt(aud: string, exp: number) {
         const now = Math.floor(Date.now() / 1000);
 
         const data = Buffer.alloc(22 + (release?.length ?? 0));
