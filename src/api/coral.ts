@@ -15,7 +15,7 @@ const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '12';
-export const ZNCA_VERSION = '3.0.2';
+export const ZNCA_VERSION = '3.0.2'; // TODO: update to 3.1.0
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
@@ -83,6 +83,7 @@ export abstract class AbstractCoralApi {
 
     async getWebServices() {
         return this.call<WebServices_4>('/v4/GameWebService/List', {
+            [RequestFlagNoParameterSymbol]: true,
             [RequestFlagRequestIdSymbol]: RequestFlagRequestId.AFTER,
         });
     }
