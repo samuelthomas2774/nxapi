@@ -69,6 +69,9 @@ export class PresenceMonitorManager {
                 defaultId: 0,
             });
 
+            const show_error_alerts: boolean = await this.app.store.storage.getItem('ShowErrorAlertsPreference') ?? false;
+            if (!show_error_alerts) return ErrorResult.DEFER;
+
             if (response === 1) {
                 return ErrorResult.RETRY;
             }
@@ -395,6 +398,9 @@ export class PresenceMonitorManager {
         if (monitor instanceof EmbeddedProxyPresenceMonitor || checkShouldIgnorePresenceMonitorError(err)) {
             return LoopResult.OK;
         }
+
+        const show_error_alerts: boolean = await this.app.store.storage.getItem('ShowErrorAlertsPreference') ?? false;
+        if (!show_error_alerts) return LoopResult.DEFER_NEXT_UPDATE;
 
         const {response} = await showErrorDialog({
             message: err.name + ' updating presence monitor',

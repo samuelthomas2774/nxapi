@@ -148,5 +148,6 @@ export interface ExternalMonitor<T = unknown> extends EmbeddedLoop {
 export enum ErrorResult {
     STOP,
     RETRY,
+    DEFER,
     IGNORE,
 }
