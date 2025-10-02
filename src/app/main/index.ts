@@ -51,9 +51,16 @@ enum LoginItemType {
     NOT_SUPPORTED,
 }
 const login_item_type: LoginItemType =
-    process.platform === 'darwin' ? LoginItemType.NATIVE :
+    process.platform === 'darwin' ?
+        // macOS 13+ does not support open as hidden
+        parseInt(process.getSystemVersion().split('.', 1)[0]) >= 13 ?
+            LoginItemType.NATIVE_PARTIAL : LoginItemType.NATIVE :
     process.platform === 'win32' ? LoginItemType.NATIVE_PARTIAL :
     LoginItemType.NOT_SUPPORTED;
+
+const was_opened_at_login = process.platform === 'darwin' ?
+    app.getLoginItemSettings(login_item_options).wasOpenedAtLogin :
+    process.argv.includes('--app-open-at-login=1');
 
 debug('Protocol registration options', protocol_registration_options);
 debug('Login item registration options', LoginItemType[login_item_type], login_item_options);
@@ -271,7 +278,7 @@ export async function init() {
 
     const should_hide =
         login_item_type === LoginItemType.NATIVE ? app.getLoginItemSettings(login_item_options).wasOpenedAsHidden :
-        process.argv.includes('--app-open-at-login=1') && (await appinstance.store.getLoginItem()).startup_hidden;
+        was_opened_at_login && (await appinstance.store.getLoginItem()).startup_hidden;
 
     if (!should_hide) {
         appinstance.showMainWindow();
@@ -458,7 +465,6 @@ export class Store extends EventEmitter {
         }
 
         const startup_options: SavedStartupOptions | undefined = await this.storage.getItem('StartupOptions');
-        const was_opened_at_login = process.argv.includes('--app-open-at-login=1');
 
         if (login_item_type === LoginItemType.NATIVE_PARTIAL) {
             // Partial native support
