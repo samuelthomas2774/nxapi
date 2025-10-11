@@ -10,7 +10,7 @@ export const languages = {
         name: 'English',
         app: () => import('./locale/en-gb.js'),
         authors: [
-            ['Samuel Elliott', 'https://gitlab.fancy.org.uk/samuel', 'https://github.com/samuelthomas2774'],
+            ['Ellie', 'https://gitlab.fancy.org.uk/ellie'],
         ],
     },
     'de-DE': {

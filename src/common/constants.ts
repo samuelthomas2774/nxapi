@@ -6,7 +6,7 @@ export const USER_AGENT_INFO_URL = 'https://gitlab.fancy.org.uk/samuel/nxapi#use
 export const CONFIG_URL = 'https://fancy.org.uk/api/nxapi/config';
 
 export const LICENCE_NOTICE = `
-Copyright (c) 2023 Samuel Elliott
+Copyright (c) 2023 Ellie
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
@@ -18,7 +18,7 @@ This product is not affiliated with Nintendo, Discord and others. All product na
 `.trim();
 
 export const CREDITS_NOTICE = `
-This product uses services provided by Nintendo (https://nintendo.co.jp), Samuel Elliott (https://gitlab.fancy.org.uk/samuel/nxapi-znca-api) and Jone Wang (https://imink.app).
+This product uses services provided by Nintendo (https://nintendo.co.jp), Ellie (https://gitlab.fancy.org.uk/samuel/nxapi-znca-api) and Jone Wang (https://imink.app).
 `.trim();
 
 export const ZNCA_API_USE_VERSION = 2;

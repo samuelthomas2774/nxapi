@@ -154,7 +154,7 @@ function setAboutPanelOptions(i18n?: i18n) {
         applicationVersion: process.platform === 'darwin' ? version : version +
             (!release ? '-' + (git?.revision.substr(0, 8) ?? '?') : ''),
         version: git?.revision.substr(0, 8) ?? '?',
-        authors: ['Samuel Elliott'],
+        authors: ['Ellie'],
         website: GITLAB_URL,
         credits: (i18n?.t('app:credits') ?? CREDITS_NOTICE) +
             (language?.authors.length ? '\n\n' + i18n!.t('app:translation_credits', {

@@ -3,7 +3,7 @@
     "version": "1.6.1",
     "description": "Nintendo Switch app APIs",
     "license": "AGPL-3.0-or-later",
-    "author": "Samuel Elliott <samuel+nxapi@fancy.org.uk>",
+    "author": "Ellie <ellie+nxapi@fancy.org.uk>",
     "main": "dist/index.js",
     "type": "module",
     "repository": {
@@ -94,7 +94,7 @@
     "build": {
         "appId": "uk.org.fancy.nxapi.app",
         "productName": "Nintendo Switch Online",
-        "copyright": "Copyright © 2023 Samuel Elliott",
+        "copyright": "Copyright © 2023 Ellie",
         "npmRebuild": false,
         "files": [
             "dist/app/bundle",
