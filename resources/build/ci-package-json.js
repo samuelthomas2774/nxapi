@@ -42,6 +42,21 @@ pkg.__nxapi_git = pkg.__nxapi_git ?? {
     changed_files: changed_files.length ? changed_files.split('\n') : [],
 };
 
+pkg.__nxapi_ci = pkg.__nxapi_ci ?? (process.env.GITLAB_CI ? {
+    type: 'gitlab',
+    server: process.env.CI_SERVER_URL,
+    project: {
+        id: process.env.CI_PROJECT_ID,
+        path: process.env.CI_PROJECT_PATH,
+        url: process.env.CI_PROJECT_URL,
+    },
+    pipeline: {
+        id: process.env.CI_PIPELINE_ID,
+        iid: process.env.CI_PIPELINE_IID,
+        url: process.env.CI_PIPELINE_URL,
+    },
+} : process.env.CI ? null : undefined);
+
 pkg.__nxapi_auth = process.env.NXAPI_AUTH_CLI_CLIENT_ID || process.env.NXAPI_AUTH_APP_CLIENT_ID ? {
     cli: process.env.NXAPI_AUTH_CLI_CLIENT_ID ? {
         client_id: process.env.NXAPI_AUTH_CLI_CLIENT_ID,
