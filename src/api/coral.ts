@@ -5,7 +5,7 @@ import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
-import { AccountLogin, AccountLoginParameter, AccountToken, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListMediaParameter, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { AccountLogin, AccountLogin_4, AccountLoginParameter, AccountToken, AccountToken_4, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CreateFriendRequestChannel, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, FriendRouteChannel, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
 import { createZncaApi, DecryptResponseResult, FResult, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
@@ -15,8 +15,10 @@ const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '12';
-export const ZNCA_VERSION = '3.0.2'; // TODO: update to 3.1.0
+export const ZNCA_VERSION = '3.2.0'; // TODO: update to 3.1.0
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
+
+export const ZNCA_API_COMPATIBILITY_VERSION = 'hio87-mJks_e9GNF';
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
@@ -93,9 +95,7 @@ export abstract class AbstractCoralApi {
     }
 
     async getMedia() {
-        return this.call<ListMedia, ListMediaParameter>('/v4/Media/List', {
-            count: 100,
-        });
+        return this.call<ListMedia>('/v4/Media/List');
     }
 
     async getHashtags(media: Media) {
@@ -186,9 +186,10 @@ export abstract class AbstractCoralApi {
         });
     }
 
-    async sendFriendRequest(nsa_id: string) {
-        return this.call('/v3/FriendRequest/Create', {
+    async sendFriendRequest(nsa_id: string, channel: CreateFriendRequestChannel = FriendRouteChannel.FRIEND_CODE) {
+        return this.call('/v4/FriendRequest/Create', {
             nsaId: nsa_id,
+            channel,
         });
     }
 
@@ -591,7 +592,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
         const fdata = await provider.genf(nintendoAccountToken.id_token, HashMethod.CORAL, {
             na_id: user.id, coral_user_id: '' + this[CoralUserIdSymbol],
         }, provider.supportsEncryption() ? {
-            url: ZNC_URL + '/v3/Account/GetToken',
+            url: ZNC_URL + '/v4/Account/GetToken',
             parameter,
         } : undefined);
 
@@ -609,13 +610,13 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
             });
 
             if (provider.supportsEncryption()) {
-                const result = await provider.encryptRequest(ZNC_URL + '/v3/Account/GetToken', null, body);
+                const result = await provider.encryptRequest(ZNC_URL + '/v4/Account/GetToken', null, body);
 
                 body = new EncryptedRequestBody(provider, result.data, body);
             }
         }
 
-        const data = await this.fetch<AccountToken>('/v3/Account/GetToken', 'POST', body, undefined, {
+        const data = await this.fetch<AccountToken_4>('/v4/Account/GetToken', 'POST', body, undefined, {
             [RequestFlagAddPlatformSymbol]: true,
             [RequestFlagAddProductVersionSymbol]: true,
             [RequestFlagNoAuthenticationSymbol]: true,
@@ -719,7 +720,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
         const fdata = await provider.genf(nintendoAccountToken.id_token, HashMethod.CORAL, {
             na_id: user.id,
         }, provider.supportsEncryption() ? {
-            url: ZNC_URL + '/v3/Account/Login',
+            url: ZNC_URL + '/v4/Account/Login',
             parameter,
         } : undefined);
 
@@ -743,7 +744,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
             });
 
             if (provider.supportsEncryption()) {
-                const result = await provider.encryptRequest(ZNC_URL + '/v3/Account/Login', null, body);
+                const result = await provider.encryptRequest(ZNC_URL + '/v4/Account/Login', null, body);
 
                 encrypted = [provider];
                 body = result.data;
@@ -759,22 +760,22 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
         });
 
         const [signal, cancel] = timeoutSignal();
-        const response = await fetch(ZNC_URL + '/v3/Account/Login', {
+        const response = await fetch(ZNC_URL + '/v4/Account/Login', {
             method: 'POST',
             headers,
             body,
             signal,
         }).finally(cancel);
 
-        debug('fetch %s %s, response %s', 'POST', '/v3/Account/Login', response.status);
+        debug('fetch %s %s, response %s', 'POST', '/v4/Account/Login', response.status);
 
         if (response.status !== 200) {
             throw await CoralErrorResponse.fromResponse(response, '[znc] Non-200 status code');
         }
 
-        const data: CoralResponse<AccountLogin> = encrypted ?
+        const data: CoralResponse<AccountLogin_4> = encrypted ?
             JSON.parse((await encrypted[0].decryptResponse(new Uint8Array(await response.arrayBuffer()))).data) :
-            await response.json() as CoralResponse<AccountLogin>;
+            await response.json() as CoralResponse<AccountLogin_4>;
 
         if ('errorMessage' in data) {
             throw new CoralErrorResponse('[znc] ' + data.errorMessage, response, data);
@@ -1048,7 +1049,7 @@ export interface CoralAuthData {
     nintendoAccountToken: NintendoAccountToken;
     user: NintendoAccountUserCoral;
     f: FResult;
-    nsoAccount: AccountLogin;
+    nsoAccount: AccountLogin | AccountLogin_4;
     credential: AccountLogin['webApiServerCredential'];
     znca_version: string;
     znca_useragent: string;

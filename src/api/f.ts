@@ -6,7 +6,7 @@ import createDebug from '../util/debug.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getUserAgent } from '../util/useragent.js';
 import { client_assertion_provider, client_auth_provider, ClientAssertionProviderInterface } from '../util/nxapi-auth.js';
-import { ZNCA_VERSION } from './coral.js';
+import { ZNCA_API_COMPATIBILITY_VERSION } from './coral.js';
 import { AccountLoginParameter, AccountTokenParameter, WebServiceTokenParameter } from './coral-types.js';
 
 const debugFlapg = createDebug('nxapi:api:flapg');
@@ -345,6 +345,7 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         this.auth = auth;
 
         this.headers.set('User-Agent', getUserAgent(useragent));
+        this.headers.append('X-znca-Client-Version', ZNCA_API_COMPATIBILITY_VERSION);
     }
 
     static create(
@@ -384,7 +385,6 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         headers.set('Accept', 'application/json');
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
-        if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
         if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
@@ -450,7 +450,6 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         headers.set('Accept', 'application/octet-stream');
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
-        if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
         if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();
@@ -504,7 +503,6 @@ export class ZncaApiNxapi extends ZncaApi implements RequestEncryptionProvider {
         headers.set('Accept', request_nsa_assertion ? 'application/json' : 'text/plain');
         if (this.app?.platform) headers.append('X-znca-Platform', this.app.platform);
         if (this.app?.version) headers.append('X-znca-Version', this.app.version);
-        if (ZNCA_VERSION) headers.append('X-znca-Client-Version', ZNCA_VERSION);
         if (this.auth?.token) headers.append('Authorization', 'Bearer ' + this.auth.token.token);
 
         const [signal, cancel] = timeoutSignal();

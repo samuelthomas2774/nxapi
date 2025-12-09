@@ -81,6 +81,20 @@ export interface AccountLogin {
 /** /v3/Account/GetToken, /v3/Extension/Account/GetToken */
 export type AccountToken = AccountLogin;
 
+/** /v4/Account/Login */
+export interface AccountLogin_4 {
+    user: Exclude<CurrentUser, 'links'> & {
+        links: Exclude<CurrentUser['links'], 'nintendoAccount'>;
+    };
+    webApiServerCredential: {
+        accessToken: string;
+        expiresIn: number;
+    };
+}
+
+/** /v4/Account/GetToken, /v4/Extension/Account/GetToken */
+export type AccountToken_4 = AccountLogin_4;
+
 export interface AccountTokenParameter {
     naIdToken: string;
     naBirthday: string;
@@ -177,21 +191,37 @@ export interface FriendRoute {
     userName: string;
     shopUri: string;
     imageUri: string;
-    // if not IN_APP all other properties are empty strings
+    // if not IN_APP/NINTENDO_ACCOUNT all other properties are empty strings
     channel: FriendRouteChannel;
 }
 
 export enum FriendRouteChannel {
     /** Added from friend code lookup on a Switch console or using coral */
     FRIEND_CODE = 'FRIEND_CODE',
-    /** Added from users you've played with */
-    IN_APP = 'IN_APP',
     /** Added from search for local users */
     NX_FACED = 'NX_FACED',
+    /**
+     * Added from users you've played with
+     * Shows the application details (appName, shopUri, imageUri) and in-game name (userName)
+     */
+    IN_APP = 'IN_APP',
+    /**
+     * Added from friend suggestions for smart device game friends linked to the same Nintendo Account
+     * Shows the client name (FriendRoute.appName)
+     */
+    NINTENDO_ACCOUNT = 'NINTENDO_ACCOUNT',
     '3DS' = '3DS',
-
-    // Wii U, Facebook, Twitter suggestions?
+    NNID = 'NNID',
+    TWITTER = 'TWITTER',
+    FACEBOOK = 'FACEBOOK',
+    WECHAT = 'WECHAT',
+    /** Added from GameChat */
+    CAMPUS = 'CAMPUS',
 }
+
+export type CreateFriendRequestChannel =
+    FriendRouteChannel.FRIEND_CODE |
+    FriendRouteChannel.CAMPUS;
 
 export interface Presence {
     state: PresenceState;
@@ -624,6 +654,8 @@ export enum FeedbackTopic {
 // - /v1/Voip/Mute
 // - /v5/Chat/Show
 // - /v5/Chat/List
+// - /v5/Chat/Member/Show
+// - /v5/Chat/FriendCandidate/List
 // - /v1/Support/ReportUser
 //
 //   Also, announcement types other than OPERATION and FRIEND_REQUEST

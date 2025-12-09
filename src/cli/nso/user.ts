@@ -43,6 +43,6 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
         nso.getCurrentUser(),
     ]) : [];
 
-    console.log('Nintendo Account', data.user);
+    console.log('Nintendo Account', data.user, 'naUser' in data.nsoAccount ? data.nsoAccount.naUser : null);
     console.log('Nintendo Switch user', current_user ?? data.nsoAccount.user);
 }
