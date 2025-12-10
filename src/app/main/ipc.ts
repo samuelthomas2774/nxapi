@@ -9,7 +9,7 @@ import { askAddNsoAccount, askAddPctlAccount } from './na-auth.js';
 import { App } from './index.js';
 import { EmbeddedPresenceMonitor } from './monitor.js';
 import { DiscordPresenceConfiguration, DiscordPresenceSource, DiscordStatus, LoginItemOptions, WindowType } from '../common/types.js';
-import { CurrentUser, Friend, Game, PresencePlatform, PresenceState, WebService } from '../../api/coral-types.js';
+import { CurrentUser, CurrentUserFriendCodeLink, Friend, Game, PresencePlatform, PresenceState, WebService } from '../../api/coral-types.js';
 import { NintendoAccountSessionTokenJwtPayload, NintendoAccountUser } from '../../api/na.js';
 import { DiscordPresence } from '../../discord/types.js';
 import { getDiscordRpcClients } from '../../discord/rpc.js';
@@ -201,7 +201,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
     handle('misc:share', (e, item: SharingItem) =>
         new ShareMenu(item).popup({window: BrowserWindow.fromWebContents(e.sender)!}));
 
-    handle('menu:user', (e, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean) =>
+    handle('menu:user', (e, user: NintendoAccountUser, nso?: CurrentUser<true> | CurrentUser<false>, moon?: boolean) =>
         (buildUserMenu(appinstance, user, nso, moon, BrowserWindow.fromWebContents(e.sender) ?? undefined)
             .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
     handle('menu:add-user', e => (Menu.buildFromTemplate([
@@ -212,7 +212,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
             (item: MenuItem, window: BrowserWindow | undefined, event: KeyboardEvent) =>
                 askAddPctlAccount(appinstance, !event.shiftKey)}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
-    handle('menu:friend-code', (e, fc: CurrentUser['links']['friendCode']) => (Menu.buildFromTemplate([
+    handle('menu:friend-code', (e, fc: CurrentUserFriendCodeLink) => (Menu.buildFromTemplate([
         new MenuItem({label: 'SW-' + fc.id, enabled: false}),
         new MenuItem({label: t('friend_code.share')!, role: 'shareMenu', sharingItem: {texts: ['SW-' + fc.id]}}),
         new MenuItem({label: t('friend_code.copy')!, click: () => clipboard.writeText('SW-' + fc.id)}),
@@ -223,7 +223,7 @@ export function setupIpc(appinstance: App, ipcMain: IpcMain) {
                 formatParams: { date: { dateStyle: 'short', timeStyle: 'medium' } },
             })!, enabled: false}),
     ]).popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
-    handle('menu:friend', (e, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) =>
+    handle('menu:friend', (e, user: NintendoAccountUser, nso: CurrentUser<true> | CurrentUser<false>, friend: Friend) =>
         (buildFriendMenu(appinstance, user, nso, friend)
             .popup({window: BrowserWindow.fromWebContents(e.sender)!}), undefined));
 
@@ -255,7 +255,7 @@ export function sendToAllWindows(channel: string, ...args: any[]) {
     }
 }
 
-function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, moon?: boolean, window?: BrowserWindow) {
+function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser<true> | CurrentUser<false>, moon?: boolean, window?: BrowserWindow) {
     const t = app.i18n.getFixedT(null, 'menus', 'user');
     const dm = app.monitors.getActiveDiscordPresenceMonitor();
     const monitor = app.monitors.monitors.find(m => m instanceof EmbeddedPresenceMonitor &&
@@ -307,7 +307,7 @@ function buildUserMenu(app: App, user: NintendoAccountUser, nso?: CurrentUser, m
     ]);
 }
 
-function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser, friend: Friend) {
+function buildFriendMenu(app: App, user: NintendoAccountUser, nso: CurrentUser<true> | CurrentUser<false>, friend: Friend) {
     const t = app.i18n.getFixedT(null, 'menus', 'friend');
     const discord_presence_source = app.monitors.getDiscordPresenceSource();
     const discord_presence_active = !!discord_presence_source && 'na_id' in discord_presence_source &&

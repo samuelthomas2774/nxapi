@@ -136,7 +136,7 @@ export class TerminalNotificationManager extends NotificationManager {
         super();
     }
 
-    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendOnline(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as PresenceGame;
 
         this.notifier.notify({
@@ -148,7 +148,7 @@ export class TerminalNotificationManager extends NotificationManager {
         });
     }
 
-    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendOffline(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         this.notifier.notify({
             title: friend.name,
             message: 'Offline',
@@ -156,7 +156,7 @@ export class TerminalNotificationManager extends NotificationManager {
         });
     }
 
-    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendPlayingChangeTitle(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as PresenceGame;
 
         this.notifier.notify({
@@ -168,7 +168,7 @@ export class TerminalNotificationManager extends NotificationManager {
         });
     }
 
-    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendTitleStateChange(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         const currenttitle = friend.presence.game as PresenceGame;
 
         this.notifier.notify({

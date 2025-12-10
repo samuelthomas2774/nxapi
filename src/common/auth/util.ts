@@ -118,6 +118,9 @@ export class RateLimitError extends Error implements HasErrorDescription {
 }
 
 export function checkMembershipActive(data: SavedToken) {
+    // Since 3.2.0 we can't check if the user has an active NSO membership
+    if (!('nintendoAccount' in data.nsoAccount.user.links)) return;
+
     const membership = data.nsoAccount.user.links.nintendoAccount.membership;
     const active = typeof membership.active === 'object' ? (membership.active as typeof membership).active : membership.active;
 

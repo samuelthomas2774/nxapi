@@ -109,7 +109,7 @@ export interface CoralUserData<T extends CoralApiInterface = CoralApi> extends U
     chats: CoralSuccessResponse<ListChat>;
     media: CoralSuccessResponse<ListMedia>;
     active_event: CoralSuccessResponse<GetActiveEventResult>;
-    user: CoralSuccessResponse<CurrentUser>;
+    user: CoralSuccessResponse<CurrentUser<true> | CurrentUser<false>>;
 }
 
 export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralUserData<T> {
@@ -149,7 +149,7 @@ export class CoralUser<T extends CoralApiInterface = CoralApi> implements CoralU
         public chats: CoralSuccessResponse<ListChat>,
         public media: CoralSuccessResponse<ListMedia>,
         public active_event: CoralSuccessResponse<GetActiveEventResult>,
-        public user: CoralSuccessResponse<CurrentUser>,
+        public user: CoralSuccessResponse<CurrentUser<true> | CurrentUser<false>>,
     ) {}
 
     private async update(key: keyof CoralUser['updated'], callback: () => Promise<void>, ttl: number) {

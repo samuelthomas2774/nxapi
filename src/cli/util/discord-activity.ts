@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { fetch } from 'undici';
 import { getPresenceFromUrl } from '../../api/znc-proxy.js';
-import { ActiveEvent, CurrentUser, Friend, PresenceGame, PresenceOffline, PresenceOnline, PresenceOnline_4, PresencePlatform, PresenceState } from '../../api/coral-types.js';
+import { ActiveEvent, CurrentUser, CurrentUserFriendCodeLink, Friend, PresenceGame, PresenceOffline, PresenceOnline, PresenceOnline_4, PresencePlatform, PresenceState } from '../../api/coral-types.js';
 import type { Arguments as ParentArguments } from './index.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../../discord/util.js';
 import { DiscordPresenceContext, DiscordPresencePlayTime } from '../../discord/types.js';
@@ -184,8 +184,8 @@ async function getPresenceFromCoral(argv: ArgumentsCamelCase<Arguments>) {
 function getActivityFromPresence(
     argv: ArgumentsCamelCase<Arguments>,
     presence: Presence | null,
-    user?: CurrentUser | Friend,
-    friendcode?: CurrentUser['links']['friendCode'],
+    user?: CurrentUser<true> | CurrentUser<false> | Friend,
+    friendcode?: CurrentUserFriendCodeLink,
     activeevent?: ActiveEvent,
     proxy_response?: unknown,
 ) {

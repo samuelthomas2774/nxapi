@@ -12,7 +12,7 @@ import { DiscordRpcClient, findDiscordRpcClient } from '../discord/rpc.js';
 import { getDiscordPresence, getInactiveDiscordPresence } from '../discord/util.js';
 import { DiscordPresencePlayTime, DiscordPresenceContext, DiscordPresence, ExternalMonitorConstructor, ExternalMonitor, ErrorResult } from '../discord/types.js';
 import { CoralApiInterface } from '../api/coral.js';
-import { ActiveEvent, CurrentUser, Friend, Game, PresenceState, CoralError, PresenceOnline_4, PresenceOffline, PresenceOnline } from '../api/coral-types.js';
+import { ActiveEvent, CurrentUser, Friend, Game, PresenceState, CoralError, PresenceOnline_4, PresenceOffline, PresenceOnline, CurrentUserFriendCodeLink } from '../api/coral-types.js';
 import { getPresenceFromUrl } from '../api/znc-proxy.js';
 import { ErrorResponse, ResponseSymbol } from '../api/util.js';
 import { CoralUser } from './users.js';
@@ -44,8 +44,8 @@ class ZncDiscordPresenceClient {
     protected i = 0;
 
     last_presence: Presence | null = null;
-    last_user: CurrentUser | Friend | null = null;
-    last_friendcode: CurrentUser['links']['friendCode'] | null = null;
+    last_user: CurrentUser<false> | Friend | null = null;
+    last_friendcode: CurrentUserFriendCodeLink | null = null;
     last_event: ActiveEvent | null = null;
 
     last_activity: DiscordPresence | string | null = null;
@@ -68,8 +68,8 @@ class ZncDiscordPresenceClient {
 
     async updatePresenceForDiscord(
         presence: Presence | null,
-        user?: CurrentUser | Friend | null,
-        friendcode?: CurrentUser['links']['friendCode'] | null,
+        user?: CurrentUser<false> | Friend | null,
+        friendcode?: CurrentUserFriendCodeLink | null,
         activeevent?: ActiveEvent | null,
     ) {
         this.last_presence = presence;
@@ -449,13 +449,13 @@ export class ZncDiscordPresence extends ZncNotifications {
                     await this.savePresenceForTitleUpdateAt(friend.nsaId, friend.presence, this.discord.title?.since);
                 }
             } else {
-                await this.discord.updatePresenceForDiscord(user!.presence, user, user!.links.friendCode, activeevent);
+                await this.discord.updatePresenceForDiscord(user!.presence, user as CurrentUser<false>, user!.links.friendCode, activeevent);
                 await this.savePresenceForTitleUpdateAt(user!.nsaId, user!.presence, this.discord.title?.since);
             }
         }
 
-        await this.updatePresenceForNotifications(user, friends, this.user.data.user.id, false);
-        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
+        await this.updatePresenceForNotifications(user as CurrentUser<false>, friends, this.user.data.user.id, false);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user as CurrentUser<false>]);
     }
 
     async onStop() {
@@ -555,7 +555,7 @@ export class ZncProxyDiscordPresence extends Loop {
             this.last_data = data;
             this.proxy_temporary_errors = 0;
 
-            await this.discord.updatePresenceForDiscord(presence, user);
+            await this.discord.updatePresenceForDiscord(presence, user as Friend | CurrentUser<false>);
             await this.updatePresenceForSplatNet2Monitor(presence, this.presence_url);
 
             const link_header = result[ResponseSymbol].headers.get('Link');
@@ -665,7 +665,7 @@ export class ZncProxyDiscordPresence extends Loop {
             this.updateStatusUpdateSource(links);
         };
 
-        let user: CurrentUser | Friend | undefined = undefined;
+        let user: CurrentUser<false> | Friend | undefined = undefined;
         let presence: Presence | null = null;
 
         this.last_data = {};

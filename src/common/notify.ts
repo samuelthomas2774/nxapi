@@ -1,8 +1,6 @@
-import persist from 'node-persist';
 import { CoralApiInterface } from '../api/coral.js';
 import { CurrentUser, Friend, Presence, PresenceState, CoralError, PresenceGame } from '../api/coral-types.js';
 import { ErrorResponse } from '../api/util.js';
-import { SavedToken } from './auth/coral.js';
 import { SplatNet2RecordsMonitor } from './splatnet2/monitor.js';
 import createDebug from '../util/debug.js';
 import Loop, { LoopResult } from '../util/loop.js';
@@ -35,7 +33,7 @@ export class ZncNotifications extends Loop {
     }
 
     async updateFriendsStatusForNotifications(
-        friends: (CurrentUser | Friend)[],
+        friends: (CurrentUser<false> | Friend)[],
         naid = this.user.data.user.id,
         initialRun?: boolean
     ) {
@@ -43,15 +41,15 @@ export class ZncNotifications extends Loop {
     }
 
     async updatePresenceForNotifications(
-        user: CurrentUser | null, friends: Friend[] | null,
+        user: CurrentUser<false> | null, friends: Friend[] | null,
         naid = this.user.data.user.id, initialRun?: boolean
     ) {
-        await this.updateFriendsStatusForNotifications(([] as (CurrentUser | Friend)[])
+        await this.updateFriendsStatusForNotifications(([] as (CurrentUser<false> | Friend)[])
             .concat(this.user_notifications && user ? [user] : [])
             .concat(this.friend_notifications && friends ? friends : []), naid, initialRun);
     }
 
-    async updatePresenceForSplatNet2Monitors(friends: (CurrentUser | Friend)[]) {
+    async updatePresenceForSplatNet2Monitors(friends: (CurrentUser<false> | Friend)[]) {
         for (const friend of friends) {
             await this.updatePresenceForSplatNet2Monitor(friend.presence, friend.nsaId, friend.name);
         }
@@ -91,8 +89,8 @@ export class ZncNotifications extends Loop {
             this.friend_notifications ? this.user.getFriends() : null,
         ]);
 
-        await this.updatePresenceForNotifications(user, friends, this.user.data.user.id, false);
-        if (user) await this.updatePresenceForSplatNet2Monitors([user]);
+        await this.updatePresenceForNotifications(user as CurrentUser<false>, friends, this.user.data.user.id, false);
+        if (user) await this.updatePresenceForSplatNet2Monitors([user as CurrentUser<false>]);
     }
 
     async handleError(err: ErrorResponse<CoralError> | NodeJS.ErrnoException): Promise<LoopResult> {
@@ -101,18 +99,18 @@ export class ZncNotifications extends Loop {
 }
 
 export class NotificationManager {
-    onPresenceUpdated?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, type?: PresenceEvent, naid?: string, ir?: boolean): void;
+    onPresenceUpdated?(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, type?: PresenceEvent, naid?: string, ir?: boolean): void;
 
-    onFriendOnline?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
-    onFriendOffline?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
-    onFriendPlayingChangeTitle?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
-    onFriendTitleStateChange?(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean): void;
+    onFriendOnline?(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean): void;
+    onFriendOffline?(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean): void;
+    onFriendPlayingChangeTitle?(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean): void;
+    onFriendTitleStateChange?(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean): void;
 
-    onlinefriends = new Map</** NA ID */ string, (CurrentUser | Friend)[]>();
+    onlinefriends = new Map</** NA ID */ string, (CurrentUser<false> | Friend)[]>();
     accounts = new Map</** NSA ID */ string, /** NA ID */ string>();
 
-    updateFriendsStatusForNotifications(friends: (CurrentUser | Friend)[], naid: string, initialRun?: boolean) {
-        const newonlinefriends: (CurrentUser | Friend)[] = [];
+    updateFriendsStatusForNotifications(friends: (CurrentUser<false> | Friend)[], naid: string, initialRun?: boolean) {
+        const newonlinefriends: (CurrentUser<false> | Friend)[] = [];
 
         for (const friend of friends) {
             const prev = this.onlinefriends.get(naid)?.find(f => f.nsaId === friend.nsaId);

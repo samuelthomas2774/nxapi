@@ -1,18 +1,18 @@
 import DiscordRPC from 'discord-rpc';
-import { ActiveEvent, CurrentUser, Friend, Game, PresencePlatform } from '../api/coral-types.js';
+import { ActiveEvent, CurrentUser, CurrentUserFriendCodeLink, Friend, Game, PresencePlatform } from '../api/coral-types.js';
 import { ExternalMonitorPresenceInterface, ZncDiscordPresence, ZncProxyDiscordPresence } from '../common/presence.js';
 import { EmbeddedLoop } from '../util/loop.js';
 import { DiscordActivity } from './util.js';
 
 export interface DiscordPresenceContext {
-    friendcode?: CurrentUser['links']['friendCode'];
+    friendcode?: CurrentUserFriendCodeLink;
     activeevent?: ActiveEvent;
     show_play_time?: DiscordPresencePlayTime;
     znc_discord_presence?: ZncDiscordPresence | ZncProxyDiscordPresence;
     proxy_response?: unknown;
     monitors?: ExternalMonitor[];
     nsaid?: string;
-    user?: CurrentUser | Friend;
+    user?: CurrentUser<true> | CurrentUser<false> | Friend;
     platform?: PresencePlatform;
 }
 

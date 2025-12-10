@@ -6,7 +6,7 @@ export default function NintendoSwitchUser(props: {
     friend: Friend;
     nickname?: string;
 } | {
-    user: CurrentUser;
+    user: CurrentUser<true> | CurrentUser<false>;
     nickname?: string;
 }) {
     const user = 'friend' in props ? props.friend : props.user;

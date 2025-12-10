@@ -58,10 +58,10 @@ export async function handler(argv: ArgumentsCamelCase<Arguments>) {
     const friendcodeurl = await user.nso.getFriendCodeUrl();
 
     const webservice = webservices.find(webservice => {
+        // Since coral 3.2.0 we can't check if the user has an active NSO
+        // membership, so just choose one that definitely won't fail
         const verifymembership = webservice.customAttributes.find(a => a.attrKey === 'verifyMembership');
-        if (verifymembership?.attrValue === 'true' &&
-            !user.data.nsoAccount.user.links.nintendoAccount.membership.active
-        ) return false;
+        if (verifymembership?.attrValue === 'true') return false;
 
         return true;
     });

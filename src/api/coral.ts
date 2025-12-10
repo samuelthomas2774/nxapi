@@ -63,7 +63,7 @@ export interface CoralApiInterface {
     getEvent(id: number): Promise<Result<Event>>;
     getUser(id: number): Promise<Result<User>>;
     getUserByFriendCode(friend_code: string, hash?: string): Promise<Result<FriendCodeUser>>;
-    getCurrentUser(): Promise<Result<CurrentUser>>;
+    getCurrentUser(): Promise<Result<CurrentUser<true> | CurrentUser<false>>>;
     getReceivedFriendRequests(): Promise<Result<ReceivedFriendRequests>>;
     getSentFriendRequests(): Promise<Result<SentFriendRequests>>;
     getFriendCodeUrl(): Promise<Result<FriendCodeUrl>>;
@@ -260,7 +260,7 @@ export abstract class AbstractCoralApi {
         });
     }
 
-    abstract getCurrentUser(): Promise<Result<CurrentUser>>;
+    abstract getCurrentUser(): Promise<Result<CurrentUser<true> | CurrentUser<false>>>;
 
     async getFriendCodeUrl() {
         return this.call<FriendCodeUrl>('/v3/Friend/CreateFriendCodeUrl', {
@@ -502,7 +502,7 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
     }
 
     async getCurrentUser() {
-        return this.call<CurrentUser, {id: number}>('/v4/User/ShowSelf', {
+        return this.call<CurrentUser<true>, {id: number}>('/v4/User/ShowSelf', {
             id: this[CoralUserIdSymbol],
         });
     }

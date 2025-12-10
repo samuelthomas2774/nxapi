@@ -175,7 +175,7 @@ export default class ZncProxyApi extends AbstractCoralApi implements CoralApiInt
     // }
 
     async getCurrentUser() {
-        const result = await this.fetchProxyApi<{user: CurrentUser}>('user');
+        const result = await this.fetchProxyApi<{user: CurrentUser<true> | CurrentUser<false>}>('user');
         return createResult(result, result.user);
     }
 
@@ -338,7 +338,7 @@ export async function getPresenceFromUrl(presence_url: string, useragent?: strin
 
     const data = await response.json() as PresenceUrlResponse;
 
-    const user: CurrentUser | Friend | Friend_4 | undefined =
+    const user: CurrentUser<true> | CurrentUser<false> | Friend | Friend_4 | undefined =
         'user' in data ? data.user :
         'friend' in data ? data.friend :
         'nsaId' in data ? data :

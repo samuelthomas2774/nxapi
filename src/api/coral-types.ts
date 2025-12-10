@@ -67,7 +67,7 @@ export interface AccountLoginParameter {
 
 /** /v3/Account/Login */
 export interface AccountLogin {
-    user: CurrentUser;
+    user: CurrentUser<true>;
     webApiServerCredential: {
         accessToken: string;
         expiresIn: number;
@@ -83,9 +83,7 @@ export type AccountToken = AccountLogin;
 
 /** /v4/Account/Login */
 export interface AccountLogin_4 {
-    user: Exclude<CurrentUser, 'links'> & {
-        links: Exclude<CurrentUser['links'], 'nintendoAccount'>;
-    };
+    user: CurrentUser<false>;
     webApiServerCredential: {
         accessToken: string;
         expiresIn: number;
@@ -377,7 +375,7 @@ export interface User {
 }
 
 /** /v4/User/ShowSelf */
-export interface CurrentUser {
+export interface CurrentUser<WithNintendoAccount extends boolean = true> {
     id: number;
     nsaId: string;
     imageUri: string;
@@ -386,17 +384,12 @@ export interface CurrentUser {
     supportId: string;
     isChildRestricted: boolean;
     etag: string;
-    links: {
-        nintendoAccount: {
-            membership: {
-                active: boolean;
-            };
-        };
-        friendCode: {
-            regenerable: boolean;
-            regenerableAt: number;
-            id: string;
-        };
+    links: (boolean extends WithNintendoAccount ? {
+        nintendoAccount?: CurrentUserNintendoAccountLink;
+    } : true extends WithNintendoAccount ? {
+        nintendoAccount: CurrentUserNintendoAccountLink;
+    } : {}) & {
+        friendCode: CurrentUserFriendCodeLink;
     };
     permissions: {
         playLog: PlayLogPermissions;
@@ -404,6 +397,17 @@ export interface CurrentUser {
         friendRequestReception: boolean;
     };
     presence: PresenceOnline_4 | PresenceOffline;
+}
+
+export interface CurrentUserNintendoAccountLink {
+    membership: {
+        active: boolean;
+    };
+}
+export interface CurrentUserFriendCodeLink {
+    regenerable: boolean;
+    regenerableAt: number;
+    id: string;
 }
 
 export enum PlayLogPermissions {

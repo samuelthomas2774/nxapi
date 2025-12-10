@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { CurrentUser } from '../../../api/coral-types.js';
+import { CurrentUserFriendCodeLink } from '../../../api/coral-types.js';
 import ipc from '../ipc.js';
 
 export default function FriendCode(props: {
-    friendcode: CurrentUser['links']['friendCode'];
+    friendcode: CurrentUserFriendCodeLink;
 } | {
     id: string;
 }) {

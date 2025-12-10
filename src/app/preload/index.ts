@@ -7,7 +7,7 @@ import type { SavedToken } from '../../common/auth/coral.js';
 import type { SavedMoonToken } from '../../common/auth/moon.js';
 import type { UpdateCacheData } from '../../common/update.js';
 import type { StatusUpdate } from '../../common/status.js';
-import type { Announcements_4, CoralSuccessResponse, CurrentUser, Friend, Friend_4, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, ReceivedFriendRequests, SentFriendRequests, WebService, WebServices_4 } from '../../api/coral-types.js';
+import type { Announcements_4, CoralSuccessResponse, CurrentUser, CurrentUserFriendCodeLink, Friend, Friend_4, FriendCodeUrl, FriendCodeUser, GetActiveEventResult, ReceivedFriendRequests, SentFriendRequests, WebService, WebServices_4 } from '../../api/coral-types.js';
 import type { DiscordPresence } from '../../discord/types.js';
 import type { CachedErrorKey } from '../main/ipc.js';
 import type { DiscordSetupProps } from '../browser/discord/index.js';
@@ -102,10 +102,10 @@ const ipc = {
     openExternalUrl: (url: string) => inv('misc:open-url', url),
     share: (item: SharingItem) => inv('misc:share', item),
 
-    showUserMenu: (user: NintendoAccountUserCoral | NintendoAccountUserMoon, nso?: CurrentUser, moon?: boolean) => inv('menu:user', user, nso, moon),
+    showUserMenu: (user: NintendoAccountUserCoral | NintendoAccountUserMoon, nso?: CurrentUser<true> | CurrentUser<false>, moon?: boolean) => inv('menu:user', user, nso, moon),
     showAddUserMenu: () => inv('menu:add-user'),
-    showFriendCodeMenu: (fc: CurrentUser['links']['friendCode']) => inv('menu:friend-code', fc),
-    showFriendMenu: (user: NintendoAccountUserCoral, nso: CurrentUser, friend: Friend_4) => inv('menu:friend', user, nso, friend),
+    showFriendCodeMenu: (fc: CurrentUserFriendCodeLink) => inv('menu:friend-code', fc),
+    showFriendMenu: (user: NintendoAccountUserCoral, nso: CurrentUser<true> | CurrentUser<false>, friend: Friend_4) => inv('menu:friend', user, nso, friend),
 
     registerEventListener: (event: string, listener: (args: any[]) => void) => events.on(event, listener),
     removeEventListener: (event: string, listener: (args: any[]) => void) => events.removeListener(event, listener),

@@ -56,7 +56,7 @@ export default class Coral {
         public chats: Result<ListChat> | null = null,
         public media: Result<ListMedia> | null = null,
         public active_event: Result<GetActiveEventResult> | null = null,
-        public current_user: Result<CurrentUser> | null = null,
+        public current_user: Result<CurrentUser<true> | CurrentUser<false>> | null = null,
     ) {
         if (announcements) this.updated.announcements = Date.now();
         if (friends) this.updated.friends = Date.now();

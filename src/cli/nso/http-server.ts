@@ -962,7 +962,7 @@ class EventStreamNotificationManager extends NotificationManager {
     }
 
     onPresenceUpdated(
-        friend: CurrentUser | Friend, prev?: CurrentUser | Friend, type?: PresenceEvent,
+        friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, type?: PresenceEvent,
         naid?: string, ir?: boolean
     ) {
         this.stream.sendEvent(ZncPresenceEventStreamEvent.PRESENCE_UPDATED, {
@@ -970,25 +970,25 @@ class EventStreamNotificationManager extends NotificationManager {
         });
     }
 
-    onFriendOnline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendOnline(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_ONLINE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
-    onFriendOffline(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendOffline(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_OFFLINE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
-    onFriendPlayingChangeTitle(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendPlayingChangeTitle(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_CHANGE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
     }
 
-    onFriendTitleStateChange(friend: CurrentUser | Friend, prev?: CurrentUser | Friend, naid?: string, ir?: boolean) {
+    onFriendTitleStateChange(friend: CurrentUser<false> | Friend, prev?: CurrentUser<false> | Friend, naid?: string, ir?: boolean) {
         this.stream.sendEvent(ZncPresenceEventStreamEvent.FRIEND_TITLE_STATECHANGE, {
             id: friend.nsaId, presence: friend.presence, prev: prev?.presence,
         });
