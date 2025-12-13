@@ -590,10 +590,15 @@ export class NxapiZncaAuth {
             auth.client_credentials = {
                 id: process.env.NXAPI_ZNCA_API_CLIENT_ID,
             };
-        } else if (client_auth_provider && 'id' in client_auth_provider) {
+        } else if (client_auth_provider && 'secret' in client_auth_provider) {
             auth.client_credentials = {
                 id: client_auth_provider.id,
                 secret: client_auth_provider.secret,
+            };
+            scope = client_auth_provider.scope;
+        } else if (client_auth_provider && 'id' in client_auth_provider) {
+            auth.client_credentials = {
+                id: client_auth_provider.id,
             };
             scope = client_auth_provider.scope;
         } else if (client_auth_provider && 'create' in client_auth_provider) {
