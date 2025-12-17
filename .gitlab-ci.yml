@@ -89,7 +89,7 @@ build-app:
   script:
     - node resources/build/ci-package-json.js
 
-    - npx electron-builder build --macos zip:x64 zip:arm64 --linux deb snap appimage --publish never
+    - npx electron-builder build --macos zip:x64 zip:arm64 --linux deb snap appimage deb:arm64 appimage:arm64 --publish never
     - mv dist/app/package app
   needs:
     - job: build
