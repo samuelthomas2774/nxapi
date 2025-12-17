@@ -1043,6 +1043,10 @@ export class NintendoAccountSessionAuthorisationCoral extends NintendoAccountSes
 
         return new this(auth_data.url, auth_data.state, auth_data.verifier, redirect_uri);
     }
+
+    static resume(authorise_url: string, state: string, verifier: string, /** @internal */ redirect_uri?: string) {
+        return new this(authorise_url, state, verifier, redirect_uri);
+    }
 }
 
 export interface CoralAuthData {
