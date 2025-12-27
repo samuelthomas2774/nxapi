@@ -34,6 +34,13 @@ export const languages = {
             ['hilot06', 'https://github.com/hilot06'],
         ],
     },
+    'zh-CN': {
+        name: '中文（简体）',
+        app: () => import('./locale/zh-cn.js'),
+        authors: [
+            ['Ray Lin', 'https://github.com/lin010151'],
+        ],
+    },
 };
 
 const namespaces = {
