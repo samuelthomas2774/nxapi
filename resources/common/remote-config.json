@@ -2,7 +2,7 @@
     "require_version": [],
     "log_encryption_key": "E2Sii_7drCzK-68RsEoArmopiAIlZD_6TMA2F_UAAU0",
     "coral": {
-        "znca_version": "2.12.0"
+        "znca_version": "3.3.0"
     },
     "coral_auth": {
         "default": [
@@ -11,11 +11,11 @@
         ],
         "splatnet2statink": null,
         "flapg": null,
-        "imink": {}
+        "imink": null
     },
     "moon": {
-        "znma_version": "1.18.0",
-        "znma_build": "275"
+        "znma_version": "1.20.0",
+        "znma_build": "282"
     },
     "coral_gws_nooklink": {
         "blanco_version": "2.1.1"
