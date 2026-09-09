@@ -82,10 +82,25 @@ export type AccountToken = AccountLogin;
 /** /v4/Account/Login */
 export interface AccountLogin_4 {
     user: CurrentUser<false>;
+    naUser: NaUser;
     webApiServerCredential: {
         accessToken: string;
         expiresIn: number;
     };
+}
+
+export interface NaUser {
+    region: string | null;
+    /** obfuscated sign in id and/or email */
+    screenName: string;
+    country: string;
+    birthday: string;
+    language: string;
+    loginId: string | null;
+    id: string;
+    iconUri: string | null;
+    nickname: string;
+    email: string | null;
 }
 
 /** /v4/Account/GetToken, /v4/Extension/Account/GetToken */
@@ -517,6 +532,7 @@ export interface MediaBase {
     capturedAt: number;
     expiresAt: number;
     uploadedAt: number;
+    hashtags: string;
 }
 
 export type Media = MediaImage | MediaVideo;
@@ -540,6 +556,10 @@ export enum MediaPlatform {
 
 export interface ListMediaParameter {
     count: 100;
+}
+
+export interface DeleteMediaParameter {
+    mediaIds: string[];
 }
 
 /** /v5/Hashtag/List */

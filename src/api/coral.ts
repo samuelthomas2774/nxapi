@@ -5,7 +5,7 @@ import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
-import { AccountLogin, AccountLogin_4, AccountLoginParameter, AccountToken_4, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CreateFriendRequestChannel, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, FriendRouteChannel, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { AccountLogin, AccountLogin_4, AccountLoginParameter, AccountToken_4, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CreateFriendRequestChannel, CurrentUser, CurrentUserPermissions, DeleteMediaParameter, Event, Friend_4, FriendCodeUrl, FriendCodeUser, FriendRouteChannel, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
 import { createZncaApi, DecryptResponseResult, FResult, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
@@ -99,6 +99,13 @@ export abstract class AbstractCoralApi {
         return this.call<ListMedia>('/v4/Media/List');
     }
 
+    async deleteMedia(ids: string | string[]) {
+        return this.call<{}, DeleteMediaParameter>('/v4/Media/Delete', {
+            mediaIds: typeof ids === 'string' ? [ids] : ids,
+        });
+    }
+
+    /** @deprecated removed in ?? */
     async getHashtags(media: Media) {
         return this.call<ListHashtag, ListHashtagParameter>('/v5/Hashtag/List', {
             applications: [
@@ -360,6 +367,7 @@ export abstract class AbstractCoralApi {
         });
     }
 
+    /** @deprecated removed in 3.5.0 */
     async getUserLoginFactor() {
         return this.call<ShowUserLogin>('/v4/NA/User/LoginFactor/Show');
     }
