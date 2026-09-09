@@ -5,7 +5,7 @@ import { JwtPayload } from '../util/jwt.js';
 import { timeoutSignal } from '../util/misc.js';
 import { getAdditionalUserAgents } from '../util/useragent.js';
 import type { CoralRemoteConfig } from '../common/remote-config.js';
-import { AccountLogin, AccountLogin_4, AccountLoginParameter, AccountToken, AccountToken_4, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CreateFriendRequestChannel, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, FriendRouteChannel, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
+import { AccountLogin, AccountLogin_4, AccountLoginParameter, AccountToken_4, AccountTokenParameter, Announcements_4, BlockingUsers, CoralError, CoralResponse, CoralStatus, CoralSuccessResponse, CreateFriendRequestChannel, CurrentUser, CurrentUserPermissions, Event, Friend_4, FriendCodeUrl, FriendCodeUser, FriendRouteChannel, Friends_4, GetActiveEventResult, ListChat, ListHashtag, ListHashtagParameter, ListMedia, ListPushNotificationSettings, Media, PlayLogPermissions, PresencePermissions, PushNotificationPlayInvitationScope, ReceivedFriendRequest, ReceivedFriendRequests, SentFriendRequests, ShowUserLogin, UpdatePushNotificationSettingsParameter, UpdatePushNotificationSettingsParameterItem, User, UserPlayLog, WebServices_4, WebServiceToken, WebServiceTokenParameter } from './coral-types.js';
 import { createZncaApi, DecryptResponseResult, FResult, HashMethod, RequestEncryptionProvider, ZncaApi, ZncaApiNxapi } from './f.js';
 import { generateAuthData, getNintendoAccountToken, getNintendoAccountUser, NintendoAccountScope, NintendoAccountSessionAuthorisation, NintendoAccountToken, NintendoAccountUser } from './na.js';
 import { ErrorResponse, ResponseSymbol } from './util.js';
@@ -15,10 +15,10 @@ const debug = createDebug('nxapi:api:coral');
 
 const ZNCA_PLATFORM = 'Android';
 const ZNCA_PLATFORM_VERSION = '12';
-export const ZNCA_VERSION = '3.3.0';
+export const ZNCA_VERSION = '3.5.0';
 const ZNCA_USER_AGENT = `com.nintendo.znca/${ZNCA_VERSION}(${ZNCA_PLATFORM}/${ZNCA_PLATFORM_VERSION})`;
 
-export const ZNCA_API_COMPATIBILITY_VERSION = 'w8zSLBsxR7rVoGJA';
+export const ZNCA_API_COMPATIBILITY_VERSION = 'd8fAZDPzwimzQ7c6';
 
 const ZNC_URL = 'https://api-lp1.znc.srv.nintendo.net';
 export const ZNCA_CLIENT_ID = '71b963c1b7b6d119';
@@ -589,7 +589,6 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
         nintendoAccountToken: NintendoAccountToken, user: NintendoAccountUserCoral,
     ): Promise<PartialCoralAuthData> {
         const parameter: AccountTokenParameter = {
-            naBirthday: user.birthday,
             timestamp: 0,
             f: '',
             requestId: '',
@@ -716,8 +715,6 @@ export default class CoralApi extends AbstractCoralApi implements CoralApiInterf
 
         const parameter: AccountLoginParameter = {
             naIdToken: nintendoAccountToken.id_token,
-            naBirthday: user.birthday,
-            naCountry: user.country,
             language: user.language,
 
             // These fields will be filled by the f-generation API when encrypting the request data

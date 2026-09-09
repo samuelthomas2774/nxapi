@@ -57,8 +57,6 @@ export type CoralResponse<T = unknown> = CoralSuccessResponse<T> | CoralError;
 
 export interface AccountLoginParameter {
     naIdToken: string;
-    naBirthday: string;
-    naCountry: string;
     language: string;
     timestamp: number;
     requestId: string;
@@ -95,7 +93,6 @@ export type AccountToken_4 = AccountLogin_4;
 
 export interface AccountTokenParameter {
     naIdToken: string;
-    naBirthday: string;
     timestamp: number;
     requestId: string;
     f: string;
